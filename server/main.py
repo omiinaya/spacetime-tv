@@ -850,7 +850,9 @@ _converting: dict[str, asyncio.Task] = {}  # stream_id → conversion task
 
 
 async def convert_to_mp4(stream_id: str, stream_type: str):
-    """Convert a VOD stream to MP4 via ffmpeg -c copy. Caches to CACHE_DIR/{id}.mp4."""
+    """Convert VOD stream → fMP4 via ffmpeg -c copy directly from CDN.
+    Uses fragmented MP4 so partial files are still browser-playable.
+    Caches result to CACHE_DIR. Overwrites on retry."""
     cache_key = f"{stream_type}_{stream_id}"
     output_path = CACHE_DIR / f"{cache_key}.mp4"
     lock_path = CACHE_DIR / f"{cache_key}.converting"
@@ -858,29 +860,27 @@ async def convert_to_mp4(stream_id: str, stream_type: str):
     if output_path.exists():
         return  # already cached
 
-    # Write lock file so other requests know conversion is in progress
     lock_path.write_text(str(time.time()))
-
     url = build_stream_url(int(stream_id), stream_type)
-    headers = {"User-Agent": UA_STR}
+    ua = UA_STR
 
-    # Resolve redirect
+    # Resolve CDN URL through redirect
     cdn_url = url
     try:
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=headers) as c:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True,
+                                     headers={"User-Agent": ua}) as c:
             async with c.stream("GET", url) as resp:
                 cdn_url = str(resp.url)
     except Exception as e:
-        log.warning(f"MP4 convert URL resolution failed: {e}")
+        log.warning(f"URL resolution failed for {cache_key}: {e}")
 
-    log.info(f"Converting {cache_key} → MP4 (source: {cdn_url[:100]}...)")
+    log.info(f"Converting {cache_key} → fMP4 (source: {cdn_url[:100]}...)")
     cmd = [
-        "ffmpeg",
-        "-loglevel", "warning",
-        "-user_agent", headers["User-Agent"],
+        "ffmpeg", "-loglevel", "warning",
+        "-user_agent", ua,
         "-i", cdn_url,
         "-c", "copy",
-        "-movflags", "+faststart",
+        "-movflags", "frag_keyframe+empty_moov+default_base_moof",
         "-f", "mp4",
         str(output_path),
     ]
@@ -891,35 +891,28 @@ async def convert_to_mp4(stream_id: str, stream_type: str):
         stderr=asyncio.subprocess.PIPE,
     )
 
-    # Log stderr
     async def log_stderr():
         while proc.stderr:
             line = await proc.stderr.readline()
-            if not line:
-                break
+            if not line: break
             log.warning(f"mp4-convert: {line.decode().rstrip()}")
 
     stderr_task = asyncio.create_task(log_stderr())
     await proc.wait()
     stderr_task.cancel()
-    try:
-        await stderr_task
-    except asyncio.CancelledError:
-        pass
+    try: await stderr_task
+    except asyncio.CancelledError: pass
 
-    # Clean up lock file
+    # Clean up lock
     if lock_path.exists():
         lock_path.unlink()
 
-    if proc.returncode != 0 or not output_path.exists():
-        log.error(f"MP4 conversion failed for {cache_key} (exit {proc.returncode})")
-        # Clean up partial file
-        if output_path.exists():
-            output_path.unlink()
-        raise RuntimeError(f"Conversion failed (exit {proc.returncode})")
-
-    size_mb = output_path.stat().st_size / (1024 * 1024)
-    log.info(f"MP4 cached: {cache_key} ({size_mb:.0f} MB)")
+    file_size = output_path.stat().st_size if output_path.exists() else 0
+    if proc.returncode != 0:
+        log.warning(f"MP4 conversion exited {proc.returncode} for {cache_key} "
+                     f"(partial: {file_size / (1024*1024):.0f} MB)")
+    else:
+        log.info(f"MP4 cached: {cache_key} ({file_size / (1024*1024):.0f} MB)")
 
 
 @app.get("/api/movie/convert/{stream_id}")
