@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Tv, Loader2, AlertCircle, RotateCcw, Search, X } from "lucide-react";
 import { api, Category, LiveStream } from "@/lib/api";
 import { Skeleton, ChannelCardSkeleton, TabSkeleton } from "@/components/Skeleton";
@@ -11,6 +11,7 @@ const BATCH = 50;
 
 export default function LiveTV() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCat, setActiveCat] = useState<string>("");
   const [streams, setStreams] = useState<LiveStream[]>([]);
@@ -19,8 +20,18 @@ export default function LiveTV() {
   const [streamsLoading, setStreamsLoading] = useState(false);
   const [allLoading, setAllLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
 
+  const searchQuery = searchParams.get("q") || "";
+  const setSearchQuery = useCallback(
+    (q: string) => {
+      if (q) {
+        setSearchParams({ q });
+      } else {
+        setSearchParams({});
+      }
+    },
+    [setSearchParams]
+  );
   const q = searchQuery.toLowerCase().trim();
 
   const { visibleItems, sentinelRef, hasMore } = useInfiniteScroll(
@@ -28,28 +39,23 @@ export default function LiveTV() {
   );
   const { settings } = useSettings();
 
-  // Filter categories by settings
   const filteredCategories = useMemo(
     () => filterCategories(categories, settings, true),
     [categories, settings]
   );
 
-  // When searching, filter all streams by query; otherwise return visibleItems as-is
   const filteredItems = useMemo(() => {
     if (!q) return visibleItems;
-    const filtered = visibleItems.filter((s) => s.name.toLowerCase().includes(q));
-    return filtered;
+    return visibleItems.filter((s) => s.name.toLowerCase().includes(q));
   }, [visibleItems, q]);
 
   useEffect(() => {
-    // Fetch categories
     api.live
       .categories()
       .then((d) => setCategories(d.categories))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
 
-    // Fetch ALL streams for cross-category search
     api.live
       .all()
       .then((d) => setAllStreams(d.streams))
@@ -57,14 +63,12 @@ export default function LiveTV() {
       .finally(() => setAllLoading(false));
   }, []);
 
-  // Auto-select first filtered category
   useEffect(() => {
     if (filteredCategories.length > 0 && !filteredCategories.find((c) => c.category_id === activeCat)) {
       setActiveCat(filteredCategories[0].category_id);
     }
   }, [filteredCategories, activeCat]);
 
-  // Load streams for selected category (only when not searching)
   useEffect(() => {
     if (!activeCat || q) return;
     setError(null);
@@ -231,7 +235,6 @@ export default function LiveTV() {
                 ))}
               </div>
 
-              {/* Infinite scroll sentinel */}
               <div ref={sentinelRef} className="h-1" />
               {hasMore && (
                 <div className="flex justify-center py-4">

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Tv2,
   Loader2,
@@ -38,8 +38,13 @@ export default function SeriesPage() {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const fetchingRef = useRef<Set<string>>(new Set());
 
-  // Section search
-  const [searchQuery, setSearchQuery] = useState("");
+  // Section search (persisted in URL so Back button restores it)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchQuery = searchParams.get("q") || "";
+  const setSearchQuery = useCallback(
+    (q: string) => { if (q) setSearchParams({ q }); else setSearchParams({}); },
+    [setSearchParams]
+  );
 
   // Episodes state
   const [expandedId, setExpandedId] = useState<number | null>(null);

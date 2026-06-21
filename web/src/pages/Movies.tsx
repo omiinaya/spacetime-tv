@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Film, Loader2, AlertCircle, RotateCcw, Star, Play, Search, X } from "lucide-react";
 import { api, Category, Movie } from "@/lib/api";
 import ContentRow from "@/components/ContentRow";
@@ -36,8 +36,13 @@ export default function Movies() {
     [categories, settings]
   );
 
-  // Section search
-  const [searchQuery, setSearchQuery] = useState("");
+  // Section search (persisted in URL so Back button restores it)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchQuery = searchParams.get("q") || "";
+  const setSearchQuery = useCallback(
+    (q: string) => { if (q) setSearchParams({ q }); else setSearchParams({}); },
+    [setSearchParams]
+  );
 
   // Load categories
   useEffect(() => {
