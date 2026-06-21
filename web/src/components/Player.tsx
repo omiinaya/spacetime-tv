@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Loader2, AlertCircle, ArrowLeft, Maximize, Minimize } from "lucide-react";
 import mpegts from "mpegts.js";
@@ -16,6 +16,10 @@ export default function Player({ type }: PlayerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+
+  // Refs for timeout safety — closures capture state at call time,
+  // so timeouts must check refs, not state variables.
+  const loadingRef = useRef(true);
   const retryKey = useRef(0);
 
   // ── Build stream URL ──────────────────────────────────────────
@@ -28,12 +32,21 @@ export default function Player({ type }: PlayerProps) {
 
   const isLive = type === "live";
 
-  // ── Play via mpegts.js (live MPEG-TS only) ────────────────────
-  const playLive = () => {
-    const video = videoRef.current;
-    if (!video || !streamPath) return;
+  const setDone = useCallback(() => {
+    loadingRef.current = false;
+    setLoading(false);
+  }, []);
 
-    // Reset source in case we were in native mode
+  const setBusy = useCallback(() => {
+    loadingRef.current = true;
+    setLoading(true);
+  }, []);
+
+  // ── Play via mpegts.js (live MPEG-TS only) ────────────────────
+  const playLive = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !streamPath) return () => {};
+
     video.removeAttribute("src");
 
     const player = mpegts.createPlayer({
@@ -50,7 +63,7 @@ export default function Player({ type }: PlayerProps) {
     player.load();
 
     player.on(mpegts.Events.LOADING_COMPLETE, () => {
-      setLoading(false);
+      setDone();
       video.play().catch(() => {});
     });
 
@@ -58,42 +71,41 @@ export default function Player({ type }: PlayerProps) {
       errorCount++;
       if (detail?.response?.code === 0 || errorCount < 3) return;
       if (!timedOut) {
-        setLoading(false);
+        setDone();
         setError("Stream unavailable. The channel may be offline from the provider.");
       }
     });
 
     player.on(mpegts.Events.STATISTICS_INFO, () => {
-      if (loading) setLoading(false);
+      if (loadingRef.current) setDone();
     });
 
     const timeout = setTimeout(() => {
-      if (loading) {
+      // Check REF, not state — closure would always see stale true
+      if (loadingRef.current) {
         timedOut = true;
-        setLoading(false);
+        setDone();
         setError("Stream timed out. The channel may be offline.");
       }
     }, 12000);
 
     return () => clearTimeout(timeout);
-  };
+  }, [streamPath, setDone]);
 
   // ── Play via native <video> (VOD: movies / series) ────────────
-  const playVod = () => {
+  const playVod = useCallback(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video) return () => {};
 
-    // Destroy any mpegts player
     if (playerRef.current) {
       playerRef.current.destroy();
       playerRef.current = null;
     }
 
-    // Add a cache-busting param so the browser doesn't use a stale cached response
     const url = `${streamPath}?_=${retryKey.current}`;
 
     const onLoaded = () => {
-      setLoading(false);
+      setDone();
       video.play().catch(() => {});
     };
 
@@ -116,7 +128,7 @@ export default function Player({ type }: PlayerProps) {
             break;
         }
       }
-      setLoading(false);
+      setDone();
       setError(msg);
     };
 
@@ -127,8 +139,8 @@ export default function Player({ type }: PlayerProps) {
     video.load();
 
     const timeout = setTimeout(() => {
-      if (loading) {
-        setLoading(false);
+      if (loadingRef.current) {
+        setDone();
         setError("Stream timed out. The video may be unavailable.");
       }
     }, 20000);
@@ -138,11 +150,11 @@ export default function Player({ type }: PlayerProps) {
       video.removeEventListener("loadeddata", onLoaded);
       video.removeEventListener("error", onError);
     };
-  };
+  }, [streamPath, setDone]);
 
   // ── Main effect ───────────────────────────────────────────────
   useEffect(() => {
-    setLoading(true);
+    setBusy();
     setError(null);
 
     if (playerRef.current) {
@@ -150,41 +162,28 @@ export default function Player({ type }: PlayerProps) {
       playerRef.current = null;
     }
 
-    let cleanup: (() => void) | undefined;
-
-    if (isLive) {
-      cleanup = playLive();
-    } else {
-      cleanup = playVod();
-    }
+    const cleanupFn = isLive ? playLive() : playVod();
 
     return () => {
-      cleanup?.();
+      cleanupFn?.();
       if (playerRef.current) {
         playerRef.current.destroy();
         playerRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streamPath, isLive, retryKey.current]);
+  }, [streamPath, isLive, setBusy, playLive, playVod]);
 
   // ── Retry ─────────────────────────────────────────────────────
   const retry = () => {
     retryKey.current++;
     setError(null);
-    setLoading(true);
+    setBusy();
     if (playerRef.current) {
       playerRef.current.destroy();
       playerRef.current = null;
     }
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (isLive) {
-      playLive();
-    } else {
-      playVod();
-    }
+    const cleanupFn = isLive ? playLive() : playVod();
+    // Cleanup stored for next retry
   };
 
   // ── Fullscreen toggle ─────────────────────────────────────────
