@@ -130,6 +130,19 @@ export default function Player({ type }: PlayerProps) {
     return `/api/stream/series/${seriesId}/${epId}/remux`;
   }, [isLive, type, id, seriesId, epId]);
 
+  // VOD MP4 path — cached conversion, browser-native playback with full seeking
+  const mp4Path = useMemo(() => {
+    if (isLive) return null;
+    if (type === "movie") return `/api/stream/movie/${id}/mp4`;
+    return `/api/stream/series/${seriesId}/${epId}/mp4`;
+  }, [isLive, type, id, seriesId, epId]);
+
+  const convertUrl = useMemo(() => {
+    if (isLive) return null;
+    if (type === "movie") return `/api/movie/convert/${id}`;
+    return `/api/series/convert/${seriesId}/${epId}`;
+  }, [isLive, type, id, seriesId, epId]);
+
   const probeUrl = useMemo(() => {
     if (type === "live") return `/api/live/probe/${id}`;
     if (type === "movie") return `/api/movie/probe/${id}`;
@@ -239,14 +252,14 @@ export default function Player({ type }: PlayerProps) {
   }, []);
 
   // ── Playback: VOD (native video) ────────────────────────────
-  const playVod = useCallback((resumeFrom: number | null = null) => {
+  const playVod = useCallback((resumeFrom: number | null = null, vodUrl?: string) => {
     const video = videoRef.current;
     if (!video) return () => {};
 
     if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
     video.removeAttribute("src");
 
-    const url = `${streamPath}?_=${retryKey.current}`;
+    const url = vodUrl || `${streamPath}?_=${retryKey.current}`;
     let resumed = false;
 
     const onLoaded = () => {
@@ -323,41 +336,39 @@ export default function Player({ type }: PlayerProps) {
     const start = async () => {
       setPhase("probing"); setErrorMsg(null); setTranscoding(false);
       if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
+      if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
 
-      // Probe first to detect HEVC and container format
+      // Probe for codec
       let needsTranscode = false;
-      let needsRemux = false;
       if (transcodeCache.has(streamId)) {
-        const cached = transcodeCache.get(streamId);
-        needsTranscode = cached === "hevc";
-        needsRemux = cached === "remux";
+        needsTranscode = transcodeCache.get(streamId) === "hevc";
       } else {
         const result = await probeStream(probeUrl);
         if (result.codec === "hevc") {
           needsTranscode = true;
           transcodeCache.set(streamId, "hevc");
-        } else if (result.container && result.container.includes("matroska")) {
-          needsRemux = true;
-          transcodeCache.set(streamId, "remux");
         } else {
           transcodeCache.set(streamId, "native");
         }
       }
       if (cancelled) return;
 
-      // For VOD transcode/remux: skip resume (seeking doesn't work without restart)
-      // For VOD native: check resume position
-      if (!isLive && !needsTranscode && !needsRemux && watchKey) {
-        const pos = getWatchPos(watchKey);
-        if (pos && pos > 5) {
-          setResumePos(pos);
-          setShowResumePrompt(true);
-          setPhase("playing");
-          return;
-        }
+      // ── Live TV ──────────────────────────────────────────────
+      if (isLive) {
+        const url = needsTranscode ? (transcodePath || streamPath) : streamPath;
+        playMPEGTS(url, true, needsTranscode);
+        return;
       }
 
-      await startPlayback(true, needsTranscode, needsRemux); // skipProbe since we already probed
+      // ── VOD ──────────────────────────────────────────────────
+      if (needsTranscode && vodTranscodePath) {
+        // HEVC → transcode via mpegts.js (slower startup)
+        playMPEGTS(vodTranscodePath, false, true, 90000, watchKey);
+        return;
+      }
+
+      // H.264 VOD → convert to MP4, play natively (full seeking!)
+      await convertAndPlay(() => cancelled);
     };
 
     start();
@@ -365,28 +376,63 @@ export default function Player({ type }: PlayerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamPath]);
 
-  const startPlayback = useCallback(async (skipProbe: boolean, cachedNeedsTranscode = false, cachedNeedsRemux = false) => {
+  const convertAndPlay = useCallback(async (isCancelled: () => boolean) => {
+    if (!mp4Path || !convertUrl) return;
+
+    // Check resume position before starting
+    if (watchKey) {
+      const pos = getWatchPos(watchKey);
+      if (pos && pos > 5) {
+        setResumePos(pos);
+        setShowResumePrompt(true);
+        setPhase("playing");
+        return;
+      }
+    }
+
+    setPhase("loading");
+    try {
+      let res = await fetch(convertUrl);
+      let data = await res.json();
+
+      if (data.status === "ready") {
+        // MP4 cached — play natively with full seeking
+        playVod(null, mp4Path);
+        return;
+      }
+
+      // First-time conversion — poll until ready
+      setErrorMsg("Preparing video… (first-time conversion, ~30s)");
+      const pollStart = Date.now();
+      while (data.status !== "ready") {
+        if (isCancelled()) return;
+        if (Date.now() - pollStart > 180000) {
+          setPhase("error"); setErrorMsg("Conversion timed out.");
+          return;
+        }
+        await new Promise(r => setTimeout(r, 2000));
+        res = await fetch(convertUrl);
+        data = await res.json();
+      }
+
+      setErrorMsg(null);
+      playVod(null, mp4Path);
+    } catch (e) {
+      setPhase("error"); setErrorMsg("Failed to prepare video.");
+    }
+  }, [mp4Path, convertUrl, playVod]);
+
+  const startPlayback = useCallback(async (skipProbe: boolean, cachedNeedsTranscode = false) => {
     let needsTranscode = cachedNeedsTranscode;
-    let needsRemux = cachedNeedsRemux;
 
     if (!skipProbe) {
-      // Probe for codec and container (live + VOD)
       if (transcodeCache.has(streamId)) {
-        const cached = transcodeCache.get(streamId);
-        needsTranscode = cached === "hevc";
-        needsRemux = cached === "remux";
+        needsTranscode = transcodeCache.get(streamId) === "hevc";
       } else {
         setPhase("probing");
         const result = await probeStream(probeUrl);
-        if (result.codec === "hevc") {
-          needsTranscode = true;
-          transcodeCache.set(streamId, "hevc");
-        } else if (result.container && result.container.includes("matroska")) {
-          needsRemux = true;
-          transcodeCache.set(streamId, "remux");
-        } else {
-          transcodeCache.set(streamId, "native");
-        }
+        needsTranscode = result.codec === "hevc";
+        transcodeCache.set(streamId, needsTranscode ? "hevc" : "native");
       }
     }
 
@@ -395,15 +441,12 @@ export default function Player({ type }: PlayerProps) {
       const url = needsTranscode ? (transcodePath || streamPath) : streamPath;
       playMPEGTS(url, true, needsTranscode);
     } else if (needsTranscode && vodTranscodePath) {
-      // VOD HEVC → transcode via mpegts.js (slower startup for 4K)
       playMPEGTS(vodTranscodePath, false, true, 90000, watchKey);
-    } else if (needsRemux && remuxPath) {
-      // VOD MKV → remux to MPEG-TS via -c copy (mpegts.js)
-      playMPEGTS(`${remuxPath}?_=${retryKey.current}`, false, false, 30000, watchKey);
     } else {
-      playVod(null);
+      // H.264 VOD — convert to MP4 then play
+      convertAndPlay(() => false);
     }
-  }, [isLive, streamId, probeUrl, streamPath, transcodePath, vodTranscodePath, remuxPath, playMPEGTS, playVod]);
+  }, [isLive, streamId, probeUrl, streamPath, transcodePath, vodTranscodePath, playMPEGTS, convertAndPlay]);
 
   // ── Controls ─────────────────────────────────────────────────
   const togglePlay = useCallback(() => {
@@ -416,20 +459,11 @@ export default function Player({ type }: PlayerProps) {
 
   const seek = useCallback((delta: number) => {
     if (isLive) return;
-    const needsRemux = remuxPath && transcodeCache.get(streamId) === "remux";
-    if (needsRemux && remuxPath) {
-      // mpegts.js VOD: restart stream at new position
-      const newPos = Math.max(0, currentTime + delta);
-      setCurrentTime(newPos); // immediate feedback before stream restarts
-      retryKey.current++;
-      playMPEGTS(`${remuxPath}?start=${newPos}&_=${retryKey.current}`, false, false, 30000, watchKey);
-    } else {
-      const v = videoRef.current;
-      if (!v) return;
-      v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + delta));
-    }
+    const v = videoRef.current;
+    if (!v) return;
+    v.currentTime = Math.max(0, Math.min(v.duration || 0, v.currentTime + delta));
     showControls(true);
-  }, [isLive, currentTime, streamId, remuxPath, playMPEGTS, showControls]);
+  }, [isLive, showControls]);
 
   const setVolume = useCallback((val: number) => {
     const v = videoRef.current;
@@ -485,24 +519,14 @@ export default function Player({ type }: PlayerProps) {
   const resumePlayback = useCallback(() => {
     setShowResumePrompt(false);
     setPhase("loading");
-    const needsRemux = remuxPath && transcodeCache.get(streamId) === "remux";
-    if (needsRemux) {
-      playMPEGTS(`${remuxPath}?start=${resumePos}&_=${retryKey.current}`, false, false, 30000, watchKey);
-    } else {
-      playVod(resumePos);
-    }
-  }, [resumePos, streamId, remuxPath, watchKey, playMPEGTS, playVod]);
+    playVod(resumePos, mp4Path!);
+  }, [resumePos, mp4Path, playVod]);
 
   const startFromBeginning = useCallback(() => {
     setShowResumePrompt(false);
     setPhase("loading");
-    const needsRemux = remuxPath && transcodeCache.get(streamId) === "remux";
-    if (needsRemux) {
-      playMPEGTS(`${remuxPath}?_=${retryKey.current}`, false, false, 30000, watchKey);
-    } else {
-      playVod(null);
-    }
-  }, [streamId, remuxPath, playMPEGTS, playVod]);
+    playVod(null, mp4Path!);
+  }, [mp4Path, playVod]);
 
   // ── Keyboard ─────────────────────────────────────────────────
   useEffect(() => {
@@ -541,19 +565,10 @@ export default function Player({ type }: PlayerProps) {
     const rect = e.currentTarget.getBoundingClientRect();
     const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     const targetTime = frac * duration;
-
-    const needsRemux = remuxPath && transcodeCache.get(streamId) === "remux";
-    if (needsRemux && remuxPath) {
-      // mpegts.js VOD: restart stream at clicked position
-      setCurrentTime(targetTime); // immediate feedback before stream restarts
-      retryKey.current++;
-      playMPEGTS(`${remuxPath}?start=${targetTime}&_=${retryKey.current}`, false, false, 30000, watchKey);
-    } else {
-      const v = videoRef.current;
-      if (v) v.currentTime = targetTime;
-    }
+    const v = videoRef.current;
+    if (v) v.currentTime = targetTime;
     showControls(true);
-  }, [isLive, duration, streamId, remuxPath, watchKey, playMPEGTS, showControls]);
+  }, [isLive, duration, showControls]);
 
   // ── Render ───────────────────────────────────────────────────
   const showOverlay = phase === "probing" || phase === "loading" || phase === "error" || showResumePrompt;

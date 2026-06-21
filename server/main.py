@@ -840,6 +840,197 @@ async def iptv_raw(path: str):
         raise HTTPException(502, str(e))
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# ── VOD MP4 Converter (MKV → MP4 via -c copy, cached on disk) ─────────────
+# ══════════════════════════════════════════════════════════════════════════════
+
+CACHE_DIR = Path("/tmp/stv_cache")
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
+_converting: dict[str, asyncio.Task] = {}  # stream_id → conversion task
+
+
+async def convert_to_mp4(stream_id: str, stream_type: str):
+    """Convert a VOD stream to MP4 via ffmpeg -c copy. Caches to CACHE_DIR/{id}.mp4."""
+    cache_key = f"{stream_type}_{stream_id}"
+    output_path = CACHE_DIR / f"{cache_key}.mp4"
+    lock_path = CACHE_DIR / f"{cache_key}.converting"
+
+    if output_path.exists():
+        return  # already cached
+
+    # Write lock file so other requests know conversion is in progress
+    lock_path.write_text(str(time.time()))
+
+    url = build_stream_url(int(stream_id), stream_type)
+    headers = {"User-Agent": UA_STR}
+
+    # Resolve redirect
+    cdn_url = url
+    try:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=headers) as c:
+            async with c.stream("GET", url) as resp:
+                cdn_url = str(resp.url)
+    except Exception as e:
+        log.warning(f"MP4 convert URL resolution failed: {e}")
+
+    log.info(f"Converting {cache_key} → MP4 (source: {cdn_url[:100]}...)")
+    cmd = [
+        "ffmpeg",
+        "-loglevel", "warning",
+        "-user_agent", headers["User-Agent"],
+        "-i", cdn_url,
+        "-c", "copy",
+        "-movflags", "+faststart",
+        "-f", "mp4",
+        str(output_path),
+    ]
+
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
+    # Log stderr
+    async def log_stderr():
+        while proc.stderr:
+            line = await proc.stderr.readline()
+            if not line:
+                break
+            log.warning(f"mp4-convert: {line.decode().rstrip()}")
+
+    stderr_task = asyncio.create_task(log_stderr())
+    await proc.wait()
+    stderr_task.cancel()
+    try:
+        await stderr_task
+    except asyncio.CancelledError:
+        pass
+
+    # Clean up lock file
+    if lock_path.exists():
+        lock_path.unlink()
+
+    if proc.returncode != 0 or not output_path.exists():
+        log.error(f"MP4 conversion failed for {cache_key} (exit {proc.returncode})")
+        # Clean up partial file
+        if output_path.exists():
+            output_path.unlink()
+        raise RuntimeError(f"Conversion failed (exit {proc.returncode})")
+
+    size_mb = output_path.stat().st_size / (1024 * 1024)
+    log.info(f"MP4 cached: {cache_key} ({size_mb:.0f} MB)")
+
+
+@app.get("/api/movie/convert/{stream_id}")
+async def convert_movie(stream_id: int):
+    """Trigger MKV→MP4 conversion for a movie. Returns status."""
+    cache_key = f"movie_{stream_id}"
+    output_path = CACHE_DIR / f"{cache_key}.mp4"
+    lock_path = CACHE_DIR / f"{cache_key}.converting"
+
+    if output_path.exists():
+        return {"status": "ready", "message": "Cached"}
+
+    if lock_path.exists():
+        return {"status": "converting", "message": "Conversion in progress"}
+
+    # Start conversion in background
+    if cache_key not in _converting:
+        _converting[cache_key] = asyncio.create_task(convert_to_mp4(str(stream_id), "movie"))
+
+    return {"status": "converting", "message": "Conversion started"}
+
+
+@app.get("/api/series/convert/{series_id}/{episode_id}")
+async def convert_series_ep(series_id: int, episode_id: int):
+    """Trigger MKV→MP4 conversion for a series episode."""
+    cache_key = f"series_{episode_id}"
+    output_path = CACHE_DIR / f"{cache_key}.mp4"
+    lock_path = CACHE_DIR / f"{cache_key}.converting"
+
+    if output_path.exists():
+        return {"status": "ready", "message": "Cached"}
+
+    if lock_path.exists():
+        return {"status": "converting", "message": "Conversion in progress"}
+
+    if cache_key not in _converting:
+        _converting[cache_key] = asyncio.create_task(convert_to_mp4(str(episode_id), "series"))
+
+    return {"status": "converting", "message": "Conversion started"}
+
+
+@app.get("/api/stream/movie/{stream_id}/mp4")
+async def serve_movie_mp4(stream_id: int, request: Request):
+    """Serve a cached MP4 movie with byte-range support for seeking."""
+    cache_key = f"movie_{stream_id}"
+    output_path = CACHE_DIR / f"{cache_key}.mp4"
+
+    if not output_path.exists():
+        raise HTTPException(404, "MP4 not yet converted. Call /api/movie/convert/{id} first.")
+
+    return serve_cached_mp4(output_path, request)
+
+
+@app.get("/api/stream/series/{series_id}/{episode_id}/mp4")
+async def serve_series_mp4(series_id: int, episode_id: int, request: Request):
+    """Serve a cached MP4 series episode with byte-range support."""
+    cache_key = f"series_{episode_id}"
+    output_path = CACHE_DIR / f"{cache_key}.mp4"
+
+    if not output_path.exists():
+        raise HTTPException(404, "MP4 not yet converted. Call /api/series/convert/{sid}/{eid} first.")
+
+    return serve_cached_mp4(output_path, request)
+
+
+def serve_cached_mp4(path: Path, request: Request):
+    """Serve a local MP4 file with proper Range/206 support for seeking."""
+    file_size = path.stat().st_size
+    range_header = request.headers.get("range")
+
+    if not range_header:
+        return FileResponse(path, media_type="video/mp4", headers={
+            "Access-Control-Allow-Origin": "*",
+            "Accept-Ranges": "bytes",
+        })
+
+    # Parse Range: bytes=START-END
+    start = 0
+    end = file_size - 1
+    if range_header.startswith("bytes="):
+        parts = range_header[6:].split("-")
+        start = int(parts[0]) if parts[0] else 0
+        if len(parts) > 1 and parts[1]:
+            end = min(int(parts[1]), file_size - 1)
+
+    chunk_size = end - start + 1
+
+    async def range_stream():
+        with open(path, "rb") as f:
+            f.seek(start)
+            remaining = chunk_size
+            while remaining > 0:
+                buf = f.read(min(65536, remaining))
+                if not buf:
+                    break
+                remaining -= len(buf)
+                yield buf
+
+    return StreamingResponse(
+        range_stream(),
+        status_code=206,
+        media_type="video/mp4",
+        headers={
+            "Content-Range": f"bytes {start}-{end}/{file_size}",
+            "Content-Length": str(chunk_size),
+            "Accept-Ranges": "bytes",
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
+
+
 # ── Serve Frontend (must be last) ───────────────────────────────────────────
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
