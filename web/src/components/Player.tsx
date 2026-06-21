@@ -21,54 +21,69 @@ export default function Player({ type }: PlayerProps) {
     setLoading(true);
     setError(null);
 
-    // Clean up previous player
     if (playerRef.current) {
       playerRef.current.destroy();
       playerRef.current = null;
     }
 
-    let streamPath = "";
-    if (type === "live") {
-      streamPath = `/api/stream/live/${id}`;
-    } else if (type === "movie") {
-      streamPath = `/api/stream/movie/${id}`;
-    } else if (type === "series") {
-      streamPath = `/api/stream/series/${seriesId}/${epId}`;
-    }
+    const streamPath =
+      type === "live"
+        ? `/api/stream/live/${id}`
+        : type === "movie"
+        ? `/api/stream/movie/${id}`
+        : `/api/stream/series/${seriesId}/${epId}`;
 
     const video = videoRef.current;
     if (!video || !streamPath) return;
 
-    if (mpegts.isSupported()) {
-      const player = mpegts.createPlayer({
-        type: "mpegts",
-        isLive: type === "live",
-        url: streamPath,
-      });
-      playerRef.current = player;
-
-      player.attachMediaElement(video);
-      player.load();
-
-      player.on(mpegts.Events.LOADING_COMPLETE, () => {
-        setLoading(false);
-        video.play().catch(() => {});
-      });
-
-      player.on(mpegts.Events.ERROR, () => {
-        setLoading(false);
-        setError("Stream unavailable. The channel may be offline.");
-      });
-
-      player.on(mpegts.Events.STATISTICS_INFO, () => {
-        if (loading) setLoading(false);
-      });
-    } else {
-      setError("Your browser does not support MSE (Media Source Extensions).");
+    if (!mpegts.isSupported()) {
+      setError("Your browser does not support MSE.");
       setLoading(false);
+      return;
     }
 
+    const player = mpegts.createPlayer({
+      type: "mpegts",
+      isLive: type === "live",
+      url: streamPath,
+    });
+    playerRef.current = player;
+
+    let errorCount = 0;
+    let timedOut = false;
+
+    player.attachMediaElement(video);
+    player.load();
+
+    player.on(mpegts.Events.LOADING_COMPLETE, () => {
+      setLoading(false);
+      video.play().catch(() => {});
+    });
+
+    player.on(mpegts.Events.ERROR, (_type: string, detail: any) => {
+      errorCount++;
+      // Ignore non-fatal errors — mpegts.js auto-recovers
+      if (detail?.response?.code === 0 || errorCount < 3) return;
+      if (!timedOut) {
+        setLoading(false);
+        setError("Stream unavailable. The channel may be offline from the provider.");
+      }
+    });
+
+    player.on(mpegts.Events.STATISTICS_INFO, () => {
+      if (loading) setLoading(false);
+    });
+
+    const timeout = setTimeout(() => {
+      if (loading) {
+        timedOut = true;
+        setLoading(false);
+        setError("Stream timed out. The channel may be offline.");
+      }
+    }, 12000);
+
     return () => {
+      clearTimeout(timeout);
       if (playerRef.current) {
         playerRef.current.destroy();
         playerRef.current = null;
@@ -83,6 +98,46 @@ export default function Player({ type }: PlayerProps) {
     } else {
       document.exitFullscreen().then(() => setFullscreen(false));
     }
+  };
+
+  const play = () => {
+    setError(null);
+    setLoading(true);
+    if (playerRef.current) {
+      playerRef.current.destroy();
+      playerRef.current = null;
+    }
+    const streamPath =
+      type === "live"
+        ? `/api/stream/live/${id}`
+        : type === "movie"
+        ? `/api/stream/movie/${id}`
+        : `/api/stream/series/${seriesId}/${epId}`;
+    const video = videoRef.current;
+    if (!video || !mpegts.isSupported()) return;
+
+    const player = mpegts.createPlayer({
+      type: "mpegts",
+      isLive: type === "live",
+      url: streamPath,
+    });
+    playerRef.current = player;
+    let errorCount = 0;
+    player.attachMediaElement(video);
+    player.load();
+    player.on(mpegts.Events.LOADING_COMPLETE, () => {
+      setLoading(false);
+      video.play().catch(() => {});
+    });
+    player.on(mpegts.Events.ERROR, () => {
+      errorCount++;
+      if (errorCount < 3) return;
+      setLoading(false);
+      setError("Stream unavailable.");
+    });
+    player.on(mpegts.Events.STATISTICS_INFO, () => {
+      if (loading) setLoading(false);
+    });
   };
 
   return (
@@ -106,38 +161,7 @@ export default function Player({ type }: PlayerProps) {
             <AlertCircle className="h-10 w-10 text-destructive mx-auto" />
             <p className="text-sm text-muted-foreground">{error}</p>
             <button
-              onClick={() => {
-                setError(null);
-                setLoading(true);
-                if (playerRef.current) {
-                  playerRef.current.destroy();
-                  playerRef.current = null;
-                }
-                const newPath = type === "live"
-                  ? `/api/stream/live/${id}`
-                  : type === "movie"
-                  ? `/api/stream/movie/${id}`
-                  : `/api/stream/series/${seriesId}/${epId}`;
-                const video = videoRef.current;
-                if (video && mpegts.isSupported()) {
-                  const player = mpegts.createPlayer({
-                    type: "mpegts",
-                    isLive: type === "live",
-                    url: newPath,
-                  });
-                  playerRef.current = player;
-                  player.attachMediaElement(video);
-                  player.load();
-                  player.on(mpegts.Events.LOADING_COMPLETE, () => {
-                    setLoading(false);
-                    video.play().catch(() => {});
-                  });
-                  player.on(mpegts.Events.ERROR, () => {
-                    setLoading(false);
-                    setError("Stream unavailable.");
-                  });
-                }
-              }}
+              onClick={play}
               className="px-3 py-1.5 rounded-md bg-primary/10 text-primary text-xs hover:bg-primary/20"
             >
               Retry
