@@ -570,7 +570,7 @@ async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
         "-user_agent", headers["User-Agent"],
     ]
     if start_time and start_time > 0:
-        cmd += ["-ss", str(start_time)]
+        cmd += ["-ss", str(start_time), "-copyts"]
     cmd += [
         "-i", cdn_url,
         "-c", "copy",

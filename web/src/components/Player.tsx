@@ -420,6 +420,7 @@ export default function Player({ type }: PlayerProps) {
     if (needsRemux && remuxPath) {
       // mpegts.js VOD: restart stream at new position
       const newPos = Math.max(0, currentTime + delta);
+      setCurrentTime(newPos); // immediate feedback before stream restarts
       retryKey.current++;
       playMPEGTS(`${remuxPath}?start=${newPos}&_=${retryKey.current}`, false, false, 30000, watchKey);
     } else {
@@ -544,6 +545,7 @@ export default function Player({ type }: PlayerProps) {
     const needsRemux = remuxPath && transcodeCache.get(streamId) === "remux";
     if (needsRemux && remuxPath) {
       // mpegts.js VOD: restart stream at clicked position
+      setCurrentTime(targetTime); // immediate feedback before stream restarts
       retryKey.current++;
       playMPEGTS(`${remuxPath}?start=${targetTime}&_=${retryKey.current}`, false, false, 30000, watchKey);
     } else {
