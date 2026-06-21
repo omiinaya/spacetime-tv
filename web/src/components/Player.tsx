@@ -7,6 +7,9 @@ interface PlayerProps {
   type: "live" | "movie" | "series";
 }
 
+// Remember which streams need transcoding across retries
+const transcodeCache = new Map<string, boolean>();
+
 export default function Player({ type }: PlayerProps) {
   const { id, seriesId, epId } = useParams();
   const navigate = useNavigate();
@@ -16,11 +19,12 @@ export default function Player({ type }: PlayerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [transcoding, setTranscoding] = useState(false);
 
-  // Refs for timeout safety — closures capture state at call time,
-  // so timeouts must check refs, not state variables.
   const loadingRef = useRef(true);
   const retryKey = useRef(0);
+  const transcodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triedTranscodeRef = useRef(false);
 
   // ── Build stream URL ──────────────────────────────────────────
   const streamPath =
@@ -29,6 +33,9 @@ export default function Player({ type }: PlayerProps) {
       : type === "movie"
       ? `/api/stream/movie/${id}`
       : `/api/stream/series/${seriesId}/${epId}`;
+
+  const transcodePath =
+    type === "live" ? `/api/stream/live/${id}/transcode` : null;
 
   const isLive = type === "live";
 
@@ -42,55 +49,101 @@ export default function Player({ type }: PlayerProps) {
     setLoading(true);
   }, []);
 
-  // ── Play via mpegts.js (live MPEG-TS only) ────────────────────
-  const playLive = useCallback(() => {
-    const video = videoRef.current;
-    if (!video || !streamPath) return () => {};
+  // Clear transcode detection timer
+  const clearTranscodeTimer = useCallback(() => {
+    if (transcodeTimerRef.current) {
+      clearTimeout(transcodeTimerRef.current);
+      transcodeTimerRef.current = null;
+    }
+  }, []);
 
-    video.removeAttribute("src");
+  // ── Play via mpegts.js (live MPEG-TS) ─────────────────────────
+  const playLive = useCallback(
+    (useTranscode: boolean) => {
+      const video = videoRef.current;
+      if (!video || !streamPath) return () => {};
 
-    const player = mpegts.createPlayer({
-      type: "mpegts",
-      isLive: true,
-      url: streamPath,
-    });
-    playerRef.current = player;
+      video.removeAttribute("src");
 
-    let errorCount = 0;
-    let timedOut = false;
+      const url = useTranscode && transcodePath ? transcodePath : streamPath;
+      if (useTranscode) setTranscoding(true);
 
-    player.attachMediaElement(video);
-    player.load();
+      const player = mpegts.createPlayer({
+        type: "mpegts",
+        isLive: true,
+        url,
+      });
+      playerRef.current = player;
 
-    player.on(mpegts.Events.LOADING_COMPLETE, () => {
-      setDone();
-      video.play().catch(() => {});
-    });
+      let errorCount = 0;
+      let timedOut = false;
+      let videoDetected = false;
 
-    player.on(mpegts.Events.ERROR, (_type: string, detail: any) => {
-      errorCount++;
-      if (detail?.response?.code === 0 || errorCount < 3) return;
-      if (!timedOut) {
-        setDone();
-        setError("Stream unavailable. The channel may be offline from the provider.");
+      player.attachMediaElement(video);
+      player.load();
+
+      // HEVC detection: check if video frames are actually rendering
+      if (!useTranscode && isLive) {
+        transcodeTimerRef.current = setTimeout(() => {
+          if (!videoDetected && videoRef.current && videoRef.current.videoWidth === 0) {
+            // No video frames — likely HEVC or unsupported codec
+            // Switch to transcode
+            transcodeCache.set(id || "", true);
+            triedTranscodeRef.current = true;
+            retryKey.current++;
+            setBusy();
+            setError(null);
+            if (playerRef.current) {
+              playerRef.current.destroy();
+              playerRef.current = null;
+            }
+            playLive(true);
+          }
+        }, 4000);
       }
-    });
 
-    player.on(mpegts.Events.STATISTICS_INFO, () => {
-      if (loadingRef.current) setDone();
-    });
-
-    const timeout = setTimeout(() => {
-      // Check REF, not state — closure would always see stale true
-      if (loadingRef.current) {
-        timedOut = true;
+      player.on(mpegts.Events.LOADING_COMPLETE, () => {
         setDone();
-        setError("Stream timed out. The channel may be offline.");
-      }
-    }, 12000);
+        video.play().catch(() => {});
+      });
 
-    return () => clearTimeout(timeout);
-  }, [streamPath, setDone]);
+      player.on(mpegts.Events.ERROR, (_type: string, detail: any) => {
+        errorCount++;
+        if (detail?.response?.code === 0 || errorCount < 3) return;
+        if (!timedOut) {
+          setDone();
+          if (useTranscode) {
+            setError("Stream unavailable even with transcoding. The channel may be offline.");
+          } else {
+            setError("Stream unavailable. The channel may be offline from the provider.");
+          }
+        }
+      });
+
+      player.on(mpegts.Events.STATISTICS_INFO, () => {
+        if (loadingRef.current) setDone();
+        // Check if video is actually rendering
+        if (videoRef.current && videoRef.current.videoWidth > 0) {
+          videoDetected = true;
+          clearTranscodeTimer();
+        }
+      });
+
+      const timeout = setTimeout(() => {
+        if (loadingRef.current) {
+          timedOut = true;
+          setDone();
+          setError("Stream timed out. The channel may be offline.");
+        }
+      }, 12000);
+
+      return () => {
+        clearTimeout(timeout);
+        clearTranscodeTimer();
+      };
+    },
+    [streamPath, transcodePath, isLive, id, setDone, setBusy, clearTranscodeTimer]
+  );
 
   // ── Play via native <video> (VOD: movies / series) ────────────
   const playVod = useCallback(() => {
@@ -156,34 +209,47 @@ export default function Player({ type }: PlayerProps) {
   useEffect(() => {
     setBusy();
     setError(null);
+    setTranscoding(false);
+    clearTranscodeTimer();
 
     if (playerRef.current) {
       playerRef.current.destroy();
       playerRef.current = null;
     }
 
-    const cleanupFn = isLive ? playLive() : playVod();
+    // Check if this stream previously needed transcoding
+    const needsTranscode = isLive && transcodeCache.has(id || "");
+    if (needsTranscode) setTranscoding(true);
+
+    const cleanupFn = isLive ? playLive(needsTranscode) : playVod();
 
     return () => {
       cleanupFn?.();
+      clearTranscodeTimer();
       if (playerRef.current) {
         playerRef.current.destroy();
         playerRef.current = null;
       }
     };
-  }, [streamPath, isLive, setBusy, playLive, playVod]);
+  }, [streamPath, isLive, setBusy, playLive, playVod, clearTranscodeTimer, id]);
 
   // ── Retry ─────────────────────────────────────────────────────
   const retry = () => {
     retryKey.current++;
     setError(null);
     setBusy();
+    setTranscoding(false);
+    clearTranscodeTimer();
     if (playerRef.current) {
       playerRef.current.destroy();
       playerRef.current = null;
     }
-    const cleanupFn = isLive ? playLive() : playVod();
-    // Cleanup stored for next retry
+
+    const needsTranscode = isLive && transcodeCache.has(id || "");
+    if (needsTranscode) setTranscoding(true);
+
+    const cleanupFn = isLive ? playLive(needsTranscode) : playVod();
+    // Keep cleanup stored via the effect
   };
 
   // ── Fullscreen toggle ─────────────────────────────────────────
@@ -210,6 +276,11 @@ export default function Player({ type }: PlayerProps) {
         <span className="text-sm font-medium text-muted-foreground">
           {type === "live" ? "Live TV" : type === "movie" ? "Movie" : "Series"}
         </span>
+        {transcoding && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
+            Transcoding H.265→H.264
+          </span>
+        )}
       </div>
 
       {error ? (
@@ -229,7 +300,14 @@ export default function Player({ type }: PlayerProps) {
         <div ref={containerRef} className="video-container relative group">
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                {transcoding && (
+                  <span className="text-[10px] text-yellow-500">
+                    Converting video codec...
+                  </span>
+                )}
+              </div>
             </div>
           )}
           <video

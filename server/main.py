@@ -196,6 +196,77 @@ async def stream_bytes(url: str):
                 yield chunk
 
 
+async def stream_bytes_transcode(url: str):
+    """Generator: resolve CDN redirect, then transcode HEVC→H.264 via ffmpeg.
+    ffmpeg reads directly from the CDN URL (no pipe latency)."""
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    }
+
+    # Resolve the redirect chain to get the final CDN URL for ffmpeg
+    cdn_url = url
+    try:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=headers) as c:
+            async with c.stream("GET", url) as resp:
+                # resp.url is the final URL after following all redirects
+                cdn_url = str(resp.url)
+                # Read and discard a small amount to trigger the connection
+                # then close — we just need the resolved URL
+    except Exception as e:
+        log.warning(f"URL resolution failed, using original: {e}")
+
+    log.info(f"Transcoding {cdn_url[:100]}...")
+
+    cmd = [
+        "ffmpeg",
+        "-loglevel", "warning",
+        "-probesize", "2M",
+        "-analyzeduration", "2M",
+        "-user_agent", headers["User-Agent"],
+        "-i", cdn_url,
+        "-c:v", "libx264",
+        "-preset", "ultrafast",
+        "-tune", "zerolatency",
+        "-crf", "28",
+        "-c:a", "copy",
+        "-f", "mpegts",
+        "pipe:1",
+    ]
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
+    # Background task to log ffmpeg stderr
+    async def log_stderr():
+        while proc.stderr:
+            line = await proc.stderr.readline()
+            if not line:
+                break
+            log.warning(f"ffmpeg: {line.decode().rstrip()}")
+
+    stderr_task = asyncio.create_task(log_stderr())
+
+    try:
+        while proc.stdout:
+            chunk = await proc.stdout.read(65536)
+            if not chunk:
+                break
+            yield chunk
+    except GeneratorExit:
+        pass
+    finally:
+        stderr_task.cancel()
+        try:
+            await stderr_task
+        except asyncio.CancelledError:
+            pass
+        if proc.returncode is None:
+            proc.kill()
+            await proc.wait()
+
+
 async def stream_proxy(url: str, content_type: str):
     """Stream a remote URL through our backend, bypassing CORS."""
     try:
@@ -218,6 +289,24 @@ async def stream_live(stream_id: int):
     return await stream_proxy(
         build_stream_url(stream_id, "live"), "video/mp2t"
     )
+
+
+@app.get("/api/stream/live/{stream_id}/transcode")
+async def stream_live_transcode(stream_id: int):
+    """Proxy live TV stream with HEVC→H.264 transcoding via ffmpeg."""
+    url = build_stream_url(stream_id, "live")
+    try:
+        return StreamingResponse(
+            stream_bytes_transcode(url),
+            media_type="video/mp2t",
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "no-cache",
+            },
+        )
+    except Exception as e:
+        log.error(f"Transcode setup error ({url}): {e}")
+        return Response(status_code=502, content="Transcode failed")
 
 
 @app.get("/api/stream/movie/{stream_id}")
