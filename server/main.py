@@ -334,7 +334,18 @@ async def iptv_raw(path: str):
 
 # ── Serve Frontend (must be last) ───────────────────────────────────────────
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
+app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
+
+# SPA catch-all: serve index.html for any unmatched route
+from fastapi.responses import FileResponse
+
+@app.get("/{full_path:path}")
+async def spa_fallback(full_path: str):
+    """Serve index.html for client-side routing."""
+    index = STATIC_DIR / "index.html"
+    if index.exists():
+        return FileResponse(index)
+    return {"detail": "Not Found"}
 
 
 if __name__ == "__main__":
