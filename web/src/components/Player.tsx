@@ -16,35 +16,29 @@ export default function Player({ type }: PlayerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const retryKey = useRef(0);
 
-  useEffect(() => {
-    setLoading(true);
-    setError(null);
+  // ── Build stream URL ──────────────────────────────────────────
+  const streamPath =
+    type === "live"
+      ? `/api/stream/live/${id}`
+      : type === "movie"
+      ? `/api/stream/movie/${id}`
+      : `/api/stream/series/${seriesId}/${epId}`;
 
-    if (playerRef.current) {
-      playerRef.current.destroy();
-      playerRef.current = null;
-    }
+  const isLive = type === "live";
 
-    const streamPath =
-      type === "live"
-        ? `/api/stream/live/${id}`
-        : type === "movie"
-        ? `/api/stream/movie/${id}`
-        : `/api/stream/series/${seriesId}/${epId}`;
-
+  // ── Play via mpegts.js (live MPEG-TS only) ────────────────────
+  const playLive = () => {
     const video = videoRef.current;
     if (!video || !streamPath) return;
 
-    if (!mpegts.isSupported()) {
-      setError("Your browser does not support MSE.");
-      setLoading(false);
-      return;
-    }
+    // Reset source in case we were in native mode
+    video.removeAttribute("src");
 
     const player = mpegts.createPlayer({
       type: "mpegts",
-      isLive: type === "live",
+      isLive: true,
       url: streamPath,
     });
     playerRef.current = player;
@@ -62,7 +56,6 @@ export default function Player({ type }: PlayerProps) {
 
     player.on(mpegts.Events.ERROR, (_type: string, detail: any) => {
       errorCount++;
-      // Ignore non-fatal errors — mpegts.js auto-recovers
       if (detail?.response?.code === 0 || errorCount < 3) return;
       if (!timedOut) {
         setLoading(false);
@@ -82,15 +75,119 @@ export default function Player({ type }: PlayerProps) {
       }
     }, 12000);
 
+    return () => clearTimeout(timeout);
+  };
+
+  // ── Play via native <video> (VOD: movies / series) ────────────
+  const playVod = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    // Destroy any mpegts player
+    if (playerRef.current) {
+      playerRef.current.destroy();
+      playerRef.current = null;
+    }
+
+    // Add a cache-busting param so the browser doesn't use a stale cached response
+    const url = `${streamPath}?_=${retryKey.current}`;
+
+    const onLoaded = () => {
+      setLoading(false);
+      video.play().catch(() => {});
+    };
+
+    const onError = () => {
+      const mediaError = video.error;
+      let msg = "Playback failed.";
+      if (mediaError) {
+        switch (mediaError.code) {
+          case MediaError.MEDIA_ERR_ABORTED:
+            msg = "Playback aborted.";
+            break;
+          case MediaError.MEDIA_ERR_NETWORK:
+            msg = "Network error. The stream may be unavailable.";
+            break;
+          case MediaError.MEDIA_ERR_DECODE:
+            msg = "Decode error. The video format may not be supported.";
+            break;
+          case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+            msg = "Video format not supported by your browser.";
+            break;
+        }
+      }
+      setLoading(false);
+      setError(msg);
+    };
+
+    video.addEventListener("loadeddata", onLoaded, { once: true });
+    video.addEventListener("error", onError, { once: true });
+
+    video.src = url;
+    video.load();
+
+    const timeout = setTimeout(() => {
+      if (loading) {
+        setLoading(false);
+        setError("Stream timed out. The video may be unavailable.");
+      }
+    }, 20000);
+
     return () => {
       clearTimeout(timeout);
+      video.removeEventListener("loadeddata", onLoaded);
+      video.removeEventListener("error", onError);
+    };
+  };
+
+  // ── Main effect ───────────────────────────────────────────────
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+
+    if (playerRef.current) {
+      playerRef.current.destroy();
+      playerRef.current = null;
+    }
+
+    let cleanup: (() => void) | undefined;
+
+    if (isLive) {
+      cleanup = playLive();
+    } else {
+      cleanup = playVod();
+    }
+
+    return () => {
+      cleanup?.();
       if (playerRef.current) {
         playerRef.current.destroy();
         playerRef.current = null;
       }
     };
-  }, [type, id, seriesId, epId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streamPath, isLive, retryKey.current]);
 
+  // ── Retry ─────────────────────────────────────────────────────
+  const retry = () => {
+    retryKey.current++;
+    setError(null);
+    setLoading(true);
+    if (playerRef.current) {
+      playerRef.current.destroy();
+      playerRef.current = null;
+    }
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isLive) {
+      playLive();
+    } else {
+      playVod();
+    }
+  };
+
+  // ── Fullscreen toggle ─────────────────────────────────────────
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
     if (!document.fullscreenElement) {
@@ -100,46 +197,7 @@ export default function Player({ type }: PlayerProps) {
     }
   };
 
-  const play = () => {
-    setError(null);
-    setLoading(true);
-    if (playerRef.current) {
-      playerRef.current.destroy();
-      playerRef.current = null;
-    }
-    const streamPath =
-      type === "live"
-        ? `/api/stream/live/${id}`
-        : type === "movie"
-        ? `/api/stream/movie/${id}`
-        : `/api/stream/series/${seriesId}/${epId}`;
-    const video = videoRef.current;
-    if (!video || !mpegts.isSupported()) return;
-
-    const player = mpegts.createPlayer({
-      type: "mpegts",
-      isLive: type === "live",
-      url: streamPath,
-    });
-    playerRef.current = player;
-    let errorCount = 0;
-    player.attachMediaElement(video);
-    player.load();
-    player.on(mpegts.Events.LOADING_COMPLETE, () => {
-      setLoading(false);
-      video.play().catch(() => {});
-    });
-    player.on(mpegts.Events.ERROR, () => {
-      errorCount++;
-      if (errorCount < 3) return;
-      setLoading(false);
-      setError("Stream unavailable.");
-    });
-    player.on(mpegts.Events.STATISTICS_INFO, () => {
-      if (loading) setLoading(false);
-    });
-  };
-
+  // ── Render ────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -161,7 +219,7 @@ export default function Player({ type }: PlayerProps) {
             <AlertCircle className="h-10 w-10 text-destructive mx-auto" />
             <p className="text-sm text-muted-foreground">{error}</p>
             <button
-              onClick={play}
+              onClick={retry}
               className="px-3 py-1.5 rounded-md bg-primary/10 text-primary text-xs hover:bg-primary/20"
             >
               Retry

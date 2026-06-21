@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/Player.tsx","./src/components/Skeleton.tsx","./src/hooks/useInfiniteScroll.ts","./src/lib/api.ts","./src/lib/utils.ts","./src/pages/Guide.tsx","./src/pages/LiveTV.tsx","./src/pages/Movies.tsx","./src/pages/Search.tsx","./src/pages/Series.tsx"],"version":"5.9.3"}

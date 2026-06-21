@@ -185,7 +185,10 @@ def build_stream_url(stream_id: int, stream_type: str) -> str:
 
 async def stream_bytes(url: str):
     """Generator that yields bytes from a streaming URL."""
-    async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as stream_client:
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    }
+    async with httpx.AsyncClient(timeout=60.0, follow_redirects=True, headers=headers) as stream_client:
         async with stream_client.stream("GET", url) as resp:
             resp.raise_for_status()
             ct = resp.headers.get("content-type", "application/octet-stream")
