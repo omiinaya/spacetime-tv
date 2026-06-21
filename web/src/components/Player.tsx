@@ -166,30 +166,34 @@ export default function Player({ type }: PlayerProps) {
     playerRef.current = player;
     let errorCount = 0;
     let timedOut = false;
-    let vodDuration = 0;
-    const vodStartTime = Date.now();
-    const vodStartOffset = (() => {
-      try { const u = new URL(url, window.location.origin); return parseFloat(u.searchParams.get("start") || "0"); }
-      catch { return 0; }
-    })();
 
-    // Time tracker for VOD progress bar + position saving
-    let timeInterval: ReturnType<typeof setInterval> | null = null;
-    let saveTimer: ReturnType<typeof setTimeout> | null = null;
+    // ── VOD time tracking via native video events (syncs with actual playback) ──
+    let saveInterval: ReturnType<typeof setInterval> | null = null;
+    const onTimeUpdate = () => {
+      setCurrentTime(video!.currentTime);
+      // Update buffered
+      if (video!.buffered.length > 0) {
+        setBuffered(video!.buffered.end(video!.buffered.length - 1));
+      }
+    };
+    const onDurationChange = () => {
+      const d = video!.duration;
+      if (d && isFinite(d)) setDuration(d);
+    };
+    const onEnded = () => { setPhase("paused"); };
+
     if (!liveFlag) {
-      timeInterval = setInterval(() => {
-        const pos = vodStartOffset + (Date.now() - vodStartTime) / 1000;
-        setCurrentTime(pos);
-      }, 500);
-      // Save watch position every 5 seconds
-      const scheduleSave = () => {
-        saveTimer = setTimeout(() => {
-          const pos = vodStartOffset + (Date.now() - vodStartTime) / 1000;
-          if (saveKey && pos > 5) saveWatchPos(saveKey, pos);
-          scheduleSave();
+      video.addEventListener("timeupdate", onTimeUpdate);
+      video.addEventListener("durationchange", onDurationChange);
+      video.addEventListener("ended", onEnded);
+      // Save watch position every 5 seconds (only when playing)
+      if (saveKey) {
+        saveInterval = setInterval(() => {
+          if (!video!.paused && video!.currentTime > 5) {
+            saveWatchPos(saveKey, video!.currentTime);
+          }
         }, 5000);
-      };
-      scheduleSave();
+      }
     }
 
     player.attachMediaElement(video);
@@ -198,13 +202,6 @@ export default function Player({ type }: PlayerProps) {
     player.on(mpegts.Events.LOADING_COMPLETE, () => {
       setPhase("playing");
       video.play().catch(() => {});
-    });
-
-    player.on(mpegts.Events.MEDIA_INFO, (info: any) => {
-      if (info.duration) {
-        vodDuration = info.duration;
-        setDuration(info.duration);
-      }
     });
 
     player.on(mpegts.Events.ERROR, (_t: string, detail: any) => {
@@ -234,8 +231,10 @@ export default function Player({ type }: PlayerProps) {
 
     mpegtsCleanup.current = () => {
       clearTimeout(timeout);
-      if (timeInterval) clearInterval(timeInterval);
-      if (saveTimer) clearTimeout(saveTimer);
+      if (saveInterval) clearInterval(saveInterval);
+      video.removeEventListener("timeupdate", onTimeUpdate);
+      video.removeEventListener("durationchange", onDurationChange);
+      video.removeEventListener("ended", onEnded);
     };
   }, []);
 
