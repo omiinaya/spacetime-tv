@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Tv, Loader2, AlertCircle, RotateCcw } from "lucide-react";
+import { Tv, Loader2, AlertCircle, RotateCcw, Search, X } from "lucide-react";
 import { api, Category, LiveStream } from "@/lib/api";
 import { Skeleton, ChannelCardSkeleton, TabSkeleton } from "@/components/Skeleton";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
@@ -17,6 +17,9 @@ export default function LiveTV() {
   const [loading, setLoading] = useState(true);
   const [streamsLoading, setStreamsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const q = searchQuery.toLowerCase().trim();
 
   const { visibleItems, sentinelRef, hasMore } = useInfiniteScroll(streams, BATCH);
   const { settings } = useSettings();
@@ -26,6 +29,12 @@ export default function LiveTV() {
     () => filterCategories(categories, settings, true),
     [categories, settings]
   );
+
+  // Filter visible items by search query
+  const filteredItems = useMemo(() => {
+    if (!q) return visibleItems;
+    return visibleItems.filter((s) => s.name.toLowerCase().includes(q));
+  }, [visibleItems, q]);
 
   useEffect(() => {
     api.live
@@ -98,6 +107,28 @@ export default function LiveTV() {
         </div>
       )}
 
+      {/* Search bar */}
+      {!loading && (
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Filter channels..."
+            className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Category tabs */}
       {loading ? (
         <div className="flex gap-1.5 pb-2">
@@ -110,7 +141,7 @@ export default function LiveTV() {
           {filteredCategories.map((cat) => (
             <button
               key={cat.category_id}
-              onClick={() => setActiveCat(cat.category_id)}
+              onClick={() => { setActiveCat(cat.category_id); setSearchQuery(""); }}
               className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 activeCat === cat.category_id
                   ? "bg-primary/15 text-primary border border-primary/20"
@@ -132,41 +163,58 @@ export default function LiveTV() {
         </div>
       ) : (
         <>
-          <div className="channel-grid">
-            {visibleItems.map((s) => (
+          {q && filteredItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Search className="h-10 w-10 text-muted-foreground/20 mb-3" />
+              <p className="text-sm text-muted-foreground">
+                No channels matching "{searchQuery}"
+              </p>
               <button
-                key={s.stream_id}
-                onClick={() => navigate(`/watch/live/${s.stream_id}`)}
-                className="channel-card bg-card rounded-lg border border-border p-3 text-left hover:border-primary/30"
+                onClick={() => setSearchQuery("")}
+                className="mt-2 text-xs text-primary hover:underline"
               >
-                {s.stream_icon ? (
-                  <img
-                    src={`/api/iptv/${s.stream_icon.replace("http://", "").replace("https://", "")}`}
-                    alt=""
-                    className="w-full h-12 object-contain mb-2 rounded opacity-80"
-                    loading="lazy"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-12 bg-muted rounded mb-2 flex items-center justify-center">
-                    <Tv className="h-4 w-4 text-muted-foreground/40" />
-                  </div>
-                )}
-                <p className="text-xs font-medium leading-tight line-clamp-2">
-                  {s.name}
-                </p>
+                Clear search
               </button>
-            ))}
-          </div>
-
-          {/* Infinite scroll sentinel */}
-          <div ref={sentinelRef} className="h-1" />
-          {hasMore && (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
+          ) : (
+            <>
+              <div className="channel-grid">
+                {filteredItems.map((s) => (
+                  <button
+                    key={s.stream_id}
+                    onClick={() => navigate(`/watch/live/${s.stream_id}`)}
+                    className="channel-card bg-card rounded-lg border border-border p-3 text-left hover:border-primary/30"
+                  >
+                    {s.stream_icon ? (
+                      <img
+                        src={`/api/iptv/${s.stream_icon.replace("http://", "").replace("https://", "")}`}
+                        alt=""
+                        className="w-full h-12 object-contain mb-2 rounded opacity-80"
+                        loading="lazy"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-12 bg-muted rounded mb-2 flex items-center justify-center">
+                        <Tv className="h-4 w-4 text-muted-foreground/40" />
+                      </div>
+                    )}
+                    <p className="text-xs font-medium leading-tight line-clamp-2">
+                      {s.name}
+                    </p>
+                  </button>
+                ))}
+              </div>
+
+              {/* Infinite scroll sentinel (only when not searching) */}
+              {!q && <div ref={sentinelRef} className="h-1" />}
+              {!q && hasMore && (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              )}
+            </>
           )}
         </>
       )}
