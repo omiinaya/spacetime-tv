@@ -147,6 +147,10 @@ async def cached_fetch(key: str, action: str, **params) -> list | dict:
     if key in _cache and (now - _cache[key][0]) < CACHE_TTL:
         return _cache[key][1]
     data = await fetch_iptv(action, **params)
+    # Don't cache empty lists — provider may have had a transient error
+    if isinstance(data, list) and len(data) == 0:
+        log.warning(f"cached_fetch: {key} returned empty list, not caching")
+        return data
     _cache[key] = (now, data)
     return data
 
@@ -467,6 +471,103 @@ async def stream_live_quality(stream_id: int, height: int):
         )
     except Exception as e:
         log.error(f"Quality transcode error ({url}): {e}")
+        return Response(status_code=502, content="Transcode failed")
+
+
+# ── VOD Transcode (HEVC→H.264 for movies/series) ───────────────────────────
+
+async def stream_vod_transcode(url: str):
+    """Transcode VOD (MKV with HEVC) → H.264+AAC in MPEG-TS container.
+    Used when the browser can't decode H.265 natively."""
+    headers = {"User-Agent": UA_STR}
+
+    # Resolve the redirect chain to get the final CDN URL for ffmpeg
+    cdn_url = url
+    try:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=headers) as c:
+            async with c.stream("GET", url) as resp:
+                cdn_url = str(resp.url)
+    except Exception as e:
+        log.warning(f"VOD URL resolution failed, using original: {e}")
+
+    log.info(f"VOD transcode {cdn_url[:100]}...")
+    cmd = [
+        "ffmpeg",
+        "-loglevel", "warning",
+        "-probesize", "2M",
+        "-analyzeduration", "2M",
+        "-user_agent", headers["User-Agent"],
+        "-i", cdn_url,
+        "-c:v", "libx264",
+        "-preset", "ultrafast",
+        "-tune", "zerolatency",
+        "-crf", "26",
+        "-c:a", "aac",
+        "-b:a", "128k",
+        "-f", "mpegts",
+        "pipe:1",
+    ]
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    # Background stderr logging
+    async def log_stderr():
+        while proc.stderr:
+            line = await proc.stderr.readline()
+            if not line: break
+            log.warning(f"vod-ffmpeg: {line.decode().rstrip()}")
+
+    stderr_task = asyncio.create_task(log_stderr())
+    try:
+        while proc.stdout:
+            chunk = await proc.stdout.read(65536)
+            if not chunk: break
+            yield chunk
+    except GeneratorExit:
+        pass
+    finally:
+        stderr_task.cancel()
+        try: await stderr_task
+        except asyncio.CancelledError: pass
+        if proc.returncode is None:
+            proc.kill(); await proc.wait()
+
+
+@app.get("/api/stream/movie/{stream_id}/transcode")
+async def stream_movie_transcode(stream_id: int):
+    """Transcode a HEVC movie to H.264 on-the-fly."""
+    url = build_stream_url(stream_id, "movie")
+    try:
+        return StreamingResponse(
+            stream_vod_transcode(url),
+            media_type="video/mp2t",
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "no-cache",
+            },
+        )
+    except Exception as e:
+        log.error(f"VOD transcode error (movie {stream_id}): {e}")
+        return Response(status_code=502, content="Transcode failed")
+
+
+@app.get("/api/stream/series/{series_id}/{episode_id}/transcode")
+async def stream_series_transcode(series_id: int, episode_id: int):
+    """Transcode a HEVC series episode to H.264 on-the-fly."""
+    url = build_stream_url(episode_id, "series")
+    try:
+        return StreamingResponse(
+            stream_vod_transcode(url),
+            media_type="video/mp2t",
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "no-cache",
+            },
+        )
+    except Exception as e:
+        log.error(f"VOD transcode error (series {episode_id}): {e}")
         return Response(status_code=502, content="Transcode failed")
 
 

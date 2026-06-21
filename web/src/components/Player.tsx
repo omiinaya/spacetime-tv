@@ -110,6 +110,13 @@ export default function Player({ type }: PlayerProps) {
     return `/api/stream/live/${id}/transcode`;
   }, [isLive, id, qualityIdx]);
 
+  // VOD transcode URL for HEVC movies/series (mpegts.js plays the transcoded MPEG-TS)
+  const vodTranscodePath = useMemo(() => {
+    if (isLive) return null;
+    if (type === "movie") return `/api/stream/movie/${id}/transcode`;
+    return `/api/stream/series/${seriesId}/${epId}/transcode`;
+  }, [isLive, type, id, seriesId, epId]);
+
   const probeUrl = useMemo(() => {
     if (type === "live") return `/api/live/probe/${id}`;
     if (type === "movie") return `/api/movie/probe/${id}`;
@@ -130,23 +137,17 @@ export default function Player({ type }: PlayerProps) {
     setControlsVisible(false);
   }, []);
 
-  // ── Playback: Live TV (mpegts.js) ───────────────────────────
-  const playLive = useCallback((useTranscode: boolean, qualityHeight: number | null) => {
+  // ── Playback: MPEG-TS via mpegts.js (live TV + VOD transcode) ──
+  const playMPEGTS = useCallback((url: string, liveFlag: boolean, isTranscode: boolean, timeoutMs = 15000) => {
     const video = videoRef.current;
     if (!video) return () => {};
 
     video.removeAttribute("src");
     if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
 
-    let url: string;
-    if (useTranscode && transcodePath) {
-      url = transcodePath;
-      setTranscoding(true);
-    } else {
-      url = `${streamPath}?_=${retryKey.current}`;
-    }
+    if (isTranscode) setTranscoding(true);
 
-    const player = mpegts.createPlayer({ type: "mpegts", isLive: true, url });
+    const player = mpegts.createPlayer({ type: "mpegts", isLive: liveFlag, url });
     playerRef.current = player;
     let errorCount = 0;
     let timedOut = false;
@@ -164,14 +165,14 @@ export default function Player({ type }: PlayerProps) {
       if (detail?.response?.code === 0 || errorCount < 3) return;
       if (!timedOut) {
         setPhase("error");
-        setErrorMsg(useTranscode
+        setErrorMsg(isTranscode
           ? "Stream unavailable even with transcoding. The channel may be offline."
           : "Stream unavailable. The channel may be offline.");
       }
     });
 
     player.on(mpegts.Events.STATISTICS_INFO, () => {
-      if (phase === "loading") setPhase("playing");
+      if (phase === "loading" || phase === "probing") setPhase("playing");
     });
 
     const timeout = setTimeout(() => {
@@ -180,10 +181,10 @@ export default function Player({ type }: PlayerProps) {
         setPhase("error");
         setErrorMsg("Stream timed out. The channel may be offline.");
       }
-    }, 15000);
+    }, timeoutMs);
 
     return () => { clearTimeout(timeout); };
-  }, [streamPath, transcodePath, phase]);
+  }, [phase]);
 
   // ── Playback: VOD (native video) ────────────────────────────
   const playVod = useCallback((resumeFrom: number | null = null) => {
@@ -270,18 +271,34 @@ export default function Player({ type }: PlayerProps) {
       setPhase("probing"); setErrorMsg(null); setTranscoding(false);
       if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
 
-      // Check resume for VOD
-      if (!isLive && watchKey) {
+      // Probe first to detect HEVC
+      let needsTranscode = false;
+      if (transcodeCache.has(streamId)) {
+        needsTranscode = transcodeCache.get(streamId) || false;
+      } else {
+        const result = await probeStream(probeUrl);
+        if (result.codec === "hevc") {
+          needsTranscode = true;
+          transcodeCache.set(streamId, true);
+        } else {
+          transcodeCache.set(streamId, false);
+        }
+      }
+      if (cancelled) return;
+
+      // For VOD HEVC: skip resume (seeking doesn't work with transcode)
+      // For VOD non-HEVC: check resume position
+      if (!isLive && !needsTranscode && watchKey) {
         const pos = getWatchPos(watchKey);
         if (pos && pos > 5) {
           setResumePos(pos);
           setShowResumePrompt(true);
-          setPhase("playing"); // don't show loading behind the prompt
-          return; // wait for user choice
+          setPhase("playing");
+          return;
         }
       }
 
-      await startPlayback(false);
+      await startPlayback(true, needsTranscode); // skipProbe since we already probed
     };
 
     start();
@@ -289,11 +306,11 @@ export default function Player({ type }: PlayerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamPath]);
 
-  const startPlayback = useCallback(async (skipProbe: boolean) => {
-    let needsTranscode = false;
+  const startPlayback = useCallback(async (skipProbe: boolean, cachedNeedsTranscode = false) => {
+    let needsTranscode = cachedNeedsTranscode;
 
-    if (isLive && !skipProbe) {
-      // Probe for codec
+    if (!skipProbe) {
+      // Probe for codec (live + VOD)
       if (transcodeCache.has(streamId)) {
         needsTranscode = transcodeCache.get(streamId) || false;
       } else {
@@ -310,11 +327,15 @@ export default function Player({ type }: PlayerProps) {
 
     setPhase("loading");
     if (isLive) {
-      playLive(needsTranscode, QUALITIES[qualityIdx].height);
+      const url = needsTranscode ? (transcodePath || streamPath) : streamPath;
+      playMPEGTS(url, true, needsTranscode);
+    } else if (needsTranscode && vodTranscodePath) {
+      // VOD HEVC → transcode via mpegts.js (slower startup for 4K)
+      playMPEGTS(vodTranscodePath, false, true, 90000);
     } else {
       playVod(null);
     }
-  }, [isLive, streamId, probeUrl, playLive, playVod, qualityIdx]);
+  }, [isLive, streamId, probeUrl, streamPath, transcodePath, vodTranscodePath, playMPEGTS, playVod]);
 
   // ── Controls ─────────────────────────────────────────────────
   const togglePlay = useCallback(() => {
@@ -361,9 +382,11 @@ export default function Player({ type }: PlayerProps) {
     retryKey.current++;
     if (isLive) {
       const needsTranscode = transcodeCache.get(streamId) || false;
-      playLive(needsTranscode || idx > 0, QUALITIES[idx].height);
+      const useTranscode = needsTranscode || idx > 0;
+      const url = useTranscode ? (transcodePath || streamPath) : streamPath;
+      playMPEGTS(url, true, useTranscode);
     }
-  }, [isLive, streamId, playLive]);
+  }, [isLive, streamId, streamPath, transcodePath, playMPEGTS]);
 
   const toggleFullscreen = useCallback(() => {
     if (!containerRef.current) return;
@@ -503,7 +526,9 @@ export default function Player({ type }: PlayerProps) {
               <div className="flex flex-col items-center gap-2">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 {transcoding && (
-                  <span className="text-[10px] text-yellow-500">Converting video codec...</span>
+                  <span className="text-[10px] text-yellow-500">
+                    {isLive ? "Converting video codec..." : "Converting H.265 video — this may take 30-60s..."}
+                  </span>
                 )}
               </div>
             ) : phase === "error" ? (
