@@ -14,6 +14,7 @@ export default {
         "muted-foreground": "oklch(var(--muted-foreground) / <alpha-value>)",
         border: "oklch(var(--border) / <alpha-value>)",
         sidebar: "oklch(var(--sidebar) / <alpha-value>)",
+        destructive: "oklch(var(--destructive) / <alpha-value>)",
       },
       fontFamily: {
         sans: [

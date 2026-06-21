@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tv, Loader2, AlertCircle, RotateCcw } from "lucide-react";
 import { api, Category, LiveStream } from "@/lib/api";
+import { Skeleton, ChannelCardSkeleton, TabSkeleton } from "@/components/Skeleton";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+
+const BATCH = 50;
 
 export default function LiveTV() {
   const navigate = useNavigate();
@@ -9,7 +13,10 @@ export default function LiveTV() {
   const [activeCat, setActiveCat] = useState<string>("");
   const [streams, setStreams] = useState<LiveStream[]>([]);
   const [loading, setLoading] = useState(true);
+  const [streamsLoading, setStreamsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { visibleItems, sentinelRef, hasMore } = useInfiniteScroll(streams, BATCH);
 
   useEffect(() => {
     api.live
@@ -25,35 +32,39 @@ export default function LiveTV() {
   useEffect(() => {
     if (!activeCat) return;
     setError(null);
+    setStreamsLoading(true);
     api.live
       .streams(activeCat)
       .then((d) => setStreams(d.streams))
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e.message))
+      .finally(() => setStreamsLoading(false));
   }, [activeCat]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-          <Tv className="h-5 w-5 text-primary" />
+      {loading ? (
+        <div className="flex items-center gap-4">
+          <Skeleton className="w-10 h-10 rounded-lg" />
+          <div className="space-y-1.5">
+            <Skeleton className="w-24 h-5" />
+            <Skeleton className="w-40 h-3.5" />
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-semibold">Live TV</h1>
-          <p className="text-sm text-muted-foreground">
-            {streams.length.toLocaleString()} channels ·{" "}
-            {categories.length} categories
-          </p>
+      ) : (
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Tv className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold">Live TV</h1>
+            <p className="text-sm text-muted-foreground">
+              {streams.length.toLocaleString()} channels ·{" "}
+              {categories.length} categories
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {error && (
         <div className="flex items-center gap-3 p-3 rounded-lg border border-destructive/30 bg-destructive/5 text-sm text-destructive">
@@ -73,53 +84,79 @@ export default function LiveTV() {
       )}
 
       {/* Category tabs */}
-      <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin">
-        {categories.map((cat) => (
-          <button
-            key={cat.category_id}
-            onClick={() => setActiveCat(cat.category_id)}
-            className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              activeCat === cat.category_id
-                ? "bg-primary/15 text-primary border border-primary/20"
-                : "bg-muted text-muted-foreground hover:text-foreground border border-transparent"
-            }`}
-          >
-            {cat.category_name}
-          </button>
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex gap-1.5 pb-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <TabSkeleton key={i} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin">
+          {categories.map((cat) => (
+            <button
+              key={cat.category_id}
+              onClick={() => setActiveCat(cat.category_id)}
+              className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                activeCat === cat.category_id
+                  ? "bg-primary/15 text-primary border border-primary/20"
+                  : "bg-muted text-muted-foreground hover:text-foreground border border-transparent"
+              }`}
+            >
+              {cat.category_name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Channel grid */}
-      <div className="channel-grid">
-        {streams.map((s) => (
-          <button
-            key={s.stream_id}
-            onClick={() => navigate(`/watch/live/${s.stream_id}`)}
-            className="channel-card bg-card rounded-lg border border-border p-3 text-left hover:border-primary/30"
-          >
-            {s.stream_icon ? (
-              <img
-                src={`/api/iptv/${s.stream_icon.replace("http://", "").replace("https://", "")}`}
-                alt=""
-                className="w-full h-12 object-contain mb-2 rounded opacity-80"
-                loading="lazy"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />
-            ) : (
-              <div className="w-full h-12 bg-muted rounded mb-2 flex items-center justify-center">
-                <Tv className="h-4 w-4 text-muted-foreground/40" />
-              </div>
-            )}
-            <p className="text-xs font-medium leading-tight line-clamp-2">
-              {s.name}
-            </p>
-          </button>
-        ))}
-      </div>
+      {streamsLoading ? (
+        <div className="channel-grid">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <ChannelCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="channel-grid">
+            {visibleItems.map((s) => (
+              <button
+                key={s.stream_id}
+                onClick={() => navigate(`/watch/live/${s.stream_id}`)}
+                className="channel-card bg-card rounded-lg border border-border p-3 text-left hover:border-primary/30"
+              >
+                {s.stream_icon ? (
+                  <img
+                    src={`/api/iptv/${s.stream_icon.replace("http://", "").replace("https://", "")}`}
+                    alt=""
+                    className="w-full h-12 object-contain mb-2 rounded opacity-80"
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-12 bg-muted rounded mb-2 flex items-center justify-center">
+                    <Tv className="h-4 w-4 text-muted-foreground/40" />
+                  </div>
+                )}
+                <p className="text-xs font-medium leading-tight line-clamp-2">
+                  {s.name}
+                </p>
+              </button>
+            ))}
+          </div>
 
-      {streams.length === 0 && !loading && (
+          {/* Infinite scroll sentinel */}
+          <div ref={sentinelRef} className="h-1" />
+          {hasMore && (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+        </>
+      )}
+
+      {streams.length === 0 && !streamsLoading && !loading && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Tv className="h-10 w-10 text-muted-foreground/20 mb-3" />
           <p className="text-sm text-muted-foreground">No channels in this category</p>
