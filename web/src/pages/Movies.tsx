@@ -1,19 +1,19 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Film, Loader2, AlertCircle, RotateCcw, Star, Play } from "lucide-react";
+import { Film, Loader2, AlertCircle, RotateCcw, Star, Play, Search, X } from "lucide-react";
 import { api, Category, Movie } from "@/lib/api";
 import ContentRow from "@/components/ContentRow";
 import { Skeleton } from "@/components/Skeleton";
 
-const ROWS_PER_PAGE = 12; // categories shown at a time
-const MOVIES_PER_ROW = 20; // initial movies per row
+const ROWS_PER_PAGE = 12;
+const MOVIES_PER_ROW = 20;
 
 interface RowState {
   cat: Category;
   movies: Movie[];
   total: number;
   loading: boolean;
-  loaded: boolean; // true once first fetch done
+  loaded: boolean;
 }
 
 export default function Movies() {
@@ -25,6 +25,9 @@ export default function Movies() {
   const [error, setError] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const fetchingRef = useRef<Set<string>>(new Set());
+
+  // Section search
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Load categories
   useEffect(() => {
@@ -108,7 +111,7 @@ export default function Movies() {
       const key = cat.category_id;
       const current = rows.get(key);
       if (!current || fetchingRef.current.has(key)) return;
-      if (current.movies.length >= current.total) return; // all loaded
+      if (current.movies.length >= current.total) return;
       fetchingRef.current.add(key);
       try {
         const d = await api.movies.list(key, MOVIES_PER_ROW, current.movies.length);
@@ -140,6 +143,30 @@ export default function Movies() {
     }
   }, [visibleCats, rows, fetchRow]);
 
+  // Filter categories+movies by search query
+  const q = searchQuery.toLowerCase().trim();
+  const filteredCats = useMemo(() => {
+    if (!q) return visibleCats;
+    return visibleCats.filter((cat) => {
+      const row = rows.get(cat.category_id);
+      // If row hasn't loaded yet, show it (user might be searching within it)
+      if (!row || !row.loaded) return true;
+      // Check if category name matches
+      if (cat.category_name.toLowerCase().includes(q)) return true;
+      // Check if any movie in the row matches
+      return row.movies.some((m) => m.name.toLowerCase().includes(q));
+    });
+  }, [visibleCats, rows, q]);
+
+  // Filter movies within a row
+  const filterMovies = useCallback(
+    (movies: Movie[]) => {
+      if (!q) return movies;
+      return movies.filter((m) => m.name.toLowerCase().includes(q));
+    },
+    [q]
+  );
+
   if (loading) {
     return (
       <div className="space-y-8">
@@ -167,7 +194,7 @@ export default function Movies() {
   const totalMovies = Array.from(rows.values()).reduce((s, r) => s + r.total, 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -181,6 +208,26 @@ export default function Movies() {
               : `${categories.length} categories`}
           </p>
         </div>
+      </div>
+
+      {/* Section search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Filter movies..."
+          className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
 
       {error && (
@@ -200,91 +247,111 @@ export default function Movies() {
         </div>
       )}
 
-      {/* Category rows */}
-      <div className="space-y-6">
-        {visibleCats.map((cat) => {
-          const row = rows.get(cat.category_id);
-          const movies = row?.movies || [];
-          const loadingRow = row?.loading && movies.length === 0;
-          const hasMore = row ? row.movies.length < row.total : true;
+      {/* Filtered rows */}
+      {q && filteredCats.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Search className="h-10 w-10 text-muted-foreground/20 mb-3" />
+          <p className="text-sm text-muted-foreground">
+            No movies matching "{searchQuery}"
+          </p>
+          <button
+            onClick={() => setSearchQuery("")}
+            className="mt-2 text-xs text-primary hover:underline"
+          >
+            Clear search
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {filteredCats.map((cat) => {
+            const row = rows.get(cat.category_id);
+            const movies = row?.movies || [];
+            const loadingRow = row?.loading && movies.length === 0;
+            const hasMore = row ? row.movies.length < row.total : true;
+            const filtered = filterMovies(movies);
 
-          // Show skeleton for rows that haven't loaded yet
-          if (!row || loadingRow) {
-            return (
-              <div key={cat.category_id} className="space-y-2">
-                <div className="flex items-baseline gap-2 px-1">
-                  <Skeleton className="w-40 h-4" />
-                </div>
-                <div className="flex gap-2 overflow-hidden">
-                  {Array.from({ length: 7 }).map((_, j) => (
-                    <Skeleton
-                      key={j}
-                      className="w-[160px] aspect-[2/3] shrink-0 rounded"
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          }
-
-          return (
-            <ContentRow
-              key={cat.category_id}
-              title={cat.category_name}
-              itemCount={row.total}
-              loading={row.loading && movies.length > 0}
-              onScrollEnd={hasMore ? () => loadMore(cat) : undefined}
-            >
-              {movies.map((m) => (
-                <button
-                  key={m.stream_id}
-                  onClick={() => navigate(`/watch/movie/${m.stream_id}`)}
-                  className="group shrink-0 w-[160px] bg-card rounded-lg border border-border overflow-hidden hover:border-primary/30 transition-all"
-                >
-                  <div className="aspect-[2/3] bg-muted relative overflow-hidden">
-                    {m.stream_icon ? (
-                      <img
-                        src={m.stream_icon}
-                        alt=""
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 3'><rect fill='%231a1a2e' width='2' height='3'/></svg>";
-                        }}
+            if (!row || loadingRow) {
+              return (
+                <div key={cat.category_id} className="space-y-2">
+                  <div className="flex items-baseline gap-2 px-1">
+                    <Skeleton className="w-40 h-4" />
+                  </div>
+                  <div className="flex gap-2 overflow-hidden">
+                    {Array.from({ length: 7 }).map((_, j) => (
+                      <Skeleton
+                        key={j}
+                        className="w-[160px] aspect-[2/3] shrink-0 rounded"
                       />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Film className="h-8 w-8 text-muted-foreground/30" />
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+
+            // If filtering and no matches in this row, skip it
+            if (q && filtered.length === 0 && !cat.category_name.toLowerCase().includes(q)) {
+              return null;
+            }
+
+            return (
+              <ContentRow
+                key={cat.category_id}
+                title={cat.category_name}
+                itemCount={q ? filtered.length : row.total}
+                loading={row.loading && movies.length > 0}
+                onScrollEnd={q ? undefined : hasMore ? () => loadMore(cat) : undefined}
+              >
+                {filtered.map((m) => (
+                  <button
+                    key={m.stream_id}
+                    onClick={() => navigate(`/watch/movie/${m.stream_id}`)}
+                    className="group shrink-0 w-[160px] bg-card rounded-lg border border-border overflow-hidden hover:border-primary/30 transition-all"
+                  >
+                    <div className="aspect-[2/3] bg-muted relative overflow-hidden">
+                      {m.stream_icon ? (
+                        <img
+                          src={m.stream_icon}
+                          alt=""
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 3'><rect fill='%231a1a2e' width='2' height='3'/></svg>";
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Film className="h-8 w-8 text-muted-foreground/30" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                        <Play className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
-                    )}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                      <Play className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                  </div>
-                  <div className="p-2">
-                    <p className="text-[11px] font-medium line-clamp-2 leading-tight mb-1">
-                      {m.name}
-                    </p>
-                    {m.rating && (
-                      <div className="flex items-center gap-1">
-                        <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                        <span className="text-[10px] text-muted-foreground">
-                          {m.rating}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </ContentRow>
-          );
-        })}
-      </div>
+                    <div className="p-2">
+                      <p className="text-[11px] font-medium line-clamp-2 leading-tight mb-1">
+                        {m.name}
+                      </p>
+                      {m.rating && (
+                        <div className="flex items-center gap-1">
+                          <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                          <span className="text-[10px] text-muted-foreground">
+                            {m.rating}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </ContentRow>
+            );
+          })}
+        </div>
+      )}
 
       {/* Sentinel for infinite scroll of categories */}
       <div ref={sentinelRef} className="h-1" />
-      {visibleRows < categories.length && (
+      {!q && visibleRows < categories.length && (
         <div className="flex justify-center py-4">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
