@@ -915,12 +915,26 @@ async def convert_to_mp4(stream_id: str, stream_type: str):
         log.info(f"MP4 cached: {cache_key} ({file_size / (1024*1024):.0f} MB)")
 
 
+async def _safe_convert(stream_id: str, stream_type: str, cache_key: str):
+    """Wrapper that catches exceptions so background tasks don't die silently."""
+    try:
+        await convert_to_mp4(stream_id, stream_type)
+    except Exception as e:
+        log.error(f"Conversion failed for {cache_key}: {e}", exc_info=True)
+    finally:
+        _converting.pop(cache_key, None)
+
+
 @app.get("/api/movie/convert/{stream_id}")
-async def convert_movie(stream_id: int):
-    """Trigger MKV→MP4 conversion for a movie. Returns status."""
+async def convert_movie(stream_id: int, retry: bool = False):
+    """Trigger MKV→MP4 conversion for a movie. Returns status.
+    Set ?retry=1 to re-convert even if already cached."""
     cache_key = f"movie_{stream_id}"
     output_path = CACHE_DIR / f"{cache_key}.mp4"
     lock_path = CACHE_DIR / f"{cache_key}.converting"
+
+    if retry and output_path.exists():
+        output_path.unlink()
 
     if output_path.exists():
         return {"status": "ready", "message": "Cached"}
@@ -930,17 +944,22 @@ async def convert_movie(stream_id: int):
 
     # Start conversion in background
     if cache_key not in _converting:
-        _converting[cache_key] = asyncio.create_task(convert_to_mp4(str(stream_id), "movie"))
+        _converting[cache_key] = asyncio.create_task(
+            _safe_convert(str(stream_id), "movie", cache_key))
 
     return {"status": "converting", "message": "Conversion started"}
 
 
 @app.get("/api/series/convert/{series_id}/{episode_id}")
-async def convert_series_ep(series_id: int, episode_id: int):
-    """Trigger MKV→MP4 conversion for a series episode."""
+async def convert_series_ep(series_id: int, episode_id: int, retry: bool = False):
+    """Trigger MKV→MP4 conversion for a series episode.
+    Set ?retry=1 to re-convert even if already cached."""
     cache_key = f"series_{episode_id}"
     output_path = CACHE_DIR / f"{cache_key}.mp4"
     lock_path = CACHE_DIR / f"{cache_key}.converting"
+
+    if retry and output_path.exists():
+        output_path.unlink()
 
     if output_path.exists():
         return {"status": "ready", "message": "Cached"}
@@ -949,7 +968,8 @@ async def convert_series_ep(series_id: int, episode_id: int):
         return {"status": "converting", "message": "Conversion in progress"}
 
     if cache_key not in _converting:
-        _converting[cache_key] = asyncio.create_task(convert_to_mp4(str(episode_id), "series"))
+        _converting[cache_key] = asyncio.create_task(
+            _safe_convert(str(episode_id), "series", cache_key))
 
     return {"status": "converting", "message": "Conversion started"}
 
