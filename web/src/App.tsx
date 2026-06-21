@@ -80,7 +80,7 @@ function AppLayout() {
 
   const sidebar = (
     <div
-      className="flex flex-col h-full bg-[var(--sidebar)] border-r border-border shrink-0"
+      className="flex flex-col h-full bg-sidebar border-r border-border shrink-0"
       style={{ width: sidebarWidth }}
     >
       {/* Brand */}
@@ -145,7 +145,7 @@ function AppLayout() {
       {/* Main content */}
       <main className="flex-1 overflow-y-auto">
         {/* Mobile header */}
-        <div className="md:hidden flex items-center gap-3 px-4 h-12 border-b border-border bg-[var(--sidebar)]">
+        <div className="md:hidden flex items-center gap-3 px-4 h-12 border-b border-border bg-sidebar">
           <button
             onClick={() => setMobileOpen(true)}
             className="text-muted-foreground hover:text-foreground"

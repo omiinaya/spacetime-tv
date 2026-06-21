@@ -65,7 +65,7 @@ export default function SearchPage() {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && doSearch()}
           placeholder="Search channels, movies, series..."
-          className="w-full h-10 pl-10 pr-4 rounded-lg border border-border bg-[var(--card)] text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="w-full h-10 pl-10 pr-4 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
           autoFocus
         />
         <button
@@ -105,7 +105,7 @@ export default function SearchPage() {
                   <button
                     key={s.stream_id}
                     onClick={() => navigate(`/watch/live/${s.stream_id}`)}
-                    className="channel-card bg-[var(--card)] rounded-lg border border-border p-3 text-left hover:border-primary/30"
+                    className="channel-card bg-card rounded-lg border border-border p-3 text-left hover:border-primary/30"
                   >
                     <p className="text-xs font-medium leading-tight line-clamp-2">
                       {s.name}
@@ -130,7 +130,7 @@ export default function SearchPage() {
                   <button
                     key={m.stream_id}
                     onClick={() => navigate(`/watch/movie/${m.stream_id}`)}
-                    className="group bg-[var(--card)] rounded-lg border border-border overflow-hidden hover:border-primary/30 transition-all"
+                    className="group bg-card rounded-lg border border-border overflow-hidden hover:border-primary/30 transition-all"
                   >
                     <div className="aspect-[2/3] bg-muted relative overflow-hidden">
                       {m.stream_icon ? (
@@ -173,7 +173,7 @@ export default function SearchPage() {
                 {results.series.map((s) => (
                   <div
                     key={s.series_id}
-                    className="bg-[var(--card)] rounded-lg border border-border overflow-hidden"
+                    className="bg-card rounded-lg border border-border overflow-hidden"
                   >
                     <div className="aspect-[2/3] bg-muted">
                       {s.cover ? (

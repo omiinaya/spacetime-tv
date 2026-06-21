@@ -122,7 +122,7 @@ export default function SeriesPage() {
         {series.map((s) => (
           <div
             key={s.series_id}
-            className="bg-[var(--card)] rounded-lg border border-border overflow-hidden"
+            className="bg-card rounded-lg border border-border overflow-hidden"
           >
             {/* Poster */}
             <div className="aspect-[2/3] bg-muted relative overflow-hidden">
