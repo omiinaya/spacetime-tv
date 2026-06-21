@@ -9,14 +9,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "hls.js": "^1.6.16",
+    "lucide-react": "^0.441.0",
+    "mpegts.js": "^1.8.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.0",
-    "lucide-react": "^0.441.0",
     "sonner": "^1.7.0",
-    "tailwind-merge": "^2.6.0",
-    "clsx": "^2.1.1",
-    "class-variance-authority": "^0.7.1"
+    "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.4",

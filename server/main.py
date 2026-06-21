@@ -44,16 +44,6 @@ def iptv_url(action: str, **params) -> str:
     return f"{IPTV_BASE}/player_api.php?{urlencode(params)}"
 
 
-def iptv_stream_url(stream_id: int, stream_type: str = "live") -> str:
-    """Stream URL for live/VOD/series playback."""
-    ext_map = {"live": "ts", "movie": "mkv"}
-    ext = ext_map.get(stream_type, "mkv")
-    if stream_type == "live":
-        return f"{IPTV_BASE}/live/{IPTV_USER}/{IPTV_PASS}/{stream_id}.{ext}"
-    else:
-        return f"{IPTV_BASE}/movie/{IPTV_USER}/{IPTV_PASS}/{stream_id}.{ext}"
-
-
 async def fetch_iptv(action: str, **params) -> dict | list:
     """Fetch from IPTV API and parse JSON."""
     url = iptv_url(action, **params)
@@ -176,13 +166,71 @@ async def live_streams(category_id: str = Query(...)):
     return {"streams": data}
 
 
-@app.get("/api/live/play/{stream_id}")
-async def live_play(stream_id: int):
-    """Redirect to the actual stream URL."""
-    return RedirectResponse(iptv_stream_url(stream_id, "live"))
+# ── STREAM PROXY ─────────────────────────────────────────────────────────────
+
+from starlette.responses import StreamingResponse
+from fastapi.responses import Response
 
 
-# ── MOVIES (VOD) ────────────────────────────────────────────────────────────
+def build_stream_url(stream_id: int, stream_type: str) -> str:
+    """Build the IPTV stream URL for a given stream ID and type."""
+    if stream_type == "live":
+        return f"{IPTV_BASE}/live/{IPTV_USER}/{IPTV_PASS}/{stream_id}.ts"
+    elif stream_type == "movie":
+        return f"{IPTV_BASE}/movie/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
+    elif stream_type == "series":
+        return f"{IPTV_BASE}/series/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
+    return ""
+
+
+async def stream_bytes(url: str):
+    """Generator that yields bytes from a streaming URL."""
+    async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as stream_client:
+        async with stream_client.stream("GET", url) as resp:
+            resp.raise_for_status()
+            ct = resp.headers.get("content-type", "application/octet-stream")
+            async for chunk in resp.aiter_bytes():
+                yield chunk
+
+
+async def stream_proxy(url: str, content_type: str):
+    """Stream a remote URL through our backend, bypassing CORS."""
+    try:
+        return StreamingResponse(
+            stream_bytes(url),
+            media_type=content_type,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "no-cache",
+            },
+        )
+    except Exception as e:
+        log.error(f"Stream proxy error ({url}): {e}")
+        return Response(status_code=502, content="Stream unavailable")
+
+
+@app.get("/api/stream/live/{stream_id}")
+async def stream_live(stream_id: int):
+    """Proxy live TV stream (raw MPEG-TS)."""
+    return await stream_proxy(
+        build_stream_url(stream_id, "live"), "video/mp2t"
+    )
+
+
+@app.get("/api/stream/movie/{stream_id}")
+async def stream_movie(stream_id: int):
+    """Proxy movie stream (MKV)."""
+    return await stream_proxy(
+        build_stream_url(stream_id, "movie"), "video/x-matroska"
+    )
+
+
+@app.get("/api/stream/series/{series_id}/{episode_id}")
+async def stream_series_ep(series_id: int, episode_id: int):
+    """Proxy series episode stream (MKV)."""
+    return await stream_proxy(
+        build_stream_url(episode_id, "series"), "video/x-matroska"
+    )
 
 @app.get("/api/movies/categories")
 async def movies_categories():
@@ -196,12 +244,6 @@ async def movies(category_id: str = Query(...)):
     """Movies in a category."""
     data = await cached_fetch(f"vod_{category_id}", "get_vod_streams", category_id=category_id)
     return {"movies": data}
-
-
-@app.get("/api/movies/play/{stream_id}")
-async def movie_play(stream_id: int):
-    """Redirect to movie stream URL."""
-    return RedirectResponse(iptv_stream_url(stream_id, "movie"))
 
 
 # ── SERIES ──────────────────────────────────────────────────────────────────
@@ -227,12 +269,6 @@ async def series_details(series_id: int):
     if isinstance(data, dict):
         return data
     return {"info": data}
-
-
-@app.get("/api/series/play/{series_id}/{episode_id}")
-async def series_play(series_id: int, episode_id: int):
-    """Redirect to series episode stream."""
-    return RedirectResponse(f"{IPTV_BASE}/series/{IPTV_USER}/{IPTV_PASS}/{episode_id}.mkv")
 
 
 # ── EPG GUIDE ───────────────────────────────────────────────────────────────
