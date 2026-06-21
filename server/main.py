@@ -13,7 +13,7 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -172,6 +172,7 @@ async def live_streams(category_id: str = Query(...)):
 from starlette.responses import StreamingResponse
 from fastapi.responses import Response
 
+UA_STR = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 def build_stream_url(stream_id: int, stream_type: str) -> str:
     """Build the IPTV stream URL for a given stream ID and type."""
@@ -184,35 +185,98 @@ def build_stream_url(stream_id: int, stream_type: str) -> str:
     return ""
 
 
+async def get_content_length(url: str) -> Optional[int]:
+    """HEAD the remote URL to discover Content-Length."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True,
+                                     headers={"User-Agent": UA_STR}) as c:
+            resp = await c.head(url)
+            cl = resp.headers.get("content-length")
+            return int(cl) if cl else None
+    except Exception:
+        return None
+
+
 async def stream_bytes(url: str):
     """Generator that yields bytes from a streaming URL."""
-    headers = {
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    }
-    async with httpx.AsyncClient(timeout=60.0, follow_redirects=True, headers=headers) as stream_client:
-        async with stream_client.stream("GET", url) as resp:
+    headers = {"User-Agent": UA_STR}
+    async with httpx.AsyncClient(timeout=60.0, follow_redirects=True, headers=headers) as sc:
+        async with sc.stream("GET", url) as resp:
             resp.raise_for_status()
-            ct = resp.headers.get("content-type", "application/octet-stream")
             async for chunk in resp.aiter_bytes():
                 yield chunk
 
 
-async def stream_bytes_transcode(url: str):
+async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
+    """Generator that yields VOD bytes, optionally with Range support."""
+    headers = {"User-Agent": UA_STR}
+    if range_header:
+        headers["Range"] = range_header
+    async with httpx.AsyncClient(timeout=60.0, follow_redirects=True, headers=headers) as sc:
+        async with sc.stream("GET", url) as resp:
+            resp.raise_for_status()
+            async for chunk in resp.aiter_bytes():
+                yield chunk
+
+
+async def handle_vod_request(req: Request, stream_id: int, stream_type: str,
+                              content_type: str = "video/x-matroska"):
+    """Handle a VOD stream request with Range/206 support for seeking."""
+    url = build_stream_url(stream_id, stream_type)
+    range_header = req.headers.get("range")
+
+    if range_header:
+        # Range request — get file size from upstream
+        file_size = await get_content_length(url)
+
+        # Forward Range to upstream and stream
+        response = StreamingResponse(
+            stream_vod_bytes(url, range_header),
+            media_type=content_type,
+            status_code=206,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "no-cache",
+                "Accept-Ranges": "bytes",
+            },
+        )
+        if file_size:
+            response.headers["Content-Length"] = str(file_size)
+
+        # Parse the requested range to set Content-Range
+        # Simple case: bytes=X-
+        if range_header.startswith("bytes="):
+            parts = range_header[6:].split("-")
+            start = int(parts[0]) if parts[0] else 0
+            if file_size:
+                end = file_size - 1
+                response.headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
+        return response
+
+    # Full request — no Range
+    return StreamingResponse(
+        stream_vod_bytes(url),
+        media_type=content_type,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-cache",
+            "Accept-Ranges": "bytes",
+        },
+    )
+
+
+async def stream_bytes_transcode(url: str, target_height: Optional[int] = None):
     """Generator: resolve CDN redirect, then transcode HEVC→H.264 via ffmpeg.
-    ffmpeg reads directly from the CDN URL (no pipe latency)."""
-    headers = {
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    }
+    ffmpeg reads directly from the CDN URL (no pipe latency).
+    If target_height is set, scales video to that height."""
+    headers = {"User-Agent": UA_STR}
 
     # Resolve the redirect chain to get the final CDN URL for ffmpeg
     cdn_url = url
     try:
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=headers) as c:
             async with c.stream("GET", url) as resp:
-                # resp.url is the final URL after following all redirects
                 cdn_url = str(resp.url)
-                # Read and discard a small amount to trigger the connection
-                # then close — we just need the resolved URL
     except Exception as e:
         log.warning(f"URL resolution failed, using original: {e}")
 
@@ -229,6 +293,10 @@ async def stream_bytes_transcode(url: str):
         "-preset", "ultrafast",
         "-tune", "zerolatency",
         "-crf", "28",
+    ]
+    if target_height:
+        cmd += ["-vf", f"scale=-2:{target_height}"]
+    cmd += [
         "-c:a", "copy",
         "-f", "mpegts",
         "pipe:1",
@@ -354,6 +422,18 @@ async def probe_endpoint(stream_id: int):
     return await probe_stream(stream_id, "live")
 
 
+@app.get("/api/movie/probe/{stream_id}")
+async def probe_movie(stream_id: int):
+    """Probe a movie stream to detect video codec."""
+    return await probe_stream(stream_id, "movie")
+
+
+@app.get("/api/series/probe/{stream_id}")
+async def probe_series(stream_id: int):
+    """Probe a series stream to detect video codec."""
+    return await probe_stream(stream_id, "series")
+
+
 @app.get("/api/stream/live/{stream_id}/transcode")
 async def stream_live_transcode(stream_id: int):
     """Proxy live TV stream with HEVC→H.264 transcoding via ffmpeg."""
@@ -372,20 +452,34 @@ async def stream_live_transcode(stream_id: int):
         return Response(status_code=502, content="Transcode failed")
 
 
+@app.get("/api/stream/live/{stream_id}/quality/{height}")
+async def stream_live_quality(stream_id: int, height: int):
+    """Proxy live TV stream transcoded to a specific height (360, 720, 1080)."""
+    url = build_stream_url(stream_id, "live")
+    try:
+        return StreamingResponse(
+            stream_bytes_transcode(url, target_height=height),
+            media_type="video/mp2t",
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "no-cache",
+            },
+        )
+    except Exception as e:
+        log.error(f"Quality transcode error ({url}): {e}")
+        return Response(status_code=502, content="Transcode failed")
+
+
 @app.get("/api/stream/movie/{stream_id}")
-async def stream_movie(stream_id: int):
-    """Proxy movie stream (MKV)."""
-    return await stream_proxy(
-        build_stream_url(stream_id, "movie"), "video/x-matroska"
-    )
+async def stream_movie(req: Request, stream_id: int):
+    """Proxy movie stream (MKV) with Range support for seeking."""
+    return await handle_vod_request(req, stream_id, "movie")
 
 
 @app.get("/api/stream/series/{series_id}/{episode_id}")
-async def stream_series_ep(series_id: int, episode_id: int):
-    """Proxy series episode stream (MKV)."""
-    return await stream_proxy(
-        build_stream_url(episode_id, "series"), "video/x-matroska"
-    )
+async def stream_series_ep(req: Request, series_id: int, episode_id: int):
+    """Proxy series episode stream (MKV) with Range support for seeking."""
+    return await handle_vod_request(req, episode_id, "series")
 
 @app.get("/api/movies/categories")
 async def movies_categories():
