@@ -3,6 +3,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import os
 import re
 import time
 import xml.etree.ElementTree as ET
@@ -289,6 +290,68 @@ async def stream_live(stream_id: int):
     return await stream_proxy(
         build_stream_url(stream_id, "live"), "video/mp2t"
     )
+
+
+# ── Stream Probe (codec detection) ──────────────────────────────────────────
+
+_probe_cache: dict[str, tuple[float, dict]] = {}
+PROBE_CACHE_TTL = 3600
+
+
+async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
+    """Run ffprobe on a stream to detect codec. Cached for 1 hour."""
+    cache_key = f"{stream_type}_{stream_id}"
+    now = time.time()
+    if cache_key in _probe_cache and (now - _probe_cache[cache_key][0]) < PROBE_CACHE_TTL:
+        return _probe_cache[cache_key][1]
+
+    url = build_stream_url(stream_id, stream_type)
+    ua = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "timeout", "8", "ffprobe",
+            "-v", "quiet",
+            "-print_format", "json",
+            "-show_streams",
+            "-user_agent", ua,
+            "-select_streams", "v:0",
+            url,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _stderr = await asyncio.wait_for(proc.communicate(), timeout=10.0)
+    except (asyncio.TimeoutError, Exception) as e:
+        log.warning(f"ffprobe failed for {stream_id}: {e}")
+        return {"codec": "unknown", "error": str(e)}
+
+    if proc.returncode != 0 or not stdout:
+        return {"codec": "unknown"}
+
+    try:
+        data = json.loads(stdout)
+        streams = data.get("streams", [])
+        if not streams:
+            return {"codec": "unknown"}
+        s = streams[0]
+        result = {
+            "codec": s.get("codec_name", "unknown"),
+            "codec_long": s.get("codec_long_name", ""),
+            "width": s.get("width", 0),
+            "height": s.get("height", 0),
+            "profile": s.get("profile", ""),
+        }
+        _probe_cache[cache_key] = (now, result)
+        log.info(f"Probe {stream_id}: {result['codec']} {result['width']}x{result['height']}")
+        return result
+    except json.JSONDecodeError:
+        return {"codec": "unknown"}
+
+
+@app.get("/api/live/probe/{stream_id}")
+async def probe_endpoint(stream_id: int):
+    """Probe a live stream to detect video codec before playback."""
+    return await probe_stream(stream_id, "live")
 
 
 @app.get("/api/stream/live/{stream_id}/transcode")

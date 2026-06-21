@@ -10,6 +10,23 @@ interface PlayerProps {
 // Remember which streams need transcoding across retries
 const transcodeCache = new Map<string, boolean>();
 
+interface ProbeResult {
+  codec: string;
+  codec_long?: string;
+  width?: number;
+  height?: number;
+  profile?: string;
+}
+
+async function probeStream(streamId: string): Promise<ProbeResult> {
+  try {
+    const resp = await fetch(`/api/live/probe/${streamId}`);
+    return await resp.json();
+  } catch {
+    return { codec: "unknown" };
+  }
+}
+
 export default function Player({ type }: PlayerProps) {
   const { id, seriesId, epId } = useParams();
   const navigate = useNavigate();
@@ -20,10 +37,10 @@ export default function Player({ type }: PlayerProps) {
   const [error, setError] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [transcoding, setTranscoding] = useState(false);
+  const [probing, setProbing] = useState(false);
 
   const loadingRef = useRef(true);
   const retryKey = useRef(0);
-  const transcodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triedTranscodeRef = useRef(false);
 
   // ── Build stream URL ──────────────────────────────────────────
@@ -49,14 +66,6 @@ export default function Player({ type }: PlayerProps) {
     setLoading(true);
   }, []);
 
-  // Clear transcode detection timer
-  const clearTranscodeTimer = useCallback(() => {
-    if (transcodeTimerRef.current) {
-      clearTimeout(transcodeTimerRef.current);
-      transcodeTimerRef.current = null;
-    }
-  }, []);
-
   // ── Play via mpegts.js (live MPEG-TS) ─────────────────────────
   const playLive = useCallback(
     (useTranscode: boolean) => {
@@ -77,30 +86,9 @@ export default function Player({ type }: PlayerProps) {
 
       let errorCount = 0;
       let timedOut = false;
-      let videoDetected = false;
 
       player.attachMediaElement(video);
       player.load();
-
-      // HEVC detection: check if video frames are actually rendering
-      if (!useTranscode && isLive) {
-        transcodeTimerRef.current = setTimeout(() => {
-          if (!videoDetected && videoRef.current && videoRef.current.videoWidth === 0) {
-            // No video frames — likely HEVC or unsupported codec
-            // Switch to transcode
-            transcodeCache.set(id || "", true);
-            triedTranscodeRef.current = true;
-            retryKey.current++;
-            setBusy();
-            setError(null);
-            if (playerRef.current) {
-              playerRef.current.destroy();
-              playerRef.current = null;
-            }
-            playLive(true);
-          }
-        }, 4000);
-      }
 
       player.on(mpegts.Events.LOADING_COMPLETE, () => {
         setDone();
@@ -122,11 +110,6 @@ export default function Player({ type }: PlayerProps) {
 
       player.on(mpegts.Events.STATISTICS_INFO, () => {
         if (loadingRef.current) setDone();
-        // Check if video is actually rendering
-        if (videoRef.current && videoRef.current.videoWidth > 0) {
-          videoDetected = true;
-          clearTranscodeTimer();
-        }
       });
 
       const timeout = setTimeout(() => {
@@ -139,10 +122,9 @@ export default function Player({ type }: PlayerProps) {
 
       return () => {
         clearTimeout(timeout);
-        clearTranscodeTimer();
       };
     },
-    [streamPath, transcodePath, isLive, id, setDone, setBusy, clearTranscodeTimer]
+    [streamPath, transcodePath, setDone, setBusy]
   );
 
   // ── Play via native <video> (VOD: movies / series) ────────────
@@ -205,33 +187,57 @@ export default function Player({ type }: PlayerProps) {
     };
   }, [streamPath, setDone]);
 
-  // ── Main effect ───────────────────────────────────────────────
+  // ── Main effect — probe first, then play the right way ───────
   useEffect(() => {
-    setBusy();
-    setError(null);
-    setTranscoding(false);
-    clearTranscodeTimer();
+    let cancelled = false;
 
-    if (playerRef.current) {
-      playerRef.current.destroy();
-      playerRef.current = null;
-    }
+    const startPlayback = async () => {
+      setBusy();
+      setError(null);
+      setTranscoding(false);
+      setProbing(false);
 
-    // Check if this stream previously needed transcoding
-    const needsTranscode = isLive && transcodeCache.has(id || "");
-    if (needsTranscode) setTranscoding(true);
+      if (playerRef.current) {
+        playerRef.current.destroy();
+        playerRef.current = null;
+      }
 
-    const cleanupFn = isLive ? playLive(needsTranscode) : playVod();
+      // Check transcode cache first
+      let needsTranscode = isLive && transcodeCache.has(id || "");
+
+      // For live TV, probe the stream if not cached
+      if (isLive && !transcodeCache.has(id || "") && id) {
+        setProbing(true);
+        const result = await probeStream(id);
+        if (cancelled) return;
+        setProbing(false);
+
+        if (result.codec === "hevc") {
+          needsTranscode = true;
+          transcodeCache.set(id, true);
+        } else {
+          transcodeCache.set(id, false);
+        }
+      }
+
+      if (cancelled) return;
+
+      if (needsTranscode) setTranscoding(true);
+
+      const cleanupFn = isLive ? playLive(needsTranscode) : playVod();
+      // Store cleanup ref for manual retry
+    };
+
+    startPlayback();
 
     return () => {
-      cleanupFn?.();
-      clearTranscodeTimer();
+      cancelled = true;
       if (playerRef.current) {
         playerRef.current.destroy();
         playerRef.current = null;
       }
     };
-  }, [streamPath, isLive, setBusy, playLive, playVod, clearTranscodeTimer, id]);
+  }, [streamPath, isLive, setBusy, playLive, playVod, id]);
 
   // ── Retry ─────────────────────────────────────────────────────
   const retry = () => {
@@ -239,17 +245,17 @@ export default function Player({ type }: PlayerProps) {
     setError(null);
     setBusy();
     setTranscoding(false);
-    clearTranscodeTimer();
+
     if (playerRef.current) {
       playerRef.current.destroy();
       playerRef.current = null;
     }
 
-    const needsTranscode = isLive && transcodeCache.has(id || "");
+    const needsTranscode = isLive && (transcodeCache.has(id || "") ? (transcodeCache.get(id || "") || false) : false);
     if (needsTranscode) setTranscoding(true);
 
     const cleanupFn = isLive ? playLive(needsTranscode) : playVod();
-    // Keep cleanup stored via the effect
+    // Keep cleanup managed by effect
   };
 
   // ── Fullscreen toggle ─────────────────────────────────────────
@@ -302,6 +308,11 @@ export default function Player({ type }: PlayerProps) {
             <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
               <div className="flex flex-col items-center gap-2">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                {probing && (
+                  <span className="text-[10px] text-blue-400">
+                    Detecting stream format...
+                  </span>
+                )}
                 {transcoding && (
                   <span className="text-[10px] text-yellow-500">
                     Converting video codec...
