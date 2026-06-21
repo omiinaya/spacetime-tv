@@ -101,7 +101,6 @@ export default function Player({ type }: PlayerProps) {
   const watchKey = type === "movie" ? `vod_${id}` : type === "series" ? `ep_${seriesId}_${epId}` : "";
   const streamId = epId || id || "";
 
-  // Stream URLs
   const streamPath = useMemo(() => {
     if (type === "live") return `/api/stream/live/${id}`;
     if (type === "movie") return `/api/stream/movie/${id}`;
@@ -115,7 +114,6 @@ export default function Player({ type }: PlayerProps) {
     return `/api/stream/live/${id}/transcode`;
   }, [isLive, id, qualityIdx]);
 
-  // VOD HLS URLs
   const hlsInitUrl = useMemo(() => {
     if (!isVod) return null;
     if (type === "movie") return `/api/movie/hls/${id}`;
@@ -147,7 +145,6 @@ export default function Player({ type }: PlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
-    // Clean up previous
     if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
     video.removeAttribute("src");
@@ -165,7 +162,8 @@ export default function Player({ type }: PlayerProps) {
 
     player.on(mpegts.Events.LOADING_COMPLETE, () => {
       setPhase("playing");
-      video.play().catch(() => {});
+      video.muted = true; setMuted(true);
+      video.play().catch(() => setPhase("paused"));
     });
 
     player.on(mpegts.Events.ERROR, (_t: string, detail: any) => {
@@ -174,8 +172,8 @@ export default function Player({ type }: PlayerProps) {
       if (!timedOut) {
         setPhase("error");
         setErrorMsg(isTranscode
-          ? "Stream unavailable even with transcoding. The channel may be offline."
-          : "Stream unavailable. The channel may be offline.");
+          ? "Stream unavailable even with transcoding."
+          : "Stream unavailable.");
       }
     });
 
@@ -189,21 +187,18 @@ export default function Player({ type }: PlayerProps) {
       if (p === "loading" || p === "probing") {
         timedOut = true;
         setPhase("error");
-        setErrorMsg("Stream timed out. The channel may be offline.");
+        setErrorMsg("Stream timed out.");
       }
     }, timeoutMs);
 
-    mpegtsCleanup.current = () => {
-      clearTimeout(timeout);
-    };
+    mpegtsCleanup.current = () => { clearTimeout(timeout); };
   }, []);
 
-  // ── Playback: HLS via hls.js (VOD — cached MP4 → HLS segments) ─
+  // ── Playback: HLS via hls.js (VOD) ───────────────────────────
   const playHLS = useCallback((playlistUrl: string, startPos: number | null = null) => {
     const video = videoRef.current;
     if (!video) return;
 
-    // Clean up previous
     if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
     if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
@@ -226,14 +221,17 @@ export default function Player({ type }: PlayerProps) {
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         setPhase("playing");
         setDuration(hls.levels[0]?.details?.totalduration || video.duration || 0);
-        video.play().catch(() => {});
+        // Start muted for browser autoplay policy
+        video.muted = true;
+        setMuted(true);
+        video.play().catch(() => setPhase("paused"));
       });
 
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              hls.startLoad(); // Try to recover
+              hls.startLoad();
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
               hls.recoverMediaError();
@@ -247,26 +245,25 @@ export default function Player({ type }: PlayerProps) {
         }
       });
 
-      // Start at resume position after manifest loads
       if (startPos && startPos > 5) {
-        const onManifest = () => {
+        const resumeHandler = () => {
           video.currentTime = startPos;
-          hls.off(Hls.Events.MANIFEST_PARSED, onManifest);
+          hls.off(Hls.Events.MANIFEST_PARSED, resumeHandler);
         };
-        hls.on(Hls.Events.MANIFEST_PARSED, onManifest);
+        hls.on(Hls.Events.MANIFEST_PARSED, resumeHandler);
       }
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      // Safari native HLS
       video.src = playlistUrl;
       video.addEventListener("loadedmetadata", () => {
         setDuration(video.duration || 0);
         if (startPos && startPos > 5) video.currentTime = startPos;
         setPhase("playing");
-        video.play().catch(() => {});
+        video.muted = true; setMuted(true);
+        video.play().catch(() => setPhase("paused"));
       }, { once: true });
     } else {
       setPhase("error");
-      setErrorMsg("HLS playback not supported in this browser.");
+      setErrorMsg("HLS playback not supported.");
       return;
     }
 
@@ -287,7 +284,6 @@ export default function Player({ type }: PlayerProps) {
     video.addEventListener("durationchange", onDurationChange);
     video.addEventListener("ended", onEnded);
 
-    // Save watch position
     if (watchKey) {
       saveInterval = setInterval(() => {
         if (!video!.paused && video!.currentTime > 5) {
@@ -296,12 +292,11 @@ export default function Player({ type }: PlayerProps) {
       }, 5000);
     }
 
-    // Timeout: if nothing happens in 30s, show error
     const timeout = setTimeout(() => {
       const p = phaseRef.current;
       if (p === "loading" || p === "probing") {
         setPhase("error");
-        setErrorMsg("Stream timed out. The channel may be offline.");
+        setErrorMsg("Stream timed out.");
       }
     }, 30000);
 
@@ -321,25 +316,22 @@ export default function Player({ type }: PlayerProps) {
     setErrorMsg(null);
 
     try {
-      const seekParam = seekPos ? `&start=${seekPos}` : "";
+      const seekParam = seekPos ? `?start=${seekPos}` : "";
       const res = await fetch(`${hlsInitUrl}${seekParam}`);
       const data = await res.json();
 
       if (data.status === "ready") {
-        playHLS(data.playlist, seekPos || null);
+        playHLS(data.playlist, seekPos ?? null);
         return;
       }
 
-      // Preparing — poll until ready
-      setErrorMsg("Preparing video… (downloading full movie, ~2-5 minutes)");
+      setErrorMsg("Preparing video… (downloading full movie)");
       const pollStart = Date.now();
       let status = data.status;
       while (status !== "ready") {
         if (isCancelled()) return;
         if (Date.now() - pollStart > 600000) {
-          setPhase("error");
-          setErrorMsg("Preparation timed out.");
-          return;
+          setPhase("error"); setErrorMsg("Preparation timed out."); return;
         }
         await new Promise(r => setTimeout(r, 3000));
         const r2 = await fetch(hlsInitUrl);
@@ -347,17 +339,16 @@ export default function Player({ type }: PlayerProps) {
         status = d2.status;
         if (status === "ready") {
           setErrorMsg(null);
-          playHLS(d2.playlist, seekPos || null);
+          playHLS(d2.playlist, seekPos ?? null);
           return;
         }
       }
     } catch (e) {
-      setPhase("error");
-      setErrorMsg("Failed to prepare video.");
+      setPhase("error"); setErrorMsg("Failed to prepare video.");
     }
   }, [hlsInitUrl, playHLS]);
 
-  // ── Main effect: probe → play ───────────────────────────────
+  // ── Main effect ──────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     const video = videoRef.current;
@@ -366,7 +357,6 @@ export default function Player({ type }: PlayerProps) {
     const start = async () => {
       setPhase("probing"); setErrorMsg(null); setTranscoding(false);
 
-      // Probe for codec
       let needsTranscode = false;
       if (transcodeCache.has(streamId)) {
         needsTranscode = transcodeCache.get(streamId) === "hevc";
@@ -381,22 +371,20 @@ export default function Player({ type }: PlayerProps) {
       }
       if (cancelled) return;
 
-      // ── Live TV ──────────────────────────────────────────────
       if (isLive) {
         const url = needsTranscode ? (transcodePath || streamPath) : streamPath;
         playMPEGTS(url, true, needsTranscode);
         return;
       }
 
-      // ── VOD (Movies & Series) ────────────────────────────────
-      // Check for resume position
+      // VOD: check resume
       if (watchKey) {
         const pos = getWatchPos(watchKey);
         if (pos && pos > 5) {
           setResumePos(pos);
           setShowResumePrompt(true);
-          setPhase("playing"); // Show the prompt
-          return; // Wait for user choice
+          setPhase("playing");
+          return;
         }
       }
 
@@ -421,7 +409,6 @@ export default function Player({ type }: PlayerProps) {
     if (isLive) return;
     const v = videoRef.current;
     if (!v) return;
-    // hls.js handles seeking natively via video.currentTime
     v.currentTime = Math.max(0, Math.min(v.duration || 0, v.currentTime + delta));
     showControls(true);
   }, [isLive, showControls]);
@@ -444,13 +431,11 @@ export default function Player({ type }: PlayerProps) {
   const setSpeed = useCallback((rate: number) => {
     const v = videoRef.current;
     if (v) v.playbackRate = rate;
-    setPlaybackRate(rate);
-    setShowSpeedMenu(false);
+    setPlaybackRate(rate); setShowSpeedMenu(false);
   }, []);
 
   const setQuality = useCallback((idx: number) => {
-    setQualityIdx(idx);
-    setShowQualityMenu(false);
+    setQualityIdx(idx); setShowQualityMenu(false);
   }, []);
 
   const toggleFullscreen = useCallback(() => {
@@ -474,7 +459,6 @@ export default function Player({ type }: PlayerProps) {
     showControls(true);
   }, [isLive, duration, showControls]);
 
-  // ── Resume handlers ──────────────────────────────────────────
   const resumePlayback = useCallback(() => {
     setShowResumePrompt(false);
     startVod(() => false, resumePos ?? undefined);
@@ -504,7 +488,7 @@ export default function Player({ type }: PlayerProps) {
     return () => window.removeEventListener("keydown", handler);
   }, [togglePlay, seek, toggleFullscreen, toggleMute, setVolume, volume]);
 
-  // ── Cleanup on unmount ───────────────────────────────────────
+  // ── Cleanup ──────────────────────────────────────────────────
   useEffect(() => {
     return () => {
       if (hlsRef.current) hlsRef.current.destroy();
@@ -513,21 +497,19 @@ export default function Player({ type }: PlayerProps) {
     };
   }, []);
 
-  // ── Fullscreen change detection ──────────────────────────────
   useEffect(() => {
     const handler = () => setFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
-  // ── Back button ──────────────────────────────────────────────
+  // ── Render helpers ───────────────────────────────────────────
   const goBack = () => {
     if (type === "movie") navigate("/movies");
     else if (type === "series") navigate("/series");
     else navigate("/live-tv");
   };
 
-  // ── Render ───────────────────────────────────────────────────
   const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
   const bufferedPct = duration > 0 ? (buffered / duration) * 100 : 0;
 
@@ -539,7 +521,6 @@ export default function Player({ type }: PlayerProps) {
       onMouseLeave={() => { if (phase === "playing") hideControls(); }}
       style={{ aspectRatio: "16 / 9", maxHeight: "calc(100vh - 4rem)" }}
     >
-      {/* Video */}
       <video
         ref={videoRef}
         className="absolute inset-0 w-full h-full object-contain"
@@ -547,7 +528,7 @@ export default function Player({ type }: PlayerProps) {
         onClick={togglePlay}
       />
 
-      {/* Loader */}
+      {/* Loading */}
       {(phase === "loading" || phase === "probing") && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-10 gap-3">
           <Loader2 className="w-10 h-10 animate-spin text-white/70" />
@@ -588,20 +569,12 @@ export default function Player({ type }: PlayerProps) {
       )}
 
       {/* Controls overlay */}
-      <div
-        className={`absolute inset-x-0 bottom-0 transition-opacity duration-300 z-10
-          ${controlsVisible || phase !== "playing" ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-      >
-        {/* Gradient */}
+      <div className={`absolute inset-x-0 bottom-0 transition-opacity duration-300 z-10 ${controlsVisible || phase !== "playing" ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
         <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
 
         <div className="relative px-4 pb-3 pt-8">
-          {/* Progress bar — only for VOD */}
           {isVod && (
-            <div
-              className="relative w-full h-1 bg-white/20 rounded cursor-pointer group/progress mb-3"
-              onClick={handleProgressClick}
-            >
+            <div className="relative w-full h-1 bg-white/20 rounded cursor-pointer group/progress mb-3" onClick={handleProgressClick}>
               <div className="absolute inset-y-0 left-0 bg-white/30 rounded" style={{ width: `${bufferedPct}%` }} />
               <div className="absolute inset-y-0 left-0 bg-blue-500 rounded" style={{ width: `${progressPct}%` }}>
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity" />
@@ -610,109 +583,73 @@ export default function Player({ type }: PlayerProps) {
           )}
 
           <div className="flex items-center gap-3">
-            {/* Back */}
             <button onClick={goBack} className="text-white/70 hover:text-white transition-colors p-1" title="Back">
               <ArrowLeft className="w-5 h-5" />
             </button>
-
-            {/* Play/Pause */}
             <button onClick={togglePlay} className="text-white/70 hover:text-white transition-colors p-1" title={phase === "playing" ? "Pause" : "Play"}>
               {phase === "playing" ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
             </button>
-
-            {/* Seek -10 */}
             <button onClick={() => seek(-10)} className="text-white/60 hover:text-white transition-colors p-1 hidden sm:block" title="Rewind 10s">
               <SkipBack className="w-4 h-4" />
             </button>
-
-            {/* Seek +10 */}
             <button onClick={() => seek(10)} className="text-white/60 hover:text-white transition-colors p-1 hidden sm:block" title="Forward 10s">
               <SkipForward className="w-4 h-4" />
             </button>
-
-            {/* Time */}
             {isVod && (
               <span className="text-white/60 text-xs tabular-nums ml-1">
                 {fmtTime(currentTime)} / {fmtTime(duration)}
               </span>
             )}
-
-            {/* LIVE badge */}
             {isLive && (
-              <span className="text-red-500 text-xs font-bold tracking-wider px-2 py-0.5 bg-red-500/10 rounded">
-                LIVE
-              </span>
+              <span className="text-red-500 text-xs font-bold tracking-wider px-2 py-0.5 bg-red-500/10 rounded">LIVE</span>
             )}
-
-            {/* Transcode badge */}
             {transcoding && (
-              <span className="text-yellow-500 text-xs px-2 py-0.5 bg-yellow-500/10 rounded">
-                Transcoding
-              </span>
+              <span className="text-yellow-500 text-xs px-2 py-0.5 bg-yellow-500/10 rounded">Transcoding</span>
             )}
-
             <div className="flex-1" />
-
-            {/* Volume */}
             <button onClick={toggleMute} className="text-white/60 hover:text-white transition-colors p-1" title={muted ? "Unmute" : "Mute"}>
               {muted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </button>
-            <input
-              type="range" min="0" max="1" step="0.05" value={muted ? 0 : volume}
+            <input type="range" min="0" max="1" step="0.05" value={muted ? 0 : volume}
               onChange={e => setVolume(parseFloat(e.target.value))}
-              className="w-20 h-1 accent-blue-500 cursor-pointer hidden sm:block"
-            />
-
-            {/* Speed */}
+              className="w-20 h-1 accent-blue-500 cursor-pointer hidden sm:block" />
             <div className="relative">
-              <button
-                onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-                className="text-white/60 hover:text-white transition-colors p-1 text-xs tabular-nums min-w-[2rem]"
-                title="Speed"
-              >
+              <button onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+                className="text-white/60 hover:text-white transition-colors p-1 text-xs tabular-nums min-w-[2rem]" title="Speed">
                 {playbackRate}x
               </button>
               {showSpeedMenu && (
                 <div className="absolute bottom-full mb-2 right-0 bg-zinc-900/95 border border-white/10 rounded-lg py-1 min-w-[5rem] shadow-xl">
                   {SPEEDS.map(s => (
                     <button key={s} onClick={() => setSpeed(s)}
-                      className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-white/10 transition-colors
-                        ${playbackRate === s ? "text-blue-400" : "text-white/70"}`}
+                      className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-white/10 transition-colors ${playbackRate === s ? "text-blue-400" : "text-white/70"}`}
                     >{s}x</button>
                   ))}
                 </div>
               )}
             </div>
-
-            {/* Quality (live only) */}
             {isLive && (
               <div className="relative">
-                <button
-                  onClick={() => setShowQualityMenu(!showQualityMenu)}
-                  className="text-white/60 hover:text-white transition-colors p-1"
-                  title="Quality"
-                >
+                <button onClick={() => setShowQualityMenu(!showQualityMenu)}
+                  className="text-white/60 hover:text-white transition-colors p-1" title="Quality">
                   <Settings className="w-4 h-4" />
                 </button>
                 {showQualityMenu && (
                   <div className="absolute bottom-full mb-2 right-0 bg-zinc-900/95 border border-white/10 rounded-lg py-1 min-w-[7rem] shadow-xl">
                     {QUALITIES.map((q, i) => (
-                      <button key={q.label} onClick={() => {
-                        setQuality(i);
-                        // Re-trigger playback with new quality
-                        const url = i === 0 ? streamPath : `/api/stream/live/${id}/quality/${q.height}`;
-                        playMPEGTS(url, true, false);
-                      }}
-                        className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-white/10 transition-colors
-                          ${qualityIdx === i ? "text-blue-400" : "text-white/70"}`}
+                      <button key={q.label}
+                        onClick={() => {
+                          setQuality(i);
+                          const url = i === 0 ? streamPath : `/api/stream/live/${id}/quality/${q.height}`;
+                          playMPEGTS(url, true, false);
+                        }}
+                        className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-white/10 transition-colors ${qualityIdx === i ? "text-blue-400" : "text-white/70"}`}
                       >{q.label}</button>
                     ))}
                   </div>
                 )}
               </div>
             )}
-
-            {/* Fullscreen */}
             <button onClick={toggleFullscreen} className="text-white/60 hover:text-white transition-colors p-1" title={fullscreen ? "Exit Fullscreen" : "Fullscreen"}>
               {fullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
             </button>
