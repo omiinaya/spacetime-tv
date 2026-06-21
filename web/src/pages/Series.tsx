@@ -14,6 +14,8 @@ import {
 import { api, Category, Series } from "@/lib/api";
 import ContentRow from "@/components/ContentRow";
 import { Skeleton } from "@/components/Skeleton";
+import { useSettings } from "@/context/SettingsContext";
+import { filterCategories } from "@/lib/settings";
 
 const ROWS_PER_PAGE = 10;
 const SERIES_PER_ROW = 20;
@@ -44,6 +46,14 @@ export default function SeriesPage() {
   const [episodes, setEpisodes] = useState<any>(null);
   const [epLoading, setEpLoading] = useState(false);
 
+  const { settings } = useSettings();
+
+  // Filter categories by settings
+  const filteredCatsBySettings = useMemo(
+    () => filterCategories(categories, settings, false),
+    [categories, settings]
+  );
+
   // Load categories
   useEffect(() => {
     api.series
@@ -56,11 +66,11 @@ export default function SeriesPage() {
   // Lazy-load more rows
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel || visibleRows >= categories.length) return;
+    if (!sentinel || visibleRows >= filteredCatsBySettings.length) return;
     const obs = new IntersectionObserver(
       ([e]) => {
         if (e.isIntersecting) {
-          setVisibleRows((v) => Math.min(v + ROWS_PER_PAGE, categories.length));
+          setVisibleRows((v) => Math.min(v + ROWS_PER_PAGE, filteredCatsBySettings.length));
         }
       },
       { rootMargin: "400px" }
@@ -125,8 +135,8 @@ export default function SeriesPage() {
     [rows]
   );
 
-  // Lazy-fetch visible rows
-  const visibleCats = categories.slice(0, visibleRows);
+  // Lazy-fetch visible rows (after settings filter)
+  const visibleCats = filteredCatsBySettings.slice(0, visibleRows);
   useEffect(() => {
     for (const cat of visibleCats) {
       const existing = rows.get(cat.category_id);
@@ -210,8 +220,8 @@ export default function SeriesPage() {
           <h1 className="text-xl font-semibold">Series</h1>
           <p className="text-sm text-muted-foreground">
             {totalSeries > 0
-              ? `${totalSeries.toLocaleString()} series · ${categories.length} categories`
-              : `${categories.length} categories`}
+              ? `${totalSeries.toLocaleString()} series · ${filteredCatsBySettings.length} categories`
+              : `${filteredCatsBySettings.length} categories`}
           </p>
         </div>
       </div>
@@ -421,16 +431,19 @@ export default function SeriesPage() {
 
       {/* Sentinel */}
       <div ref={sentinelRef} className="h-1" />
-      {!q && visibleRows < categories.length && (
+      {!q && visibleRows < filteredCatsBySettings.length && (
         <div className="flex justify-center py-4">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       )}
 
-      {categories.length === 0 && !loading && (
+      {filteredCatsBySettings.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Tv2 className="h-10 w-10 text-muted-foreground/20 mb-3" />
-          <p className="text-sm text-muted-foreground">No categories available</p>
+          <p className="text-sm text-muted-foreground">No categories match your filters</p>
+          <p className="text-xs text-muted-foreground/50 mt-1">
+            Adjust your language or service settings to see more content
+          </p>
         </div>
       )}
     </div>

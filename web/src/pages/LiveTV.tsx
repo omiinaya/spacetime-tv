@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tv, Loader2, AlertCircle, RotateCcw } from "lucide-react";
 import { api, Category, LiveStream } from "@/lib/api";
 import { Skeleton, ChannelCardSkeleton, TabSkeleton } from "@/components/Skeleton";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { useSettings } from "@/context/SettingsContext";
+import { filterCategories } from "@/lib/settings";
 
 const BATCH = 50;
 
@@ -17,17 +19,30 @@ export default function LiveTV() {
   const [error, setError] = useState<string | null>(null);
 
   const { visibleItems, sentinelRef, hasMore } = useInfiniteScroll(streams, BATCH);
+  const { settings } = useSettings();
+
+  // Filter categories by settings
+  const filteredCategories = useMemo(
+    () => filterCategories(categories, settings, true),
+    [categories, settings]
+  );
 
   useEffect(() => {
     api.live
       .categories()
       .then((d) => {
         setCategories(d.categories);
-        if (d.categories.length > 0) setActiveCat(d.categories[0].category_id);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  // Auto-select first filtered category when categories or filter changes
+  useEffect(() => {
+    if (filteredCategories.length > 0 && !filteredCategories.find((c) => c.category_id === activeCat)) {
+      setActiveCat(filteredCategories[0].category_id);
+    }
+  }, [filteredCategories, activeCat]);
 
   useEffect(() => {
     if (!activeCat) return;
@@ -60,7 +75,7 @@ export default function LiveTV() {
             <h1 className="text-xl font-semibold">Live TV</h1>
             <p className="text-sm text-muted-foreground">
               {streams.length.toLocaleString()} channels ·{" "}
-              {categories.length} categories
+              {filteredCategories.length} categories
             </p>
           </div>
         </div>
@@ -92,7 +107,7 @@ export default function LiveTV() {
         </div>
       ) : (
         <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin">
-          {categories.map((cat) => (
+          {filteredCategories.map((cat) => (
             <button
               key={cat.category_id}
               onClick={() => setActiveCat(cat.category_id)}
@@ -160,6 +175,16 @@ export default function LiveTV() {
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Tv className="h-10 w-10 text-muted-foreground/20 mb-3" />
           <p className="text-sm text-muted-foreground">No channels in this category</p>
+        </div>
+      )}
+
+      {filteredCategories.length === 0 && !loading && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Tv className="h-10 w-10 text-muted-foreground/20 mb-3" />
+          <p className="text-sm text-muted-foreground">No categories match your filters</p>
+          <p className="text-xs text-muted-foreground/50 mt-1">
+            Adjust your language/country settings to see more content
+          </p>
         </div>
       )}
     </div>

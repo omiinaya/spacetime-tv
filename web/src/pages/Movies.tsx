@@ -4,6 +4,8 @@ import { Film, Loader2, AlertCircle, RotateCcw, Star, Play, Search, X } from "lu
 import { api, Category, Movie } from "@/lib/api";
 import ContentRow from "@/components/ContentRow";
 import { Skeleton } from "@/components/Skeleton";
+import { useSettings } from "@/context/SettingsContext";
+import { filterCategories } from "@/lib/settings";
 
 const ROWS_PER_PAGE = 12;
 const MOVIES_PER_ROW = 20;
@@ -26,6 +28,14 @@ export default function Movies() {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const fetchingRef = useRef<Set<string>>(new Set());
 
+  const { settings } = useSettings();
+
+  // Filter categories by settings
+  const filteredCatsBySettings = useMemo(
+    () => filterCategories(categories, settings, false),
+    [categories, settings]
+  );
+
   // Section search
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -43,11 +53,11 @@ export default function Movies() {
   // Lazy-load more category rows as you scroll down
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel || visibleRows >= categories.length) return;
+    if (!sentinel || visibleRows >= filteredCatsBySettings.length) return;
     const obs = new IntersectionObserver(
       ([e]) => {
         if (e.isIntersecting) {
-          setVisibleRows((v) => Math.min(v + ROWS_PER_PAGE, categories.length));
+          setVisibleRows((v) => Math.min(v + ROWS_PER_PAGE, filteredCatsBySettings.length));
         }
       },
       { rootMargin: "400px" }
@@ -132,8 +142,8 @@ export default function Movies() {
     [rows]
   );
 
-  // Lazy-fetch rows as they become visible
-  const visibleCats = categories.slice(0, visibleRows);
+  // Lazy-fetch rows as they become visible (after settings filter)
+  const visibleCats = filteredCatsBySettings.slice(0, visibleRows);
   useEffect(() => {
     for (const cat of visibleCats) {
       const existing = rows.get(cat.category_id);
@@ -204,8 +214,8 @@ export default function Movies() {
           <h1 className="text-xl font-semibold">Movies</h1>
           <p className="text-sm text-muted-foreground">
             {totalMovies > 0
-              ? `${totalMovies.toLocaleString()} movies · ${categories.length} categories`
-              : `${categories.length} categories`}
+              ? `${totalMovies.toLocaleString()} movies · ${filteredCatsBySettings.length} categories`
+              : `${filteredCatsBySettings.length} categories`}
           </p>
         </div>
       </div>
@@ -351,16 +361,19 @@ export default function Movies() {
 
       {/* Sentinel for infinite scroll of categories */}
       <div ref={sentinelRef} className="h-1" />
-      {!q && visibleRows < categories.length && (
+      {!q && visibleRows < filteredCatsBySettings.length && (
         <div className="flex justify-center py-4">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       )}
 
-      {categories.length === 0 && !loading && (
+      {filteredCatsBySettings.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Film className="h-10 w-10 text-muted-foreground/20 mb-3" />
-          <p className="text-sm text-muted-foreground">No categories available</p>
+          <p className="text-sm text-muted-foreground">No categories match your filters</p>
+          <p className="text-xs text-muted-foreground/50 mt-1">
+            Adjust your language or service settings to see more content
+          </p>
         </div>
       )}
     </div>

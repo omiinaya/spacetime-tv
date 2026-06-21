@@ -8,14 +8,17 @@ import {
   Search,
   Menu,
   X,
+  Settings,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
+import { SettingsProvider } from "@/context/SettingsContext";
 import LiveTV from "@/pages/LiveTV";
 import Guide from "@/pages/Guide";
 import Movies from "@/pages/Movies";
 import Series from "@/pages/Series";
 import SearchPage from "@/pages/Search";
+import SettingsPage from "@/pages/SettingsPage";
 import Player from "@/components/Player";
 
 const SIDEBAR_MIN = 200;
@@ -113,9 +116,21 @@ function AppLayout() {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="p-3 border-t border-border">
-        <p className="text-[10px] text-muted-foreground/50 text-center">
+      {/* Bottom section: Settings + Footer */}
+      <div className="border-t border-border">
+        <button
+          onClick={() => navigate("/settings")}
+          className={cn(
+            "w-full flex items-center gap-2.5 px-5 py-2.5 text-sm transition-colors text-left",
+            isActive("/settings")
+              ? "bg-primary/10 text-foreground font-medium"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          )}
+        >
+          <Settings className="h-4 w-4 shrink-0" />
+          Settings
+        </button>
+        <p className="text-[10px] text-muted-foreground/50 text-center px-4 py-2">
           Spacetime-TV · iptv-provider
         </p>
       </div>
@@ -168,6 +183,7 @@ function AppLayout() {
             <Route path="/movies" element={<Movies />} />
             <Route path="/series" element={<Series />} />
             <Route path="/search" element={<SearchPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/watch/live/:id" element={<Player type="live" />} />
             <Route path="/watch/movie/:id" element={<Player type="movie" />} />
             <Route
@@ -186,7 +202,9 @@ function AppLayout() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppLayout />
+      <SettingsProvider>
+        <AppLayout />
+      </SettingsProvider>
     </BrowserRouter>
   );
 }
