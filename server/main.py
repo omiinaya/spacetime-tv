@@ -393,6 +393,7 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
             "-v", "quiet",
             "-print_format", "json",
             "-show_streams",
+            "-show_format",
             "-user_agent", ua,
             "-select_streams", "v:0",
             url,
@@ -413,12 +414,14 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
         if not streams:
             return {"codec": "unknown"}
         s = streams[0]
+        fmt = data.get("format", {})
         result = {
             "codec": s.get("codec_name", "unknown"),
             "codec_long": s.get("codec_long_name", ""),
             "width": s.get("width", 0),
             "height": s.get("height", 0),
             "profile": s.get("profile", ""),
+            "container": fmt.get("format_name", ""),
         }
         _probe_cache[cache_key] = (now, result)
         log.info(f"Probe {stream_id}: {result['codec']} {result['width']}x{result['height']}")
@@ -540,6 +543,102 @@ async def stream_vod_transcode(url: str):
         except asyncio.CancelledError: pass
         if proc.returncode is None:
             proc.kill(); await proc.wait()
+
+
+# ── VOD Remux: MKV→MPEG-TS via -c copy (no re-encode) ──────────────────────
+
+async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
+    """Remux VOD (any container) → MPEG-TS with -c copy (no re-encode).
+    Output is playable by mpegts.js. Supports time-based seeking via start_time."""
+    headers = {"User-Agent": UA_STR}
+
+    # Resolve the redirect chain to get the final CDN URL for ffmpeg
+    cdn_url = url
+    try:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=headers) as c:
+            async with c.stream("GET", url) as resp:
+                cdn_url = str(resp.url)
+    except Exception as e:
+        log.warning(f"VOD remux URL resolution failed, using original: {e}")
+
+    log.info(f"VOD remux {cdn_url[:100]}... start={start_time}")
+    cmd = [
+        "ffmpeg",
+        "-loglevel", "warning",
+        "-probesize", "2M",
+        "-analyzeduration", "2M",
+        "-user_agent", headers["User-Agent"],
+    ]
+    if start_time and start_time > 0:
+        cmd += ["-ss", str(start_time)]
+    cmd += [
+        "-i", cdn_url,
+        "-c", "copy",
+        "-f", "mpegts",
+        "pipe:1",
+    ]
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    # Background stderr logging
+    async def log_stderr():
+        while proc.stderr:
+            line = await proc.stderr.readline()
+            if not line: break
+            log.warning(f"vod-remux: {line.decode().rstrip()}")
+
+    stderr_task = asyncio.create_task(log_stderr())
+    try:
+        while proc.stdout:
+            chunk = await proc.stdout.read(65536)
+            if not chunk: break
+            yield chunk
+    except GeneratorExit:
+        pass
+    finally:
+        stderr_task.cancel()
+        try: await stderr_task
+        except asyncio.CancelledError: pass
+        if proc.returncode is None:
+            proc.kill(); await proc.wait()
+
+
+@app.get("/api/stream/movie/{stream_id}/remux")
+async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
+    """Remux movie MKV→MPEG-TS for browser playback (mpegts.js)."""
+    url = build_stream_url(stream_id, "movie")
+    try:
+        return StreamingResponse(
+            stream_vod_mpegts(url, start),
+            media_type="video/mp2t",
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "no-cache",
+            },
+        )
+    except Exception as e:
+        log.error(f"Movie remux error ({stream_id}): {e}")
+        return Response(status_code=502, content="Remux failed")
+
+
+@app.get("/api/stream/series/{series_id}/{episode_id}/remux")
+async def stream_series_remux(series_id: int, episode_id: int, start: Optional[float] = None):
+    """Remux series episode MKV→MPEG-TS for browser playback (mpegts.js)."""
+    url = build_stream_url(episode_id, "series")
+    try:
+        return StreamingResponse(
+            stream_vod_mpegts(url, start),
+            media_type="video/mp2t",
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "no-cache",
+            },
+        )
+    except Exception as e:
+        log.error(f"Series remux error ({episode_id}): {e}")
+        return Response(status_code=502, content="Remux failed")
 
 
 @app.get("/api/stream/movie/{stream_id}/transcode")
