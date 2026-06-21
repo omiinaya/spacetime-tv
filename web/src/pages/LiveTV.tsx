@@ -56,11 +56,29 @@ export default function LiveTV() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
 
-    api.live
-      .all()
-      .then((d) => setAllStreams(d.streams))
-      .catch(() => {})
-      .finally(() => setAllLoading(false));
+    // Fetch ALL streams for cross-category search (with sessionStorage cache)
+    let restored = false;
+    const cached = sessionStorage.getItem("stv_live_all");
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.streams && Date.now() - parsed.ts < 300000) {
+          setAllStreams(parsed.streams);
+          setAllLoading(false);
+          restored = true;
+        }
+      } catch {}
+    }
+    if (!restored) {
+      api.live
+        .all()
+        .then((d) => {
+          setAllStreams(d.streams);
+          sessionStorage.setItem("stv_live_all", JSON.stringify({ streams: d.streams, ts: Date.now() }));
+        })
+        .catch(() => {})
+        .finally(() => setAllLoading(false));
+    }
   }, []);
 
   useEffect(() => {

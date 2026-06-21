@@ -70,9 +70,14 @@ export default function Player({ type }: PlayerProps) {
   const playerRef = useRef<mpegts.Player | null>(null);
   const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const phaseRef = useRef<string>("loading");
 
   // ── State ────────────────────────────────────────────────────
-  const [phase, setPhase] = useState<"probing" | "loading" | "playing" | "paused" | "error">("loading");
+  const [phase, _setPhase] = useState<"probing" | "loading" | "playing" | "paused" | "error">("loading");
+  const setPhase = useCallback((p: typeof phase) => {
+    phaseRef.current = p;
+    _setPhase(p);
+  }, []);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [transcoding, setTranscoding] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -172,11 +177,13 @@ export default function Player({ type }: PlayerProps) {
     });
 
     player.on(mpegts.Events.STATISTICS_INFO, () => {
-      if (phase === "loading" || phase === "probing") setPhase("playing");
+      const p = phaseRef.current;
+      if (p === "loading" || p === "probing") setPhase("playing");
     });
 
     const timeout = setTimeout(() => {
-      if (phase === "loading" || phase === "probing") {
+      const p = phaseRef.current;
+      if (p === "loading" || p === "probing") {
         timedOut = true;
         setPhase("error");
         setErrorMsg("Stream timed out. The channel may be offline.");
@@ -184,7 +191,7 @@ export default function Player({ type }: PlayerProps) {
     }, timeoutMs);
 
     return () => { clearTimeout(timeout); };
-  }, [phase]);
+  }, []);
 
   // ── Playback: VOD (native video) ────────────────────────────
   const playVod = useCallback((resumeFrom: number | null = null) => {
@@ -249,7 +256,8 @@ export default function Player({ type }: PlayerProps) {
     video.load();
 
     const timeout = setTimeout(() => {
-      if (phase === "loading" || phase === "probing") {
+      const p = phaseRef.current;
+      if (p === "loading" || p === "probing") {
         setPhase("error"); setErrorMsg("Stream timed out.");
       }
     }, 30000);
@@ -259,7 +267,7 @@ export default function Player({ type }: PlayerProps) {
       video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("ended", onEnded);
     };
-  }, [streamPath, watchKey, phase]);
+  }, [streamPath, watchKey]);
 
   // ── Main effect: probe → play ───────────────────────────────
   useEffect(() => {
