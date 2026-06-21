@@ -1,0 +1,192 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import {
+  Tv,
+  CalendarClock,
+  Film,
+  Tv2,
+  Search,
+  Menu,
+  X,
+} from "lucide-react";
+import { Toaster } from "sonner";
+import { cn } from "@/lib/utils";
+import LiveTV from "@/pages/LiveTV";
+import Guide from "@/pages/Guide";
+import Movies from "@/pages/Movies";
+import Series from "@/pages/Series";
+import SearchPage from "@/pages/Search";
+import Player from "@/components/Player";
+
+const SIDEBAR_MIN = 200;
+const SIDEBAR_MAX = 400;
+const SIDEBAR_DEFAULT = 240;
+
+const NAV_ITEMS = [
+  { id: "/live", label: "Live TV", icon: Tv },
+  { id: "/guide", label: "TV Guide", icon: CalendarClock },
+  { id: "/movies", label: "Movies", icon: Film },
+  { id: "/series", label: "Series", icon: Tv2 },
+  { id: "/search", label: "Search", icon: Search },
+];
+
+function AppLayout() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem("stv-sidebar-width");
+    return saved
+      ? Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, parseInt(saved, 10)))
+      : SIDEBAR_DEFAULT;
+  });
+  const sidebarWidthRef = useRef(sidebarWidth);
+  sidebarWidthRef.current = sidebarWidth;
+  const dragging = useRef(false);
+
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      dragging.current = true;
+      document.body.style.cursor = "ew-resize";
+      document.body.style.userSelect = "none";
+      const handleMouseMove = (ev: MouseEvent) => {
+        if (!dragging.current) return;
+        const newWidth = Math.min(
+          SIDEBAR_MAX,
+          Math.max(SIDEBAR_MIN, ev.clientX)
+        );
+        setSidebarWidth(newWidth);
+        sidebarWidthRef.current = newWidth;
+      };
+      const handleMouseUp = () => {
+        dragging.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        localStorage.setItem(
+          "stv-sidebar-width",
+          String(sidebarWidthRef.current)
+        );
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    []
+  );
+
+  const isActive = (path: string) => location.pathname.startsWith(path);
+
+  const sidebar = (
+    <div
+      className="flex flex-col h-full bg-[var(--sidebar)] border-r border-border shrink-0"
+      style={{ width: sidebarWidth }}
+    >
+      {/* Brand */}
+      <div className="flex items-center gap-3 px-4 h-14 border-b border-border shrink-0">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shrink-0">
+          <Tv className="h-4 w-4 text-white" />
+        </div>
+        <span className="font-semibold text-sm">Spacetime-TV</span>
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+        {NAV_ITEMS.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => {
+              navigate(item.id);
+              setMobileOpen(false);
+            }}
+            className={cn(
+              "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left",
+              isActive(item.id)
+                ? "bg-primary/10 text-foreground font-medium border-l-2 border-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent"
+            )}
+          >
+            <item.icon className="h-4 w-4 shrink-0" />
+            {item.label}
+          </button>
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div className="p-3 border-t border-border">
+        <p className="text-[10px] text-muted-foreground/50 text-center">
+          Spacetime-TV · iptv-provider
+        </p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      {/* Desktop sidebar */}
+      <div className="hidden md:block shrink-0">{sidebar}</div>
+      {/* Resize handle */}
+      <div
+        className="hidden md:block w-[5px] shrink-0 cursor-ew-resize relative z-30 hover:bg-primary/20 active:bg-primary/30 transition-colors"
+        onMouseDown={handleResizeStart}
+      />
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="relative w-64 h-full">{sidebar}</div>
+        </div>
+      )}
+
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto">
+        {/* Mobile header */}
+        <div className="md:hidden flex items-center gap-3 px-4 h-12 border-b border-border bg-[var(--sidebar)]">
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+              <Tv className="h-3 w-3 text-white" />
+            </div>
+            <span className="font-semibold text-sm">Spacetime-TV</span>
+          </div>
+        </div>
+
+        <div className="p-4 md:p-6 lg:p-8">
+          <Routes>
+            <Route path="/" element={<LiveTV />} />
+            <Route path="/live" element={<LiveTV />} />
+            <Route path="/guide" element={<Guide />} />
+            <Route path="/movies" element={<Movies />} />
+            <Route path="/series" element={<Series />} />
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/watch/live/:id" element={<Player type="live" />} />
+            <Route path="/watch/movie/:id" element={<Player type="movie" />} />
+            <Route
+              path="/watch/series/:seriesId/:epId"
+              element={<Player type="series" />}
+            />
+          </Routes>
+        </div>
+      </main>
+
+      <Toaster richColors theme="dark" position="bottom-right" />
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppLayout />
+    </BrowserRouter>
+  );
+}
