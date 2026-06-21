@@ -149,8 +149,8 @@ export default function Player({ type }: PlayerProps) {
     setControlsVisible(false);
   }, []);
 
-  // ── Playback: MPEG-TS via mpegts.js (live TV + VOD transcode) ──
-  const playMPEGTS = useCallback((url: string, liveFlag: boolean, isTranscode: boolean, timeoutMs = 15000) => {
+  // ── Playback: MPEG-TS via mpegts.js (live TV + VOD remux/transcode) ──
+  const playMPEGTS = useCallback((url: string, liveFlag: boolean, isTranscode: boolean, timeoutMs = 15000, saveKey = "") => {
     const video = videoRef.current;
     if (!video) return () => {};
 
@@ -170,12 +170,23 @@ export default function Player({ type }: PlayerProps) {
       catch { return 0; }
     })();
 
-    // Time tracker for VOD progress bar
+    // Time tracker for VOD progress bar + position saving
     let timeInterval: ReturnType<typeof setInterval> | null = null;
+    let saveTimer: ReturnType<typeof setTimeout> | null = null;
     if (!liveFlag) {
       timeInterval = setInterval(() => {
-        setCurrentTime(vodStartOffset + (Date.now() - vodStartTime) / 1000);
+        const pos = vodStartOffset + (Date.now() - vodStartTime) / 1000;
+        setCurrentTime(pos);
       }, 500);
+      // Save watch position every 5 seconds
+      const scheduleSave = () => {
+        saveTimer = setTimeout(() => {
+          const pos = vodStartOffset + (Date.now() - vodStartTime) / 1000;
+          if (saveKey && pos > 5) saveWatchPos(saveKey, pos);
+          scheduleSave();
+        }, 5000);
+      };
+      scheduleSave();
     }
 
     player.attachMediaElement(video);
@@ -218,7 +229,7 @@ export default function Player({ type }: PlayerProps) {
       }
     }, timeoutMs);
 
-    return () => { clearTimeout(timeout); if (timeInterval) clearInterval(timeInterval); };
+    return () => { clearTimeout(timeout); if (timeInterval) clearInterval(timeInterval); if (saveTimer) clearTimeout(saveTimer); };
   }, []);
 
   // ── Playback: VOD (native video) ────────────────────────────
@@ -379,10 +390,10 @@ export default function Player({ type }: PlayerProps) {
       playMPEGTS(url, true, needsTranscode);
     } else if (needsTranscode && vodTranscodePath) {
       // VOD HEVC → transcode via mpegts.js (slower startup for 4K)
-      playMPEGTS(vodTranscodePath, false, true, 90000);
+      playMPEGTS(vodTranscodePath, false, true, 90000, watchKey);
     } else if (needsRemux && remuxPath) {
       // VOD MKV → remux to MPEG-TS via -c copy (mpegts.js)
-      playMPEGTS(`${remuxPath}?_=${retryKey.current}`, false, false, 30000);
+      playMPEGTS(`${remuxPath}?_=${retryKey.current}`, false, false, 30000, watchKey);
     } else {
       playVod(null);
     }
@@ -398,11 +409,20 @@ export default function Player({ type }: PlayerProps) {
   }, [showControls]);
 
   const seek = useCallback((delta: number) => {
-    const v = videoRef.current;
-    if (!v || isLive) return;
-    v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + delta));
+    if (isLive) return;
+    const needsRemux = remuxPath && transcodeCache.get(streamId) === "remux";
+    if (needsRemux && remuxPath) {
+      // mpegts.js VOD: restart stream at new position
+      const newPos = Math.max(0, currentTime + delta);
+      retryKey.current++;
+      playMPEGTS(`${remuxPath}?start=${newPos}&_=${retryKey.current}`, false, false, 30000, watchKey);
+    } else {
+      const v = videoRef.current;
+      if (!v) return;
+      v.currentTime = Math.max(0, Math.min(v.duration, v.currentTime + delta));
+    }
     showControls(true);
-  }, [isLive, showControls]);
+  }, [isLive, currentTime, streamId, remuxPath, playMPEGTS, showControls]);
 
   const setVolume = useCallback((val: number) => {
     const v = videoRef.current;
@@ -460,18 +480,18 @@ export default function Player({ type }: PlayerProps) {
     setPhase("loading");
     const needsRemux = remuxPath && transcodeCache.get(streamId) === "remux";
     if (needsRemux) {
-      playMPEGTS(`${remuxPath}?start=${resumePos}&_=${retryKey.current}`, false, false, 30000);
+      playMPEGTS(`${remuxPath}?start=${resumePos}&_=${retryKey.current}`, false, false, 30000, watchKey);
     } else {
       playVod(resumePos);
     }
-  }, [resumePos, streamId, remuxPath, playMPEGTS, playVod]);
+  }, [resumePos, streamId, remuxPath, watchKey, playMPEGTS, playVod]);
 
   const startFromBeginning = useCallback(() => {
     setShowResumePrompt(false);
     setPhase("loading");
     const needsRemux = remuxPath && transcodeCache.get(streamId) === "remux";
     if (needsRemux) {
-      playMPEGTS(`${remuxPath}?_=${retryKey.current}`, false, false, 30000);
+      playMPEGTS(`${remuxPath}?_=${retryKey.current}`, false, false, 30000, watchKey);
     } else {
       playVod(null);
     }
@@ -511,11 +531,20 @@ export default function Player({ type }: PlayerProps) {
   const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (isLive || !duration) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const frac = (e.clientX - rect.left) / rect.width;
-    const v = videoRef.current;
-    if (v) v.currentTime = frac * duration;
+    const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const targetTime = frac * duration;
+
+    const needsRemux = remuxPath && transcodeCache.get(streamId) === "remux";
+    if (needsRemux && remuxPath) {
+      // mpegts.js VOD: restart stream at clicked position
+      retryKey.current++;
+      playMPEGTS(`${remuxPath}?start=${targetTime}&_=${retryKey.current}`, false, false, 30000, watchKey);
+    } else {
+      const v = videoRef.current;
+      if (v) v.currentTime = targetTime;
+    }
     showControls(true);
-  }, [isLive, duration, showControls]);
+  }, [isLive, duration, streamId, remuxPath, watchKey, playMPEGTS, showControls]);
 
   // ── Render ───────────────────────────────────────────────────
   const showOverlay = phase === "probing" || phase === "loading" || phase === "error" || showResumePrompt;
