@@ -11,6 +11,7 @@ export const api = {
     categories: () => get<{ categories: Category[] }>("/live/categories"),
     streams: (catId: string) =>
       get<{ streams: LiveStream[] }>(`/live/streams?category_id=${catId}`),
+    all: () => get<{ streams: LiveStream[] }>("/live/all"),
   },
   movies: {
     categories: () => get<{ categories: Category[] }>("/movies/categories"),

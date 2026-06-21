@@ -14,14 +14,18 @@ export default function LiveTV() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCat, setActiveCat] = useState<string>("");
   const [streams, setStreams] = useState<LiveStream[]>([]);
+  const [allStreams, setAllStreams] = useState<LiveStream[]>([]);
   const [loading, setLoading] = useState(true);
   const [streamsLoading, setStreamsLoading] = useState(false);
+  const [allLoading, setAllLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const q = searchQuery.toLowerCase().trim();
 
-  const { visibleItems, sentinelRef, hasMore } = useInfiniteScroll(streams, BATCH);
+  const { visibleItems, sentinelRef, hasMore } = useInfiniteScroll(
+    q ? allStreams : streams, BATCH
+  );
   const { settings } = useSettings();
 
   // Filter categories by settings
@@ -30,31 +34,39 @@ export default function LiveTV() {
     [categories, settings]
   );
 
-  // Filter visible items by search query
+  // When searching, filter all streams by query; otherwise return visibleItems as-is
   const filteredItems = useMemo(() => {
     if (!q) return visibleItems;
-    return visibleItems.filter((s) => s.name.toLowerCase().includes(q));
+    const filtered = visibleItems.filter((s) => s.name.toLowerCase().includes(q));
+    return filtered;
   }, [visibleItems, q]);
 
   useEffect(() => {
+    // Fetch categories
     api.live
       .categories()
-      .then((d) => {
-        setCategories(d.categories);
-      })
+      .then((d) => setCategories(d.categories))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
+
+    // Fetch ALL streams for cross-category search
+    api.live
+      .all()
+      .then((d) => setAllStreams(d.streams))
+      .catch(() => {})
+      .finally(() => setAllLoading(false));
   }, []);
 
-  // Auto-select first filtered category when categories or filter changes
+  // Auto-select first filtered category
   useEffect(() => {
     if (filteredCategories.length > 0 && !filteredCategories.find((c) => c.category_id === activeCat)) {
       setActiveCat(filteredCategories[0].category_id);
     }
   }, [filteredCategories, activeCat]);
 
+  // Load streams for selected category (only when not searching)
   useEffect(() => {
-    if (!activeCat) return;
+    if (!activeCat || q) return;
     setError(null);
     setStreamsLoading(true);
     api.live
@@ -62,7 +74,9 @@ export default function LiveTV() {
       .then((d) => setStreams(d.streams))
       .catch((e) => setError(e.message))
       .finally(() => setStreamsLoading(false));
-  }, [activeCat]);
+  }, [activeCat, q]);
+
+  const isSearching = !!q;
 
   return (
     <div className="space-y-6">
@@ -83,8 +97,9 @@ export default function LiveTV() {
           <div>
             <h1 className="text-xl font-semibold">Live TV</h1>
             <p className="text-sm text-muted-foreground">
-              {streams.length.toLocaleString()} channels ·{" "}
-              {filteredCategories.length} categories
+              {isSearching
+                ? `${filteredItems.length.toLocaleString()} results · ${allStreams.length.toLocaleString()} channels`
+                : `${streams.length.toLocaleString()} channels · ${filteredCategories.length} categories`}
             </p>
           </div>
         </div>
@@ -115,8 +130,9 @@ export default function LiveTV() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Filter channels..."
-            className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+            placeholder={allLoading ? "Loading channels..." : `Search ${allStreams.length.toLocaleString()} channels...`}
+            disabled={allLoading}
+            className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
           />
           {searchQuery && (
             <button
@@ -129,33 +145,41 @@ export default function LiveTV() {
         </div>
       )}
 
-      {/* Category tabs */}
-      {loading ? (
-        <div className="flex gap-1.5 pb-2">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <TabSkeleton key={i} />
-          ))}
-        </div>
-      ) : (
-        <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin">
-          {filteredCategories.map((cat) => (
-            <button
-              key={cat.category_id}
-              onClick={() => { setActiveCat(cat.category_id); setSearchQuery(""); }}
-              className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                activeCat === cat.category_id
-                  ? "bg-primary/15 text-primary border border-primary/20"
-                  : "bg-muted text-muted-foreground hover:text-foreground border border-transparent"
-              }`}
-            >
-              {cat.category_name}
-            </button>
-          ))}
-        </div>
+      {/* Category tabs (hidden when searching) */}
+      {!isSearching && (
+        loading ? (
+          <div className="flex gap-1.5 pb-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <TabSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin">
+            {filteredCategories.map((cat) => (
+              <button
+                key={cat.category_id}
+                onClick={() => setActiveCat(cat.category_id)}
+                className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  activeCat === cat.category_id
+                    ? "bg-primary/15 text-primary border border-primary/20"
+                    : "bg-muted text-muted-foreground hover:text-foreground border border-transparent"
+                }`}
+              >
+                {cat.category_name}
+              </button>
+            ))}
+          </div>
+        )
       )}
 
       {/* Channel grid */}
-      {streamsLoading ? (
+      {isSearching && allLoading ? (
+        <div className="channel-grid">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <ChannelCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : !isSearching && streamsLoading ? (
         <div className="channel-grid">
           {Array.from({ length: 20 }).map((_, i) => (
             <ChannelCardSkeleton key={i} />
@@ -163,11 +187,11 @@ export default function LiveTV() {
         </div>
       ) : (
         <>
-          {q && filteredItems.length === 0 ? (
+          {isSearching && filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Search className="h-10 w-10 text-muted-foreground/20 mb-3" />
               <p className="text-sm text-muted-foreground">
-                No channels matching "{searchQuery}"
+                No channels matching "{searchQuery}" across all {allStreams.length.toLocaleString()} channels
               </p>
               <button
                 onClick={() => setSearchQuery("")}
@@ -207,9 +231,9 @@ export default function LiveTV() {
                 ))}
               </div>
 
-              {/* Infinite scroll sentinel (only when not searching) */}
-              {!q && <div ref={sentinelRef} className="h-1" />}
-              {!q && hasMore && (
+              {/* Infinite scroll sentinel */}
+              <div ref={sentinelRef} className="h-1" />
+              {hasMore && (
                 <div className="flex justify-center py-4">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 </div>
@@ -219,14 +243,14 @@ export default function LiveTV() {
         </>
       )}
 
-      {streams.length === 0 && !streamsLoading && !loading && (
+      {streams.length === 0 && !streamsLoading && !loading && !isSearching && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Tv className="h-10 w-10 text-muted-foreground/20 mb-3" />
           <p className="text-sm text-muted-foreground">No channels in this category</p>
         </div>
       )}
 
-      {filteredCategories.length === 0 && !loading && (
+      {filteredCategories.length === 0 && !loading && !isSearching && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Tv className="h-10 w-10 text-muted-foreground/20 mb-3" />
           <p className="text-sm text-muted-foreground">No categories match your filters</p>

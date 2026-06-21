@@ -164,6 +164,13 @@ async def live_categories():
     return {"categories": data}
 
 
+@app.get("/api/live/all")
+async def live_all_streams():
+    """All live TV streams (cached, for cross-category search)."""
+    data = await cached_fetch("live_all", "get_live_streams")
+    return {"streams": data}
+
+
 @app.get("/api/live/streams")
 async def live_streams(category_id: str = Query(...)):
     """Live streams for a category."""
