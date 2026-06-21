@@ -1079,6 +1079,175 @@ def serve_cached_mp4(path: Path, request: Request):
     )
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# ── VOD HLS Streaming ───────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+
+HLS_DIR = CACHE_DIR / "hls"
+HLS_DIR.mkdir(parents=True, exist_ok=True)
+_hls_tasks: dict[str, asyncio.Task] = {}  # cache_key → ffprobe task
+_hls_procs: dict[str, asyncio.subprocess.Process] = {}  # cache_key → ffmpeg proc
+_mkv_downloaders: dict[str, asyncio.subprocess.Process] = {}  # cache_key → curl proc
+
+
+async def download_mkv(stream_id: str, stream_type: str, cache_key: str) -> Optional[Path]:
+    """Download MKV from CDN to disk with retries. Returns path on success."""
+    mkv_path = CACHE_DIR / f"{cache_key}.mkv"
+    if mkv_path.exists():
+        return mkv_path
+
+    url = build_stream_url(int(stream_id), stream_type)
+    ua = UA_STR
+
+    log.info(f"[HLS] Downloading {cache_key} → {mkv_path}")
+    cmd = [
+        "curl", "-sS", "-L",
+        "--retry", "10", "--retry-delay", "5",
+        "--retry-max-time", "600", "--max-time", "900",
+        "-H", f"User-Agent: {ua}",
+        "-o", str(mkv_path), url,
+    ]
+    proc = await asyncio.create_subprocess_exec(*cmd)
+    _mkv_downloaders[cache_key] = proc
+    await proc.wait()
+    _mkv_downloaders.pop(cache_key, None)
+
+    if proc.returncode != 0 or not mkv_path.exists():
+        log.error(f"[HLS] Download failed for {cache_key}")
+        return None
+    log.info(f"[HLS] Downloaded {cache_key}: {mkv_path.stat().st_size/1024/1024:.0f} MB")
+    return mkv_path
+
+
+async def run_hls_segmenter(cache_key: str, input_path: Path, seek_seconds: float = 0):
+    """Run ffmpeg to segment a local MKV/MP4 into HLS (.m3u8 + .ts)."""
+    seg_dir = HLS_DIR / cache_key
+    seg_dir.mkdir(parents=True, exist_ok=True)
+
+    # Clear old segments
+    for f in seg_dir.glob("*.ts"):
+        f.unlink()
+    pl_path = seg_dir / "playlist.m3u8"
+    if pl_path.exists():
+        pl_path.unlink()
+
+    ffmpeg_args = [
+        "ffmpeg", "-loglevel", "warning", "-y",
+    ]
+    if seek_seconds > 0:
+        ffmpeg_args += ["-ss", str(seek_seconds)]
+    ffmpeg_args += [
+        "-i", str(input_path),
+        "-c", "copy",
+        "-f", "hls",
+        "-hls_time", "4",
+        "-hls_list_size", "0",
+        "-hls_flags", "delete_segments",
+        str(seg_dir / "playlist.m3u8"),
+    ]
+
+    # Kill any existing segmenter for this stream
+    old = _hls_procs.pop(cache_key, None)
+    if old and old.returncode is None:
+        old.kill()
+
+    log.info(f"[HLS] Segmenting {cache_key} seek={seek_seconds}s")
+    proc = await asyncio.create_subprocess_exec(*ffmpeg_args)
+    _hls_procs[cache_key] = proc
+    await proc.wait()
+    _hls_procs.pop(cache_key, None)
+
+    if proc.returncode != 0:
+        log.warning(f"[HLS] Segmenter exited {proc.returncode} for {cache_key}")
+
+
+async def ensure_hls(stream_id: str, stream_type: str, seek_seconds: float = 0) -> bool:
+    """Ensure HLS segments exist for a VOD stream. Returns True if ready."""
+    cache_key = f"{stream_type}_{stream_id}"
+    seg_dir = HLS_DIR / cache_key
+    pl_path = seg_dir / "playlist.m3u8"
+
+    # Check if we already have a cached MP4 (fast path)
+    mp4_path = CACHE_DIR / f"{cache_key}.mp4"
+
+    if mp4_path.exists():
+        # Cached MP4 → convert to HLS (~7s for full movie)
+        if not pl_path.exists():
+            log.info(f"[HLS] Converting cached MP4 → HLS: {cache_key}")
+            await run_hls_segmenter(cache_key, mp4_path, seek_seconds)
+        elif seek_seconds > 0:
+            # Re-segment at new position
+            await run_hls_segmenter(cache_key, mp4_path, seek_seconds)
+        return pl_path.exists()
+
+    # No cached MP4 — download MKV then convert
+    if cache_key in _hls_tasks:
+        # Already in progress
+        return pl_path.exists()
+
+    async def _do():
+        try:
+            mkv = await download_mkv(stream_id, stream_type, cache_key)
+            if mkv:
+                await run_hls_segmenter(cache_key, mkv, seek_seconds)
+        except Exception as e:
+            log.error(f"[HLS] Pipeline failed for {cache_key}: {e}", exc_info=True)
+        finally:
+            _hls_tasks.pop(cache_key, None)
+
+    _hls_tasks[cache_key] = asyncio.create_task(_do())
+    return False  # Will be ready after download + segment
+
+
+@app.get("/api/movie/hls/{stream_id}")
+async def movie_hls_start(stream_id: int, start: float = 0):
+    """Start HLS streaming for a movie. Returns playlist URL when ready."""
+    ready = await ensure_hls(str(stream_id), "movie", start)
+    cache_key = f"movie_{stream_id}"
+    pl_path = HLS_DIR / cache_key / "playlist.m3u8"
+
+    if pl_path.exists():
+        return {"status": "ready", "playlist": f"/api/hls/movie/{stream_id}/playlist.m3u8"}
+
+    return {"status": "preparing", "message": "Downloading and segmenting..."}
+
+
+@app.get("/api/series/hls/{series_id}/{episode_id}")
+async def series_hls_start(series_id: int, episode_id: int, start: float = 0):
+    """Start HLS streaming for a series episode."""
+    ready = await ensure_hls(str(episode_id), "series", start)
+    cache_key = f"series_{episode_id}"
+    pl_path = HLS_DIR / cache_key / "playlist.m3u8"
+
+    if pl_path.exists():
+        return {"status": "ready", "playlist": f"/api/hls/series/{episode_id}/playlist.m3u8"}
+
+    return {"status": "preparing", "message": "Downloading and segmenting..."}
+
+
+# Serve HLS segments and playlists
+from fastapi.responses import FileResponse as FastAPIFileResponse
+
+
+@app.get("/api/hls/{stream_type}/{stream_id}/{filename}")
+async def serve_hls_file(stream_type: str, stream_id: str, filename: str):
+    """Serve .m3u8 playlist or .ts segment for HLS playback."""
+    if ".." in filename or "/" in filename:
+        raise HTTPException(400, "Invalid filename")
+
+    cache_key = f"{stream_type}_{stream_id}"
+    file_path = HLS_DIR / cache_key / filename
+
+    if not file_path.exists():
+        raise HTTPException(404, "Segment not found")
+
+    media = "application/vnd.apple.mpegurl" if filename.endswith(".m3u8") else "video/mp2t"
+    return FastAPIFileResponse(file_path, media_type=media, headers={
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-cache",
+    })
+
+
 # ── Serve Frontend (must be last) ───────────────────────────────────────────
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
