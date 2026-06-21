@@ -850,10 +850,15 @@ _converting: dict[str, asyncio.Task] = {}  # stream_id → conversion task
 
 
 async def convert_to_mp4(stream_id: str, stream_type: str):
-    """Convert VOD stream → fMP4 via ffmpeg -c copy directly from CDN.
-    Uses fragmented MP4 so partial files are still browser-playable.
-    Caches result to CACHE_DIR. Overwrites on retry."""
+    """Download full MKV from CDN (with retries), then convert → fMP4 locally.
+    
+    Two-phase approach avoids CDN drops corrupting the output:
+    1. curl --retry downloads the full MKV to disk
+    2. ffmpeg -c copy converts the local file to fragmented MP4
+    If the CDN drops mid-download, curl retries and resumes.
+    """
     cache_key = f"{stream_type}_{stream_id}"
+    mkv_path = CACHE_DIR / f"{cache_key}.mkv"
     output_path = CACHE_DIR / f"{cache_key}.mp4"
     lock_path = CACHE_DIR / f"{cache_key}.converting"
 
@@ -864,21 +869,39 @@ async def convert_to_mp4(stream_id: str, stream_type: str):
     url = build_stream_url(int(stream_id), stream_type)
     ua = UA_STR
 
-    # Resolve CDN URL through redirect
-    cdn_url = url
-    try:
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True,
-                                     headers={"User-Agent": ua}) as c:
-            async with c.stream("GET", url) as resp:
-                cdn_url = str(resp.url)
-    except Exception as e:
-        log.warning(f"URL resolution failed for {cache_key}: {e}")
+    # Phase 1: Download full MKV with curl (retries on connection drops)
+    if not mkv_path.exists():
+        log.info(f"Downloading {cache_key} → {mkv_path}")
+        dl_cmd = [
+            "curl", "-sS", "-L",
+            "--retry", "10",
+            "--retry-delay", "5",
+            "--retry-max-time", "600",
+            "--max-time", "600",
+            "-H", f"User-Agent: {ua}",
+            "-o", str(mkv_path),
+            url,
+        ]
+        dl_proc = await asyncio.create_subprocess_exec(
+            *dl_cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        dl_stdout, dl_stderr = await dl_proc.communicate()
+        dl_size = mkv_path.stat().st_size if mkv_path.exists() else 0
+        if dl_proc.returncode != 0:
+            log.error(f"Download failed for {cache_key} ({dl_size/1024/1024:.0f}MB): "
+                      f"curl rc={dl_proc.returncode} stderr={dl_stderr.decode()[:500]}")
+            if lock_path.exists():
+                lock_path.unlink()
+            return
+        log.info(f"Downloaded {cache_key}: {dl_size/1024/1024:.0f} MB")
 
-    log.info(f"Converting {cache_key} → fMP4 (source: {cdn_url[:100]}...)")
+    # Phase 2: Convert local MKV → fMP4 (no network, can't drop)
+    log.info(f"Converting {cache_key} MKV→fMP4")
     cmd = [
         "ffmpeg", "-loglevel", "warning",
-        "-user_agent", ua,
-        "-i", cdn_url,
+        "-i", str(mkv_path),
         "-c", "copy",
         "-movflags", "frag_keyframe+empty_moov+default_base_moof",
         "-f", "mp4",
@@ -903,9 +926,13 @@ async def convert_to_mp4(stream_id: str, stream_type: str):
     try: await stderr_task
     except asyncio.CancelledError: pass
 
-    # Clean up lock
+    # Clean up
     if lock_path.exists():
         lock_path.unlink()
+    # Delete MKV to free disk — only if conversion succeeded
+    if proc.returncode == 0 and output_path.exists() and mkv_path.exists():
+        mkv_path.unlink()
+        log.info(f"Cleaned up MKV for {cache_key}")
 
     file_size = output_path.stat().st_size if output_path.exists() else 0
     if proc.returncode != 0:
@@ -933,8 +960,12 @@ async def convert_movie(stream_id: int, retry: bool = False):
     output_path = CACHE_DIR / f"{cache_key}.mp4"
     lock_path = CACHE_DIR / f"{cache_key}.converting"
 
-    if retry and output_path.exists():
-        output_path.unlink()
+    mkv_path = CACHE_DIR / f"{cache_key}.mkv"
+    if retry:
+        if output_path.exists():
+            output_path.unlink()
+        if mkv_path.exists():
+            mkv_path.unlink()
 
     if output_path.exists():
         return {"status": "ready", "message": "Cached"}
@@ -957,9 +988,13 @@ async def convert_series_ep(series_id: int, episode_id: int, retry: bool = False
     cache_key = f"series_{episode_id}"
     output_path = CACHE_DIR / f"{cache_key}.mp4"
     lock_path = CACHE_DIR / f"{cache_key}.converting"
+    mkv_path = CACHE_DIR / f"{cache_key}.mkv"
 
-    if retry and output_path.exists():
-        output_path.unlink()
+    if retry:
+        if output_path.exists():
+            output_path.unlink()
+        if mkv_path.exists():
+            mkv_path.unlink()
 
     if output_path.exists():
         return {"status": "ready", "message": "Cached"}
