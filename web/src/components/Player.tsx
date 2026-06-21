@@ -68,6 +68,7 @@ export default function Player({ type }: PlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<mpegts.Player | null>(null);
+  const mpegtsCleanup = useRef<(() => void) | null>(null);
   const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const phaseRef = useRef<string>("loading");
@@ -152,8 +153,10 @@ export default function Player({ type }: PlayerProps) {
   // ── Playback: MPEG-TS via mpegts.js (live TV + VOD remux/transcode) ──
   const playMPEGTS = useCallback((url: string, liveFlag: boolean, isTranscode: boolean, timeoutMs = 15000, saveKey = "") => {
     const video = videoRef.current;
-    if (!video) return () => {};
+    if (!video) return;
 
+    // Clean up any previous mpegts playback (intervals, timers, player)
+    if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
     video.removeAttribute("src");
     if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
 
@@ -229,7 +232,11 @@ export default function Player({ type }: PlayerProps) {
       }
     }, timeoutMs);
 
-    return () => { clearTimeout(timeout); if (timeInterval) clearInterval(timeInterval); if (saveTimer) clearTimeout(saveTimer); };
+    mpegtsCleanup.current = () => {
+      clearTimeout(timeout);
+      if (timeInterval) clearInterval(timeInterval);
+      if (saveTimer) clearTimeout(saveTimer);
+    };
   }, []);
 
   // ── Playback: VOD (native video) ────────────────────────────
@@ -524,6 +531,7 @@ export default function Player({ type }: PlayerProps) {
 
   // ── Cleanup ──────────────────────────────────────────────────
   useEffect(() => () => {
+    if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
     if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
   }, []);
 
