@@ -5,3 +5,4 @@ __pycache__/
 .env
 epg_cache.json
 *.egg-info/
+*.tsbuildinfo
