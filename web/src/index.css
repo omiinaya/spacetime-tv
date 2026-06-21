@@ -108,6 +108,15 @@ body {
   border-left: 2px solid oklch(var(--primary));
 }
 
+/* Scrollbar hide for horizontal rows */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Video player */
 .video-container {
   position: relative;

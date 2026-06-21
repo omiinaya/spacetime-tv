@@ -14,13 +14,17 @@ export const api = {
   },
   movies: {
     categories: () => get<{ categories: Category[] }>("/movies/categories"),
-    list: (catId: string) =>
-      get<{ movies: Movie[] }>(`/movies?category_id=${catId}`),
+    list: (catId: string, limit = 20, offset = 0) =>
+      get<{ movies: Movie[]; total: number; offset: number; limit: number }>(
+        `/movies?category_id=${catId}&limit=${limit}&offset=${offset}`
+      ),
   },
   series: {
     categories: () => get<{ categories: Category[] }>("/series/categories"),
-    list: (catId: string) =>
-      get<{ series: Series[] }>(`/series?category_id=${catId}`),
+    list: (catId: string, limit = 20, offset = 0) =>
+      get<{ series: Series[]; total: number; offset: number; limit: number }>(
+        `/series?category_id=${catId}&limit=${limit}&offset=${offset}`
+      ),
     details: (id: number) => get<any>(`/series/${id}`),
   },
   guide: {

@@ -243,9 +243,17 @@ async def movies_categories():
 
 
 @app.get("/api/movies")
-async def movies(category_id: str = Query(...)):
-    """Movies in a category."""
+async def movies(
+    category_id: str = Query(...),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
+    """Movies in a category, with pagination."""
     data = await cached_fetch(f"vod_{category_id}", "get_vod_streams", category_id=category_id)
+    if isinstance(data, list):
+        total = len(data)
+        data = data[offset : offset + limit]
+        return {"movies": data, "total": total, "offset": offset, "limit": limit}
     return {"movies": data}
 
 
@@ -259,9 +267,17 @@ async def series_categories():
 
 
 @app.get("/api/series")
-async def series_list(category_id: str = Query(...)):
-    """Series in a category."""
+async def series_list(
+    category_id: str = Query(...),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
+    """Series in a category, with pagination."""
     data = await cached_fetch(f"series_{category_id}", "get_series", category_id=category_id)
+    if isinstance(data, list):
+        total = len(data)
+        data = data[offset : offset + limit]
+        return {"series": data, "total": total, "offset": offset, "limit": limit}
     return {"series": data}
 
 
