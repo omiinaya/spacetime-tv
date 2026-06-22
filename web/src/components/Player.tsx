@@ -186,7 +186,7 @@ export default function Player({ type }: PlayerProps) {
         if (loadStarted) return;
         loadStarted = true;
         video.muted = true; setMuted(true);
-        video.play().catch(() => setPhase("paused"));
+        video.play().catch(() => {});
       });
 
       player.on(mpegts.Events.LOADING_COMPLETE, () => {
@@ -194,7 +194,7 @@ export default function Player({ type }: PlayerProps) {
         if (!loadStarted) {
           loadStarted = true;
           video.muted = true; setMuted(true);
-          video.play().catch(() => setPhase("paused"));
+          video.play().catch(() => {});
         }
         reconnectAttempts = 0;
       });
@@ -292,7 +292,7 @@ export default function Player({ type }: PlayerProps) {
     player.on(mpegts.Events.LOADING_COMPLETE, () => {
       // Don't hide spinner yet — wait for video to actually advance past frame 0
       video.muted = true; setMuted(true);
-      video.play().catch(() => setPhase("paused"));
+      video.play().catch(() => {});
     });
 
     // Fallback: start playback when media info is available (covers cases where
@@ -302,7 +302,7 @@ export default function Player({ type }: PlayerProps) {
       if (playStarted) return;
       playStarted = true;
       video.muted = true; setMuted(true);
-      video.play().catch(() => setPhase("paused"));
+      video.play().catch(() => {});
     };
     player.on(mpegts.Events.MEDIA_INFO, () => tryPlay());
 
@@ -593,12 +593,8 @@ export default function Player({ type }: PlayerProps) {
   const togglePlay = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
-    if (v.paused) {
-      v.muted = true; setMuted(true);
-      v.play().then(() => setPhase("playing")).catch(() => {});
-    } else {
-      v.pause(); setPhase("paused");
-    }
+    if (v.paused) { v.play().catch(() => {}); setPhase("playing"); }
+    else { v.pause(); setPhase("paused"); }
     showControls(true);
   }, [showControls]);
 
