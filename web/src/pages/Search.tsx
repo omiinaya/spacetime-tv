@@ -44,6 +44,28 @@ export default function SearchPage() {
   // Cancel on unmount
   useEffect(() => () => cancelPending(), [cancelPending]);
 
+  // ── Session-level search cache ─────────────────────────────────
+  // Saves results keyed by query so back navigation is instant.
+  // Restores cached results first, then refreshes in background.
+  const SEARCH_CACHE_PREFIX = "stv_search_";
+  const SEARCH_CACHE_TTL = 120000; // 2 minutes
+
+  const getCached = (q: string): SearchResults | null => {
+    try {
+      const raw = sessionStorage.getItem(SEARCH_CACHE_PREFIX + q);
+      if (!raw) return null;
+      const { results, ts } = JSON.parse(raw);
+      if (Date.now() - ts < SEARCH_CACHE_TTL) return results;
+      sessionStorage.removeItem(SEARCH_CACHE_PREFIX + q);
+    } catch {}
+    return null;
+  };
+  const setCached = (q: string, r: SearchResults) => {
+    try {
+      sessionStorage.setItem(SEARCH_CACHE_PREFIX + q, JSON.stringify({ results: r, ts: Date.now() }));
+    } catch {}
+  };
+
   // ── Single unified search pipeline ────────────────────────────
   const runSearch = useCallback(async (q: string) => {
     const trimmed = q.trim();
@@ -69,6 +91,7 @@ export default function SearchPage() {
       const r = await api.search(trimmed, controller.signal);
       // Only apply results if this is still the latest search
       if (searchIdRef.current === myId && !controller.signal.aborted) {
+        setCached(trimmed, r);  // cache for instant back-nav
         setResults(r);
         setLoading(false);
       }
@@ -83,13 +106,29 @@ export default function SearchPage() {
   }, [cancelPending]);
 
   // ── Auto-search from URL (Back navigation / direct link) ──────
-  // Drive search from URL params. runSearch() uses searchIdRef + AbortController
-  // internally, so redundant calls (e.g. from handleQueryChange's debounce + this
-  // effect firing on the same URL update) are harmless: the second cancels the first.
+  // Restore cached results instantly (no loading state), then refresh
+  // in background so stale cache gets updated.
+  const bgRefreshRef = useRef(false);
+
   useEffect(() => {
-    if (urlQuery && urlQuery.trim().length >= 2) {
-      setQuery(urlQuery);
-      runSearch(urlQuery);
+    if (!urlQuery || urlQuery.trim().length < 2) return;
+    const trimmed = urlQuery.trim();
+    setQuery(trimmed);
+
+    const cached = getCached(trimmed);
+    if (cached) {
+      // Instant: show cached results (no spinner)
+      setResults(cached);
+      setLoading(false);
+      setError(null);
+      // Background: refresh from API if not already refreshing
+      if (!bgRefreshRef.current) {
+        bgRefreshRef.current = true;
+        runSearch(trimmed).finally(() => { bgRefreshRef.current = false; });
+      }
+    } else {
+      // No cache — full load with spinner
+      runSearch(trimmed);
     }
   }, [urlQuery, runSearch]);
 
