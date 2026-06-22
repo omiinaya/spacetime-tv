@@ -27,45 +27,109 @@ export default function SearchPage() {
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<SearchResults | null>(null);
 
-  // Track if we've already auto-searched this URL query
-  const lastAutoSearched = useRef<string>("");
+  // ── Request cancellation ──────────────────────────────────────
+  // Each search gets a unique ID. When a new search starts, we abort
+  // the previous request and increment the ID. Responses are ignored
+  // unless their ID matches the latest.
+  const searchIdRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
 
-  // Auto-search when URL has a query param (from Back navigation or direct link)
-  useEffect(() => {
-    if (urlQuery && urlQuery.trim().length >= 2 && urlQuery !== lastAutoSearched.current) {
-      lastAutoSearched.current = urlQuery;
-      setQuery(urlQuery);
-      // Fire the search
-      const run = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          const r = await api.search(urlQuery);
-          setResults(r);
-        } catch (e: any) {
-          setError(e.message);
-        }
-        setLoading(false);
-      };
-      run();
+  const cancelPending = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
     }
-  }, [urlQuery]);
+  }, []);
 
-  const doSearch = useCallback(async () => {
-    if (query.trim().length < 2) return;
-    // Update URL with the query
-    setSearchParams({ q: query }, { replace: true });
+  // Cancel on unmount
+  useEffect(() => cancelPending, [cancelPending]);
+
+  // ── Single unified search pipeline ────────────────────────────
+  const runSearch = useCallback(async (q: string) => {
+    const trimmed = q.trim();
+    if (trimmed.length < 2) {
+      setResults(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    // Cancel any in-flight request
+    cancelPending();
+
+    // Bump generation — stale responses will be ignored
+    const myId = ++searchIdRef.current;
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     setError(null);
-    try {
-      const r = await api.search(query);
-      setResults(r);
-    } catch (e: any) {
-      setError(e.message);
-    }
-    setLoading(false);
-  }, [query, setSearchParams]);
 
+    try {
+      const r = await api.search(trimmed, controller.signal);
+      // Only apply results if this is still the latest search
+      if (searchIdRef.current === myId && !controller.signal.aborted) {
+        setResults(r);
+        setLoading(false);
+      }
+    } catch (e: any) {
+      // AbortError = cancelled by a newer search — ignore silently
+      if (e.name === "AbortError") return;
+      if (searchIdRef.current === myId) {
+        setError(e.message || "Search failed");
+        setLoading(false);
+      }
+    }
+  }, [cancelPending]);
+
+  // ── Auto-search from URL (Back navigation / direct link) ──────
+  const lastUrlQuery = useRef("");
+  useEffect(() => {
+    if (urlQuery && urlQuery.trim().length >= 2 && urlQuery !== lastUrlQuery.current) {
+      lastUrlQuery.current = urlQuery;
+      setQuery(urlQuery);
+      runSearch(urlQuery);
+    }
+  }, [urlQuery, runSearch]);
+
+  // ── Debounced auto-search as user types ───────────────────────
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleQueryChange = useCallback((value: string) => {
+    setQuery(value);
+
+    // Debounce: wait 300ms after last keystroke before searching
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (value.trim().length >= 2) {
+      debounceRef.current = setTimeout(() => {
+        setSearchParams({ q: value }, { replace: true });
+        runSearch(value);
+      }, 300);
+    } else {
+      // Short/empty query → clear results immediately
+      setSearchParams({}, { replace: true });
+      cancelPending();
+      setResults(null);
+      setError(null);
+      setLoading(false);
+    }
+  }, [setSearchParams, runSearch, cancelPending]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, []);
+
+  // ── Manual search (Enter key / button click) ──────────────────
+  const doSearch = useCallback(() => {
+    if (query.trim().length < 2) return;
+    // Kill any pending debounce
+    if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
+    setSearchParams({ q: query }, { replace: true });
+    runSearch(query);
+  }, [query, setSearchParams, runSearch]);
+
+  // ── Derived ───────────────────────────────────────────────────
   const total =
     results
       ? results.live.length + results.movies.length + results.series.length
@@ -92,11 +156,10 @@ export default function SearchPage() {
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => handleQueryChange(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && doSearch()}
           placeholder="Search channels, movies, series..."
           className="w-full h-10 pl-10 pr-20 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
-          autoFocus
         />
         <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
           {query && (
@@ -105,6 +168,8 @@ export default function SearchPage() {
                 setQuery("");
                 setResults(null);
                 setError(null);
+                cancelPending();
+                if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
                 setSearchParams({}, { replace: true });
               }}
               className="px-2 py-1 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-muted"

@@ -1,43 +1,43 @@
 const API = "/api";
 
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${API}${path}`);
+async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
+  const res = await fetch(`${API}${path}`, { signal });
   if (!res.ok) throw new Error(`API error ${res.status}`);
   return res.json();
 }
 
 export const api = {
   live: {
-    categories: () => get<{ categories: Category[] }>("/live/categories"),
-    streams: (catId: string) =>
-      get<{ streams: LiveStream[] }>(`/live/streams?category_id=${catId}`),
-    all: () => get<{ streams: LiveStream[] }>("/live/all"),
+    categories: (signal?: AbortSignal) => get<{ categories: Category[] }>("/live/categories", signal),
+    streams: (catId: string, signal?: AbortSignal) =>
+      get<{ streams: LiveStream[] }>(`/live/streams?category_id=${catId}`, signal),
+    all: (signal?: AbortSignal) => get<{ streams: LiveStream[] }>("/live/all", signal),
   },
   movies: {
-    categories: () => get<{ categories: Category[] }>("/movies/categories"),
-    list: (catId: string, limit = 20, offset = 0) =>
+    categories: (signal?: AbortSignal) => get<{ categories: Category[] }>("/movies/categories", signal),
+    list: (catId: string, limit = 20, offset = 0, signal?: AbortSignal) =>
       get<{ movies: Movie[]; total: number; offset: number; limit: number }>(
-        `/movies?category_id=${catId}&limit=${limit}&offset=${offset}`
+        `/movies?category_id=${catId}&limit=${limit}&offset=${offset}`, signal
       ),
   },
   series: {
-    categories: () => get<{ categories: Category[] }>("/series/categories"),
-    list: (catId: string, limit = 20, offset = 0) =>
+    categories: (signal?: AbortSignal) => get<{ categories: Category[] }>("/series/categories", signal),
+    list: (catId: string, limit = 20, offset = 0, signal?: AbortSignal) =>
       get<{ series: Series[]; total: number; offset: number; limit: number }>(
-        `/series?category_id=${catId}&limit=${limit}&offset=${offset}`
+        `/series?category_id=${catId}&limit=${limit}&offset=${offset}`, signal
       ),
-    details: (id: number) => get<SeriesDetails>(`/series/${id}`),
-    probe: (id: number) => get<ProbeResult>(`/api/series/probe/${id}`),
+    details: (id: number, signal?: AbortSignal) => get<SeriesDetails>(`/series/${id}`, signal),
+    probe: (id: number, signal?: AbortSignal) => get<ProbeResult>(`/api/series/probe/${id}`, signal),
   },
   guide: {
-    get: (channel?: string) =>
+    get: (channel?: string, signal?: AbortSignal) =>
       get<{ programmes: Programme[]; channels: Channel[] }>(
-        `/guide${channel ? `?channel=${encodeURIComponent(channel)}` : ""}`
+        `/guide${channel ? `?channel=${encodeURIComponent(channel)}` : ""}`, signal
       ),
   },
-  search: (q: string) =>
+  search: (q: string, signal?: AbortSignal) =>
     get<{ live: LiveStream[]; movies: Movie[]; series: Series[] }>(
-      `/search?q=${encodeURIComponent(q)}`
+      `/search?q=${encodeURIComponent(q)}`, signal
     ),
 };
 
