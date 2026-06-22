@@ -229,6 +229,7 @@ export default function LiveTV() {
                   <button
                     key={s.stream_id}
                     onClick={() => navigate(`/watch/live/${s.stream_id}`)}
+                    data-watch-link
                     className="channel-card bg-card rounded-lg border border-border p-3 text-left hover:border-primary/30"
                   >
                     {s.stream_icon ? (

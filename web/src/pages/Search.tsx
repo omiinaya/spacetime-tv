@@ -150,6 +150,7 @@ export default function SearchPage() {
                   <button
                     key={s.stream_id}
                     onClick={() => navigate(`/watch/live/${s.stream_id}`)}
+                    data-watch-link
                     className="channel-card bg-card rounded-lg border border-border p-3 text-left hover:border-primary/30"
                   >
                     {s.stream_icon ? (
@@ -190,6 +191,7 @@ export default function SearchPage() {
                   <button
                     key={m.stream_id}
                     onClick={() => navigate(`/watch/movie/${m.stream_id}`)}
+                    data-watch-link
                     className="group bg-card rounded-lg border border-border overflow-hidden hover:border-primary/30 transition-all"
                   >
                     <div className="aspect-[2/3] bg-muted relative overflow-hidden">

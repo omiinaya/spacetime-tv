@@ -320,6 +320,7 @@ export default function Movies() {
                   <button
                     key={m.stream_id}
                     onClick={() => navigate(`/watch/movie/${m.stream_id}`)}
+                    data-watch-link
                     className="group shrink-0 w-[160px] bg-card rounded-lg border border-border overflow-hidden hover:border-primary/30 transition-all"
                   >
                     <div className="aspect-[2/3] bg-muted relative overflow-hidden">

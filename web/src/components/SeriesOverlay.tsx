@@ -292,6 +292,7 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
                         navigate(`/watch/series/${series.series_id}/${ep.id}`);
                         onClose();
                       }}
+                      data-watch-link
                       className="w-full flex items-start gap-3 p-3 rounded-lg hover:bg-muted/60 transition-colors text-left group/ep"
                     >
                       {/* Episode thumbnail */}
@@ -359,6 +360,7 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
                       navigate(`/watch/series/${series.series_id}/1`);
                       onClose();
                     }}
+                    data-watch-link
                     className="mt-2 text-xs text-primary hover:underline"
                   >
                     Play from beginning

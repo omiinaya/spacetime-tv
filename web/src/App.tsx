@@ -26,9 +26,10 @@ const SIDEBAR_MAX = 400;
 const SIDEBAR_DEFAULT = 240;
 
 // Track the last non-player route for reliable Back navigation.
-// Using sessionStorage (survives full page reloads) + window.location.href
-// avoids iOS Safari rendering corruption when tearing down video elements
-// during React unmount.
+// Uses a global click interceptor — saves the current URL to sessionStorage
+// right before any navigation to /watch/ routes. This is 100% reliable
+// because it captures the URL at the exact moment of navigation, not via
+// useEffect which can fire at unpredictable times.
 const BACK_KEY = "stv_back_url";
 
 function saveBackPath(path: string) {
@@ -36,6 +37,19 @@ function saveBackPath(path: string) {
 }
 function getBackPath(fallback: string): string {
   try { return sessionStorage.getItem(BACK_KEY) || fallback; } catch { return fallback; }
+}
+
+// Intercept all clicks that navigate to /watch/ routes and save the
+// current URL BEFORE the navigation happens. Uses capture phase to
+// fire before e.stopPropagation() in individual button handlers.
+if (typeof document !== "undefined") {
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    const btn = target.closest<HTMLElement>("[data-watch-link]");
+    if (btn) {
+      saveBackPath(window.location.pathname + window.location.search);
+    }
+  }, true);
 }
 
 const NAV_ITEMS = [

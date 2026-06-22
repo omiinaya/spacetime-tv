@@ -332,6 +332,7 @@ export default function SeriesPage() {
                             e.stopPropagation();
                             navigate(`/watch/series/${s.series_id}/1`);
                           }}
+                          data-watch-link
                           className="p-2 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/80"
                         >
                           <Play className="h-5 w-5" />
