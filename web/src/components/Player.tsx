@@ -524,12 +524,14 @@ export default function Player({ type }: PlayerProps) {
       setPhase("probing"); setErrorMsg(null); setTranscoding(false);
 
       let needsTranscode = false;
+      let probeHeight = 0;
       if (transcodeCache.has(streamId)) {
         needsTranscode = transcodeCache.get(streamId) === "hevc";
       } else {
         const result = await probeStream(probeUrl);
         if (result.codec === "hevc") {
           needsTranscode = true;
+          probeHeight = result.height || 0;
           transcodeCache.set(streamId, "hevc");
         } else if (result.codec === "unavailable") {
           setPhase("error");
@@ -540,6 +542,12 @@ export default function Player({ type }: PlayerProps) {
         }
       }
       if (cancelled) return;
+
+      // 4K HEVC → ffmpeg software encode at original res drops frames.
+      // Default to 1080p when transcoding 4K live streams.
+      if (needsTranscode && isLive && probeHeight >= 2160 && qualityIdx === 0) {
+        setQualityIdx(1); // 1080p
+      }
 
       if (isLive) {
         const url = needsTranscode ? (transcodePath || streamPath) : streamPath;
