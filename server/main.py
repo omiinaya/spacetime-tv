@@ -390,7 +390,7 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
     try:
         proc = await asyncio.create_subprocess_exec(
             "timeout", "8", "ffprobe",
-            "-v", "quiet",
+            "-v", "error",
             "-print_format", "json",
             "-show_streams",
             "-show_format",
@@ -400,12 +400,31 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, _stderr = await asyncio.wait_for(proc.communicate(), timeout=10.0)
+        stdout, stderr_bytes = await asyncio.wait_for(proc.communicate(), timeout=10.0)
+        stderr_text = stderr_bytes.decode() if stderr_bytes else ""
     except (asyncio.TimeoutError, Exception) as e:
         log.warning(f"ffprobe failed for {stream_id}: {e}")
         return {"codec": "unknown", "error": str(e)}
 
     if proc.returncode != 0 or not stdout:
+        # Check if CDN returned 405 (movie not on this edge)
+        if "405" in stderr_text or "Method Not Allowed" in stderr_text:
+            log.info(f"Probe {stream_id}: CDN returned 405 — unavailable on this edge")
+            result = {"codec": "unavailable", "error": "Not on this CDN edge"}
+            _probe_cache[cache_key] = (now, result)
+            return result
+        # Try a quick GET to check for 405
+        try:
+            async with httpx.AsyncClient(timeout=5.0, follow_redirects=True,
+                                         headers={"User-Agent": ua}) as c:
+                resp = await c.get(url)
+                if resp.status_code == 405:
+                    log.info(f"Probe {stream_id}: GET returned 405 — unavailable")
+                    result = {"codec": "unavailable", "error": "Not on this CDN edge"}
+                    _probe_cache[cache_key] = (now, result)
+                    return result
+        except Exception:
+            pass
         return {"codec": "unknown"}
 
     try:
@@ -554,12 +573,21 @@ async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
 
     # Resolve the redirect chain to get the final CDN URL for ffmpeg
     cdn_url = url
+    cdn_error = None
     try:
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=headers) as c:
             async with c.stream("GET", url) as resp:
+                if resp.status_code in (405, 404, 403):
+                    cdn_error = f"CDN returned {resp.status_code} — movie unavailable on this edge"
+                    log.warning(f"VOD remux {url[:100]}: {cdn_error}")
                 cdn_url = str(resp.url)
     except Exception as e:
         log.warning(f"VOD remux URL resolution failed, using original: {e}")
+
+    if cdn_error:
+        # Yield nothing — the streaming response returns empty body, but we log it
+        log.error(f"VOD remux aborted — {cdn_error}")
+        return  # empty generator — caller sees 200 with 0 bytes... not ideal, but caller handles
 
     log.info(f"VOD remux {cdn_url[:100]}... start={start_time}")
     cmd = [
@@ -609,6 +637,22 @@ async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
 async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
     """Remux movie MKV→MPEG-TS for browser playback (mpegts.js)."""
     url = build_stream_url(stream_id, "movie")
+    
+    # Pre-check CDN availability to avoid silent 0-byte responses
+    try:
+        async with httpx.AsyncClient(timeout=8.0, follow_redirects=True,
+                                     headers={"User-Agent": UA_STR}) as c:
+            async with c.stream("GET", url) as resp:
+                if resp.status_code in (405, 404, 403):
+                    log.info(f"Movie {stream_id}: CDN returned {resp.status_code} — unavailable")
+                    return Response(
+                        status_code=503,
+                        content=json.dumps({"error": f"Movie unavailable on this CDN edge (HTTP {resp.status_code})"}),
+                        media_type="application/json",
+                    )
+    except Exception:
+        pass  # proceed anyway — the generator will handle failures
+    
     try:
         return StreamingResponse(
             stream_vod_mpegts(url, start),
@@ -848,6 +892,79 @@ CACHE_DIR = Path("/tmp/stv_cache")
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 _converting: dict[str, asyncio.Task] = {}  # stream_id → conversion task
 
+# ── Cache TTL / Auto-cleanup ────────────────────────────────────────────────
+CACHE_TTL_HOURS = 2  # Delete entries not accessed in this many hours
+CLEANUP_INTERVAL = 600  # Run cleanup every 10 minutes
+_cleanup_task: Optional[asyncio.Task] = None
+
+
+def touch_access(cache_key: str):
+    """Record that a cache entry was just accessed."""
+    stamp_path = CACHE_DIR / f".{cache_key}.accessed"
+    stamp_path.write_text(str(time.time()))
+
+
+def get_last_access(cache_key: str) -> Optional[float]:
+    """Get the last access time for a cache entry."""
+    stamp_path = CACHE_DIR / f".{cache_key}.accessed"
+    try:
+        return float(stamp_path.read_text().strip())
+    except Exception:
+        return None
+
+
+async def cleanup_stale_cache():
+    """Delete cache entries that haven't been accessed in CACHE_TTL_HOURS."""
+    cutoff = time.time() - (CACHE_TTL_HOURS * 3600)
+    deleted_total = 0
+
+    for entry in list(CACHE_DIR.iterdir()):
+        if entry.name.startswith("."):
+            continue  # skip .accessed files
+        cache_key = entry.stem
+        last = get_last_access(cache_key)
+        if last is None:
+            # No access record — touch it now to give it a grace period
+            if entry.is_dir():
+                touch_access(cache_key)
+            continue
+        if last < cutoff:
+            log.info(f"[CLEANUP] Removing stale: {cache_key} (last access {time.time() - last:.0f}s ago)")
+            try:
+                if entry.is_dir():
+                    import shutil
+                    shutil.rmtree(entry)
+                else:
+                    entry.unlink()
+                # Also clean up .accessed file
+                stamp = CACHE_DIR / f".{cache_key}.accessed"
+                if stamp.exists():
+                    stamp.unlink()
+                deleted_total += 1
+            except Exception as e:
+                log.warning(f"[CLEANUP] Failed to remove {cache_key}: {e}")
+
+    if deleted_total:
+        log.info(f"[CLEANUP] Removed {deleted_total} stale entries")
+
+
+async def cleanup_loop():
+    """Periodic background task that runs cleanup."""
+    while True:
+        await asyncio.sleep(CLEANUP_INTERVAL)
+        try:
+            await cleanup_stale_cache()
+        except Exception as e:
+            log.error(f"[CLEANUP] Error: {e}")
+
+
+def start_cleanup_task():
+    """Start the periodic cleanup background task (must be called from running loop)."""
+    global _cleanup_task
+    if _cleanup_task is None or _cleanup_task.done():
+        _cleanup_task = asyncio.create_task(cleanup_loop())
+        log.info(f"[CLEANUP] Started — TTL={CACHE_TTL_HOURS}h, interval={CLEANUP_INTERVAL}s")
+
 
 async def convert_to_mp4(stream_id: str, stream_type: str):
     """Download full MKV from CDN (with retries), then convert → fMP4 locally.
@@ -968,6 +1085,7 @@ async def convert_movie(stream_id: int, retry: bool = False):
             mkv_path.unlink()
 
     if output_path.exists():
+        touch_access(cache_key)
         return {"status": "ready", "message": "Cached"}
 
     if lock_path.exists():
@@ -997,6 +1115,7 @@ async def convert_series_ep(series_id: int, episode_id: int, retry: bool = False
             mkv_path.unlink()
 
     if output_path.exists():
+        touch_access(cache_key)
         return {"status": "ready", "message": "Cached"}
 
     if lock_path.exists():
@@ -1018,6 +1137,7 @@ async def serve_movie_mp4(stream_id: int, request: Request):
     if not output_path.exists():
         raise HTTPException(404, "MP4 not yet converted. Call /api/movie/convert/{id} first.")
 
+    touch_access(cache_key)
     return serve_cached_mp4(output_path, request)
 
 
@@ -1119,7 +1239,7 @@ async def download_mkv(stream_id: str, stream_type: str, cache_key: str) -> Opti
     return mkv_path
 
 
-async def run_hls_segmenter(cache_key: str, input_path: Path, seek_seconds: float = 0):
+async def run_hls_segmenter(cache_key: str, input_path: Path):
     """Run ffmpeg to segment a local MKV/MP4 into HLS (.m3u8 + .ts)."""
     seg_dir = HLS_DIR / cache_key
     seg_dir.mkdir(parents=True, exist_ok=True)
@@ -1133,10 +1253,6 @@ async def run_hls_segmenter(cache_key: str, input_path: Path, seek_seconds: floa
 
     ffmpeg_args = [
         "ffmpeg", "-loglevel", "warning", "-y",
-    ]
-    if seek_seconds > 0:
-        ffmpeg_args += ["-ss", str(seek_seconds)]
-    ffmpeg_args += [
         "-i", str(input_path),
         "-c", "copy",
         "-f", "hls",
@@ -1151,7 +1267,7 @@ async def run_hls_segmenter(cache_key: str, input_path: Path, seek_seconds: floa
     if old and old.returncode is None:
         old.kill()
 
-    log.info(f"[HLS] Segmenting {cache_key} seek={seek_seconds}s")
+    log.info(f"[HLS] Segmenting {cache_key}")
     proc = await asyncio.create_subprocess_exec(*ffmpeg_args)
     _hls_procs[cache_key] = proc
     await proc.wait()
@@ -1159,10 +1275,21 @@ async def run_hls_segmenter(cache_key: str, input_path: Path, seek_seconds: floa
 
     if proc.returncode != 0:
         log.warning(f"[HLS] Segmenter exited {proc.returncode} for {cache_key}")
+    else:
+        # Clean up MKV source file after successful HLS conversion (free disk)
+        mkv_path = CACHE_DIR / f"{cache_key}.mkv"
+        if mkv_path.exists():
+            try:
+                mkv_path.unlink()
+                log.info(f"[HLS] Cleaned up MKV for {cache_key}")
+            except Exception as e:
+                log.warning(f"[HLS] Failed to clean MKV {cache_key}: {e}")
 
 
 async def ensure_hls(stream_id: str, stream_type: str, seek_seconds: float = 0) -> bool:
-    """Ensure HLS segments exist for a VOD stream. Returns True if ready."""
+    """Ensure HLS segments exist for a VOD stream. Returns True if ready.
+    seek_seconds is ignored — seeking is handled client-side via hls.js.
+    HLS is always generated from start for seekable playback."""
     cache_key = f"{stream_type}_{stream_id}"
     seg_dir = HLS_DIR / cache_key
     pl_path = seg_dir / "playlist.m3u8"
@@ -1174,10 +1301,7 @@ async def ensure_hls(stream_id: str, stream_type: str, seek_seconds: float = 0) 
         # Cached MP4 → convert to HLS (~7s for full movie)
         if not pl_path.exists():
             log.info(f"[HLS] Converting cached MP4 → HLS: {cache_key}")
-            await run_hls_segmenter(cache_key, mp4_path, seek_seconds)
-        elif seek_seconds > 0:
-            # Re-segment at new position
-            await run_hls_segmenter(cache_key, mp4_path, seek_seconds)
+            await run_hls_segmenter(cache_key, mp4_path)
         return pl_path.exists()
 
     # No cached MP4 — download MKV then convert
@@ -1189,7 +1313,7 @@ async def ensure_hls(stream_id: str, stream_type: str, seek_seconds: float = 0) 
         try:
             mkv = await download_mkv(stream_id, stream_type, cache_key)
             if mkv:
-                await run_hls_segmenter(cache_key, mkv, seek_seconds)
+                await run_hls_segmenter(cache_key, mkv)
         except Exception as e:
             log.error(f"[HLS] Pipeline failed for {cache_key}: {e}", exc_info=True)
         finally:
@@ -1207,6 +1331,7 @@ async def movie_hls_start(stream_id: int, start: float = 0):
     pl_path = HLS_DIR / cache_key / "playlist.m3u8"
 
     if pl_path.exists():
+        touch_access(cache_key)
         return {"status": "ready", "playlist": f"/api/hls/movie/{stream_id}/playlist.m3u8"}
 
     return {"status": "preparing", "message": "Downloading and segmenting..."}
@@ -1220,6 +1345,7 @@ async def series_hls_start(series_id: int, episode_id: int, start: float = 0):
     pl_path = HLS_DIR / cache_key / "playlist.m3u8"
 
     if pl_path.exists():
+        touch_access(cache_key)
         return {"status": "ready", "playlist": f"/api/hls/series/{episode_id}/playlist.m3u8"}
 
     return {"status": "preparing", "message": "Downloading and segmenting..."}
@@ -1241,6 +1367,7 @@ async def serve_hls_file(stream_type: str, stream_id: str, filename: str):
     if not file_path.exists():
         raise HTTPException(404, "Segment not found")
 
+    touch_access(cache_key)
     media = "application/vnd.apple.mpegurl" if filename.endswith(".m3u8") else "video/mp2t"
     return FastAPIFileResponse(file_path, media_type=media, headers={
         "Access-Control-Allow-Origin": "*",
@@ -1266,4 +1393,9 @@ async def spa_fallback(full_path: str):
 
 if __name__ == "__main__":
     import uvicorn
+
+    @app.on_event("startup")
+    async def startup():
+        start_cleanup_task()
+
     uvicorn.run(app, host="0.0.0.0", port=8720, log_level="info")

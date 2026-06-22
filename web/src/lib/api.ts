@@ -26,7 +26,8 @@ export const api = {
       get<{ series: Series[]; total: number; offset: number; limit: number }>(
         `/series?category_id=${catId}&limit=${limit}&offset=${offset}`
       ),
-    details: (id: number) => get<any>(`/series/${id}`),
+    details: (id: number) => get<SeriesDetails>(`/series/${id}`),
+    probe: (id: number) => get<ProbeResult>(`/api/series/probe/${id}`),
   },
   guide: {
     get: (channel?: string) =>
@@ -83,6 +84,70 @@ export interface Series {
   tmdb: string;
   youtube_trailer: string;
   category_id: string;
+}
+
+export interface Episode {
+  id: string;
+  episode_num: number;
+  title: string;
+  container_extension: string;
+  info: {
+    air_date?: string;
+    rating?: number;
+    id?: number;
+    duration_secs?: number;
+    movie_image?: string;
+    plot?: string;
+    release_date?: string;
+    season?: number;
+  };
+}
+
+export interface Season {
+  name: string;
+  episode_count: string;
+  overview: string;
+  air_date: string;
+  cover: string;
+  cover_tmdb: string;
+  season_number: number;
+  cover_big: string;
+  releaseDate: string;
+  duration: string;
+}
+
+export interface SeriesInfo {
+  name: string;
+  cover: string;
+  plot: string;
+  cast: string;
+  director: string;
+  genre: string;
+  releaseDate: string;
+  release_date: string;
+  last_modified: string;
+  rating: string;
+  rating_5based: string;
+  backdrop_path: string[];
+  tmdb: string;
+  youtube_trailer: string;
+  episode_run_time: string;
+  category_id: string;
+  category_ids: number[];
+}
+
+export interface SeriesDetails {
+  seasons: Season[];
+  info: SeriesInfo;
+  episodes: Record<string, Episode[]>;
+}
+
+export interface ProbeResult {
+  codec?: string;
+  width?: number;
+  height?: number;
+  bitrate?: string;
+  duration?: string;
 }
 
 export interface Programme {

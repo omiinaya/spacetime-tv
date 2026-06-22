@@ -114,6 +114,18 @@ export default function Player({ type }: PlayerProps) {
     return `/api/stream/live/${id}/transcode`;
   }, [isLive, id, qualityIdx]);
 
+  const remuxUrl = useMemo(() => {
+    if (!isVod) return null;
+    if (type === "movie") return `/api/stream/movie/${id}/remux`;
+    return `/api/stream/series/${seriesId}/${epId}/remux`;
+  }, [isVod, type, id, seriesId, epId]);
+
+  const vodTranscodeUrl = useMemo(() => {
+    if (!isVod) return null;
+    if (type === "movie") return `/api/stream/movie/${id}/transcode`;
+    return `/api/stream/series/${seriesId}/${epId}/transcode`;
+  }, [isVod, type, id, seriesId, epId]);
+
   const hlsInitUrl = useMemo(() => {
     if (!isVod) return null;
     if (type === "movie") return `/api/movie/hls/${id}`;
@@ -161,10 +173,21 @@ export default function Player({ type }: PlayerProps) {
     player.load();
 
     player.on(mpegts.Events.LOADING_COMPLETE, () => {
-      setPhase("playing");
+      // Don't hide spinner yet — wait for video 'playing' event (actual frames)
       video.muted = true; setMuted(true);
-      video.play().catch(() => setPhase("paused"));
+      video.play().catch(() => {});
     });
+
+    // Hide spinner only when video is actually rendering frames
+    let playingFired = false;
+    const onPlaying = () => {
+      if (!playingFired) {
+        playingFired = true;
+        const p = phaseRef.current;
+        if (p === "loading" || p === "probing") setPhase("playing");
+      }
+    };
+    video.addEventListener("playing", onPlaying);
 
     player.on(mpegts.Events.ERROR, (_t: string, detail: any) => {
       errorCount++;
@@ -177,24 +200,129 @@ export default function Player({ type }: PlayerProps) {
       }
     });
 
-    player.on(mpegts.Events.STATISTICS_INFO, () => {
-      const p = phaseRef.current;
-      if (p === "loading" || p === "probing") setPhase("playing");
-    });
-
     const timeout = setTimeout(() => {
       const p = phaseRef.current;
       if (p === "loading" || p === "probing") {
         timedOut = true;
         setPhase("error");
-        setErrorMsg("Stream timed out.");
+        setErrorMsg("Stream timed out. Try again.");
       }
     }, timeoutMs);
 
-    mpegtsCleanup.current = () => { clearTimeout(timeout); };
+    mpegtsCleanup.current = () => {
+      clearTimeout(timeout);
+      video.removeEventListener("playing", onPlaying);
+    };
   }, []);
 
-  // ── Playback: HLS via hls.js (VOD) ───────────────────────────
+  // ── Playback: VOD via mpegts remux (instant start, no download wait) ──
+  const playVodRemux = useCallback((streamUrl: string, startPos: number | null = null, isTranscode: boolean = false) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
+    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+    video.removeAttribute("src");
+    if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
+
+    const url = startPos && startPos > 5 ? `${streamUrl}?start=${startPos}` : streamUrl;
+    const startOffset = startPos && startPos > 5 ? startPos : 0;
+    const vodStartTime = Date.now();
+
+    // Store for seeking (MSE doesn't support currentTime seeks — must restart)
+    vodUrlRef.current = streamUrl;
+    vodTranscodeRef.current = isTranscode;
+
+    const player = mpegts.createPlayer({ type: "mpegts", isLive: true, url });
+    playerRef.current = player;
+    let errorCount = 0;
+    let timedOut = false;
+
+    player.attachMediaElement(video);
+    player.load();
+
+    player.on(mpegts.Events.LOADING_COMPLETE, () => {
+      // Don't hide spinner yet — wait for video to actually advance past frame 0
+      video.muted = true; setMuted(true);
+      video.play().catch(() => {});
+    });
+
+    // Fallback: start playback when media info is available (covers cases where
+    // LOADING_COMPLETE is delayed or doesn't fire for unbounded streams)
+    let playStarted = false;
+    const tryPlay = () => {
+      if (playStarted) return;
+      playStarted = true;
+      video.muted = true; setMuted(true);
+      video.play().catch(() => {});
+    };
+    player.on(mpegts.Events.MEDIA_INFO, () => tryPlay());
+
+    // Hide spinner only when currentTime has meaningfully advanced (frames are flowing)
+    let timeAdvancing = false;
+    const onTimeUpdate = () => {
+      if (!timeAdvancing && video.currentTime > 0.1) {
+        timeAdvancing = true;
+        setCurrentTime(video.currentTime);
+        const p = phaseRef.current;
+        if (p === "loading" || p === "probing") setPhase("playing");
+      }
+    };
+    video.addEventListener("timeupdate", onTimeUpdate);
+
+    player.on(mpegts.Events.MEDIA_INFO, (info: any) => {
+      if (info.duration && isFinite(info.duration)) {
+        setDuration(info.duration);
+      }
+    });
+
+    player.on(mpegts.Events.ERROR, (_t: string, detail: any) => {
+      errorCount++;
+      if (detail?.response?.code === 0 || errorCount < 3) return;
+      if (!timedOut) {
+        setPhase("error");
+        setErrorMsg("Stream unavailable.");
+      }
+    });
+
+    // VOD time tracking: elapsed + start offset
+    const timeInterval = setInterval(() => {
+      if (video && !video.paused) {
+        const elapsed = (Date.now() - vodStartTime) / 1000;
+        setCurrentTime(startOffset + elapsed);
+      }
+    }, 500);
+
+    // Watch position saving
+    let saveInterval: ReturnType<typeof setInterval> | null = null;
+    if (watchKey) {
+      saveInterval = setInterval(() => {
+        const t = startOffset + (Date.now() - vodStartTime) / 1000;
+        if (t > 5) {
+          saveWatchPos(watchKey, t);
+        }
+      }, 5000);
+    }
+
+    const timeoutMs = isTranscode ? 90000 : 30000;
+    const timeout = setTimeout(() => {
+      const p = phaseRef.current;
+      if (p === "loading" || p === "probing") {
+        timedOut = true;
+        setPhase("error");
+        setErrorMsg(isTranscode ? "Transcode is taking too long. Try again." : "Stream timed out. Try again.");
+      }
+    }, timeoutMs);
+
+    mpegtsCleanup.current = () => {
+      clearTimeout(timeout);
+      clearInterval(timeInterval);
+      if (saveInterval) clearInterval(saveInterval);
+      video.removeEventListener("timeupdate", onTimeUpdate);
+    };
+  }, [watchKey]);
+
+  // ── Playback: HLS via hls.js (VOD, cached) ───────────────────
   const playHLS = useCallback((playlistUrl: string, startPos: number | null = null) => {
     const video = videoRef.current;
     if (!video) return;
@@ -309,15 +437,34 @@ export default function Player({ type }: PlayerProps) {
     };
   }, [watchKey]);
 
-  // ── VOD startup: probe → HLS ─────────────────────────────────
-  const startVod = useCallback(async (isCancelled: () => boolean, seekPos?: number) => {
+  // ── VOD startup: remux immediately (transcode for HEVC) + background HLS cache ──
+  const startVod = useCallback(async (isCancelled: () => boolean, seekPos?: number, needsTranscode: boolean = false) => {
+    const streamUrl = needsTranscode ? vodTranscodeUrl : remuxUrl;
+    if (!streamUrl) return;
+    setPhase("loading");
+    setErrorMsg(null);
+
+    if (needsTranscode) setTranscoding(true);
+
+    // 1. Start playback immediately (remux for h264, transcode for HEVC)
+    playVodRemux(streamUrl, seekPos ?? null, needsTranscode);
+
+    // 2. Trigger HLS download/cache in background for future visits
+    if (hlsInitUrl) {
+      try {
+        fetch(hlsInitUrl).catch(() => {});
+      } catch {}
+    }
+  }, [remuxUrl, vodTranscodeUrl, hlsInitUrl, playVodRemux]);
+
+  // ── VOD startup via HLS (for already-cached movies, used on retry) ──
+  const startVodHLS = useCallback(async (isCancelled: () => boolean, seekPos?: number) => {
     if (!hlsInitUrl) return;
     setPhase("loading");
     setErrorMsg(null);
 
     try {
-      const seekParam = seekPos ? `?start=${seekPos}` : "";
-      const res = await fetch(`${hlsInitUrl}${seekParam}`);
+      const res = await fetch(`${hlsInitUrl}`);
       const data = await res.json();
 
       if (data.status === "ready") {
@@ -325,26 +472,10 @@ export default function Player({ type }: PlayerProps) {
         return;
       }
 
-      setErrorMsg("Preparing video… (downloading full movie)");
-      const pollStart = Date.now();
-      let status = data.status;
-      while (status !== "ready") {
-        if (isCancelled()) return;
-        if (Date.now() - pollStart > 600000) {
-          setPhase("error"); setErrorMsg("Preparation timed out."); return;
-        }
-        await new Promise(r => setTimeout(r, 3000));
-        const r2 = await fetch(hlsInitUrl);
-        const d2 = await r2.json();
-        status = d2.status;
-        if (status === "ready") {
-          setErrorMsg(null);
-          playHLS(d2.playlist, seekPos ?? null);
-          return;
-        }
-      }
+      setPhase("error");
+      setErrorMsg("Video not cached yet. Using streaming mode.");
     } catch (e) {
-      setPhase("error"); setErrorMsg("Failed to prepare video.");
+      setPhase("error"); setErrorMsg("Failed to load cached video.");
     }
   }, [hlsInitUrl, playHLS]);
 
@@ -365,6 +496,10 @@ export default function Player({ type }: PlayerProps) {
         if (result.codec === "hevc") {
           needsTranscode = true;
           transcodeCache.set(streamId, "hevc");
+        } else if (result.codec === "unavailable") {
+          setPhase("error");
+          setErrorMsg("This video is not available on the current CDN edge server.");
+          return;
         } else {
           transcodeCache.set(streamId, "native");
         }
@@ -384,11 +519,13 @@ export default function Player({ type }: PlayerProps) {
           setResumePos(pos);
           setShowResumePrompt(true);
           setPhase("playing");
+          // Store needsTranscode state for resume callbacks
+          transcodeCache.set(`_last_${streamId}`, needsTranscode ? "hevc" : "native");
           return;
         }
       }
 
-      await startVod(() => cancelled);
+      await startVod(() => cancelled, undefined, needsTranscode);
     };
 
     start();
@@ -405,13 +542,27 @@ export default function Player({ type }: PlayerProps) {
     showControls(true);
   }, [showControls]);
 
+  // ── Seeking: restart mpegts.js VOD at new position (MSE doesn't support currentTime seeks) ──
+  const vodUrlRef = useRef<string | null>(null);
+  const vodTranscodeRef = useRef<boolean>(false);
+
+  const seekTo = useCallback((time: number) => {
+    if (isLive || !vodUrlRef.current) return;
+    const url = vodUrlRef.current;
+    const isTC = vodTranscodeRef.current;
+    if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
+    setPhase("loading");
+    playVodRemux(url, Math.max(0, time), isTC);
+  }, [isLive, playVodRemux]);
+
   const seek = useCallback((delta: number) => {
-    if (isLive) return;
+    if (isLive || !vodUrlRef.current) return;
     const v = videoRef.current;
     if (!v) return;
-    v.currentTime = Math.max(0, Math.min(v.duration || 0, v.currentTime + delta));
+    const target = Math.max(0, (v.currentTime || 0) + delta);
+    seekTo(target);
     showControls(true);
-  }, [isLive, showControls]);
+  }, [isLive, seekTo, showControls]);
 
   const setVolume = useCallback((val: number) => {
     const v = videoRef.current;
@@ -438,36 +589,70 @@ export default function Player({ type }: PlayerProps) {
     setQualityIdx(idx); setShowQualityMenu(false);
   }, []);
 
+  const fullscreenBtnRef = useRef<HTMLButtonElement>(null);
+
   const toggleFullscreen = useCallback(() => {
-    if (!containerRef.current) return;
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(() => {});
-      setFullscreen(true);
-    } else {
-      document.exitFullscreen().catch(() => {});
+    const video = videoRef.current;
+    if (!video) return;
+
+    const isFS = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
+
+    if (isFS) {
+      // Exit fullscreen
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+      if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      }
       setFullscreen(false);
+    } else {
+      // Enter fullscreen — video element only (works everywhere: Chrome, Firefox, iOS Safari)
+      const el = video as any;
+      if (el.requestFullscreen) {
+        el.requestFullscreen().then(() => setFullscreen(true)).catch(() => {});
+      } else if (el.webkitRequestFullscreen) {
+        el.webkitRequestFullscreen();
+        setFullscreen(true);
+      } else if (el.webkitEnterFullscreen) {
+        el.webkitEnterFullscreen();
+        setFullscreen(true);
+      }
     }
   }, []);
 
+  // Native fullscreen handler — bypasses React synthetic events to preserve
+  // the user gesture chain required by iOS Safari's Fullscreen API
+  useEffect(() => {
+    const btn = fullscreenBtnRef.current;
+    if (!btn) return;
+    const handler = () => {
+      toggleFullscreen();
+    };
+    btn.addEventListener("click", handler);
+    return () => btn.removeEventListener("click", handler);
+  }, [toggleFullscreen]);
+
+
   const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (isLive || !duration) return;
-    const v = videoRef.current;
-    if (!v) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    v.currentTime = fraction * duration;
+    seekTo(fraction * duration);
     showControls(true);
-  }, [isLive, duration, showControls]);
+  }, [isLive, duration, seekTo, showControls]);
 
   const resumePlayback = useCallback(() => {
     setShowResumePrompt(false);
-    startVod(() => false, resumePos ?? undefined);
-  }, [resumePos, startVod]);
+    const needsTC = transcodeCache.get(`_last_${streamId}`) === "hevc";
+    startVod(() => false, resumePos ?? undefined, needsTC);
+  }, [resumePos, startVod, streamId]);
 
   const startFromBeginning = useCallback(() => {
     setShowResumePrompt(false);
-    startVod(() => false);
-  }, [startVod]);
+    const needsTC = transcodeCache.get(`_last_${streamId}`) === "hevc";
+    startVod(() => false, undefined, needsTC);
+  }, [startVod, streamId]);
 
   // ── Keyboard ─────────────────────────────────────────────────
   useEffect(() => {
@@ -491,23 +676,86 @@ export default function Player({ type }: PlayerProps) {
   // ── Cleanup ──────────────────────────────────────────────────
   useEffect(() => {
     return () => {
-      if (hlsRef.current) hlsRef.current.destroy();
-      if (playerRef.current) playerRef.current.destroy();
-      if (mpegtsCleanup.current) mpegtsCleanup.current();
+      // 1. Exit fullscreen first — leaving fullscreen during unmount 
+      //    corrupts iOS Safari rendering (causes black screen on nav)
+      try {
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        const doc = document as any;
+        if (doc.webkitFullscreenElement) doc.webkitExitFullscreen();
+      } catch {}
+      
+      // 2. Destroy mpegts.js player + HLS
+      if (hlsRef.current) { try { hlsRef.current.destroy(); } catch {} hlsRef.current = null; }
+      if (playerRef.current) { try { playerRef.current.destroy(); } catch {} playerRef.current = null; }
+      
+      // 3. Run ephemeral cleanup (timers, listeners)
+      if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
+      
+      // 4. Detach MediaSource from video element — critical for iOS Safari.
+      //    mpegts.js sets srcObject internally; leaving it attached after
+      //    destroy() corrupts the rendering pipeline on navigation.
+      const video = videoRef.current;
+      if (video) {
+        try {
+          // Remove all MediaSource references
+          if (video.srcObject) {
+            URL.revokeObjectURL(video.src); // revoke blob URL if any
+            video.srcObject = null;
+          }
+          video.removeAttribute("src");
+          video.load(); // reset the media element
+        } catch {}
+        // Remove all listeners that might reference stale closures
+        video.onplaying = null;
+        video.ontimeupdate = null;
+        video.ondurationchange = null;
+        video.onended = null;
+        video.onerror = null;
+        video.onwaiting = null;
+        video.onloadedmetadata = null;
+      }
     };
   }, []);
 
   useEffect(() => {
-    const handler = () => setFullscreen(!!document.fullscreenElement);
+    const handler = () => {
+      setFullscreen(!!(document.fullscreenElement || (document as any).webkitFullscreenElement));
+    };
     document.addEventListener("fullscreenchange", handler);
-    return () => document.removeEventListener("fullscreenchange", handler);
+    document.addEventListener("webkitfullscreenchange", handler);
+    return () => {
+      document.removeEventListener("fullscreenchange", handler);
+      document.removeEventListener("webkitfullscreenchange", handler);
+    };
   }, []);
 
   // ── Render helpers ───────────────────────────────────────────
   const goBack = () => {
-    if (type === "movie") navigate("/movies");
-    else if (type === "series") navigate("/series");
-    else navigate("/live-tv");
+    // Exit fullscreen first — navigating while in fullscreen
+    // corrupts iOS Safari rendering (black screen on return)
+    const doNav = () => {
+      // Use browser history back so search results, filter state,
+      // and scroll position are preserved
+      if (window.history.length > 1) {
+        navigate(-1);
+      } else {
+        if (type === "movie") navigate("/movies");
+        else if (type === "series") navigate("/series");
+        else navigate("/live");
+      }
+    };
+    try {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().then(() => setTimeout(doNav, 100)).catch(doNav);
+      } else if ((document as any).webkitFullscreenElement) {
+        (document as any).webkitExitFullscreen();
+        setTimeout(doNav, 150);
+      } else {
+        doNav();
+      }
+    } catch {
+      doNav();
+    }
   };
 
   const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -519,12 +767,19 @@ export default function Player({ type }: PlayerProps) {
       className="relative w-full bg-black group"
       onMouseMove={() => showControls(true)}
       onMouseLeave={() => { if (phase === "playing") hideControls(); }}
+      onTouchStart={() => {
+        // Toggle controls on tap
+        if (controlsVisible) hideControls();
+        else showControls(true);
+      }}
       style={{ aspectRatio: "16 / 9", maxHeight: "calc(100vh - 4rem)" }}
     >
       <video
         ref={videoRef}
         className="absolute inset-0 w-full h-full object-contain"
         playsInline
+        webkit-playsinline="true"
+        x-webkit-airplay="allow"
         onClick={togglePlay}
       />
 
@@ -545,7 +800,9 @@ export default function Player({ type }: PlayerProps) {
           <AlertCircle className="w-10 h-10 text-red-400" />
           <p className="text-white/70 text-sm max-w-md text-center">{errorMsg || "Playback failed."}</p>
           <button
-            onClick={() => startVod(() => false)}
+            onClick={() => {
+              if (isVod) startVod(() => false);
+            }}
             className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white text-sm transition-colors"
           >
             Retry
@@ -572,57 +829,61 @@ export default function Player({ type }: PlayerProps) {
       <div className={`absolute inset-x-0 bottom-0 transition-opacity duration-300 z-10 ${controlsVisible || phase !== "playing" ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
         <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
 
-        <div className="relative px-4 pb-3 pt-8">
+        <div className="relative px-3 sm:px-4 pb-2 sm:pb-3 pt-8">
           {isVod && (
-            <div className="relative w-full h-1 bg-white/20 rounded cursor-pointer group/progress mb-3" onClick={handleProgressClick}>
-              <div className="absolute inset-y-0 left-0 bg-white/30 rounded" style={{ width: `${bufferedPct}%` }} />
-              <div className="absolute inset-y-0 left-0 bg-blue-500 rounded" style={{ width: `${progressPct}%` }}>
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity" />
+            <div className="relative w-full cursor-pointer group/progress mb-3" onClick={handleProgressClick}>
+              {/* Touch-friendly progress bar: taller, invisible hit area */}
+              <div className="absolute inset-x-0 -top-2 -bottom-2" />
+              <div className="relative w-full h-1 sm:h-1 bg-white/20 rounded">
+                <div className="absolute inset-y-0 left-0 bg-white/30 rounded" style={{ width: `${bufferedPct}%` }} />
+                <div className="absolute inset-y-0 left-0 bg-blue-500 rounded" style={{ width: `${progressPct}%` }}>
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 sm:w-3 sm:h-3 bg-blue-500 rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity" />
+                </div>
               </div>
             </div>
           )}
 
-          <div className="flex items-center gap-3">
-            <button onClick={goBack} className="text-white/70 hover:text-white transition-colors p-1" title="Back">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button onClick={goBack} className="text-white/70 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title="Back">
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <button onClick={togglePlay} className="text-white/70 hover:text-white transition-colors p-1" title={phase === "playing" ? "Pause" : "Play"}>
+            <button onClick={togglePlay} className="text-white/70 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title={phase === "playing" ? "Pause" : "Play"}>
               {phase === "playing" ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
             </button>
-            <button onClick={() => seek(-10)} className="text-white/60 hover:text-white transition-colors p-1 hidden sm:block" title="Rewind 10s">
+            <button onClick={() => seek(-10)} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] hidden sm:flex items-center justify-center" title="Rewind 10s">
               <SkipBack className="w-4 h-4" />
             </button>
-            <button onClick={() => seek(10)} className="text-white/60 hover:text-white transition-colors p-1 hidden sm:block" title="Forward 10s">
+            <button onClick={() => seek(10)} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] hidden sm:flex items-center justify-center" title="Forward 10s">
               <SkipForward className="w-4 h-4" />
             </button>
             {isVod && (
-              <span className="text-white/60 text-xs tabular-nums ml-1">
+              <span className="text-white/60 text-xs sm:text-xs tabular-nums ml-1 whitespace-nowrap">
                 {fmtTime(currentTime)} / {fmtTime(duration)}
               </span>
             )}
             {isLive && (
-              <span className="text-red-500 text-xs font-bold tracking-wider px-2 py-0.5 bg-red-500/10 rounded">LIVE</span>
+              <span className="text-red-500 text-xs font-bold tracking-wider px-2 py-0.5 bg-red-500/10 rounded whitespace-nowrap">LIVE</span>
             )}
             {transcoding && (
-              <span className="text-yellow-500 text-xs px-2 py-0.5 bg-yellow-500/10 rounded">Transcoding</span>
+              <span className="text-yellow-500 text-xs px-2 py-0.5 bg-yellow-500/10 rounded whitespace-nowrap hidden sm:inline">Transcoding</span>
             )}
             <div className="flex-1" />
-            <button onClick={toggleMute} className="text-white/60 hover:text-white transition-colors p-1" title={muted ? "Unmute" : "Mute"}>
+            <button onClick={toggleMute} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title={muted ? "Unmute" : "Mute"}>
               {muted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </button>
             <input type="range" min="0" max="1" step="0.05" value={muted ? 0 : volume}
               onChange={e => setVolume(parseFloat(e.target.value))}
-              className="w-20 h-1 accent-blue-500 cursor-pointer hidden sm:block" />
+              className="w-16 sm:w-20 h-1 accent-blue-500 cursor-pointer hidden sm:block" />
             <div className="relative">
               <button onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-                className="text-white/60 hover:text-white transition-colors p-1 text-xs tabular-nums min-w-[2rem]" title="Speed">
+                className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 text-xs tabular-nums min-w-[40px] min-h-[40px] flex items-center justify-center" title="Speed">
                 {playbackRate}x
               </button>
               {showSpeedMenu && (
                 <div className="absolute bottom-full mb-2 right-0 bg-zinc-900/95 border border-white/10 rounded-lg py-1 min-w-[5rem] shadow-xl">
                   {SPEEDS.map(s => (
                     <button key={s} onClick={() => setSpeed(s)}
-                      className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-white/10 transition-colors ${playbackRate === s ? "text-blue-400" : "text-white/70"}`}
+                      className={`block w-full text-left px-4 py-2 text-sm sm:text-xs hover:bg-white/10 transition-colors ${playbackRate === s ? "text-blue-400" : "text-white/70"}`}
                     >{s}x</button>
                   ))}
                 </div>
@@ -631,7 +892,7 @@ export default function Player({ type }: PlayerProps) {
             {isLive && (
               <div className="relative">
                 <button onClick={() => setShowQualityMenu(!showQualityMenu)}
-                  className="text-white/60 hover:text-white transition-colors p-1" title="Quality">
+                  className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title="Quality">
                   <Settings className="w-4 h-4" />
                 </button>
                 {showQualityMenu && (
@@ -643,14 +904,14 @@ export default function Player({ type }: PlayerProps) {
                           const url = i === 0 ? streamPath : `/api/stream/live/${id}/quality/${q.height}`;
                           playMPEGTS(url, true, false);
                         }}
-                        className={`block w-full text-left px-3 py-1.5 text-xs hover:bg-white/10 transition-colors ${qualityIdx === i ? "text-blue-400" : "text-white/70"}`}
+                        className={`block w-full text-left px-4 py-2 text-sm sm:text-xs hover:bg-white/10 transition-colors ${qualityIdx === i ? "text-blue-400" : "text-white/70"}`}
                       >{q.label}</button>
                     ))}
                   </div>
                 )}
               </div>
             )}
-            <button onClick={toggleFullscreen} className="text-white/60 hover:text-white transition-colors p-1" title={fullscreen ? "Exit Fullscreen" : "Fullscreen"}>
+            <button ref={fullscreenBtnRef} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title={fullscreen ? "Exit Fullscreen" : "Fullscreen"}>
               {fullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
             </button>
           </div>

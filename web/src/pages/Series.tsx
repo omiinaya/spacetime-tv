@@ -7,12 +7,12 @@ import {
   RotateCcw,
   Star,
   Play,
-  ChevronDown,
   Search,
   X,
 } from "lucide-react";
 import { api, Category, Series } from "@/lib/api";
 import ContentRow from "@/components/ContentRow";
+import SeriesOverlay from "@/components/SeriesOverlay";
 import { Skeleton } from "@/components/Skeleton";
 import { useSettings } from "@/context/SettingsContext";
 import { filterCategories } from "@/lib/settings";
@@ -46,10 +46,8 @@ export default function SeriesPage() {
     [setSearchParams]
   );
 
-  // Episodes state
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [episodes, setEpisodes] = useState<any>(null);
-  const [epLoading, setEpLoading] = useState(false);
+  // Overlay state
+  const [overlaySeries, setOverlaySeries] = useState<Series | null>(null);
 
   const { settings } = useSettings();
 
@@ -150,23 +148,6 @@ export default function SeriesPage() {
       }
     }
   }, [visibleCats, rows, fetchRow]);
-
-  // Episode toggle
-  const toggleEpisodes = async (s: Series) => {
-    if (expandedId === s.series_id) {
-      setExpandedId(null);
-      return;
-    }
-    setExpandedId(s.series_id);
-    setEpLoading(true);
-    try {
-      const d = await api.series.details(s.series_id);
-      setEpisodes(d.episodes || d.info?.episodes || {});
-    } catch {
-      setEpisodes(null);
-    }
-    setEpLoading(false);
-  };
 
   // Filter by search query
   const q = searchQuery.toLowerCase().trim();
@@ -315,119 +296,79 @@ export default function SeriesPage() {
                 loading={row.loading && seriesList.length > 0}
                 onScrollEnd={q ? undefined : hasMore ? () => loadMore(cat) : undefined}
               >
-                {filtered.map((s) => {
-                  const isExpanded = expandedId === s.series_id;
-                  return (
+                {filtered.map((s) => (
+                  <div
+                    key={s.series_id}
+                    className="group shrink-0 w-[160px] bg-card rounded-lg border border-border overflow-hidden hover:border-primary/30 transition-all"
+                  >
+                    {/* Cover — clicking opens overlay */}
                     <div
-                      key={s.series_id}
-                      className="shrink-0 w-[160px] bg-card rounded-lg border border-border overflow-hidden"
+                      onClick={() => setOverlaySeries(s)}
+                      className="w-full aspect-[2/3] bg-muted relative overflow-hidden cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter') setOverlaySeries(s); }}
                     >
-                      <div className="aspect-[2/3] bg-muted relative overflow-hidden">
-                        {s.cover ? (
-                          <img
-                            src={s.cover}
-                            alt=""
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src =
-                                "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 3'><rect fill='%231a1a2e' width='2' height='3'/></svg>";
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Tv2 className="h-8 w-8 text-muted-foreground/30" />
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/watch/series/${s.series_id}/1`);
-                            }}
-                            className="p-2 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <Play className="h-5 w-5" />
-                          </button>
+                      {s.cover ? (
+                        <img
+                          src={s.cover}
+                          alt=""
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 3'><rect fill='%231a1a2e' width='2' height='3'/></svg>";
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Tv2 className="h-8 w-8 text-muted-foreground/30" />
                         </div>
-                      </div>
-
-                      <div className="p-2">
-                        <p className="text-[11px] font-medium line-clamp-2 leading-tight mb-1">
-                          {s.name}
-                        </p>
-                        <div className="flex items-center gap-2 mb-1.5">
-                          {s.rating && (
-                            <div className="flex items-center gap-1">
-                              <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                              <span className="text-[10px] text-muted-foreground">{s.rating}</span>
-                            </div>
-                          )}
-                          {s.releaseDate && (
-                            <span className="text-[10px] text-muted-foreground/60">
-                              {s.releaseDate.slice(0, 4)}
-                            </span>
-                          )}
-                        </div>
-
+                      )}
+                      {/* Play button — direct play, skips overlay */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            toggleEpisodes(s);
+                            navigate(`/watch/series/${s.series_id}/1`);
                           }}
-                          className="w-full flex items-center justify-center gap-1 py-1 rounded bg-muted hover:bg-muted/80 text-[10px] text-muted-foreground transition-colors"
+                          className="p-2 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/80"
                         >
-                          <ChevronDown
-                            className={`h-3 w-3 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                          />
-                          Episodes
+                          <Play className="h-5 w-5" />
                         </button>
-
-                        {isExpanded && (
-                          <div className="mt-1.5 space-y-0.5 max-h-32 overflow-y-auto">
-                            {epLoading ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin mx-auto text-muted-foreground" />
-                            ) : episodes ? (
-                              Object.entries(episodes).map(([season, eps]: [string, any]) => (
-                                <div key={season}>
-                                  <p className="text-[9px] text-muted-foreground/60 px-1 py-0.5">
-                                    S{season}
-                                  </p>
-                                  {Array.isArray(eps) &&
-                                    eps.slice(0, 6).map((ep: any) => (
-                                      <button
-                                        key={ep.id}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          navigate(`/watch/series/${s.series_id}/${ep.id}`);
-                                        }}
-                                        className="w-full flex items-center gap-1.5 px-1.5 py-0.5 rounded hover:bg-muted text-left group/ep"
-                                      >
-                                        <Play className="h-2 w-2 text-primary opacity-0 group-hover/ep:opacity-100" />
-                                        <span className="text-[10px] truncate">
-                                          {ep.title || `Ep ${ep.episode_num || ""}`}
-                                        </span>
-                                      </button>
-                                    ))}
-                                </div>
-                              ))
-                            ) : (
-                              <p className="text-[9px] text-muted-foreground/50 text-center py-1">
-                                No episode data
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {s.genre && (
-                          <p className="text-[9px] text-muted-foreground/50 mt-1 line-clamp-1">
-                            {s.genre}
-                          </p>
-                        )}
                       </div>
                     </div>
-                  );
-                })}
+
+                    <div className="p-2">
+                      <button
+                        onClick={() => setOverlaySeries(s)}
+                        className="w-full text-left"
+                      >
+                        <p className="text-[11px] font-medium line-clamp-2 leading-tight mb-1 hover:text-primary transition-colors">
+                          {s.name}
+                        </p>
+                      </button>
+                      <div className="flex items-center gap-2 mb-1">
+                        {s.rating && (
+                          <div className="flex items-center gap-1">
+                            <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                            <span className="text-[10px] text-muted-foreground">{s.rating}</span>
+                          </div>
+                        )}
+                        {s.releaseDate && (
+                          <span className="text-[10px] text-muted-foreground/60">
+                            {s.releaseDate.slice(0, 4)}
+                          </span>
+                        )}
+                      </div>
+                      {s.genre && (
+                        <p className="text-[9px] text-muted-foreground/50 line-clamp-1">
+                          {s.genre}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </ContentRow>
             );
           })}
@@ -450,6 +391,14 @@ export default function SeriesPage() {
             Adjust your language or service settings to see more content
           </p>
         </div>
+      )}
+
+      {/* Series overlay */}
+      {overlaySeries && (
+        <SeriesOverlay
+          series={overlaySeries}
+          onClose={() => setOverlaySeries(null)}
+        />
       )}
     </div>
   );
