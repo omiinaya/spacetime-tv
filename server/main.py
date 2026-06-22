@@ -831,11 +831,58 @@ async def tv_guide(channel: Optional[str] = None):
     return {"programmes": relevant, "channels": channels}
 
 
+# ── Cache Warming ───────────────────────────────────────────────────────────
+# Pre-fetch all VOD/series data at startup so searches are instant.
+# Without this, the first search triggers hundreds of per-category fetches.
+CACHE_WARM_CONCURRENCY = 20  # IPTV provider handles this fine (tested)
+
+async def warm_cache():
+    """Pre-fetch all VOD and series data into memory (background task)."""
+    log.info("[WARMER] Starting cache warming for VOD + Series...")
+    start = time.time()
+
+    # Warm VOD
+    try:
+        vod_cats = await cached_fetch("vod_categories", "get_vod_categories")
+        vod_cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
+        sem = asyncio.Semaphore(CACHE_WARM_CONCURRENCY)
+        async def fetch_vod_cat(cid):
+            async with sem:
+                return await cached_fetch(f"vod_{cid}", "get_vod_streams", category_id=cid)
+        await asyncio.gather(*[fetch_vod_cat(cid) for cid in vod_cat_ids], return_exceptions=True)
+        log.info(f"[WARMER] VOD: {len(vod_cat_ids)} categories cached")
+    except Exception as e:
+        log.warning(f"[WARMER] VOD warm failed (non-fatal): {e}")
+
+    # Warm Series
+    try:
+        series_cats = await cached_fetch("series_categories", "get_series_categories")
+        series_cat_ids = [c["category_id"] for c in series_cats if c.get("category_id")]
+        sem = asyncio.Semaphore(CACHE_WARM_CONCURRENCY)
+        async def fetch_series_cat(cid):
+            async with sem:
+                return await cached_fetch(f"series_{cid}", "get_series", category_id=cid)
+        await asyncio.gather(*[fetch_series_cat(cid) for cid in series_cat_ids], return_exceptions=True)
+        log.info(f"[WARMER] Series: {len(series_cat_ids)} categories cached")
+    except Exception as e:
+        log.warning(f"[WARMER] Series warm failed (non-fatal): {e}")
+
+    elapsed = time.time() - start
+    log.info(f"[WARMER] Done in {elapsed:.1f}s — all searches now instant")
+
+_warm_task: Optional[asyncio.Task] = None
+
+def start_cache_warmer():
+    """Launch cache warming in background (non-blocking)."""
+    global _warm_task
+    if _warm_task is None or _warm_task.done():
+        _warm_task = asyncio.create_task(warm_cache())
+
 # ── SEARCH ───────────────────────────────────────────────────────────────────
 
 @app.get("/api/search")
 async def search(q: str = Query(..., min_length=2)):
-    """Search across live TV, movies, and series (parallelized)."""
+    """Search across live TV, movies, and series (cache-aware fast path)."""
     query = q.lower().strip()
     results = {"live": [], "movies": [], "series": []}
 
@@ -845,69 +892,91 @@ async def search(q: str = Query(..., min_length=2)):
     except Exception as e:
         log.error(f"Live search error: {e}")
 
-    async def get_vod_results():
-        try:
-            vod_cats = await cached_fetch("vod_categories", "get_vod_categories")
-            vod_cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
-            sem = asyncio.Semaphore(8)
-            async def fetch_cat(cid):
-                async with sem:
-                    return await cached_fetch(f"vod_{cid}", "get_vod_streams", category_id=cid)
-            all_streams = await asyncio.gather(*[fetch_cat(cid) for cid in vod_cat_ids], return_exceptions=True)
-            seen = set()
-            out = []
-            for streams in all_streams:
-                if isinstance(streams, Exception):
+    def _search_cached(prefix: str, id_field: str, name_fields=("name",)):
+        """Search in-memory cache directly — O(cached_categories) instant scan."""
+        seen = set()
+        out = []
+        for key, (ts, data) in _cache.items():
+            if not key.startswith(prefix):
+                continue
+            if not isinstance(data, list):
+                continue
+            for s in data:
+                sid = s.get(id_field)
+                if not sid or sid in seen:
                     continue
-                for s in streams:
-                    sid = s.get("stream_id")
-                    if sid and sid not in seen:
-                        seen.add(sid)
-                        if query in s.get("name", "").lower():
-                            out.append(s)
-                            if len(out) >= 20:
-                                return out
-            return out
-        except Exception as e:
-            log.error(f"VOD search error: {e}")
-            return []
+                seen.add(sid)
+                text = " ".join(str(s.get(f, "") or "") for f in name_fields).lower()
+                if query in text:
+                    out.append(s)
+                    if len(out) >= 20:
+                        return out
+        return out
 
-    async def get_series_results():
-        try:
-            series_cats = await cached_fetch("series_categories", "get_series_categories")
-            series_cat_ids = [c["category_id"] for c in series_cats if c.get("category_id")]
-            sem = asyncio.Semaphore(8)
-            async def fetch_cat(cid):
-                async with sem:
-                    return await cached_fetch(f"series_{cid}", "get_series", category_id=cid)
-            all_series = await asyncio.gather(*[fetch_cat(cid) for cid in series_cat_ids], return_exceptions=True)
-            seen = set()
-            out = []
-            for slist in all_series:
-                if isinstance(slist, Exception):
-                    continue
-                for s in slist:
-                    sid = s.get("series_id")
-                    if sid and sid not in seen:
-                        seen.add(sid)
-                        name = (s.get("name") or "").lower()
-                        plot = (s.get("plot") or "").lower()
-                        if query in name or query in plot:
-                            out.append(s)
-                            if len(out) >= 20:
-                                return out
-            return out
-        except Exception as e:
-            log.error(f"Series search error: {e}")
-            return []
+    # Fast path: if caches are warm, scan in-memory directly (no async overhead)
+    results["movies"] = _search_cached("vod_", "stream_id")
+    results["series"] = _search_cached("series_", "series_id", ("name", "plot"))
 
-    vod_task = asyncio.create_task(get_vod_results())
-    series_task = asyncio.create_task(get_series_results())
-    results["movies"], results["series"] = await asyncio.gather(vod_task, series_task, return_exceptions=True)
-    if isinstance(results["movies"], Exception):
-        results["movies"] = []
-    if isinstance(results["series"], Exception):
-        results["series"] = []
+    # If caches weren't warm, fall back to per-category fetch
+    if not results["movies"]:
+        async def get_vod_results():
+            try:
+                vod_cats = await cached_fetch("vod_categories", "get_vod_categories")
+                vod_cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
+                sem = asyncio.Semaphore(20)
+                async def fetch_cat(cid):
+                    async with sem:
+                        return await cached_fetch(f"vod_{cid}", "get_vod_streams", category_id=cid)
+                all_streams = await asyncio.gather(*[fetch_cat(cid) for cid in vod_cat_ids], return_exceptions=True)
+                seen = set()
+                out = []
+                for streams in all_streams:
+                    if isinstance(streams, Exception):
+                        continue
+                    for s in streams:
+                        sid = s.get("stream_id")
+                        if sid and sid not in seen:
+                            seen.add(sid)
+                            if query in s.get("name", "").lower():
+                                out.append(s)
+                                if len(out) >= 20:
+                                    return out
+                return out
+            except Exception as e:
+                log.error(f"VOD search error: {e}")
+                return []
+        results["movies"] = await get_vod_results()
+
+    if not results["series"]:
+        async def get_series_results():
+            try:
+                series_cats = await cached_fetch("series_categories", "get_series_categories")
+                series_cat_ids = [c["category_id"] for c in series_cats if c.get("category_id")]
+                sem = asyncio.Semaphore(20)
+                async def fetch_cat(cid):
+                    async with sem:
+                        return await cached_fetch(f"series_{cid}", "get_series", category_id=cid)
+                all_series = await asyncio.gather(*[fetch_cat(cid) for cid in series_cat_ids], return_exceptions=True)
+                seen = set()
+                out = []
+                for slist in all_series:
+                    if isinstance(slist, Exception):
+                        continue
+                    for s in slist:
+                        sid = s.get("series_id")
+                        if sid and sid not in seen:
+                            seen.add(sid)
+                            name = (s.get("name") or "").lower()
+                            plot = (s.get("plot") or "").lower()
+                            if query in name or query in plot:
+                                out.append(s)
+                                if len(out) >= 20:
+                                    return out
+                return out
+            except Exception as e:
+                log.error(f"Series search error: {e}")
+                return []
+        results["series"] = await get_series_results()
 
     return results
 
@@ -1439,5 +1508,6 @@ if __name__ == "__main__":
     @app.on_event("startup")
     async def startup():
         start_cleanup_task()
+        start_cache_warmer()
 
     uvicorn.run(app, host="0.0.0.0", port=8720, log_level="info")
