@@ -42,7 +42,7 @@ export default function SearchPage() {
   }, []);
 
   // Cancel on unmount
-  useEffect(() => cancelPending, [cancelPending]);
+  useEffect(() => () => cancelPending(), [cancelPending]);
 
   // ── Single unified search pipeline ────────────────────────────
   const runSearch = useCallback(async (q: string) => {
@@ -83,10 +83,11 @@ export default function SearchPage() {
   }, [cancelPending]);
 
   // ── Auto-search from URL (Back navigation / direct link) ──────
-  const lastUrlQuery = useRef("");
+  // Drive search from URL params. runSearch() uses searchIdRef + AbortController
+  // internally, so redundant calls (e.g. from handleQueryChange's debounce + this
+  // effect firing on the same URL update) are harmless: the second cancels the first.
   useEffect(() => {
-    if (urlQuery && urlQuery.trim().length >= 2 && urlQuery !== lastUrlQuery.current) {
-      lastUrlQuery.current = urlQuery;
+    if (urlQuery && urlQuery.trim().length >= 2) {
       setQuery(urlQuery);
       runSearch(urlQuery);
     }
