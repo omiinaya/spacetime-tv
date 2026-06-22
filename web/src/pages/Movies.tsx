@@ -44,12 +44,23 @@ export default function Movies() {
     [setSearchParams]
   );
 
-  // Load categories
+  // Load categories (with 15-min sessionStorage cache)
   useEffect(() => {
+    const cached = sessionStorage.getItem("stv_movies_cats");
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.categories && Date.now() - parsed.ts < 900000) {
+          setCategories(parsed.categories);
+          setLoading(false);
+        }
+      } catch {}
+    }
     api.movies
       .categories()
       .then((d) => {
         setCategories(d.categories);
+        sessionStorage.setItem("stv_movies_cats", JSON.stringify({ categories: d.categories, ts: Date.now() }));
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));

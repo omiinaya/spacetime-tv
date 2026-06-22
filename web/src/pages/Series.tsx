@@ -57,11 +57,24 @@ export default function SeriesPage() {
     [categories, settings]
   );
 
-  // Load categories
+  // Load categories (with 15-min sessionStorage cache)
   useEffect(() => {
+    const cached = sessionStorage.getItem("stv_series_cats");
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.categories && Date.now() - parsed.ts < 900000) {
+          setCategories(parsed.categories);
+          setLoading(false);
+        }
+      } catch {}
+    }
     api.series
       .categories()
-      .then((d) => setCategories(d.categories))
+      .then((d) => {
+        setCategories(d.categories);
+        sessionStorage.setItem("stv_series_cats", JSON.stringify({ categories: d.categories, ts: Date.now() }));
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);

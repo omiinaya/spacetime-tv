@@ -60,9 +60,23 @@ export default function LiveTV() {
   const searchHasMore = q ? filteredItems.length < searchMatches.length : hasMore;
 
   useEffect(() => {
+    // Categories — restore from cache if fresh, fetch otherwise
+    const catCache = sessionStorage.getItem("stv_live_cats");
+    if (catCache) {
+      try {
+        const parsed = JSON.parse(catCache);
+        if (parsed.categories && Date.now() - parsed.ts < 900000) {
+          setCategories(parsed.categories);
+          setLoading(false);
+        }
+      } catch {}
+    }
     api.live
       .categories()
-      .then((d) => setCategories(d.categories))
+      .then((d) => {
+        setCategories(d.categories);
+        sessionStorage.setItem("stv_live_cats", JSON.stringify({ categories: d.categories, ts: Date.now() }));
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
 
@@ -72,7 +86,7 @@ export default function LiveTV() {
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        if (parsed.streams && Date.now() - parsed.ts < 300000) {
+        if (parsed.streams && Date.now() - parsed.ts < 900000) {
           setAllStreams(parsed.streams);
           setAllLoading(false);
           restored = true;
