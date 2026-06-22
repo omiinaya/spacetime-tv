@@ -683,20 +683,24 @@ export default function Player({ type }: PlayerProps) {
         if (doc.webkitFullscreenElement) doc.webkitExitFullscreen();
       } catch {}
       
-      // 2. Destroy mpegts.js player + HLS — must happen before
-      //    React removes the video element from DOM, otherwise
-      //    iOS Safari MediaSource teardown corrupts rendering.
-      if (hlsRef.current) { try { hlsRef.current.destroy(); } catch {} hlsRef.current = null; }
-      if (playerRef.current) { try { playerRef.current.destroy(); } catch {} playerRef.current = null; }
-      
-      // 3. Run ephemeral cleanup (timers, listeners)
+      // 2. Run ephemeral cleanup (timers, listeners)
       if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
       
-      // 4. DO NOT touch the video element AT ALL.
-      //    video.pause(), video.srcObject=null, or clearing on* handlers
-      //    on iOS Safari during React unmount corrupts the WebKit
-      //    rendering pipeline → black screen on navigation.
-      //    Let the browser GC handle MediaSource and DOM cleanup naturally.
+      // 3. Destroy players on the NEXT tick, after React has removed
+      //    the video element from DOM. On iOS Safari, destroying
+      //    mpegts.js/HLS while the video is still in the DOM tree
+      //    triggers synchronous MediaSource teardown that corrupts
+      //    the WebKit rendering pipeline → black screen on nav.
+      const hls = hlsRef.current;
+      const player = playerRef.current;
+      if (hls || player) {
+        hlsRef.current = null;
+        playerRef.current = null;
+        setTimeout(() => {
+          if (hls) { try { hls.destroy(); } catch {} }
+          if (player) { try { player.destroy(); } catch {} }
+        }, 0);
+      }
     };
   }, []);
 
