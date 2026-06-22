@@ -683,31 +683,20 @@ export default function Player({ type }: PlayerProps) {
         if (doc.webkitFullscreenElement) doc.webkitExitFullscreen();
       } catch {}
       
-      // 2. Destroy mpegts.js player + HLS
+      // 2. Destroy mpegts.js player + HLS — must happen before
+      //    React removes the video element from DOM, otherwise
+      //    iOS Safari MediaSource teardown corrupts rendering.
       if (hlsRef.current) { try { hlsRef.current.destroy(); } catch {} hlsRef.current = null; }
       if (playerRef.current) { try { playerRef.current.destroy(); } catch {} playerRef.current = null; }
       
       // 3. Run ephemeral cleanup (timers, listeners)
       if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
       
-      // 4. Clear video element state WITHOUT calling video.load().
-      //    video.load() and URL.revokeObjectURL during React unmount
-      //    corrupt the iOS Safari rendering pipeline on navigation.
-      const video = videoRef.current;
-      if (video) {
-        try {
-          video.pause();
-          video.removeAttribute("src");
-          if (video.srcObject) video.srcObject = null;
-        } catch {}
-        video.onplaying = null;
-        video.ontimeupdate = null;
-        video.ondurationchange = null;
-        video.onended = null;
-        video.onerror = null;
-        video.onwaiting = null;
-        video.onloadedmetadata = null;
-      }
+      // 4. DO NOT touch the video element AT ALL.
+      //    video.pause(), video.srcObject=null, or clearing on* handlers
+      //    on iOS Safari during React unmount corrupts the WebKit
+      //    rendering pipeline → black screen on navigation.
+      //    Let the browser GC handle MediaSource and DOM cleanup naturally.
     };
   }, []);
 
