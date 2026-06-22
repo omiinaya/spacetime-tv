@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
   Loader2,
@@ -11,47 +11,50 @@ import {
 } from "lucide-react";
 import { api, LiveStream, Movie, Series } from "@/lib/api";
 
-const STORAGE_KEY = "spacetimetv-search";
-
-interface SearchState {
-  query: string;
-  results: {
-    live: LiveStream[];
-    movies: Movie[];
-    series: Series[];
-  } | null;
-}
-
-function loadState(): SearchState {
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return { query: "", results: null };
-}
-
-function saveState(state: SearchState) {
-  try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {}
+interface SearchResults {
+  live: LiveStream[];
+  movies: Movie[];
+  series: Series[];
 }
 
 export default function SearchPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlQuery = searchParams.get("q") || "";
 
-  const [saved] = useState(loadState);
-  const [query, setQuery] = useState(saved.query);
+  const [query, setQuery] = useState(urlQuery);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<SearchState["results"]>(saved.results);
+  const [results, setResults] = useState<SearchResults | null>(null);
 
-  // Persist whenever results change
+  // Track if we've already auto-searched this URL query
+  const lastAutoSearched = useRef<string>("");
+
+  // Auto-search when URL has a query param (from Back navigation or direct link)
   useEffect(() => {
-    saveState({ query, results });
-  }, [query, results]);
+    if (urlQuery && urlQuery.trim().length >= 2 && urlQuery !== lastAutoSearched.current) {
+      lastAutoSearched.current = urlQuery;
+      setQuery(urlQuery);
+      // Fire the search
+      const run = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          const r = await api.search(urlQuery);
+          setResults(r);
+        } catch (e: any) {
+          setError(e.message);
+        }
+        setLoading(false);
+      };
+      run();
+    }
+  }, [urlQuery]);
 
   const doSearch = useCallback(async () => {
     if (query.trim().length < 2) return;
+    // Update URL with the query
+    setSearchParams({ q: query }, { replace: true });
     setLoading(true);
     setError(null);
     try {
@@ -61,7 +64,7 @@ export default function SearchPage() {
       setError(e.message);
     }
     setLoading(false);
-  }, [query]);
+  }, [query, setSearchParams]);
 
   const total =
     results
@@ -102,6 +105,7 @@ export default function SearchPage() {
                 setQuery("");
                 setResults(null);
                 setError(null);
+                setSearchParams({}, { replace: true });
               }}
               className="px-2 py-1 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
             >

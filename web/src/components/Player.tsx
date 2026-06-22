@@ -676,8 +676,7 @@ export default function Player({ type }: PlayerProps) {
   // ── Cleanup ──────────────────────────────────────────────────
   useEffect(() => {
     return () => {
-      // 1. Exit fullscreen first — leaving fullscreen during unmount 
-      //    corrupts iOS Safari rendering (causes black screen on nav)
+      // 1. Exit fullscreen first
       try {
         if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
         const doc = document as any;
@@ -691,21 +690,16 @@ export default function Player({ type }: PlayerProps) {
       // 3. Run ephemeral cleanup (timers, listeners)
       if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
       
-      // 4. Detach MediaSource from video element — critical for iOS Safari.
-      //    mpegts.js sets srcObject internally; leaving it attached after
-      //    destroy() corrupts the rendering pipeline on navigation.
+      // 4. Clear video element state WITHOUT calling video.load().
+      //    video.load() and URL.revokeObjectURL during React unmount
+      //    corrupt the iOS Safari rendering pipeline on navigation.
       const video = videoRef.current;
       if (video) {
         try {
-          // Remove all MediaSource references
-          if (video.srcObject) {
-            URL.revokeObjectURL(video.src); // revoke blob URL if any
-            video.srcObject = null;
-          }
+          video.pause();
           video.removeAttribute("src");
-          video.load(); // reset the media element
+          if (video.srcObject) video.srcObject = null;
         } catch {}
-        // Remove all listeners that might reference stale closures
         video.onplaying = null;
         video.ontimeupdate = null;
         video.ondurationchange = null;
@@ -731,30 +725,12 @@ export default function Player({ type }: PlayerProps) {
 
   // ── Render helpers ───────────────────────────────────────────
   const goBack = () => {
-    // Exit fullscreen first — navigating while in fullscreen
-    // corrupts iOS Safari rendering (black screen on return)
-    const doNav = () => {
-      // Use browser history back so search results, filter state,
-      // and scroll position are preserved
-      if (window.history.length > 1) {
-        navigate(-1);
-      } else {
-        if (type === "movie") navigate("/movies");
-        else if (type === "series") navigate("/series");
-        else navigate("/live");
-      }
-    };
-    try {
-      if (document.fullscreenElement) {
-        document.exitFullscreen().then(() => setTimeout(doNav, 100)).catch(doNav);
-      } else if ((document as any).webkitFullscreenElement) {
-        (document as any).webkitExitFullscreen();
-        setTimeout(doNav, 150);
-      } else {
-        doNav();
-      }
-    } catch {
-      doNav();
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      if (type === "movie") navigate("/movies");
+      else if (type === "series") navigate("/series");
+      else navigate("/live");
     }
   };
 
