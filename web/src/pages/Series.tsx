@@ -193,7 +193,6 @@ export default function SeriesPage() {
     );
   }
 
-  const totalSeries = Array.from(rows.values()).reduce((s, r) => s + r.total, 0);
 
   return (
     <div className="space-y-6">
@@ -205,9 +204,9 @@ export default function SeriesPage() {
         <div>
           <h1 className="text-xl font-semibold">Series</h1>
           <p className="text-sm text-muted-foreground">
-            {totalSeries > 0
-              ? `${totalSeries.toLocaleString()} series · ${filteredCatsBySettings.length} categories`
-              : `${filteredCatsBySettings.length} categories`}
+            {filteredCatsBySettings.length > 0
+              ? `${filteredCatsBySettings.length.toLocaleString()} categories`
+              : ""}
           </p>
         </div>
       </div>

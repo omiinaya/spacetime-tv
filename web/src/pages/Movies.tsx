@@ -206,7 +206,6 @@ export default function Movies() {
     );
   }
 
-  const totalMovies = Array.from(rows.values()).reduce((s, r) => s + r.total, 0);
 
   return (
     <div className="space-y-6">
@@ -218,9 +217,9 @@ export default function Movies() {
         <div>
           <h1 className="text-xl font-semibold">Movies</h1>
           <p className="text-sm text-muted-foreground">
-            {totalMovies > 0
-              ? `${totalMovies.toLocaleString()} movies · ${filteredCatsBySettings.length} categories`
-              : `${filteredCatsBySettings.length} categories`}
+            {filteredCatsBySettings.length > 0
+              ? `${filteredCatsBySettings.length.toLocaleString()} categories`
+              : ""}
           </p>
         </div>
       </div>
