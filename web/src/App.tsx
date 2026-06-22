@@ -25,6 +25,11 @@ const SIDEBAR_MIN = 200;
 const SIDEBAR_MAX = 400;
 const SIDEBAR_DEFAULT = 240;
 
+// Track the last non-player route for reliable Back navigation.
+// Using window.location.href instead of navigate(-1) avoids iOS Safari
+// rendering corruption when tearing down video elements during SPA nav.
+let gLastPath = "/live";
+
 const NAV_ITEMS = [
   { id: "/live", label: "Live TV", icon: Tv },
   { id: "/guide", label: "TV Guide", icon: CalendarClock },
@@ -37,6 +42,14 @@ function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Track last non-player route for Back navigation
+  useEffect(() => {
+    if (!location.pathname.startsWith("/watch/")) {
+      gLastPath = location.pathname + location.search;
+      (window as any).__stvLastPath = gLastPath;
+    }
+  }, [location]);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("stv-sidebar-width");
     return saved

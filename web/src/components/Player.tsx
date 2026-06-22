@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   Loader2, AlertCircle, ArrowLeft, Play, Pause, Maximize, Minimize,
   Volume2, VolumeX, SkipBack, SkipForward, Settings
@@ -64,7 +64,6 @@ function fmtTime(s: number): string {
 // ── Component ──────────────────────────────────────────────────
 export default function Player({ type }: PlayerProps) {
   const { id, seriesId, epId } = useParams();
-  const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<mpegts.Player | null>(null);
@@ -153,7 +152,7 @@ export default function Player({ type }: PlayerProps) {
   }, []);
 
   // ── Playback: MPEG-TS via mpegts.js (live TV only) ────────────
-  const playMPEGTS = useCallback((url: string, liveFlag: boolean, isTranscode: boolean, timeoutMs = 15000) => {
+  const playMPEGTS = useCallback((url: string, liveFlag: boolean, isTranscode: boolean) => {
     const video = videoRef.current;
     if (!video) return;
 
@@ -164,55 +163,91 @@ export default function Player({ type }: PlayerProps) {
 
     if (isTranscode) setTranscoding(true);
 
-    const player = mpegts.createPlayer({ type: "mpegts", isLive: liveFlag, url });
-    playerRef.current = player;
-    let errorCount = 0;
-    let timedOut = false;
+    // Store the URL for reconnection
+    const streamUrl = url;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECTS = 100; // effectively infinite
 
-    player.attachMediaElement(video);
-    player.load();
+    const createPlayer = () => {
+      const player = mpegts.createPlayer({
+        type: "mpegts",
+        isLive: liveFlag,
+        url: streamUrl,
+      });
+      playerRef.current = player;
 
-    player.on(mpegts.Events.LOADING_COMPLETE, () => {
-      // Don't hide spinner yet — wait for video 'playing' event (actual frames)
-      video.muted = true; setMuted(true);
-      video.play().catch(() => {});
-    });
+      player.attachMediaElement(video);
+      player.load();
 
-    // Hide spinner only when video is actually rendering frames
-    let playingFired = false;
-    const onPlaying = () => {
-      if (!playingFired) {
-        playingFired = true;
-        const p = phaseRef.current;
-        if (p === "loading" || p === "probing") setPhase("playing");
-      }
+      player.on(mpegts.Events.LOADING_COMPLETE, () => {
+        video.muted = true; setMuted(true);
+        video.play().catch(() => {});
+        // Reset reconnect counter on successful connection
+        reconnectAttempts = 0;
+      });
+
+      // Hide spinner only when video is actually rendering frames
+      let playingFired = false;
+      const onPlaying = () => {
+        if (!playingFired) {
+          playingFired = true;
+          const p = phaseRef.current;
+          if (p === "loading" || p === "probing") setPhase("playing");
+        }
+      };
+      video.addEventListener("playing", onPlaying);
+
+      // Track statistics to detect stream drops
+      let lastStatsTime = Date.now();
+      player.on(mpegts.Events.STATISTICS_INFO, () => {
+        lastStatsTime = Date.now();
+      });
+
+      // Auto-reconnect on fatal errors or stream drops
+      player.on(mpegts.Events.ERROR, (_t: string, detail: any) => {
+        // Only reconnect on real errors, not network noise
+        if (detail?.response?.code === 0) return;
+        if (!liveFlag) return; // VOD errors handled by VOD path
+        
+        if (reconnectAttempts < MAX_RECONNECTS) {
+          reconnectAttempts++;
+          // Clean up and retry after a short delay
+          try { player.destroy(); } catch {}
+          playerRef.current = null;
+          video.removeEventListener("playing", onPlaying);
+          setTimeout(() => {
+            if (playerRef.current === null) {
+              createPlayer();
+            }
+          }, Math.min(reconnectAttempts * 1000, 5000)); // 1s, 2s, 3s, 4s, 5s max
+        }
+      });
+
+      // Detect silent stream drops (no data for 15 seconds)
+      const healthCheck = setInterval(() => {
+        if (Date.now() - lastStatsTime > 15000 && liveFlag) {
+          clearInterval(healthCheck);
+          if (reconnectAttempts < MAX_RECONNECTS) {
+            reconnectAttempts++;
+            try { player.destroy(); } catch {}
+            playerRef.current = null;
+            video.removeEventListener("playing", onPlaying);
+            setTimeout(() => {
+              if (playerRef.current === null) {
+                createPlayer();
+              }
+            }, Math.min(reconnectAttempts * 1000, 5000));
+          }
+        }
+      }, 5000);
+
+      mpegtsCleanup.current = () => {
+        clearInterval(healthCheck);
+        video.removeEventListener("playing", onPlaying);
+      };
     };
-    video.addEventListener("playing", onPlaying);
 
-    player.on(mpegts.Events.ERROR, (_t: string, detail: any) => {
-      errorCount++;
-      if (detail?.response?.code === 0 || errorCount < 3) return;
-      if (!timedOut) {
-        setPhase("error");
-        setErrorMsg(isTranscode
-          ? "Stream unavailable even with transcoding."
-          : "Stream unavailable.");
-      }
-    });
-
-    const timeout = setTimeout(() => {
-      const p = phaseRef.current;
-      if (p === "loading" || p === "probing") {
-        timedOut = true;
-        setPhase("error");
-        setErrorMsg("Stream timed out. Try again.");
-      }
-    }, timeoutMs);
-
-    mpegtsCleanup.current = () => {
-      clearTimeout(timeout);
-      video.removeEventListener("playing", onPlaying);
-    };
+    createPlayer();
   }, []);
 
   // ── Playback: VOD via mpegts remux (instant start, no download wait) ──
@@ -718,13 +753,13 @@ export default function Player({ type }: PlayerProps) {
 
   // ── Render helpers ───────────────────────────────────────────
   const goBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      if (type === "movie") navigate("/movies");
-      else if (type === "series") navigate("/series");
-      else navigate("/live");
-    }
+    // Full page redirect instead of SPA navigation.
+    // navigate(-1) on iOS Safari corrupts the rendering pipeline
+    // when the video element is torn down during React unmount,
+    // leaving the next page as a black screen.
+    const backUrl = (window as any).__stvLastPath ||
+      (type === "movie" ? "/movies" : type === "series" ? "/series" : "/live");
+    window.location.href = backUrl;
   };
 
   const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
