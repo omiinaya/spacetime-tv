@@ -44,10 +44,20 @@ export default function LiveTV() {
     [categories, settings]
   );
 
+  // Pre-compute full search matches so we can show the total count
+  const searchMatches = useMemo(() => {
+    if (!q) return [];
+    return allStreams.filter((s) => s.name.toLowerCase().includes(q));
+  }, [allStreams, q]);
+
   const filteredItems = useMemo(() => {
     if (!q) return visibleItems;
-    return visibleItems.filter((s) => s.name.toLowerCase().includes(q));
-  }, [visibleItems, q]);
+    // Search: filter entire dataset first, then paginate the matches.
+    // Searching only visibleItems (first 50 of 48k) misses results
+    return searchMatches.slice(0, visibleItems.length || BATCH);
+  }, [visibleItems, q, searchMatches]);
+
+  const searchHasMore = q ? filteredItems.length < searchMatches.length : hasMore;
 
   useEffect(() => {
     api.live
@@ -120,7 +130,7 @@ export default function LiveTV() {
             <h1 className="text-xl font-semibold">Live TV</h1>
             <p className="text-sm text-muted-foreground">
               {isSearching
-                ? `${filteredItems.length.toLocaleString()} results · ${allStreams.length.toLocaleString()} channels`
+                ? `${searchMatches.length.toLocaleString()} results · ${allStreams.length.toLocaleString()} channels`
                 : `${streams.length.toLocaleString()} channels · ${filteredCategories.length} categories`}
             </p>
           </div>
@@ -209,7 +219,7 @@ export default function LiveTV() {
         </div>
       ) : (
         <>
-          {isSearching && filteredItems.length === 0 ? (
+          {isSearching && searchMatches.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Search className="h-10 w-10 text-muted-foreground/20 mb-3" />
               <p className="text-sm text-muted-foreground">
@@ -255,7 +265,7 @@ export default function LiveTV() {
               </div>
 
               <div ref={sentinelRef} className="h-1" />
-              {hasMore && (
+              {searchHasMore && (
                 <div className="flex justify-center py-4">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 </div>

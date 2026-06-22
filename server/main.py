@@ -835,64 +835,79 @@ async def tv_guide(channel: Optional[str] = None):
 
 @app.get("/api/search")
 async def search(q: str = Query(..., min_length=2)):
-    """Search across live TV, movies, and series."""
+    """Search across live TV, movies, and series (parallelized)."""
     query = q.lower().strip()
     results = {"live": [], "movies": [], "series": []}
 
     try:
-        # Search live streams (need to fetch all — cached)
         live_data = await cached_fetch("live_all", "get_live_streams")
-        for s in live_data:
-            name = s.get("name", "").lower()
-            if query in name:
-                results["live"].append(s)
-        results["live"] = results["live"][:20]
+        results["live"] = [s for s in live_data if query in s.get("name", "").lower()][:20]
     except Exception as e:
         log.error(f"Live search error: {e}")
 
-    try:
-        # IPTV provider returns empty for get_vod_streams with no category_id.
-        # Must fetch categories first, then aggregate per-category streams.
-        vod_cats = await cached_fetch("vod_categories", "get_vod_categories")
-        vod_cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
-        seen = set()
-        for cid in vod_cat_ids:
-            try:
-                streams = await cached_fetch(f"vod_{cid}", "get_vod_streams", category_id=cid)
+    async def get_vod_results():
+        try:
+            vod_cats = await cached_fetch("vod_categories", "get_vod_categories")
+            vod_cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
+            sem = asyncio.Semaphore(8)
+            async def fetch_cat(cid):
+                async with sem:
+                    return await cached_fetch(f"vod_{cid}", "get_vod_streams", category_id=cid)
+            all_streams = await asyncio.gather(*[fetch_cat(cid) for cid in vod_cat_ids], return_exceptions=True)
+            seen = set()
+            out = []
+            for streams in all_streams:
+                if isinstance(streams, Exception):
+                    continue
                 for s in streams:
                     sid = s.get("stream_id")
                     if sid and sid not in seen:
                         seen.add(sid)
-                        name = s.get("name", "").lower()
-                        if query in name:
-                            results["movies"].append(s)
-            except Exception:
-                continue
-            if len(results["movies"]) >= 20:
-                break
-    except Exception as e:
-        log.error(f"VOD search error: {e}")
+                        if query in s.get("name", "").lower():
+                            out.append(s)
+                            if len(out) >= 20:
+                                return out
+            return out
+        except Exception as e:
+            log.error(f"VOD search error: {e}")
+            return []
 
-    try:
-        series_cats = await cached_fetch("series_categories", "get_series_categories")
-        series_cat_ids = [c["category_id"] for c in series_cats if c.get("category_id")]
-        seen = set()
-        for cid in series_cat_ids:
-            try:
-                series_list = await cached_fetch(f"series_{cid}", "get_series", category_id=cid)
-                for s in series_list:
+    async def get_series_results():
+        try:
+            series_cats = await cached_fetch("series_categories", "get_series_categories")
+            series_cat_ids = [c["category_id"] for c in series_cats if c.get("category_id")]
+            sem = asyncio.Semaphore(8)
+            async def fetch_cat(cid):
+                async with sem:
+                    return await cached_fetch(f"series_{cid}", "get_series", category_id=cid)
+            all_series = await asyncio.gather(*[fetch_cat(cid) for cid in series_cat_ids], return_exceptions=True)
+            seen = set()
+            out = []
+            for slist in all_series:
+                if isinstance(slist, Exception):
+                    continue
+                for s in slist:
                     sid = s.get("series_id")
                     if sid and sid not in seen:
                         seen.add(sid)
-                        name = s.get("name", "").lower()
-                        if query in name or query in (s.get("plot", "") or "").lower():
-                            results["series"].append(s)
-            except Exception:
-                continue
-            if len(results["series"]) >= 20:
-                break
-    except Exception as e:
-        log.error(f"Series search error: {e}")
+                        name = (s.get("name") or "").lower()
+                        plot = (s.get("plot") or "").lower()
+                        if query in name or query in plot:
+                            out.append(s)
+                            if len(out) >= 20:
+                                return out
+            return out
+        except Exception as e:
+            log.error(f"Series search error: {e}")
+            return []
+
+    vod_task = asyncio.create_task(get_vod_results())
+    series_task = asyncio.create_task(get_series_results())
+    results["movies"], results["series"] = await asyncio.gather(vod_task, series_task, return_exceptions=True)
+    if isinstance(results["movies"], Exception):
+        results["movies"] = []
+    if isinstance(results["series"], Exception):
+        results["series"] = []
 
     return results
 
