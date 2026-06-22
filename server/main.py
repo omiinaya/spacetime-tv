@@ -34,7 +34,10 @@ app = FastAPI(title="Spacetime-TV")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 # ── HTTP Client ─────────────────────────────────────────────────────────────
-client = httpx.AsyncClient(timeout=30.0)
+client = httpx.AsyncClient(
+    timeout=30.0,
+    headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
+)
 
 
 def iptv_url(action: str, **params) -> str:
@@ -848,22 +851,46 @@ async def search(q: str = Query(..., min_length=2)):
         log.error(f"Live search error: {e}")
 
     try:
-        vod_data = await cached_fetch("vod_all", "get_vod_streams")
-        for s in vod_data:
-            name = s.get("name", "").lower()
-            if query in name:
-                results["movies"].append(s)
-        results["movies"] = results["movies"][:20]
+        # IPTV provider returns empty for get_vod_streams with no category_id.
+        # Must fetch categories first, then aggregate per-category streams.
+        vod_cats = await cached_fetch("vod_categories", "get_vod_categories")
+        vod_cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
+        seen = set()
+        for cid in vod_cat_ids:
+            try:
+                streams = await cached_fetch(f"vod_{cid}", "get_vod_streams", category_id=cid)
+                for s in streams:
+                    sid = s.get("stream_id")
+                    if sid and sid not in seen:
+                        seen.add(sid)
+                        name = s.get("name", "").lower()
+                        if query in name:
+                            results["movies"].append(s)
+            except Exception:
+                continue
+            if len(results["movies"]) >= 20:
+                break
     except Exception as e:
         log.error(f"VOD search error: {e}")
 
     try:
-        series_data = await cached_fetch("series_all", "get_series")
-        for s in series_data:
-            name = s.get("name", "").lower()
-            if query in name or query in (s.get("plot", "") or "").lower():
-                results["series"].append(s)
-        results["series"] = results["series"][:20]
+        series_cats = await cached_fetch("series_categories", "get_series_categories")
+        series_cat_ids = [c["category_id"] for c in series_cats if c.get("category_id")]
+        seen = set()
+        for cid in series_cat_ids:
+            try:
+                series_list = await cached_fetch(f"series_{cid}", "get_series", category_id=cid)
+                for s in series_list:
+                    sid = s.get("series_id")
+                    if sid and sid not in seen:
+                        seen.add(sid)
+                        name = s.get("name", "").lower()
+                        if query in name or query in (s.get("plot", "") or "").lower():
+                            results["series"].append(s)
+            except Exception:
+                continue
+            if len(results["series"]) >= 20:
+                break
     except Exception as e:
         log.error(f"Series search error: {e}")
 
