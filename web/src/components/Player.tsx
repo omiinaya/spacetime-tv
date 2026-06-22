@@ -179,10 +179,23 @@ export default function Player({ type }: PlayerProps) {
       player.attachMediaElement(video);
       player.load();
 
-      player.on(mpegts.Events.LOADING_COMPLETE, () => {
+      // MEDIA_INFO fires once the stream is recognized — call play() here
+      // because LOADING_COMPLETE never fires for live (unbounded) streams.
+      let loadStarted = false;
+      player.on(mpegts.Events.MEDIA_INFO, () => {
+        if (loadStarted) return;
+        loadStarted = true;
         video.muted = true; setMuted(true);
         video.play().catch(() => {});
-        // Reset reconnect counter on successful connection
+      });
+
+      player.on(mpegts.Events.LOADING_COMPLETE, () => {
+        // Fallback if both events fire (some stream types do)
+        if (!loadStarted) {
+          loadStarted = true;
+          video.muted = true; setMuted(true);
+          video.play().catch(() => {});
+        }
         reconnectAttempts = 0;
       });
 
