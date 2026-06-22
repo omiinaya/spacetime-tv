@@ -753,12 +753,15 @@ export default function Player({ type }: PlayerProps) {
 
   // ── Render helpers ───────────────────────────────────────────
   const goBack = () => {
-    // Full page redirect instead of SPA navigation.
-    // navigate(-1) on iOS Safari corrupts the rendering pipeline
-    // when the video element is torn down during React unmount,
-    // leaving the next page as a black screen.
-    const backUrl = (window as any).__stvLastPath ||
-      (type === "movie" ? "/movies" : type === "series" ? "/series" : "/live");
+    // Full page redirect — sessionStorage survives reload, so the
+    // back URL set by AppLayout on the previous page is still available.
+    // This bypasses React unmount entirely, avoiding iOS Safari
+    // rendering corruption from video element teardown.
+    let backUrl = "";
+    try { backUrl = sessionStorage.getItem("stv_back_url") || ""; } catch {}
+    if (!backUrl) {
+      backUrl = type === "movie" ? "/movies" : type === "series" ? "/series" : "/live";
+    }
     window.location.href = backUrl;
   };
 

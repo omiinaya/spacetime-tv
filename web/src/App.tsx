@@ -26,9 +26,17 @@ const SIDEBAR_MAX = 400;
 const SIDEBAR_DEFAULT = 240;
 
 // Track the last non-player route for reliable Back navigation.
-// Using window.location.href instead of navigate(-1) avoids iOS Safari
-// rendering corruption when tearing down video elements during SPA nav.
-let gLastPath = "/live";
+// Using sessionStorage (survives full page reloads) + window.location.href
+// avoids iOS Safari rendering corruption when tearing down video elements
+// during React unmount.
+const BACK_KEY = "stv_back_url";
+
+function saveBackPath(path: string) {
+  try { sessionStorage.setItem(BACK_KEY, path); } catch {}
+}
+function getBackPath(fallback: string): string {
+  try { return sessionStorage.getItem(BACK_KEY) || fallback; } catch { return fallback; }
+}
 
 const NAV_ITEMS = [
   { id: "/live", label: "Live TV", icon: Tv },
@@ -46,8 +54,7 @@ function AppLayout() {
   // Track last non-player route for Back navigation
   useEffect(() => {
     if (!location.pathname.startsWith("/watch/")) {
-      gLastPath = location.pathname + location.search;
-      (window as any).__stvLastPath = gLastPath;
+      saveBackPath(location.pathname + location.search);
     }
   }, [location]);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
