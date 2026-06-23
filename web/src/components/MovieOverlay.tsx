@@ -175,7 +175,7 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
         </button>
 
         {/* ── Hero Banner ─────────────────────────────────────── */}
-        <div className="relative shrink-0 h-[260px] sm:h-[400px] bg-[#141420] overflow-hidden">
+        <div className="relative shrink-0 h-[260px] sm:h-[400px] bg-[#141420]">
           {bannerUrl ? (
             <>
               <img
@@ -271,7 +271,7 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
                       <ChevronDown className="h-3 w-3 opacity-50" />
                     </button>
                     {showLangMenu && (
-                      <div className="absolute bottom-full left-0 mb-1 w-44 rounded-lg bg-[#1a1a2e] border border-white/10 shadow-xl py-1 z-40 max-h-60 overflow-y-auto">
+                      <div className="absolute top-full left-0 mt-1 w-44 rounded-lg bg-[#1a1a2e] border border-white/10 shadow-xl py-1 z-50 max-h-60 overflow-y-auto">
                         {movie.languages.map((l) => (
                           <button
                             key={l.code}
