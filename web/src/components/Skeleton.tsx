@@ -12,7 +12,7 @@ export function Skeleton({
       style={{
         background: "linear-gradient(90deg, oklch(0.15 0.005 286.033) 25%, oklch(0.22 0.005 286.033) 50%, oklch(0.15 0.005 286.033) 75%)",
         backgroundSize: "200% 100%",
-        animation: "shimmer 1.5s ease-in-out infinite",
+        animation: "shimmer 2.5s ease-in-out infinite",
         ...style,
       }}
     />
