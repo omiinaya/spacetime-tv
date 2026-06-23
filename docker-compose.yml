@@ -1,0 +1,36 @@
+services:
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: stv-backend
+    ports:
+      - "8720:8720"
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server/web/dist:/app/web/dist # hot-reload frontend builds
+      - ./server/epg_cache.json:/app/epg_cache.json # persist EPG cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8720/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: stv-frontend
+    ports:
+      - "8722:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  default:
+    name: stv-network

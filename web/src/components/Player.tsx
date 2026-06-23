@@ -719,6 +719,32 @@ export default function Player({ type }: PlayerProps) {
     showControls(true);
   }, [isLive, duration, seekTo, showControls]);
 
+  // Touch-based seeking: tap to seek, drag to scrub
+  const progressDragRef = useRef(false);
+  const handleProgressTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (isLive || !duration) return;
+    e.preventDefault(); // don't scroll page
+    progressDragRef.current = true;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const touch = e.touches[0];
+    const fraction = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+    seekTo(fraction * duration);
+    showControls(true);
+  }, [isLive, duration, seekTo, showControls]);
+
+  const handleProgressTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (!progressDragRef.current || isLive || !duration) return;
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const touch = e.touches[0];
+    const fraction = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+    seekTo(fraction * duration);
+  }, [isLive, duration, seekTo]);
+
+  const handleProgressTouchEnd = useCallback(() => {
+    progressDragRef.current = false;
+  }, []);
+
   const resumePlayback = useCallback(() => {
     setShowResumePrompt(false);
     const needsTC = transcodeCache.get(`_last_${streamId}`) === "hevc";
@@ -852,7 +878,13 @@ export default function Player({ type }: PlayerProps) {
 
         <div className="relative px-3 sm:px-4 pb-2 sm:pb-3 pt-8">
           {isVod && (
-            <div className="relative w-full cursor-pointer group/progress mb-3" onClick={handleProgressClick}>
+            <div
+              className="relative w-full cursor-pointer group/progress mb-3"
+              onClick={handleProgressClick}
+              onTouchStart={handleProgressTouchStart}
+              onTouchMove={handleProgressTouchMove}
+              onTouchEnd={handleProgressTouchEnd}
+            >
               {/* Touch-friendly progress bar: taller, invisible hit area */}
               <div className="absolute inset-x-0 -top-2 -bottom-2" />
               <div className="relative w-full h-1 sm:h-1 bg-white/20 rounded">

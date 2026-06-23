@@ -14,6 +14,7 @@ import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
 import { SettingsProvider } from "@/context/SettingsContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import ErrorReporter from "@/components/ErrorReporter";
 
 // Lazy-loaded pages for code splitting
 const LiveTV = lazy(() => import("@/pages/LiveTV"));
@@ -244,6 +245,7 @@ function AppLayout() {
         </div>
       </main>
 
+      <ErrorReporter />
       <Toaster richColors theme="dark" position="bottom-right" />
     </div>
   );

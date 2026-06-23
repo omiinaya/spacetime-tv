@@ -33,7 +33,8 @@ IPTV_PASS = os.getenv("IPTV_PASS", "")
 EPG_CACHE_FILE = Path(__file__).parent / "epg_cache.json"
 EPG_CACHE_TTL = 3600  # 1 hour
 ROOT = Path(__file__).resolve().parent.parent
-STATIC_DIR = ROOT / "web" / "dist"
+STATIC_DIR = Path(os.getenv("STATIC_DIR", ROOT / "web" / "dist"))
+SERVER_START_TIME = time.time()
 
 app = FastAPI(title="Spacetime-TV")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -196,6 +197,46 @@ async def cached_fetch(key: str, action: str, **params) -> list | dict:
         return data
     _cache[key] = (now, data)
     return data
+
+
+# ── Health ────────────────────────────────────────────────────────────────────
+
+@app.get("/api/health")
+async def health_check():
+    """Server health: status, uptime, cache stats."""
+    uptime = time.time() - SERVER_START_TIME
+    cache_stats = {}
+    for key, (ts, val) in _cache.items():
+        if isinstance(val, list):
+            cache_stats[key] = len(val)
+        elif isinstance(val, dict):
+            cache_stats[key] = list(val.keys())[:5] if val else []
+    return {
+        "status": "healthy",
+        "uptime": round(uptime, 1),
+        "epg_age": round(time.time() - epg_cache["fetched"], 0) if epg_cache["fetched"] else None,
+        "cached_categories": list(cache_stats.keys()),
+    }
+
+
+@app.post("/api/error")
+async def report_error(request: Request):
+    """Frontend error beacon: log client-side errors server-side."""
+    try:
+        body = await request.json()
+        msg = body.get("message", "unknown")
+        stack = body.get("stack", "")
+        component_stack = body.get("componentStack", "")
+        url = body.get("url", "")
+        user_agent = request.headers.get("user-agent", "")
+        log.error(
+            f"[CLIENT ERROR] {msg} | URL: {url} | UA: {user_agent[:80]}\n"
+            f"  stack: {(stack or 'none')[:300]}\n"
+            f"  component: {(component_stack or 'none')[:200]}"
+        )
+    except Exception as e:
+        log.warning(f"[CLIENT ERROR] Failed to parse error body: {e}")
+    return {"ok": True}
 
 
 # ── LIVE TV ─────────────────────────────────────────────────────────────────

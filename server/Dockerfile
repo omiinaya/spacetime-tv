@@ -1,0 +1,24 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install system deps for ffmpeg (VOD remux)
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
+
+# Python deps
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Application code
+COPY . .
+
+# Copy frontend build into expected location
+COPY web/dist /app/web/dist
+
+# Override static dir for Docker (ROOT resolves to /app)
+ENV STATIC_DIR=/app/web/dist
+
+EXPOSE 8720
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8720"]
