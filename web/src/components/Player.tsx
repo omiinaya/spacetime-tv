@@ -7,6 +7,7 @@ import {
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useKeyboard } from "@/hooks/useKeyboard";
 import { useVideoPlayer, fmtTime, QUALITIES, SPEEDS } from "@/hooks/useVideoPlayer";
+import { SubtitleSelector } from "@/components/SubtitleSelector";
 
 // ── Types ─────────────────────────────────────────────────────
 interface PlayerProps { type: "live" | "movie" | "series"; }
@@ -269,6 +270,11 @@ export default function Player({ type }: PlayerProps) {
               className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" aria-label="Picture in Picture">
               <PictureInPicture2 className="w-4 h-4" aria-hidden="true" />
             </button>
+            <SubtitleSelector
+              mediaType={type === "series" ? "series" : "movie"}
+              streamId={epId || id || ""}
+              videoRef={videoRef}
+            />
             {isLive && (
               <div className="relative">
                 <button onClick={() => setShowQualityMenu(!showQualityMenu)}

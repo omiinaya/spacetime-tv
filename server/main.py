@@ -972,6 +972,99 @@ async def series_details(series_id: int):
     return {"info": data}
 
 
+# ── Subtitles ────────────────────────────────────────────────────────────────
+# Probe streams for embedded subtitle tracks, extract to WebVTT on demand.
+
+SUBTITLE_CACHE: dict[str, list[dict]] = {}  # stream_id → [{index, language, codec}]
+SUBTITLE_VTT_CACHE: dict[str, str] = {}     # "stream_id:index" → VTT content
+
+
+def _get_stream_url(stream_id: int, media_type: str = "movie") -> str:
+    """Build the provider MKV URL for ffprobe/ffmpeg."""
+    if media_type == "movie":
+        return f"{IPTV_BASE}/movie/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
+    else:
+        return f"{IPTV_BASE}/series/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
+
+
+@app.get("/api/subtitles/probe/{media_type}/{stream_id}")
+async def probe_subtitles(media_type: str, stream_id: int):
+    """Probe a stream for embedded subtitle tracks. Returns list of tracks."""
+    cache_key = f"{media_type}:{stream_id}"
+    if cache_key in SUBTITLE_CACHE:
+        return {"tracks": SUBTITLE_CACHE[cache_key], "cached": True}
+
+    url = _get_stream_url(stream_id, media_type)
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", url,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=20.0)
+        if proc.returncode != 0:
+            return {"tracks": [], "error": "Probe failed"}
+
+        info = json.loads(stdout)
+        tracks = []
+        for s in info.get("streams", []):
+            if s.get("codec_type") == "subtitle":
+                tags = s.get("tags", {})
+                tracks.append({
+                    "index": s.get("index", 0),
+                    "language": tags.get("language", "und"),
+                    "title": tags.get("title", ""),
+                    "codec": s.get("codec_name", "unknown"),
+                })
+        SUBTITLE_CACHE[cache_key] = tracks
+        return {"tracks": tracks, "cached": False}
+    except asyncio.TimeoutError:
+        return {"tracks": [], "error": "Probe timed out"}
+    except Exception as e:
+        return {"tracks": [], "error": str(e)}
+
+
+@app.get("/api/subtitles/{media_type}/{stream_id}/{track_index}")
+async def get_subtitles(media_type: str, stream_id: int, track_index: int):
+    """Extract a subtitle track to WebVTT and serve it."""
+    cache_key = f"{media_type}:{stream_id}:{track_index}"
+    if cache_key in SUBTITLE_VTT_CACHE:
+        return Response(
+            content=SUBTITLE_VTT_CACHE[cache_key],
+            media_type="text/vtt",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
+    url = _get_stream_url(stream_id, media_type)
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ffmpeg", "-y",
+            "-i", url,
+            "-map", f"0:s:{track_index}",
+            "-f", "webvtt",
+            "pipe:1",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=60.0)
+        if proc.returncode != 0 or not stdout:
+            raise HTTPException(500, f"Subtitle extraction failed")
+
+        vtt = stdout.decode("utf-8", errors="replace")
+        SUBTITLE_VTT_CACHE[cache_key] = vtt
+        return Response(
+            content=vtt,
+            media_type="text/vtt",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(504, "Subtitle extraction timed out")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
 # ── EPG GUIDE ───────────────────────────────────────────────────────────────
 
 @app.get("/api/guide")
