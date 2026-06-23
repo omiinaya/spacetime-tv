@@ -7,6 +7,7 @@ import {
 import mpegts from "mpegts.js";
 import Hls from "hls.js";
 import { useFullscreen } from "@/hooks/useFullscreen";
+import { useKeyboard } from "@/hooks/useKeyboard";
 
 // ── Types ──────────────────────────────────────────────────────
 interface PlayerProps { type: "live" | "movie" | "series"; }
@@ -727,24 +728,8 @@ export default function Player({ type }: PlayerProps) {
     startVod(() => false, undefined, needsTC);
   }, [startVod, streamId]);
 
-  // ── Keyboard ─────────────────────────────────────────────────
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-      switch (e.key) {
-        case " ": case "k": e.preventDefault(); togglePlay(); break;
-        case "ArrowLeft": case "j": e.preventDefault(); seek(-10); break;
-        case "ArrowRight": case "l": e.preventDefault(); seek(10); break;
-        case "f": toggleFullscreen(); break;
-        case "m": toggleMute(); break;
-        case "ArrowUp": setVolume(Math.min(1, volume + 0.1)); break;
-        case "ArrowDown": setVolume(Math.max(0, volume - 0.1)); break;
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [togglePlay, seek, toggleFullscreen, toggleMute, setVolume, volume]);
+  // ── Keyboard shortcuts ────────────────────────────────────────
+  useKeyboard({ togglePlay, seek, toggleFullscreen, toggleMute, setVolume, volume });
 
   // ── Cleanup ──────────────────────────────────────────────────
   useEffect(() => {
