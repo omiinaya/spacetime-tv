@@ -14,6 +14,7 @@ import { api, Category, Series } from "@/lib/api";
 import ContentRow from "@/components/ContentRow";
 import SeriesOverlay from "@/components/SeriesOverlay";
 import { Skeleton } from "@/components/Skeleton";
+import { PosterCardSkeleton } from "@/components/Skeleton";
 import { useSettings } from "@/context/SettingsContext";
 import { filterCategories } from "@/lib/settings";
 
@@ -211,7 +212,9 @@ export default function SeriesPage() {
             <Skeleton className="w-48 h-4" />
             <div className="flex gap-2">
               {Array.from({ length: 7 }).map((_, j) => (
-                <Skeleton key={j} className="w-[160px] aspect-[2/3] shrink-0 rounded" />
+                <div key={j} className="shrink-0 w-[170px] sm:w-[185px]">
+                  <PosterCardSkeleton />
+                </div>
               ))}
             </div>
           </div>
@@ -303,7 +306,9 @@ export default function SeriesPage() {
                   </div>
                   <div className="flex gap-2 overflow-hidden">
                     {Array.from({ length: 7 }).map((_, j) => (
-                      <Skeleton key={j} className="w-[160px] aspect-[2/3] shrink-0 rounded" />
+                      <div key={j} className="shrink-0 w-[170px] sm:w-[185px]">
+                        <PosterCardSkeleton />
+                      </div>
                     ))}
                   </div>
                 </div>
