@@ -89,6 +89,7 @@ export default function Player({ type }: PlayerProps) {
   }, []);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [transcoding, setTranscoding] = useState(false);
+  const [loadingStep, setLoadingStep] = useState("");
   const { isFullscreen, setIsFullscreen } = useFullscreen();
   const [controlsVisible, setControlsVisible] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
@@ -500,6 +501,7 @@ export default function Player({ type }: PlayerProps) {
     if (!streamUrl) return;
     setPhase("loading");
     setErrorMsg(null);
+    setLoadingStep(needsTranscode ? "Preparing H.264 conversion…" : "Starting stream…");
 
     if (needsTranscode) setTranscoding(true);
 
@@ -519,6 +521,7 @@ export default function Player({ type }: PlayerProps) {
     if (!hlsInitUrl) return;
     setPhase("loading");
     setErrorMsg(null);
+    setLoadingStep("Checking for cached video…");
 
     try {
       const res = await fetch(`${hlsInitUrl}`);
@@ -543,7 +546,7 @@ export default function Player({ type }: PlayerProps) {
     if (video) { video.volume = volume; video.playbackRate = playbackRate; }
 
     const start = async () => {
-      setPhase("probing"); setErrorMsg(null); setTranscoding(false);
+      setPhase("probing"); setErrorMsg(null); setTranscoding(false); setLoadingStep("Detecting video format…");
 
       let needsTranscode = false;
       let probeHeight = 0;
@@ -806,7 +809,7 @@ export default function Player({ type }: PlayerProps) {
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-10 gap-3">
           <Loader2 className="w-10 h-10 animate-spin text-white/70" />
           <span className="text-white/60 text-sm">
-            {phase === "probing" ? "Detecting video format…" : "Loading…"}
+            {loadingStep || (phase === "probing" ? "Detecting video format…" : "Loading…")}
           </span>
           {errorMsg && <span className="text-white/40 text-xs">{errorMsg}</span>}
         </div>
