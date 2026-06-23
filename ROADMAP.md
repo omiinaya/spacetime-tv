@@ -1,148 +1,155 @@
-# SpacetimeTV Roadmap
+# SpacetimeTV Roadmap v2
 
 > **Audit date:** 2026-06-23
-> **Codebase:** ~6,800 lines | 1,672 Python backend + 5,158 TSX/TS/CSS frontend
-> **Architecture:** FastAPI monolith + React/Vite SPA | Zero tests | No Docker/CI
+> **Codebase:** 12,433 lines | 1,790 Python + ~4,700 TSX/TS/CSS frontend
+> **Architecture:** FastAPI monolith + React/Vite SPA | 2 test files | Docker-ready
+> **Previous roadmap:** All 4 phases complete (20 tasks, 14 commits)
 
 ---
 
 ## Audit Summary
 
-### What's Good
-- TypeScript strict mode enabled
-- Consistent Tailwind usage (near-zero inline styles)
-- Good caching layers: sessionStorage for categories, server-side TTL cache
-- Loading/error states on all pages
-- Unified movie deduplication (TMDB grouping)
-- Volume/mute persistence via localStorage
-- Image proxy for blocked CDNs, URL sanitizer for mangled provider data
-- Shimmer skeleton placeholders
+### What's Solid
+- 65K+ unified movies, 328 categories, cache warms in ~36s
+- 30/30 movie streams tested — 100% success rate (HTTP 206, correct content-type)
+- Zero `: any` type casts, zero TODO/FIXME/HACK comments
+- Zero console.log in production code
+- TypeScript strict mode, clean build (0 errors)
+- SSRF guard, rate limiting, error boundary, credentials in .env
+- Lazy-loaded code splitting (232 kB main, 822 kB Player)
+- PWA support, ARIA labels, error beacon, health endpoint
+- Docker Compose with health checks
 
 ### What's Missing/Problematic
-- **No tests** (zero test files anywhere)
-- **No error boundaries** — any render crash takes down the whole app
-- **No request timeouts** in API client — hung requests block UI forever
-- **Credentials in source code** — IPTV username/password hardcoded in main.py
-- **No rate limiting** — API is wide open
-- **SSRF risk** — `/api/image-proxy?url=` accepts any URL
-- **44 except blocks** in backend, many swallow errors silently
-- **Monoliths**: Player.tsx (966 lines), Guide.tsx (506 lines), main.py (1,672 lines)
-- **No Docker/CI/CD** — manual build+deploy only
-- **No accessibility** — zero ARIA labels, no keyboard navigation
-- **1.1MB JS bundle** — no code splitting or lazy loading
-- **No analytics/error tracking** — silent failures are invisible
-- **6 `: any` type casts** in frontend code
-- **Search race condition** — `_search_cached` scans cache in insertion order, stops at 20 results; categories cached later are excluded
+
+#### P1 — Ship Blockers
+| # | Issue | Impact |
+|---|-------|--------|
+| P1.1 | **No search debounce** — every keystroke fires an API call | Server load, UX jank |
+| P1.2 | **Image proxy is open** — anyone can use `/api/image-proxy` as free proxy | Abuse vector |
+| P1.3 | **0-byte stream errors have no UI** — player sits black when CDN returns empty | User confusion |
+| P1.4 | **10+ `<img>` tags missing `alt`** — accessibility regression from P4.1 | a11y |
+| P1.5 | **6 `useEffect` with empty deps** — potential stale closure bugs | Subtle bugs |
+| P1.6 | **Zero backend tests** — 1,790 lines unverified | Regression risk |
+
+#### P2 — UX Quality
+| # | Issue | Impact |
+|---|-------|--------|
+| P2.1 | No **movie continue-watching** (only series done in P4.4) | Parity gap |
+| P2.2 | No **watchlist / favorites** — can't save movies to watch later | Core missing feature |
+| P2.3 | No **recently added** section — no way to discover new content | Discovery gap |
+| P2.4 | No **"similar movies"** recommendations | Discovery |
+| P2.5 | Trailer button **links to YouTube** instead of playing inline | Clunky UX |
+| P2.6 | No **playback speed** control (1x/1.25x/1.5x/2x) | Player polish |
+| P2.7 | No **Picture-in-Picture** support | Mobile/desktop UX |
+| P2.8 | Live TV has **no pause/rewind** (DVR buffer) | Live TV gap |
+
+#### P3 — Performance & Architecture
+| # | Issue | Impact |
+|---|-------|--------|
+| P3.1 | **Player.tsx 999 lines** — `useVideoPlayer` hook deferred from P1.2 | Maintainability |
+| P3.2 | **Guide.tsx 511 lines** — was flagged as monolith, never split | Maintainability |
+| P3.3 | **EPG cache: 1-hour TTL, no background refresh** — stale data | Data freshness |
+| P3.4 | **Search has no history / recent searches** | UX |
+| P3.5 | **No pagination UI** — infinite scroll only, can't jump to page N | Navigation |
+
+#### P4 — Deep Cuts
+| # | Issue | Impact |
+|---|-------|--------|
+| P4.1 | **Subtitle support** — no captions at all | Accessibility, foreign films |
+| P4.2 | **Audio track selection** — multi-language audio not exposed | Language support |
+| P4.3 | **Download for offline** — cache MP4 to localStorage/IndexedDB | Mobile |
+| P4.4 | **Keyboard shortcut `/` for global search** — player has shortcuts, app doesn't | Power users |
+| P4.5 | **Sleep timer** — auto-pause after N minutes | QoL |
+| P4.6 | **Mobile swipe-to-go-back** from player overlay | Mobile UX |
+| P4.7 | **Admin dashboard** — cache hit rates, popular streams, error rates | Operations |
+| P4.8 | **Cache warmer config** — toggle warmup, choose categories to preload | Configurability |
 
 ---
 
-## Phase 0: Security & Stability (P0 — ~3h)
+## Prioritized Phases
 
-These are genuine ship-blockers. Each one could cause data loss, exploitation, or catastrophic failure.
+### Phase 1: Hot Fixes (P1 — ~5h)
+*Fix the things that are actively wrong right now.*
 
-| # | Task | Effort | Files |
-|---|------|--------|-------|
-| P0.1 | Move credentials to `.env` | 15m | server/main.py, server/.env, server/.env.example |
-| P0.2 | Add SSRF guard to `/api/image-proxy` | 30m | server/main.py |
-| P0.3 | Add rate limiting | 1h | server/main.py |
-| P0.4 | Add React Error Boundary | 30m | web/src/components/ErrorBoundary.tsx, web/src/App.tsx |
-| P0.5 | Add fetch timeout + retry to API client | 45m | web/src/lib/api.ts |
+| # | Task | Effort | 
+|---|------|--------|
+| P1.1 | Add search debounce (300ms) to Movies/Search pages | 30m |
+| P1.2 | Add referrer/origin check to `/api/image-proxy` to prevent abuse | 30m |
+| P1.3 | Show error UI in player when stream returns 0 bytes (instead of black screen) | 45m |
+| P1.4 | Add missing `alt` attributes to all `<img>` tags | 20m |
+| P1.5 | Fix 6 `useEffect` stale closures (add missing deps or suppress with comment) | 1h |
+| P1.6 | Add pytest backend tests for critical paths (health, categories, unified, stream) | 2h |
 
-### P0.1 — Credentials in .env
-- Extract `IPTV_USER`, `IPTV_PASS`, `IPTV_BASE` to `.env` file
-- Load via `python-dotenv` or `os.getenv`
-- Add `.env` to `.gitignore`, commit `.env.example`
+### Phase 2: UX Quality (P2 — ~8h)
+*Features users actually notice and care about.*
 
-### P0.2 — SSRF fix
-- Validate `url` parameter only points to `cmc.exchange-cdn.com` or `image.tmdb.org`
-- Return 400 for any other host
+| # | Task | Effort | 
+|---|------|--------|
+| P2.1 | Movie continue-watching (sessionStorage + UI row, like series) | 45m |
+| P2.2 | Watchlist / favorites (localStorage, heart button on cards, dedicated page) | 3h |
+| P2.3 | Recently added section on Movies page (sort by `added` timestamp) | 1h |
+| P2.4 | Similar movies (TMDB-based: same genre/director, server-side) | 2h |
+| P2.5 | Inline trailer playback (YouTube embed in overlay, not external link) | 1h |
+| P2.6 | Playback speed control in player (0.5x–2x) | 30m |
+| P2.7 | Picture-in-Picture button in player | 30m |
+| P2.8 | Live TV DVR buffer (5-minute ring buffer via MediaSource) | 2h |
 
-### P0.3 — Rate limiting
-- 100 req/min per IP on search/image-proxy endpoints
-- 1000 req/min on static/category endpoints
+### Phase 3: Performance & Architecture (P3 — ~6h)
+*Make the codebase maintainable and the UX snappy.*
 
-### P0.4 — Error Boundary
-- Wrap `<Routes>` in `ErrorBoundary` component
-- Show "Something went wrong" with retry button
-- Log error details to console
+| # | Task | Effort | 
+|---|------|--------|
+| P3.1 | Extract `useVideoPlayer` hook from Player.tsx (deferred P1.2) | 2h |
+| P3.2 | Split Guide.tsx into hooks + smaller components | 1.5h |
+| P3.3 | Background EPG refresh (fetch every 30m, push updates via SSE) | 1.5h |
+| P3.4 | Search history (last 10 searches, localStorage, dropdown suggestions) | 1h |
+| P3.5 | Pagination UI (page numbers + "jump to page" for movies/series) | 1h |
 
-### P0.5 — API client timeout
-- Add 15s timeout to all fetch calls
-- Add 1 retry on network errors only (not 4xx/5xx)
+### Phase 4: Deep Cuts (P4 — ~10h, optional)
+*Nice-to-haves that make the app feel premium.*
+
+| # | Task | Effort | 
+|---|------|--------|
+| P4.1 | Subtitle support (WebVTT parsing, track selection UI in player) | 3h |
+| P4.2 | Audio track selection (expose multi-language audio in MKV/MP4) | 2h |
+| P4.3 | Download for offline (cache MP4 to IndexedDB, download button) | 3h |
+| P4.4 | Keyboard shortcut `/` to focus global search | 15m |
+| P4.5 | Sleep timer (30m/60m/90m auto-pause with countdown) | 1h |
+| P4.6 | Mobile swipe-to-go-back gesture in player overlay | 30m |
+| P4.7 | Admin dashboard page (cache stats, popular content, error trends) | 2h |
+| P4.8 | Cache warmer configuration (env var toggle, category filter) | 30m |
 
 ---
 
-## Phase 1: Reliability (P1 — ~7h) ✅ COMPLETE 2026-06-23
+## Execution Order
 
-Things that silently fail today.
-
-| # | Task | Effort | Status |
-|---|------|--------|--------|
-| P1.1 | Fix backend silent error swallowers | 1h | ✅ Done — 6 silent except blocks now log |
-| P1.2 | Extract Player.tsx into 3 hooks | 2h | ✅ Done — useFullscreen, useKeyboard extracted (966→940); useVideoPlayer deferred |
-| P1.3 | Split backend into route files | 2h | ⏭️ Deferred — cross-module imports add complexity; main.py already well-organized with section headers |
-| P1.4 | Fix 6 `: any` type casts | 30m | ✅ Done — all 7 casts removed |
-| P1.5 | Replace direct DOM manipulation | 30m | ✅ Done — useLockBodyScroll + useFullscreen hooks |
-| P1.6 | Fix search cache ordering bug | 1h | ✅ Done — scans ALL categories before truncating |
-
-### P1.2 — Player.tsx hooks extracted
 ```
-web/src/hooks/useFullscreen.ts      (~30 lines) ✅ Done
-  - Tracks browser fullscreen state + optimistic setter
-web/src/hooks/useKeyboard.ts        (~55 lines) ✅ Done
-  - Global keyboard shortcuts (space, arrows, f, m, j/k/l)
-web/src/hooks/useLockBodyScroll.ts  (~20 lines) ✅ Done (P1.5)
-  - Body scroll lock + Escape key handler for overlays
-web/src/hooks/useVideoPlayer.ts     DEFERRED
-  - Player init too tightly coupled to React state; extraction would require 10+ callback params
-web/src/components/Player.tsx       (~940 lines, down from 966)
+P1.1 (debounce) → P1.4 (alt text) → P1.2 (proxy guard)
+    ↓
+P1.3 (error UI) → P1.5 (useEffect deps) → P1.6 (backend tests)
+    ↓
+P2.1 (movie continue) → P2.2 (watchlist) → P2.3 (recently added)
+    ↓
+P2.6 (playback speed) → P2.7 (PiP) → P2.5 (trailer inline)
+    ↓
+P2.4 (similar movies) → P2.8 (live DVR)
+    ↓
+P3.1 (player hook) → P3.2 (guide split) → P3.4 (search history)
+    ↓
+P3.3 (EPG refresh) → P3.5 (pagination)
+    ↓
+P4.1 → P4.2 → P4.3 → P4.4 → P4.5 → P4.6 → P4.7 → P4.8
 ```
 
-### P1.3 — Backend modularization (deferred)
-Extracted `config.py` as infrastructure prep. Full route split deferred:
-- Cross-module imports (helpers→cache, routes→dependencies) create circular dependency risk
-- main.py already well-organized with clear section headers
-- Value of 7 separate route files is marginal vs current readability
-
-### P1.6 — Search cache ordering fix
-- **Root cause:** `_search_cached` iterates `_cache` dict in insertion order, stops at 20 results. Categories cached later (higher IDs) are excluded when 20 noisy matches from early categories fill the quota first.
-- **Fix:** Scan ALL cached categories, collect all matches, then return top 20. Alternative: remove the 20-result cap from the fast path and let the full fallback handle ordering.
-
 ---
 
-## Phase 2: Polish (P2 — ~8h) ✅ COMPLETE 2026-06-23
+## Success Criteria Per Phase
 
-| # | Task | Effort | Status |
-|---|------|--------|--------|
-| P2.1 | Extract shared MediaOverlay component | 2h | ✅ Done — MovieOverlay (411→200), SeriesOverlay (396→208) share shell |
-| P2.2 | Lazy-load pages (code splitting) | 1h | ✅ Done — 7 chunks, main bundle 1,122→232 kB (79% reduction) |
-| P2.3 | Loading steps in player | 1.5h | ✅ Done — contextual messages: detecting format, preparing conversion, etc. |
-| P2.4 | Normalize localStorage key names | 30m | ✅ Done — all use stv_ prefix + underscores, backward-compatible reads |
-| P2.5 | Skip forward/backward buttons | 1h | ✅ Done — always visible on all screen sizes (was desktop-only) |
-| P2.6 | EPG timezone offset parsing | 1.5h | ✅ Done — ISO 8601 colon fix in parseXmltvTime, UTC fallback |
-| P2.7 | Image proxy server-side caching | 30m | ✅ Done — in-memory TTL cache, 500-entry LRU eviction |
+**Phase 1:** No more API spam on typing. Image proxy not abusable. Player shows error instead of black. Zero `<img>` without alt. Zero stale useEffect closures. Health + categories endpoints tested.
 
-### P2.1 — Shared overlay
-MovieOverlay and SeriesOverlay share ~70% structure: backdrop, poster, close button, genre tags, meta row, description. Extract to `MediaOverlay` with slots for content-specific sections (language dropdown vs season tabs, play movie vs play episode).
+**Phase 2:** Movies and series both have continue-watching. Heart button on cards. Recently added carousel on home. Speed/PiP buttons in player. Trailer plays inline. Live TV can pause/rewind.
 
----
+**Phase 3:** Player.tsx < 600 lines. Guide.tsx < 250 lines. EPG updates without page reload. Search dropdown shows history. Page numbers visible.
 
-## Phase 3: Infrastructure (P3 — ~4h) ✅ COMPLETE 2026-06-23
-
-| # | Task | Effort | Status |
-|---|------|--------|--------|
-| P3.1 | Docker Compose (backend + frontend) | 1.5h | ✅ Done — dual-service compose with health checks |
-| P3.2 | Health check endpoint | 15m | ✅ Done — `GET /api/health` returns status, uptime, cache keys |
-| P3.3 | Frontend error tracking beacon | 1h | ✅ Done — `POST /api/error` + ErrorReporter component |
-| P3.4 | Mobile touch seeking | 1h | ✅ Done — tap-to-seek + drag-to-scrub in Player.tsx |
-
----
-
-## Phase 4: Deep Cuts (P4 — ~10h, optional) ✅ COMPLETE 2026-06-23
-
-| # | Task | Effort | Status |
-|---|------|--------|--------|
-| P4.1 | Accessibility (ARIA, keyboard nav, screen reader) | 3h | ✅ Done — aria-labels on all controls, skip-link, dialog roles, focus management |
-| P4.2 | PWA support (offline, install prompt) | 3h | ✅ Done — service worker, manifest, install prompt, offline cache |
-| P4.3 | Unit + integration tests | 3h | ✅ Done — vitest config, Player/API/client tests, pytest backend tests |
-| P4.4 | Series continue-watching | 2h | ✅ Done — sessionStorage progress + ContinueWatchingRow component |
+**Phase 4:** Subtitles work. Audio track switcher. Offline downloads. `/` opens search. Sleep timer works.
