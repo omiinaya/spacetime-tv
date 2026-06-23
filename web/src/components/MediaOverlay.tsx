@@ -47,7 +47,7 @@ export default function MediaOverlay({
   const [showFullPlot, setShowFullPlot] = useState(false);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center">
       {/* Backdrop */}
       <div
         onClick={onClose}
@@ -59,18 +59,18 @@ export default function MediaOverlay({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative w-full sm:max-w-[960px] sm:max-h-[92vh] sm:rounded-2xl bg-[#0a0a0f] border border-white/10 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 zoom-in-95 duration-300">
+        className="relative w-full h-full sm:h-auto sm:max-w-[960px] sm:max-h-[92vh] sm:rounded-2xl bg-[#0a0a0f] border-0 sm:border border-white/10 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 zoom-in-95 duration-300">
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-30 p-2 rounded-full bg-black/50 text-white/80 hover:text-white hover:bg-black/70 transition-colors backdrop-blur-sm"
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 p-3 sm:p-2 rounded-full bg-black/60 text-white/80 hover:text-white hover:bg-black/70 transition-colors backdrop-blur-sm"
           aria-label="Close"
         >
           <X className="h-5 w-5" aria-hidden="true" />
         </button>
 
         {/* ── Hero Banner ─────────────────────────────────────── */}
-        <div className="relative shrink-0 h-[260px] sm:h-[400px] bg-[#141420]">
+        <div className="relative shrink-0 h-[180px] sm:h-[400px] bg-[#141420]">
           {bannerUrl ? (
             <>
               <img
@@ -89,9 +89,9 @@ export default function MediaOverlay({
           )}
 
           {/* Hero content */}
-          <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10 flex gap-5 items-end">
+          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-10 flex gap-3 sm:gap-5 items-end">
             {posterUrl && (
-              <div className="hidden sm:block w-[160px] shrink-0 rounded-lg overflow-hidden ring-1 ring-white/10 shadow-2xl -mb-2">
+              <div className="w-[80px] sm:w-[160px] shrink-0 rounded-lg overflow-hidden ring-1 ring-white/10 shadow-2xl -mb-2">
                 <img
                   src={imageUrl(posterUrl)}
                   alt={`${title} poster`}
@@ -118,7 +118,7 @@ export default function MediaOverlay({
                 </div>
               )}
 
-              <h2 className="text-2xl sm:text-3xl font-bold text-white leading-tight mb-2">
+              <h2 className="text-lg sm:text-3xl font-bold text-white leading-tight mb-1 sm:mb-2">
                 {title}
               </h2>
 
@@ -126,10 +126,10 @@ export default function MediaOverlay({
               {titleActions}
 
               {/* Meta row */}
-              <div className="flex items-center gap-3 flex-wrap text-sm text-white/70">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap text-xs sm:text-sm text-white/70">
                 {rating && (
                   <span className="inline-flex items-center gap-1 font-semibold text-yellow-400">
-                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                    <Star className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-yellow-400 text-yellow-400" />
                     {rating}
                   </span>
                 )}
@@ -141,7 +141,7 @@ export default function MediaOverlay({
 
               {/* Play button */}
               {playButton && (
-                <div className="mt-3">{playButton}</div>
+                <div className="mt-2 sm:mt-3">{playButton}</div>
               )}
               {/* Trailer embed */}
               {trailerEmbed}
@@ -151,7 +151,7 @@ export default function MediaOverlay({
 
         {/* ── Body ─────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto">
-          <div className="p-6 sm:px-10 sm:py-6 space-y-5">
+          <div className="p-4 sm:px-10 sm:py-6 space-y-4 sm:space-y-5">
             {loading && (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-white/30" />

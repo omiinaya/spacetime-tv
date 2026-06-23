@@ -120,7 +120,7 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
         <div className="relative inline-block mt-0.5" ref={langMenuRef}>
           <button
             onClick={() => setShowLangMenu(!showLangMenu)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 text-xs text-white/70 hover:bg-white/15 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-white/10 text-[11px] sm:text-xs text-white/70 hover:bg-white/15 hover:text-white transition-colors"
           >
             <Globe className="h-3 w-3" />
             {langLabel(selectedLang.code)}
@@ -150,17 +150,17 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={play}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 transition-all hover:scale-105 active:scale-95"
+            className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 transition-all hover:scale-105 active:scale-95"
           >
             <Play className="h-4 w-4 fill-black text-black" />
-            Play Movie
+            Play
           </button>
           {trailer && (
             <button
               onClick={() => setShowTrailer(!showTrailer)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-sm text-white/60 hover:bg-white/10 hover:text-white/80 transition-colors"
+              className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-white/5 text-xs sm:text-sm text-white/60 hover:bg-white/10 hover:text-white/80 transition-colors"
             >
-              <Play className="h-4 w-4" /> {showTrailer ? "Hide Trailer" : "Watch Trailer"}
+              <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> {showTrailer ? "Hide" : "Trailer"}
             </button>
           )}
         </div>
