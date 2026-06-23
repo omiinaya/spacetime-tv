@@ -32,7 +32,7 @@ IPTV_BASE = os.getenv("IPTV_BASE", "http://iptv-provider.example.com")
 IPTV_USER = os.getenv("IPTV_USER", "")
 IPTV_PASS = os.getenv("IPTV_PASS", "")
 EPG_CACHE_FILE = Path(__file__).parent / "epg_cache.json"
-EPG_CACHE_TTL = 3600  # 1 hour
+EPG_CACHE_TTL = 1800  # 30 min — background SSE refreshes
 ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = Path(os.getenv("STATIC_DIR", ROOT / "web" / "dist"))
 SERVER_START_TIME = time.time()
@@ -42,6 +42,7 @@ SERVER_START_TIME = time.time()
 async def lifespan(app: FastAPI):
     start_cleanup_task()
     start_cache_warmer()
+    _epg_broadcast_task = asyncio.create_task(_epg_broadcast_loop())
     yield
 
 
@@ -1067,6 +1068,69 @@ async def tv_guide(
         "offset": offset,
         "limit": limit,
     }
+
+
+# ── EPG SSE ─────────────────────────────────────────────────────────────────
+# Background EPG broadcast: every 30 minutes, force-refresh the EPG cache
+# and notify all connected SSE clients to reload.
+
+_epg_clients: list[asyncio.Queue] = []
+
+async def _epg_broadcast_loop():
+    """Background task: refresh EPG every 30 min and notify clients."""
+    while True:
+        await asyncio.sleep(1800)  # 30 minutes
+        log.info("[EPG-SSE] Refreshing EPG for broadcast…")
+        try:
+            # Force fresh fetch by bumping cache timestamp
+            epg_cache["fetched"] = 0
+            await load_epg()
+            # Notify all connected clients
+            dead: list[asyncio.Queue] = []
+            for q in _epg_clients:
+                try:
+                    q.put_nowait("update")
+                except asyncio.QueueFull:
+                    dead.append(q)
+            for q in dead:
+                if q in _epg_clients:
+                    _epg_clients.remove(q)
+            log.info(f"[EPG-SSE] Broadcast to {len(_epg_clients)} clients")
+        except Exception as e:
+            log.error(f"[EPG-SSE] Broadcast failed: {e}")
+
+
+@app.get("/api/epg/events")
+async def epg_sse(request: Request):
+    """SSE endpoint: notifies clients when EPG data has been refreshed."""
+    async def event_stream():
+        q: asyncio.Queue = asyncio.Queue(maxsize=8)
+        _epg_clients.append(q)
+        try:
+            # Send initial connected event
+            yield "event: connected\ndata: ok\n\n"
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    msg = await asyncio.wait_for(q.get(), timeout=30.0)
+                    yield f"event: {msg}\ndata: refreshed\n\n"
+                except asyncio.TimeoutError:
+                    # Send keepalive
+                    yield ": keepalive\n\n"
+        finally:
+            if q in _epg_clients:
+                _epg_clients.remove(q)
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ── Cache Warming ───────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { api, ChannelGroup } from "@/lib/api";
 import { useSettings } from "@/context/SettingsContext";
-import { parseXmltvTime, formatTime } from "@/lib/guideUtils";
+import { formatTime, parseXmltvTime } from "@/lib/guideUtils";
 
 const PAGE_SIZE = 60;
 const CACHE_KEY = "stv_guide_data";
@@ -114,6 +114,20 @@ export function useGuideData() {
     obs.observe(sentinel);
     return () => obs.disconnect();
   }, [allData.length, totalChannels, loading, loadingMore, loadPage]);
+
+  // SSE: listen for EPG refresh broadcasts from server
+  useEffect(() => {
+    const evt = new EventSource("/api/epg/events");
+    evt.addEventListener("update", () => {
+      // Invalidate sessionStorage cache and reload
+      try { sessionStorage.removeItem(CACHE_KEY); } catch {}
+      loadPage(0);
+    });
+    evt.onerror = () => {
+      // EventSource auto-reconnects — no action needed
+    };
+    return () => evt.close();
+  }, [loadPage]);
 
   // Settings-based filtering
   const filteredChannels = useMemo(() => {
