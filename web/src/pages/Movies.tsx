@@ -12,6 +12,7 @@ import {
 import { api, UnifiedMovie, imageUrl } from "@/lib/api";
 import MovieOverlay from "@/components/MovieOverlay";
 import { PosterCardSkeleton } from "@/components/Skeleton";
+import { getMovieContinueWatching, type MovieProgress } from "@/lib/continueWatching";
 
 const PAGE_SIZE = 50;
 
@@ -49,6 +50,12 @@ export default function Movies() {
 
   // Overlay
   const [overlayMovie, setOverlayMovie] = useState<UnifiedMovie | null>(null);
+
+  // Continue watching
+  const [continueWatching, setContinueWatching] = useState<MovieProgress[]>([]);
+  useEffect(() => {
+    setContinueWatching(getMovieContinueWatching());
+  }, []);
 
   // ── Fetch ───────────────────────────────────────────────────────
   const fetchPage = useCallback(
@@ -148,6 +155,43 @@ export default function Movies() {
           </button>
         )}
       </div>
+
+      {/* Continue Watching */}
+      {!loading && continueWatching.length > 0 && continueWatching.some(cw => movies.some(m => m.stream_id === cw.movieId)) && (
+        <div>
+          <h2 className="text-sm font-semibold text-muted-foreground mb-3">Continue Watching</h2>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {continueWatching.filter(cw => movies.some(m => m.stream_id === cw.movieId)).slice(0, 8).map((cw) => {
+              const movie = movies.find(m => m.stream_id === cw.movieId);
+              if (!movie) return null;
+              const pct = cw.durationSeconds > 0 ? Math.min(100, (cw.progressSeconds / cw.durationSeconds) * 100) : 0;
+              return (
+                <button
+                  key={cw.movieId}
+                  onClick={() => setOverlayMovie(movie)}
+                  className="shrink-0 w-[120px] group"
+                >
+                  <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5">
+                    {movie.stream_icon ? (
+                      <img src={imageUrl(movie.stream_icon)} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-[#141420]">
+                        <Film className="h-6 w-6 text-white/10" />
+                      </div>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 h-1 bg-white/10">
+                      <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                  <p className="text-[11px] leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+                    {movie.base_name || movie.name}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Loading skeleton */}
       {loading && (

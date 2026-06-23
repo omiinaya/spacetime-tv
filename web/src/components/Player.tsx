@@ -8,7 +8,7 @@ import mpegts from "mpegts.js";
 import Hls from "hls.js";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useKeyboard } from "@/hooks/useKeyboard";
-import { saveSeriesProgress } from "@/lib/continueWatching";
+import { saveSeriesProgress, saveMovieProgress } from "@/lib/continueWatching";
 
 // ── Types ──────────────────────────────────────────────────────
 interface PlayerProps { type: "live" | "movie" | "series"; }
@@ -360,7 +360,7 @@ export default function Player({ type }: PlayerProps) {
         const t = startOffset + (Date.now() - vodStartTime) / 1000;
         if (t > 5) {
           saveWatchPos(watchKey, t);
-          // Also save series progress for Continue Watching
+          // Also save series/movie progress for Continue Watching
           if (type === "series" && seriesId) {
             saveSeriesProgress({
               seriesId: parseInt(seriesId),
@@ -370,6 +370,15 @@ export default function Player({ type }: PlayerProps) {
               episodeNum: 0,
               episodeId: epId || "",
               episodeTitle: "",
+              progressSeconds: t,
+              durationSeconds: video?.duration || 0,
+              updatedAt: Date.now(),
+            });
+          } else if (type === "movie" && id) {
+            saveMovieProgress({
+              movieId: parseInt(id),
+              movieName: "",
+              poster: "",
               progressSeconds: t,
               durationSeconds: video?.duration || 0,
               updatedAt: Date.now(),
