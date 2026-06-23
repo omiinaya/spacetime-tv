@@ -70,7 +70,7 @@ export default function MediaOverlay({
         </button>
 
         {/* ── Hero Banner ─────────────────────────────────────── */}
-        <div className="relative shrink-0 h-[180px] sm:h-[400px] bg-[#141420]">
+        <div className="relative shrink-0 min-h-[180px] sm:h-[400px] bg-[#141420]">
           {bannerUrl ? (
             <>
               <img
