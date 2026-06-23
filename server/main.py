@@ -211,6 +211,18 @@ async def cached_fetch(key: str, action: str, **params) -> list | dict:
 
 # ── Health ────────────────────────────────────────────────────────────────────
 
+_stream_hits: dict[str, int] = {}  # "type:id" → count
+_error_log: list[dict] = []  # [{ts, message, path}] — last 100
+
+def track_hit(stream_type: str, stream_id: int | str):
+    key = f"{stream_type}:{stream_id}"
+    _stream_hits[key] = _stream_hits.get(key, 0) + 1
+
+def log_error(msg: str, path: str = ""):
+    _error_log.append({"ts": time.time(), "message": msg, "path": path})
+    if len(_error_log) > 100:
+        _error_log.pop(0)
+
 @app.get("/api/health")
 async def health_check():
     """Server health: status, uptime, cache stats."""
@@ -247,6 +259,44 @@ async def report_error(request: Request):
     except Exception as e:
         log.warning(f"[CLIENT ERROR] Failed to parse error body: {e}")
     return {"ok": True}
+
+
+@app.get("/api/admin/stats")
+async def admin_stats():
+    """Admin dashboard: cache stats, popular content, error trends."""
+    uptime = time.time() - SERVER_START_TIME
+
+    # Popular content — top 20 by hit count
+    popular = sorted(_stream_hits.items(), key=lambda x: -x[1])[:20]
+    popular_list = [{"stream": k, "hits": v} for k, v in popular]
+
+    # Cache overview
+    cache_entries = len(_cache)
+    vod_cached = sum(1 for k in _cache if k.startswith("vod_"))
+    series_cached = sum(1 for k in _cache if k.startswith("series_"))
+
+    # Recent errors (last 20)
+    recent_errors = list(reversed(_error_log[-20:]))
+
+    return {
+        "uptime": round(uptime, 1),
+        "cache": {
+            "total_entries": cache_entries,
+            "vod_categories": vod_cached,
+            "series_categories": series_cached,
+            "epg_age": round(time.time() - epg_cache["fetched"], 0) if epg_cache["fetched"] else None,
+        },
+        "streams": {
+            "total_hits": sum(_stream_hits.values()),
+            "unique_streams": len(_stream_hits),
+            "popular": popular_list,
+        },
+        "errors": {
+            "total": len(_error_log),
+            "recent": recent_errors,
+        },
+        "sse_clients": len(_epg_clients),
+    }
 
 
 # ── LIVE TV ─────────────────────────────────────────────────────────────────
@@ -341,6 +391,7 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
 async def handle_vod_request(req: Request, stream_id: int, stream_type: str,
                               content_type: str = "video/x-matroska"):
     """Handle a VOD stream request with Range/206 support for seeking."""
+    track_hit(stream_type, stream_id)
     url = build_stream_url(stream_id, stream_type)
     range_header = req.headers.get("range")
 
@@ -474,6 +525,7 @@ async def stream_proxy(url: str, content_type: str):
 @app.get("/api/stream/live/{stream_id}")
 async def stream_live(stream_id: int):
     """Proxy live TV stream (raw MPEG-TS)."""
+    track_hit("live", stream_id)
     return await stream_proxy(
         build_stream_url(stream_id, "live"), "video/mp2t"
     )

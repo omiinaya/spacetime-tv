@@ -25,6 +25,7 @@ const Series = lazy(() => import("@/pages/Series"));
 const SearchPage = lazy(() => import("@/pages/Search"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const Player = lazy(() => import("@/components/Player"));
+const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
 
 // Loading fallback for lazy routes
 function PageLoader() {
@@ -204,6 +205,12 @@ function AppLayout() {
         <p className="text-[10px] text-muted-foreground/50 text-center px-4 py-2">
           Spacetime-TV · iptv-provider
         </p>
+        <button
+          onClick={() => navigate("/admin")}
+          className="w-full text-[10px] text-muted-foreground/30 hover:text-muted-foreground/60 text-center pb-2 transition-colors"
+        >
+          Admin
+        </button>
       </div>
     </div>
   );
@@ -265,6 +272,7 @@ function AppLayout() {
             <Route path="/series" element={<Series />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/watch/live/:id" element={<Player type="live" />} />
             <Route path="/watch/movie/:id" element={<Player type="movie" />} />
             <Route
