@@ -394,12 +394,7 @@ export default function Movies() {
                           {m.rating}
                         </div>
                       )}
-                      {/* Format badge */}
-                      {m.container_extension && (
-                        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[10px] font-medium text-white/60">
-                          {m.container_extension.toUpperCase()}
-                        </div>
-                      )}
+
                     </div>
                     {/* Title */}
                     <div className="p-2.5 flex-1">
