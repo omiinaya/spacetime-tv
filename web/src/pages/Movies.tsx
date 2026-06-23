@@ -16,6 +16,7 @@ import { PosterCardSkeleton } from "@/components/Skeleton";
 import { getMovieContinueWatching, type MovieProgress } from "@/lib/continueWatching";
 import { isInWatchlist, toggleWatchlist as toggleWl } from "@/lib/watchlist";
 import { SearchHistory, addSearchHistory } from "@/components/SearchHistory";
+import { Pagination } from "@/components/Pagination";
 
 const PAGE_SIZE = 50;
 
@@ -59,6 +60,7 @@ export default function Movies() {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const fetchingRef = useRef(false);
   const searchIdRef = useRef(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Overlay
   const [overlayMovie, setOverlayMovie] = useState<UnifiedMovie | null>(null);
@@ -89,6 +91,7 @@ export default function Movies() {
           setMovies((prev) => [...prev, ...d.movies]);
         }
         setTotal(d.total);
+        if (replace) setCurrentPage(Math.floor(offset / PAGE_SIZE) + 1);
       } catch {
         // silent — errors handled by empty state
       } finally {
@@ -124,6 +127,15 @@ export default function Movies() {
   }, [movies.length, total, loading, loadingMore, searchQuery, fetchPage]);
 
   // ── Helpers ─────────────────────────────────────────────────────
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const goToPage = useCallback((page: number) => {
+    const offset = (page - 1) * PAGE_SIZE;
+    setCurrentPage(page);
+    fetchPage(offset, true, searchQuery);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [searchQuery, fetchPage]);
+
   const yearFromName = (name: string) => {
     const m = /\((\d{4})\)/.exec(name);
     return m ? m[1] : null;
@@ -371,6 +383,15 @@ export default function Movies() {
         <div className="flex justify-center py-6">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={goToPage}
+        />
       )}
 
       {/* Sentinel for infinite scroll */}
