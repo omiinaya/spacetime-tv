@@ -396,7 +396,7 @@ function ChannelRow({
             ? "cursor-pointer hover:opacity-80"
             : "cursor-default opacity-60"
         }`}
-        title={hasStream ? `Watch ${group.channel_name}` : "No stream available"}
+        aria-label={hasStream ? `Watch ${group.channel_name}` : `${group.channel_name} — no stream available`}
       >
         {/* Channel icon */}
         <div className="shrink-0 w-9 h-9 rounded-lg bg-[#141420] flex items-center justify-center overflow-hidden">
@@ -410,7 +410,7 @@ function ChannelRow({
               }}
             />
           ) : (
-            <Tv className="h-4 w-4 text-muted-foreground/40" />
+            <Tv className="h-4 w-4 text-muted-foreground/40" aria-hidden="true" />
           )}
         </div>
         <div className="min-w-0 flex-1">
@@ -467,6 +467,7 @@ function ProgrammeCard({
     <button
       onClick={onPlay}
       disabled={!onPlay}
+      aria-label={`${programme.title || "Programme"}, ${timeStr}`}
       className={`shrink-0 flex flex-col justify-center min-w-[140px] max-w-[220px] px-3 py-2 rounded-lg text-left transition-all duration-200 ${
         isLive
           ? "bg-primary/10 border border-primary/15 hover:bg-primary/15 hover:border-primary/30 cursor-pointer"

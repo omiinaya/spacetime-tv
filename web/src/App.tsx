@@ -142,7 +142,7 @@ function AppLayout() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5" role="navigation" aria-label="Main navigation">
         {NAV_ITEMS.map((item) => (
           <button
             key={item.id}
@@ -156,8 +156,10 @@ function AppLayout() {
                 ? "bg-primary/10 text-foreground font-medium border-l-2 border-primary"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent"
             )}
+            aria-label={item.label}
+            aria-current={isActive(item.id) ? "page" : undefined}
           >
-            <item.icon className="h-4 w-4 shrink-0" />
+            <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
             {item.label}
           </button>
         ))}
@@ -173,8 +175,10 @@ function AppLayout() {
               ? "bg-primary/10 text-foreground font-medium"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
+          aria-label="Settings"
+          aria-current={isActive("/settings") ? "page" : undefined}
         >
-          <Settings className="h-4 w-4 shrink-0" />
+          <Settings className="h-4 w-4 shrink-0" aria-hidden="true" />
           Settings
         </button>
         <p className="text-[10px] text-muted-foreground/50 text-center px-4 py-2">
@@ -186,6 +190,13 @@ function AppLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
+      {/* Skip to content — keyboard accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:outline-none"
+      >
+        Skip to main content
+      </a>
       {/* Desktop sidebar */}
       <div className="hidden md:block shrink-0">{sidebar}</div>
       {/* Resize handle */}
@@ -205,14 +216,15 @@ function AppLayout() {
       )}
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
+      <main id="main-content" className="flex-1 overflow-y-auto" role="main" tabIndex={-1}>
         {/* Mobile header */}
         <div className="md:hidden flex items-center gap-3 px-4 h-12 border-b border-border bg-sidebar">
           <button
             onClick={() => setMobileOpen(true)}
             className="text-muted-foreground hover:text-foreground"
+            aria-label="Open navigation menu"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-5 w-5" aria-hidden="true" />
           </button>
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">

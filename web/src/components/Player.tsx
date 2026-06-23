@@ -884,6 +884,13 @@ export default function Player({ type }: PlayerProps) {
               onTouchStart={handleProgressTouchStart}
               onTouchMove={handleProgressTouchMove}
               onTouchEnd={handleProgressTouchEnd}
+              role="slider"
+              aria-label="Seek"
+              aria-valuemin={0}
+              aria-valuemax={duration}
+              aria-valuenow={Math.round(currentTime)}
+              aria-valuetext={`${fmtTime(currentTime)} of ${fmtTime(duration)}`}
+              tabIndex={0}
             >
               {/* Touch-friendly progress bar: taller, invisible hit area */}
               <div className="absolute inset-x-0 -top-2 -bottom-2" />
@@ -897,17 +904,17 @@ export default function Player({ type }: PlayerProps) {
           )}
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <button onClick={goBack} className="text-white/70 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title="Back">
-              <ArrowLeft className="w-5 h-5" />
+            <button onClick={goBack} className="text-white/70 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" aria-label="Back to browsing">
+              <ArrowLeft className="w-5 h-5" aria-hidden="true" />
             </button>
-            <button onClick={togglePlay} className="text-white/70 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title={phase === "playing" ? "Pause" : "Play"}>
-              {phase === "playing" ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+            <button onClick={togglePlay} className="text-white/70 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" aria-label={phase === "playing" ? "Pause" : "Play"}>
+              {phase === "playing" ? <Pause className="w-6 h-6" aria-hidden="true" /> : <Play className="w-6 h-6" aria-hidden="true" />}
             </button>
-            <button onClick={() => seek(-10)} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title="Rewind 10s">
-              <SkipBack className="w-4 h-4" />
+            <button onClick={() => seek(-10)} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" aria-label="Rewind 10 seconds">
+              <SkipBack className="w-4 h-4" aria-hidden="true" />
             </button>
-            <button onClick={() => seek(10)} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title="Forward 10s">
-              <SkipForward className="w-4 h-4" />
+            <button onClick={() => seek(10)} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" aria-label="Forward 10 seconds">
+              <SkipForward className="w-4 h-4" aria-hidden="true" />
             </button>
             {isVod && (
               <span className="text-white/60 text-xs sm:text-xs tabular-nums ml-1 whitespace-nowrap">
@@ -921,15 +928,16 @@ export default function Player({ type }: PlayerProps) {
               <span className="text-yellow-500 text-xs px-2 py-0.5 bg-yellow-500/10 rounded whitespace-nowrap hidden sm:inline">Transcoding</span>
             )}
             <div className="flex-1" />
-            <button onClick={toggleMute} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title={muted ? "Unmute" : "Mute"}>
-              {muted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+            <button onClick={toggleMute} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" aria-label={muted ? "Unmute" : "Mute"}>
+              {muted || volume === 0 ? <VolumeX className="w-5 h-5" aria-hidden="true" /> : <Volume2 className="w-5 h-5" aria-hidden="true" />}
             </button>
             <input type="range" min="0" max="1" step="0.05" value={muted ? 0 : volume}
               onChange={e => setVolume(parseFloat(e.target.value))}
+              aria-label="Volume"
               className="w-16 sm:w-20 h-1 accent-blue-500 cursor-pointer hidden sm:block" />
             <div className="relative">
               <button onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-                className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 text-xs tabular-nums min-w-[40px] min-h-[40px] flex items-center justify-center" title="Speed">
+                className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 text-xs tabular-nums min-w-[40px] min-h-[40px] flex items-center justify-center" aria-label={`Playback speed ${playbackRate}x`}>
                 {playbackRate}x
               </button>
               {showSpeedMenu && (
@@ -945,8 +953,8 @@ export default function Player({ type }: PlayerProps) {
             {isLive && (
               <div className="relative">
                 <button onClick={() => setShowQualityMenu(!showQualityMenu)}
-                  className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title="Quality">
-                  <Settings className="w-4 h-4" />
+                  className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" aria-label="Stream quality">
+                  <Settings className="w-4 h-4" aria-hidden="true" />
                 </button>
                 {showQualityMenu && (
                   <div className="absolute bottom-full mb-2 right-0 bg-zinc-900/95 border border-white/10 rounded-lg py-1 min-w-[7rem] shadow-xl">
@@ -964,8 +972,8 @@ export default function Player({ type }: PlayerProps) {
                 )}
               </div>
             )}
-            <button ref={fullscreenBtnRef} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
-              {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+            <button ref={fullscreenBtnRef} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}>
+              {isFullscreen ? <Minimize className="w-5 h-5" aria-hidden="true" /> : <Maximize className="w-5 h-5" aria-hidden="true" />}
             </button>
           </div>
         </div>

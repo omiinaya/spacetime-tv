@@ -159,6 +159,7 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
                     key={ep.id}
                     onClick={() => playEpisode(ep.id)}
                     className="group flex gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors text-left w-full"
+                    aria-label={`${ep.title || `Episode ${ep.episode_num}`}${ep.info?.duration_secs ? `, ${formatDuration(ep.info.duration_secs)}` : ""}`}
                   >
                     <div className="w-[140px] sm:w-[160px] shrink-0 aspect-video bg-[#141420] rounded-lg overflow-hidden relative">
                       {ep.info?.movie_image ? (
