@@ -18,11 +18,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   services: [],
 };
 
-const KEY = "spacetimetv-settings";
+const KEY = "stv_settings";
+const KEY_OLD = "spacetimetv-settings";
 
 export function loadSettings(): AppSettings {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(KEY) || localStorage.getItem(KEY_OLD);
     if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
   } catch {}
   return { ...DEFAULT_SETTINGS };

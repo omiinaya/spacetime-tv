@@ -1677,6 +1677,12 @@ STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
 
 # ── IMAGE PROXY ──────────────────────────────────────────────────
+
+# In-memory image cache (TTL-based, to avoid re-fetching from CDN)
+_img_cache: dict[str, tuple[float, bytes, str]] = {}  # url -> (fetched_at, content, content_type)
+_IMG_CACHE_TTL = 3600  # 1 hour
+_MAX_IMG_CACHE_SIZE = 500  # evict oldest entry when exceeded
+
 @app.get("/api/image-proxy")
 async def image_proxy(url: str = Query(...)):
     """Proxy images from blocked CDNs (cmc.exchange-cdn.com) through our server."""
@@ -1693,14 +1699,28 @@ async def image_proxy(url: str = Query(...)):
     if not any(host == a or host.endswith("." + a) for a in allowed_hosts):
         raise HTTPException(400, f"Host not allowed: {host}")
     
+    # Check server-side cache
+    now = time.time()
+    if url in _img_cache:
+        cached_at, content, ct = _img_cache[url]
+        if now - cached_at < _IMG_CACHE_TTL:
+            return Response(content=content, media_type=ct,
+                          headers={"Cache-Control": "public, max-age=86400"})
+        del _img_cache[url]
+    
     resp = await client.get(url, follow_redirects=True)
     resp.raise_for_status()
+    content = resp.content
     content_type = resp.headers.get("content-type", "image/jpeg")
-    return StreamingResponse(
-        resp.aiter_bytes(),
-        media_type=content_type,
-        headers={"Cache-Control": "public, max-age=86400"},
-    )
+    
+    # Evict oldest entry if cache is full
+    if len(_img_cache) >= _MAX_IMG_CACHE_SIZE:
+        oldest_key = min(_img_cache, key=lambda k: _img_cache[k][0])
+        del _img_cache[oldest_key]
+    
+    _img_cache[url] = (now, content, content_type)
+    return Response(content=content, media_type=content_type,
+                  headers={"Cache-Control": "public, max-age=86400"})
 
 # SPA catch-all: serve index.html for any unmatched route
 from fastapi.responses import FileResponse

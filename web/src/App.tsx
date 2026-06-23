@@ -73,7 +73,7 @@ function AppLayout() {
     }
   }, [location]);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const saved = localStorage.getItem("stv-sidebar-width");
+    const saved = localStorage.getItem("stv_sidebar_width") || localStorage.getItem("stv-sidebar-width");
     return saved
       ? Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, parseInt(saved, 10)))
       : SIDEBAR_DEFAULT;
@@ -102,7 +102,7 @@ function AppLayout() {
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
         localStorage.setItem(
-          "stv-sidebar-width",
+          "stv_sidebar_width",
           String(sidebarWidthRef.current)
         );
         document.removeEventListener("mousemove", handleMouseMove);
