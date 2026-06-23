@@ -127,22 +127,22 @@ MovieOverlay and SeriesOverlay share ~70% structure: backdrop, poster, close but
 
 ---
 
-## Phase 3: Infrastructure (P3 — ~4h)
+## Phase 3: Infrastructure (P3 — ~4h) ✅ COMPLETE 2026-06-23
 
-| # | Task | Effort |
-|---|------|--------|
-| P3.1 | Docker Compose (backend + frontend) | 1.5h |
-| P3.2 | Health check endpoint | 15m |
-| P3.3 | Frontend error tracking beacon | 1h |
-| P3.4 | Mobile touch seeking | 1h |
+| # | Task | Effort | Status |
+|---|------|--------|--------|
+| P3.1 | Docker Compose (backend + frontend) | 1.5h | ✅ Done — dual-service compose with health checks |
+| P3.2 | Health check endpoint | 15m | ✅ Done — `GET /api/health` returns status, uptime, cache keys |
+| P3.3 | Frontend error tracking beacon | 1h | ✅ Done — `POST /api/error` + ErrorReporter component |
+| P3.4 | Mobile touch seeking | 1h | ✅ Done — tap-to-seek + drag-to-scrub in Player.tsx |
 
 ---
 
-## Phase 4: Deep Cuts (P4 — ~10h, optional)
+## Phase 4: Deep Cuts (P4 — ~10h, optional) ✅ COMPLETE 2026-06-23
 
-| # | Task | Effort |
-|---|------|--------|
-| P4.1 | Accessibility (ARIA, keyboard nav, screen reader) | 3h |
-| P4.2 | PWA support (offline, install prompt) | 3h |
-| P4.3 | Unit + integration tests | 3h |
-| P4.4 | Series continue-watching | 2h |
+| # | Task | Effort | Status |
+|---|------|--------|--------|
+| P4.1 | Accessibility (ARIA, keyboard nav, screen reader) | 3h | ✅ Done — aria-labels on all controls, skip-link, dialog roles, focus management |
+| P4.2 | PWA support (offline, install prompt) | 3h | ✅ Done — service worker, manifest, install prompt, offline cache |
+| P4.3 | Unit + integration tests | 3h | ✅ Done — vitest config, Player/API/client tests, pytest backend tests |
+| P4.4 | Series continue-watching | 2h | ✅ Done — sessionStorage progress + ContinueWatchingRow component |

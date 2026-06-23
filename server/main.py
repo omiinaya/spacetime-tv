@@ -13,6 +13,7 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import httpx
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, RedirectResponse, Response
@@ -36,7 +37,15 @@ ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = Path(os.getenv("STATIC_DIR", ROOT / "web" / "dist"))
 SERVER_START_TIME = time.time()
 
-app = FastAPI(title="Spacetime-TV")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_cleanup_task()
+    start_cache_warmer()
+    yield
+
+
+app = FastAPI(title="Spacetime-TV", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 # ── Rate Limiting (in-memory fixed window) ──────────────────────────────────
@@ -1777,10 +1786,5 @@ async def spa_fallback(full_path: str):
 
 if __name__ == "__main__":
     import uvicorn
-
-    @app.on_event("startup")
-    async def startup():
-        start_cleanup_task()
-        start_cache_warmer()
 
     uvicorn.run(app, host="0.0.0.0", port=8720, log_level="info")
