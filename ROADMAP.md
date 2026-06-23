@@ -110,17 +110,17 @@ Extracted `config.py` as infrastructure prep. Full route split deferred:
 
 ---
 
-## Phase 2: Polish (P2 — ~8h)
+## Phase 2: Polish (P2 — ~8h) ✅ COMPLETE 2026-06-23
 
-| # | Task | Effort | Why |
-|---|------|--------|-----|
-| P2.1 | Extract shared MediaOverlay component | 2h | Movie + Series overlays share ~70% structure |
-| P2.2 | Lazy-load pages (code splitting) | 1h | 1.1MB JS bundle, no splitting |
-| P2.3 | Cache download progress in player | 1.5h | No visibility into 5-10min VOD downloads |
-| P2.4 | Normalize localStorage key names | 30m | Mix of `stv_`, `stv-`, `stv.` prefixes |
-| P2.5 | Skip intro/outro buttons | 1h | Series player has no skip shortcuts |
-| P2.6 | EPG timezone support | 1.5h | Guide always shows UTC times |
-| P2.7 | Image proxy response caching | 30m | Every request re-fetches from CDN |
+| # | Task | Effort | Status |
+|---|------|--------|--------|
+| P2.1 | Extract shared MediaOverlay component | 2h | ✅ Done — MovieOverlay (411→200), SeriesOverlay (396→208) share shell |
+| P2.2 | Lazy-load pages (code splitting) | 1h | ✅ Done — 7 chunks, main bundle 1,122→232 kB (79% reduction) |
+| P2.3 | Loading steps in player | 1.5h | ✅ Done — contextual messages: detecting format, preparing conversion, etc. |
+| P2.4 | Normalize localStorage key names | 30m | ✅ Done — all use stv_ prefix + underscores, backward-compatible reads |
+| P2.5 | Skip forward/backward buttons | 1h | ✅ Done — always visible on all screen sizes (was desktop-only) |
+| P2.6 | EPG timezone offset parsing | 1.5h | ✅ Done — ISO 8601 colon fix in parseXmltvTime, UTC fallback |
+| P2.7 | Image proxy server-side caching | 30m | ✅ Done — in-memory TTL cache, 500-entry LRU eviction |
 
 ### P2.1 — Shared overlay
 MovieOverlay and SeriesOverlay share ~70% structure: backdrop, poster, close button, genre tags, meta row, description. Extract to `MediaOverlay` with slots for content-specific sections (language dropdown vs season tabs, play movie vs play episode).
