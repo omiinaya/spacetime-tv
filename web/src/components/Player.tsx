@@ -225,7 +225,7 @@ export default function Player({ type }: PlayerProps) {
       });
 
       // Auto-reconnect on fatal errors or stream drops
-      player.on(mpegts.Events.ERROR, (_t: string, detail: any) => {
+      player.on(mpegts.Events.ERROR, (_t: string, detail: { response?: { code?: number } }) => {
         // Only reconnect on real errors, not network noise
         if (detail?.response?.code === 0) return;
         if (!liveFlag) return; // VOD errors handled by VOD path
@@ -326,13 +326,13 @@ export default function Player({ type }: PlayerProps) {
     };
     video.addEventListener("timeupdate", onTimeUpdate);
 
-    player.on(mpegts.Events.MEDIA_INFO, (info: any) => {
+    player.on(mpegts.Events.MEDIA_INFO, (info: { duration?: number }) => {
       if (info.duration && isFinite(info.duration)) {
         setDuration(info.duration);
       }
     });
 
-    player.on(mpegts.Events.ERROR, (_t: string, detail: any) => {
+    player.on(mpegts.Events.ERROR, (_t: string, detail: { response?: { code?: number } }) => {
       errorCount++;
       if (detail?.response?.code === 0 || errorCount < 3) return;
       if (!timedOut) {

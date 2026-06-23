@@ -56,10 +56,11 @@ async function fetchWithRetry(
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       return await fetchWithTimeout(url, fetchOptions);
-    } catch (e: any) {
-      lastError = e;
+    } catch (e: unknown) {
+      const err = e as Error;
+      lastError = err;
       // Only retry on network errors (not HTTP 4xx/5xx)
-      if (e.name === "AbortError" || e.name === "TypeError") {
+      if (err.name === "AbortError" || err.name === "TypeError") {
         if (attempt < retries) continue;
       }
       throw e;

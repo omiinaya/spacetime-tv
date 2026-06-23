@@ -95,11 +95,12 @@ export default function SearchPage() {
         setResults(r);
         setLoading(false);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       // AbortError = cancelled by a newer search — ignore silently
-      if (e.name === "AbortError") return;
+      const err = e as Error;
+      if (err.name === "AbortError") return;
       if (searchIdRef.current === myId) {
-        setError(e.message || "Search failed");
+        setError(err.message || "Search failed");
         setLoading(false);
       }
     }

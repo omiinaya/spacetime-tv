@@ -118,8 +118,8 @@ async def load_epg() -> dict:
                 epg_cache["data"] = cached["data"]
                 epg_cache["fetched"] = cached["fetched"]
                 return cached["data"]
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning(f"EPG cache file corrupted: {e} — will refetch")
 
     log.info("Fetching EPG XMLTV ...")
     url = f"{IPTV_BASE}/xmltv.php?username={IPTV_USER}&password={IPTV_PASS}"
@@ -260,7 +260,8 @@ async def get_content_length(url: str) -> Optional[int]:
             resp = await c.head(url)
             cl = resp.headers.get("content-length")
             return int(cl) if cl else None
-    except Exception:
+    except Exception as e:
+        log.debug(f"Content-Length HEAD failed for {url}: {e}")
         return None
 
 
@@ -479,8 +480,8 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
                     result = {"codec": "unavailable", "error": "Not on this CDN edge"}
                     _probe_cache[cache_key] = (now, result)
                     return result
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning(f"Probe HTTP GET failed for stream {stream_id}: {e}")
         return {"codec": "unknown"}
 
     try:
@@ -706,8 +707,8 @@ async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
                         content=json.dumps({"error": f"Movie unavailable on this CDN edge (HTTP {resp.status_code})"}),
                         media_type="application/json",
                     )
-    except Exception:
-        pass  # proceed anyway — the generator will handle failures
+    except Exception as e:
+        log.debug(f"VOD CDN pre-flight failed for movie {stream_id}: {e} — proceeding anyway")
     
     try:
         return StreamingResponse(
@@ -952,8 +953,8 @@ async def tv_guide(
             epg_id = s.get("epg_channel_id")
             if epg_id and epg_id not in ch_to_stream:
                 ch_to_stream[epg_id] = s["stream_id"]
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning(f"EPG: Failed to load live_all for stream mapping: {e}")
 
     now = datetime.now(timezone.utc)
     cutoff_past = now - timedelta(minutes=30)
@@ -988,7 +989,8 @@ async def tv_guide(
                 "category": p.get("category", ""),
                 "is_live": start <= now <= stop,
             })
-        except (ValueError, IndexError):
+        except (ValueError, IndexError) as e:
+            log.debug(f"Bad EPG timestamp in programme: {e}")
             continue
 
     # Build channel groups sorted by name
@@ -1079,7 +1081,7 @@ async def search(q: str = Query(..., min_length=2)):
         log.error(f"Live search error: {e}")
 
     def _search_cached(prefix: str, id_field: str, name_fields=("name",)):
-        """Search in-memory cache directly — O(cached_categories) instant scan."""
+        """Search in-memory cache — scan ALL categories, return top 20 matches."""
         seen = set()
         out = []
         for key, (ts, data) in _cache.items():
@@ -1095,9 +1097,7 @@ async def search(q: str = Query(..., min_length=2)):
                 text = " ".join(str(s.get(f, "") or "") for f in name_fields).lower()
                 if query in text:
                     out.append(s)
-                    if len(out) >= 20:
-                        return out
-        return out
+        return out[:20]
 
     # Fast path: if caches are warm, scan in-memory directly (no async overhead)
     results["movies"] = _search_cached("vod_", "stream_id")

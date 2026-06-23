@@ -145,8 +145,8 @@ export default function Guide() {
           });
           fetchedRef.current = offset + groups.length;
         }
-      } catch (e: any) {
-        setError(e.message);
+      } catch (e: unknown) {
+        setError((e as Error).message);
       } finally {
         setLoading(false);
         setLoadingMore(false);

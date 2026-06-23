@@ -9,6 +9,10 @@ import { filterCategories } from "@/lib/settings";
 
 const BATCH = 50;
 
+// Slim stream format for sessionStorage cache (fields abbreviated to save space)
+interface SlimStream { id: number; n: string; c: string; ic?: string }
+interface SlimAllCache { a: SlimStream[]; ts: number }
+
 export default function LiveTV() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -33,9 +37,9 @@ export default function LiveTV() {
     try {
       const raw = sessionStorage.getItem(SLIM_ALL_KEY);
       if (!raw) return [];
-      const parsed = JSON.parse(raw);
+      const parsed = JSON.parse(raw) as SlimAllCache;
       if (parsed.a && Date.now() - parsed.ts < 900000) {
-        return (parsed.a as any[]).map((s: any) => ({
+        return parsed.a.map((s) => ({
           stream_id: s.id, name: s.n, stream_icon: "",
           category_id: s.c, num: 0, stream_type: "live",
           epg_channel_id: "", added: "", is_adult: 0,
