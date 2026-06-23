@@ -19,6 +19,7 @@ export const api = {
       get<{ movies: Movie[]; total: number; offset: number; limit: number }>(
         `/movies?category_id=${catId}&limit=${limit}&offset=${offset}`, signal
       ),
+    details: (id: number, signal?: AbortSignal) => get<{ info: MovieInfo }>(`/movies/${id}`, signal),
   },
   series: {
     categories: (signal?: AbortSignal) => get<{ categories: Category[] }>("/series/categories", signal),
@@ -67,6 +68,27 @@ export interface Movie {
   tmdb?: string;
   category_id: string;
   container_extension: string;
+}
+
+export interface MovieInfo {
+  name?: string;
+  plot?: string;
+  description?: string;
+  cast?: string;
+  actors?: string;
+  director?: string;
+  genre?: string;
+  rating?: string;
+  releasedate?: string;
+  backdrop_path?: string[];
+  cover_big?: string;
+  movie_image?: string;
+  youtube_trailer?: string;
+  duration?: string;
+  duration_secs?: number;
+  episode_run_time?: number;
+  tmdb_id?: string;
+  kinopoisk_url?: string;
 }
 
 export interface Series {

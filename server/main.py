@@ -757,6 +757,17 @@ async def movies(
     return {"movies": data}
 
 
+@app.get("/api/movies/{stream_id}")
+async def movie_details(stream_id: int):
+    """Movie details — plot, cast, director, genre, backdrop, etc."""
+    data = await cached_fetch(f"vod_info_{stream_id}", "get_vod_info", vod_id=stream_id)
+    if isinstance(data, dict):
+        # Wrap in consistent structure
+        info = data.get("info", data)
+        return {"info": info}
+    return {"info": data}
+
+
 # ── SERIES ──────────────────────────────────────────────────────────────────
 
 @app.get("/api/series/categories")

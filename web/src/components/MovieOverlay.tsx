@@ -1,7 +1,17 @@
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Play, Star, Film, ExternalLink } from "lucide-react";
-import type { Movie } from "@/lib/api";
+import {
+  X,
+  Play,
+  Star,
+  Film,
+  ExternalLink,
+  Loader2,
+  AlertCircle,
+  Clock,
+  Calendar,
+} from "lucide-react";
+import { api, Movie, MovieInfo } from "@/lib/api";
 
 interface MovieOverlayProps {
   movie: Movie;
@@ -10,6 +20,35 @@ interface MovieOverlayProps {
 
 export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   const navigate = useNavigate();
+  const [info, setInfo] = useState<MovieInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showFullPlot, setShowFullPlot] = useState(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  // Fetch movie details
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    api.movies
+      .details(movie.stream_id)
+      .then((d) => {
+        if (cancelled) return;
+        if (d.info) {
+          setInfo(d.info);
+        } else {
+          setError("No details available");
+        }
+      })
+      .catch((e) => setError(e.message))
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [movie.stream_id]);
 
   // Close on Escape, lock body scroll
   useEffect(() => {
@@ -24,12 +63,29 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
     };
   }, [onClose]);
 
-  const posterUrl = movie.stream_icon || "";
-  const bannerUrl = posterUrl;
-  const rating = movie.rating || "";
-  const ratingNum = movie.rating_5based;
-  const tmdbId = movie.tmdb || "";
+  // ── Derived ───────────────────────────────────────────────────
+  const bannerUrl =
+    info?.backdrop_path?.[0] || info?.cover_big || movie.stream_icon || "";
+  const posterUrl =
+    info?.movie_image || info?.cover_big || movie.stream_icon || "";
+  const rating = info?.rating || movie.rating || "";
+  const ratingNum = info?.rating
+    ? parseFloat(info.rating) / 2 // convert /10 → /5
+    : movie.rating_5based;
+  const year = (
+    info?.releasedate || ""
+  ).slice(0, 4);
+  const genre = info?.genre || "";
+  const plot = info?.plot || info?.description || "";
+  const cast = info?.cast || info?.actors || "";
+  const director = info?.director || "";
+  const duration = info?.duration || "";
+  const trailer = info?.youtube_trailer || "";
+  const tmdbId = info?.tmdb_id || movie.tmdb || "";
   const extension = (movie.container_extension || "").toUpperCase();
+  const genres = genre
+    ? genre.split(",").map((g) => g.trim()).filter(Boolean)
+    : [];
 
   const play = () => {
     navigate(`/watch/movie/${movie.stream_id}`);
@@ -66,7 +122,6 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
                   (e.target as HTMLImageElement).style.display = "none";
                 }}
               />
-              {/* Gradient overlays */}
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-[#0a0a0f]/40 to-transparent" />
               <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0f]/90 via-transparent to-transparent" />
             </>
@@ -95,55 +150,45 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
             </div>
 
             <div className="flex-1 min-w-0 pb-1">
-              {/* Badge row */}
-              <div className="flex gap-1.5 mb-2 flex-wrap">
-                {rating && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-yellow-500/15 text-yellow-400 border border-yellow-500/20">
-                    <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
-                    {rating}
-                  </span>
-                )}
-                {extension && (
-                  <span className="px-2 py-0.5 text-[11px] font-medium rounded-full bg-white/10 text-white/60">
-                    {extension}
-                  </span>
-                )}
-                {tmdbId && (
-                  <span className="px-2 py-0.5 text-[11px] font-medium rounded-full bg-white/5 text-white/40">
-                    TMDB {tmdbId}
-                  </span>
-                )}
-              </div>
+              {/* Genre tags */}
+              {genres.length > 0 && (
+                <div className="flex gap-1.5 mb-2 flex-wrap">
+                  {genres.slice(0, 4).map((g) => (
+                    <span
+                      key={g}
+                      className="px-2 py-0.5 text-[11px] font-medium rounded-full bg-white/10 text-white/80"
+                    >
+                      {g}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               <h2 className="text-2xl sm:text-3xl font-bold text-white leading-tight mb-2">
                 {movie.name}
               </h2>
 
-              {/* Rating bar */}
-              {ratingNum && (
-                <div className="flex items-center gap-2 text-sm text-white/60 mb-3">
-                  <div className="flex items-center gap-0.5">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-3.5 w-3.5 ${
-                          i < Math.round(ratingNum)
-                            ? "fill-yellow-400 text-yellow-400"
-                            : "text-white/15"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-xs text-white/40">
-                    {ratingNum.toFixed(1)} / 5
+              {/* Meta row */}
+              <div className="flex items-center gap-3 flex-wrap text-sm text-white/70">
+                {rating && (
+                  <span className="inline-flex items-center gap-1 font-semibold text-yellow-400">
+                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                    {rating}
                   </span>
-                </div>
-              )}
+                )}
+                {year && <span>{year}</span>}
+                {duration && <span>{duration}</span>}
+                {extension && (
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-white/10 text-white/50">
+                    {extension}
+                  </span>
+                )}
+              </div>
 
               {/* Play button */}
               <button
                 onClick={play}
-                className="mt-2 inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 transition-all hover:scale-105 active:scale-95"
+                className="mt-3 inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 transition-all hover:scale-105 active:scale-95"
               >
                 <Play className="h-4 w-4 fill-black text-black" />
                 Play Movie
@@ -153,36 +198,114 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
         </div>
 
         {/* ── Body ─────────────────────────────────────────────── */}
-        <div className="p-6 sm:px-10 sm:py-6">
-          <div className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
-            <div>
-              <span className="text-white/30">Stream ID: </span>
-              <span className="text-white/60 font-mono text-xs">
-                {movie.stream_id}
-              </span>
-            </div>
-            {tmdbId && (
-              <a
-                href={`https://www.themoviedb.org/movie/${tmdbId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-white/40 hover:text-white/70 transition-colors"
-              >
-                <ExternalLink className="h-3 w-3" />
-                View on TMDB
-              </a>
+        <div ref={bodyRef} className="flex-1 overflow-y-auto">
+          <div className="p-6 sm:px-10 sm:py-6 space-y-5">
+            {/* Loading / Error */}
+            {loading && (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-white/30" />
+              </div>
             )}
-          </div>
+            {error && !loading && (
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {error}
+              </div>
+            )}
 
-          {/* Quick actions */}
-          <div className="flex gap-2 mt-6 pt-4 border-t border-white/5">
-            <button
-              onClick={play}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 transition-all"
-            >
-              <Play className="h-4 w-4 fill-black text-black" />
-              Play
-            </button>
+            {!loading && !error && (
+              <>
+                {/* Plot */}
+                {plot && (
+                  <div>
+                    <p
+                      className={`text-sm text-white/60 leading-relaxed ${
+                        !showFullPlot && plot.length > 250
+                          ? "line-clamp-3"
+                          : ""
+                      }`}
+                    >
+                      {plot}
+                    </p>
+                    {plot.length > 250 && (
+                      <button
+                        onClick={() => setShowFullPlot(!showFullPlot)}
+                        className="mt-1 text-xs text-white/40 hover:text-white/70 transition-colors"
+                      >
+                        {showFullPlot ? "Show less" : "Read more"}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Cast & Director */}
+                <div className="flex flex-wrap gap-x-8 gap-y-1 text-sm">
+                  {cast && (
+                    <div>
+                      <span className="text-white/30">Cast: </span>
+                      <span className="text-white/60">{cast}</span>
+                    </div>
+                  )}
+                  {director && (
+                    <div>
+                      <span className="text-white/30">Director: </span>
+                      <span className="text-white/60">{director}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Extra info */}
+                <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-white/40">
+                  {info?.releasedate && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {info.releasedate}
+                    </span>
+                  )}
+                  {duration && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {duration}
+                    </span>
+                  )}
+                  {tmdbId && (
+                    <a
+                      href={`https://www.themoviedb.org/movie/${tmdbId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 hover:text-white/70 transition-colors"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      TMDB
+                    </a>
+                  )}
+                </div>
+
+                {/* Trailer link */}
+                {trailer && (
+                  <a
+                    href={`https://www.youtube.com/watch?v=${trailer}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-sm text-white/60 hover:bg-white/10 hover:text-white/80 transition-colors"
+                  >
+                    <Play className="h-4 w-4" />
+                    Watch Trailer
+                  </a>
+                )}
+
+                {/* Play button */}
+                <div className="pt-2 border-t border-white/5">
+                  <button
+                    onClick={play}
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 transition-all"
+                  >
+                    <Play className="h-4 w-4 fill-black text-black" />
+                    Play
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
