@@ -868,10 +868,10 @@ export default function Player({ type }: PlayerProps) {
             <button onClick={togglePlay} className="text-white/70 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title={phase === "playing" ? "Pause" : "Play"}>
               {phase === "playing" ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
             </button>
-            <button onClick={() => seek(-10)} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] hidden sm:flex items-center justify-center" title="Rewind 10s">
+            <button onClick={() => seek(-10)} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title="Rewind 10s">
               <SkipBack className="w-4 h-4" />
             </button>
-            <button onClick={() => seek(10)} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] hidden sm:flex items-center justify-center" title="Forward 10s">
+            <button onClick={() => seek(10)} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title="Forward 10s">
               <SkipForward className="w-4 h-4" />
             </button>
             {isVod && (
