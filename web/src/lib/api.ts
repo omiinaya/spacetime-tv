@@ -20,6 +20,13 @@ export const api = {
         `/movies?category_id=${catId}&limit=${limit}&offset=${offset}`, signal
       ),
     details: (id: number, signal?: AbortSignal) => get<{ info: MovieInfo }>(`/movies/${id}`, signal),
+    unified: (limit = 50, offset = 0, q?: string, signal?: AbortSignal) => {
+      const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+      if (q) params.set("q", q);
+      return get<{ movies: UnifiedMovie[]; total: number; offset: number; limit: number }>(
+        `/movies/unified?${params}`, signal
+      );
+    },
   },
   series: {
     categories: (signal?: AbortSignal) => get<{ categories: Category[] }>("/series/categories", signal),
@@ -56,6 +63,19 @@ export interface LiveStream {
   stream_icon: string;
   epg_channel_id: string;
   category_id: string;
+}
+
+export interface MovieLanguage {
+  code: string;
+  name: string;
+  stream_id: number;
+  container_extension: string;
+}
+
+export interface UnifiedMovie extends Movie {
+  base_name: string;
+  languages: MovieLanguage[];
+  language_count: number;
 }
 
 export interface Movie {

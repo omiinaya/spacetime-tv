@@ -757,6 +757,72 @@ async def movies(
     return {"movies": data}
 
 
+@app.get("/api/movies/unified")
+async def movies_unified(
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    q: str = Query(None),
+):
+    """Unified movie list — all languages merged, grouped by TMDB ID.
+
+    Each entry includes a ``languages`` array so the frontend can offer
+    a language switcher on the overlay.
+    """
+    # ── Collect all VOD streams from the in-memory cache ─────────────
+    groups: dict[str, dict] = {}  # tmdb → {movie, languages: {lang_code: {name, stream_id}}}
+
+    for key, (ts, data) in _cache.items():
+        if not key.startswith("vod_") or key in ("vod_categories",):
+            continue
+        if not isinstance(data, list):
+            continue
+        for m in data:
+            tmdb = m.get("tmdb")
+            if not tmdb:
+                continue
+            name = m.get("name", "")
+            lang_match = re.match(r"^(\w{2,3})\s*-\s*(.+)$", name)
+            lang_code = lang_match.group(1) if lang_match else ""
+            base_name = lang_match.group(2).strip() if lang_match else name
+
+            if tmdb not in groups:
+                groups[tmdb] = {
+                    "movie": m,
+                    "base_name": base_name,
+                    "languages": {},
+                }
+            groups[tmdb]["languages"][lang_code or "??"] = {
+                "name": name,
+                "stream_id": m["stream_id"],
+                "container_extension": m.get("container_extension", ""),
+            }
+
+    # ── Build consolidated list ──────────────────────────────────────
+    unified = []
+    for tmdb, grp in groups.items():
+        movie = grp["movie"]
+        langs = grp["languages"]
+        lang_list = [{"code": code, **info} for code, info in langs.items()]
+        # Sort: EN first, then alphabetical
+        lang_list.sort(key=lambda x: (x["code"] != "EN", x["code"]))
+        unified.append({
+            **movie,
+            "base_name": grp["base_name"],
+            "languages": lang_list,
+            "language_count": len(lang_list),
+        })
+
+    # ── Search filter ────────────────────────────────────────────────
+    if q:
+        ql = q.lower()
+        unified = [u for u in unified if ql in u.get("name", "").lower() or ql in u.get("base_name", "").lower()]
+
+    # ── Paginate ─────────────────────────────────────────────────────
+    total = len(unified)
+    unified = unified[offset : offset + limit]
+    return {"movies": unified, "total": total, "offset": offset, "limit": limit}
+
+
 @app.get("/api/movies/{stream_id}")
 async def movie_details(stream_id: int):
     """Movie details — plot, cast, director, genre, backdrop, etc."""

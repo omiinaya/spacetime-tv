@@ -10,29 +10,77 @@ import {
   AlertCircle,
   Clock,
   Calendar,
+  Globe,
+  ChevronDown,
 } from "lucide-react";
-import { api, Movie, MovieInfo } from "@/lib/api";
+import { api, MovieInfo, UnifiedMovie, MovieLanguage } from "@/lib/api";
 
 interface MovieOverlayProps {
-  movie: Movie;
+  movie: UnifiedMovie;
   onClose: () => void;
+}
+
+const LANG_LABELS: Record<string, string> = {
+  EN: "English",
+  FR: "French",
+  DE: "German",
+  ES: "Spanish",
+  IT: "Italian",
+  PT: "Portuguese",
+  BR: "Brazilian",
+  RU: "Russian",
+  GR: "Greek",
+  TR: "Turkish",
+  NL: "Dutch",
+  PL: "Polish",
+  IN: "Indian",
+  IR: "Persian",
+  IL: "Hebrew",
+  QC: "Canadian French",
+  SO: "Somali",
+  LA: "Latin",
+  AF: "Afrikaans",
+  RO: "Romanian",
+  BG: "Bulgarian",
+  AL: "Albanian",
+  PK: "Urdu",
+  KU: "Kurdish",
+  PH: "Filipino",
+  BN: "Bengali",
+  BE: "Belarusian",
+  MT: "Maltese",
+  CN: "Chinese",
+};
+
+function langLabel(code: string): string {
+  return LANG_LABELS[code] || code;
 }
 
 export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   const navigate = useNavigate();
+
+  // Current selected language
+  const [selectedLang, setSelectedLang] = useState<MovieLanguage>(
+    movie.languages[0]
+  );
+  const [showLangMenu, setShowLangMenu] = useState(false);
+  const langMenuRef = useRef<HTMLDivElement>(null);
+
+  const currentStreamId = selectedLang.stream_id;
+
   const [info, setInfo] = useState<MovieInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showFullPlot, setShowFullPlot] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  // Fetch movie details
+  // Fetch movie details — re-fetch when language changes
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
     api.movies
-      .details(movie.stream_id)
+      .details(currentStreamId)
       .then((d) => {
         if (cancelled) return;
         if (d.info) {
@@ -48,7 +96,7 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
     return () => {
       cancelled = true;
     };
-  }, [movie.stream_id]);
+  }, [currentStreamId]);
 
   // Close on Escape, lock body scroll
   useEffect(() => {
@@ -63,6 +111,18 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
     };
   }, [onClose]);
 
+  // Close language menu on outside click
+  useEffect(() => {
+    if (!showLangMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (langMenuRef.current && !langMenuRef.current.contains(e.target as Node)) {
+        setShowLangMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showLangMenu]);
+
   // ── Derived ───────────────────────────────────────────────────
   const bannerUrl =
     info?.backdrop_path?.[0] || info?.cover_big || movie.stream_icon || "";
@@ -72,9 +132,7 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   const ratingNum = info?.rating
     ? parseFloat(info.rating) / 2 // convert /10 → /5
     : movie.rating_5based;
-  const year = (
-    info?.releasedate || ""
-  ).slice(0, 4);
+  const year = (info?.releasedate || "").slice(0, 4);
   const genre = info?.genre || "";
   const plot = info?.plot || info?.description || "";
   const cast = info?.cast || info?.actors || "";
@@ -82,13 +140,19 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   const duration = info?.duration || "";
   const trailer = info?.youtube_trailer || "";
   const tmdbId = info?.tmdb_id || movie.tmdb || "";
-  const extension = (movie.container_extension || "").toUpperCase();
+  const extension = (
+    selectedLang.container_extension || movie.container_extension || ""
+  ).toUpperCase();
   const genres = genre
     ? genre.split(",").map((g) => g.trim()).filter(Boolean)
     : [];
 
+  const displayName = movie.languages.length > 1
+    ? movie.base_name
+    : movie.name;
+
   const play = () => {
-    navigate(`/watch/movie/${movie.stream_id}`);
+    navigate(`/watch/movie/${currentStreamId}`);
     onClose();
   };
 
@@ -165,7 +229,7 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
               )}
 
               <h2 className="text-2xl sm:text-3xl font-bold text-white leading-tight mb-2">
-                {movie.name}
+                {displayName}
               </h2>
 
               {/* Meta row */}
@@ -185,14 +249,53 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
                 )}
               </div>
 
-              {/* Play button */}
-              <button
-                onClick={play}
-                className="mt-3 inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 transition-all hover:scale-105 active:scale-95"
-              >
-                <Play className="h-4 w-4 fill-black text-black" />
-                Play Movie
-              </button>
+              {/* Buttons row: Play + Language */}
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={play}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 transition-all hover:scale-105 active:scale-95"
+                >
+                  <Play className="h-4 w-4 fill-black text-black" />
+                  Play Movie
+                </button>
+
+                {/* Language dropdown */}
+                {movie.languages.length > 1 && (
+                  <div className="relative" ref={langMenuRef}>
+                    <button
+                      onClick={() => setShowLangMenu(!showLangMenu)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/10 text-sm text-white/70 hover:bg-white/15 hover:text-white transition-colors"
+                    >
+                      <Globe className="h-3.5 w-3.5" />
+                      {langLabel(selectedLang.code)}
+                      <ChevronDown className="h-3 w-3 opacity-50" />
+                    </button>
+                    {showLangMenu && (
+                      <div className="absolute top-full left-0 mt-1 w-44 rounded-lg bg-[#1a1a2e] border border-white/10 shadow-xl py-1 z-40 max-h-60 overflow-y-auto">
+                        {movie.languages.map((l) => (
+                          <button
+                            key={l.code}
+                            onClick={() => {
+                              setSelectedLang(l);
+                              setShowLangMenu(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-white/10 transition-colors flex items-center gap-2 ${
+                              l.code === selectedLang.code
+                                ? "text-white font-medium"
+                                : "text-white/60"
+                            }`}
+                          >
+                            <span className="w-4 text-center text-[10px] font-bold opacity-50">
+                              {l.code === selectedLang.code ? "✓" : ""}
+                            </span>
+                            {langLabel(l.code)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
