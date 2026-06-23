@@ -46,6 +46,13 @@ function getVolume(): number {
 function saveVolume(v: number) {
   try { localStorage.setItem("stv_volume", String(v)); } catch {}
 }
+function getMuted(): boolean {
+  try { return localStorage.getItem("stv_muted") === "true"; }
+  catch { return false; }
+}
+function saveMuted(m: boolean) {
+  try { localStorage.setItem("stv_muted", String(m)); } catch {}
+}
 
 async function probeStream(url: string): Promise<ProbeResult> {
   try { const r = await fetch(url); return await r.json(); }
@@ -85,8 +92,8 @@ export default function Player({ type }: PlayerProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(getVolume());
-  const [muted, setMuted] = useState(false);
-  const userTouchedMuteRef = useRef(false); // once user unmutes, don't re-mute on reconnect
+  const [muted, setMuted] = useState(getMuted());
+  const userTouchedMuteRef = useRef(true); // default: don't force-mute — browser handles autoplay policy
   const [playbackRate, setPlaybackRate] = useState(1);
   const [qualityIdx, setQualityIdx] = useState(0);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
@@ -622,18 +629,26 @@ export default function Player({ type }: PlayerProps) {
 
   const setVolume = useCallback((val: number) => {
     const v = videoRef.current;
-    if (v) v.volume = val;
+    if (v) {
+      v.volume = val;
+      if (val > 0 && muted) {
+        v.muted = false;
+        userTouchedMuteRef.current = true;
+        setMuted(false);
+        saveMuted(false);
+      }
+    }
     setVolumeState(val);
     setMuted(val === 0);
     saveVolume(val);
-  }, []);
+  }, [muted]);
 
   const toggleMute = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
     userTouchedMuteRef.current = true;
-    if (muted) { v.muted = false; v.volume = volume || 0.8; setMuted(false); setVolumeState(v.volume); }
-    else { v.muted = true; v.volume = 0; setMuted(true); }
+    if (muted) { v.muted = false; v.volume = volume || 0.8; setMuted(false); setVolumeState(v.volume); saveMuted(false); }
+    else { v.muted = true; v.volume = 0; setMuted(true); saveMuted(true); }
   }, [muted, volume]);
 
   const setSpeed = useCallback((rate: number) => {
