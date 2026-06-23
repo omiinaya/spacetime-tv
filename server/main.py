@@ -21,10 +21,15 @@ from fastapi.staticfiles import StaticFiles
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("spacetime-tv")
 
+# Load .env from server directory
+from dotenv import load_dotenv
+_env_path = Path(__file__).parent / ".env"
+load_dotenv(_env_path)
+
 # ── Config ──────────────────────────────────────────────────────────────────
-IPTV_BASE = "http://iptv-provider.example.com"
-IPTV_USER = "18e099789687"
-IPTV_PASS = "9e38d82518"
+IPTV_BASE = os.getenv("IPTV_BASE", "http://iptv-provider.example.com")
+IPTV_USER = os.getenv("IPTV_USER", "")
+IPTV_PASS = os.getenv("IPTV_PASS", "")
 EPG_CACHE_FILE = Path(__file__).parent / "epg_cache.json"
 EPG_CACHE_TTL = 3600  # 1 hour
 ROOT = Path(__file__).resolve().parent.parent
