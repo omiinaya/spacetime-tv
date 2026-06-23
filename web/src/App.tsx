@@ -20,6 +20,7 @@ import Series from "@/pages/Series";
 import SearchPage from "@/pages/Search";
 import SettingsPage from "@/pages/SettingsPage";
 import Player from "@/components/Player";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const SIDEBAR_MIN = 200;
 const SIDEBAR_MAX = 400;
@@ -210,6 +211,7 @@ function AppLayout() {
         </div>
 
         <div className="p-4 md:p-6 lg:p-8">
+          <ErrorBoundary>
           <Routes>
             <Route path="/" element={<LiveTV />} />
             <Route path="/live" element={<LiveTV />} />
@@ -225,6 +227,7 @@ function AppLayout() {
               element={<Player type="series" />}
             />
           </Routes>
+          </ErrorBoundary>
         </div>
       </main>
 

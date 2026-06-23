@@ -20,8 +20,56 @@ export function imageUrl(raw: string): string {
   return raw;
 }
 
+const FETCH_TIMEOUT = 15000; // 15s
+const MAX_RETRIES = 1;
+
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit & { timeout?: number } = {}
+): Promise<Response> {
+  const { timeout = FETCH_TIMEOUT, ...fetchOptions } = options;
+  const controller = new AbortController();
+  const existingSignal = fetchOptions.signal;
+  
+  // Merge external signal with our timeout signal
+  if (existingSignal) {
+    existingSignal.addEventListener("abort", () => controller.abort());
+  }
+  
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const res = await fetch(url, { ...fetchOptions, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit & { timeout?: number; retries?: number } = {}
+): Promise<Response> {
+  const { retries = MAX_RETRIES, ...fetchOptions } = options;
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fetchWithTimeout(url, fetchOptions);
+    } catch (e: any) {
+      lastError = e;
+      // Only retry on network errors (not HTTP 4xx/5xx)
+      if (e.name === "AbortError" || e.name === "TypeError") {
+        if (attempt < retries) continue;
+      }
+      throw e;
+    }
+  }
+  throw lastError;
+}
+
 async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(`${API}${path}`, { signal });
+  const res = await fetchWithRetry(`${API}${path}`, { signal });
   if (!res.ok) throw new Error(`API error ${res.status}`);
   return res.json();
 }
