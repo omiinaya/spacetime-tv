@@ -356,7 +356,10 @@ export default function Movies() {
                 loading={row.loading && movies.length > 0}
                 onScrollEnd={q ? undefined : hasMore ? () => loadMore(cat) : undefined}
               >
-                {filtered.map((m) => (
+                {filtered.map((m) => {
+                const yearMatch = /\((\d{4})\)/.exec(m.name);
+                const year = yearMatch ? yearMatch[1] : null;
+                return (
                   <button
                     key={m.stream_id}
                     onClick={() => setOverlayMovie(m)}
@@ -391,10 +394,15 @@ export default function Movies() {
                       {m.rating && (
                         <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[11px] font-semibold text-yellow-400 flex items-center gap-0.5">
                           <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
-                          {m.rating}
+                          {parseFloat(m.rating).toFixed(1)}
                         </div>
                       )}
-
+                      {/* Year badge */}
+                      {year && (
+                        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[10px] font-medium text-white/70">
+                          {year}
+                        </div>
+                      )}
                     </div>
                     {/* Title */}
                     <div className="p-2.5 flex-1">
@@ -403,7 +411,7 @@ export default function Movies() {
                       </p>
                     </div>
                   </button>
-                ))}
+                );})}
               </ContentRow>
             );
           })}

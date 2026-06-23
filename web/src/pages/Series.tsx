@@ -357,7 +357,7 @@ export default function SeriesPage() {
                       {s.rating && (
                         <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[11px] font-semibold text-yellow-400 flex items-center gap-0.5">
                           <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
-                          {s.rating}
+                          {parseFloat(s.rating).toFixed(1)}
                         </div>
                       )}
                       {/* Year badge */}
