@@ -1328,7 +1328,7 @@ async def convert_movie(stream_id: int, retry: bool = False):
         if mkv_path.exists():
             mkv_path.unlink()
 
-    if output_path.exists():
+    if output_path.exists() and output_path.stat().st_size > 0:
         touch_access(cache_key)
         return {"status": "ready", "message": "Cached"}
 
@@ -1358,7 +1358,7 @@ async def convert_series_ep(series_id: int, episode_id: int, retry: bool = False
         if mkv_path.exists():
             mkv_path.unlink()
 
-    if output_path.exists():
+    if output_path.exists() and output_path.stat().st_size > 0:
         touch_access(cache_key)
         return {"status": "ready", "message": "Cached"}
 
@@ -1378,7 +1378,7 @@ async def serve_movie_mp4(stream_id: int, request: Request):
     cache_key = f"movie_{stream_id}"
     output_path = CACHE_DIR / f"{cache_key}.mp4"
 
-    if not output_path.exists():
+    if not output_path.exists() or output_path.stat().st_size == 0:
         raise HTTPException(404, "MP4 not yet converted. Call /api/movie/convert/{id} first.")
 
     touch_access(cache_key)
@@ -1391,7 +1391,7 @@ async def serve_series_mp4(series_id: int, episode_id: int, request: Request):
     cache_key = f"series_{episode_id}"
     output_path = CACHE_DIR / f"{cache_key}.mp4"
 
-    if not output_path.exists():
+    if not output_path.exists() or output_path.stat().st_size == 0:
         raise HTTPException(404, "MP4 not yet converted. Call /api/series/convert/{sid}/{eid} first.")
 
     return serve_cached_mp4(output_path, request)
@@ -1457,7 +1457,7 @@ _mkv_downloaders: dict[str, asyncio.subprocess.Process] = {}  # cache_key → cu
 async def download_mkv(stream_id: str, stream_type: str, cache_key: str) -> Optional[Path]:
     """Download MKV from CDN to disk with retries. Returns path on success."""
     mkv_path = CACHE_DIR / f"{cache_key}.mkv"
-    if mkv_path.exists():
+    if mkv_path.exists() and mkv_path.stat().st_size > 0:
         return mkv_path
 
     url = build_stream_url(int(stream_id), stream_type)
