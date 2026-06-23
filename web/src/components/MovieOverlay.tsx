@@ -44,6 +44,7 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   // Trailer — always from the EN version (or first language if no EN)
   const enLang = movie.languages.find((l) => l.code === "EN") || movie.languages[0];
   const [enTrailer, setEnTrailer] = useState<string>("");
+  const [showTrailer, setShowTrailer] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -154,16 +155,26 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
             Play Movie
           </button>
           {trailer && (
-            <a
-              href={`https://www.youtube.com/watch?v=${trailer}`}
-              target="_blank" rel="noopener noreferrer"
+            <button
+              onClick={() => setShowTrailer(!showTrailer)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-sm text-white/60 hover:bg-white/10 hover:text-white/80 transition-colors"
             >
-              <Play className="h-4 w-4" /> Watch Trailer
-            </a>
+              <Play className="h-4 w-4" /> {showTrailer ? "Hide Trailer" : "Watch Trailer"}
+            </button>
           )}
         </div>
       }
+      trailerEmbed={showTrailer && trailer ? (
+        <div className="mt-4 aspect-video rounded-lg overflow-hidden bg-black">
+          <iframe
+            src={`https://www.youtube.com/embed/${trailer}?autoplay=1&rel=0`}
+            className="w-full h-full"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+            title="Movie Trailer"
+          />
+        </div>
+      ) : null}
     >
       {/* Cast, Director, Extra info */}
       {!loading && !error && (

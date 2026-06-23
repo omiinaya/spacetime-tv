@@ -20,6 +20,8 @@ interface MediaOverlayProps {
   children?: ReactNode;
   /** Play button — rendered after the meta row */
   playButton?: ReactNode;
+  /** Trailer iframe embed — rendered below play button */
+  trailerEmbed?: ReactNode;
   loading?: boolean;
   error?: string | null;
 }
@@ -37,6 +39,7 @@ export default function MediaOverlay({
   titleActions,
   children,
   playButton,
+  trailerEmbed,
   loading = false,
   error = null,
 }: MediaOverlayProps) {
@@ -140,6 +143,8 @@ export default function MediaOverlay({
               {playButton && (
                 <div className="mt-3">{playButton}</div>
               )}
+              {/* Trailer embed */}
+              {trailerEmbed}
             </div>
           </div>
         </div>
