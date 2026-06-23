@@ -9,7 +9,7 @@ import {
   X,
   Globe,
 } from "lucide-react";
-import { api, UnifiedMovie } from "@/lib/api";
+import { api, UnifiedMovie, imageUrl } from "@/lib/api";
 import MovieOverlay from "@/components/MovieOverlay";
 
 const PAGE_SIZE = 50;
@@ -184,7 +184,7 @@ export default function Movies() {
                 <div className="relative w-full aspect-[2/3] bg-muted overflow-hidden">
                   {m.stream_icon ? (
                     <img
-                      src={m.stream_icon}
+                      src={imageUrl(m.stream_icon)}
                       alt=""
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
                       loading="lazy"

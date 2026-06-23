@@ -13,7 +13,7 @@ import {
   Globe,
   ChevronDown,
 } from "lucide-react";
-import { api, MovieInfo, UnifiedMovie, MovieLanguage } from "@/lib/api";
+import { api, MovieInfo, UnifiedMovie, MovieLanguage, imageUrl } from "@/lib/api";
 
 interface MovieOverlayProps {
   movie: UnifiedMovie;
@@ -193,9 +193,9 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
         {/* ── Hero Banner ─────────────────────────────────────── */}
         <div className="relative shrink-0 h-[260px] sm:h-[400px] bg-[#141420]">
           {bannerUrl ? (
-            <>
-              <img
-                src={bannerUrl}
+          <>
+          <img
+            src={imageUrl(bannerUrl)}
                 alt=""
                 className="w-full h-full object-cover opacity-60"
                 onError={(e) => {
@@ -215,7 +215,7 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
             <div className="hidden sm:block w-[160px] shrink-0 rounded-lg overflow-hidden ring-1 ring-white/10 shadow-2xl -mb-2">
               {posterUrl ? (
                 <img
-                  src={posterUrl}
+                  src={imageUrl(posterUrl)}
                   alt=""
                   className="w-full aspect-[2/3] object-cover"
                   onError={(e) => {

@@ -1,5 +1,14 @@
 const API = "/api";
 
+// Route images from blocked CDNs through our proxy
+export function imageUrl(raw: string): string {
+  if (!raw) return "";
+  if (raw.includes("cmc.exchange-cdn.com")) {
+    return `/api/image-proxy?url=${encodeURIComponent(raw)}`;
+  }
+  return raw;
+}
+
 async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(`${API}${path}`, { signal });
   if (!res.ok) throw new Error(`API error ${res.status}`);

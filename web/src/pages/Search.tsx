@@ -9,7 +9,7 @@ import {
   Star,
   AlertCircle,
 } from "lucide-react";
-import { api, LiveStream, Movie, Series } from "@/lib/api";
+import { api, LiveStream, Movie, Series, imageUrl } from "@/lib/api";
 
 interface SearchResults {
   live: LiveStream[];
@@ -302,7 +302,7 @@ export default function SearchPage() {
                     <div className="aspect-[2/3] bg-muted relative overflow-hidden">
                       {m.stream_icon ? (
                         <img
-                          src={m.stream_icon}
+                          src={imageUrl(m.stream_icon)}
                           alt=""
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           loading="lazy"

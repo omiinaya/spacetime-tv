@@ -1636,6 +1636,19 @@ async def serve_hls_file(stream_type: str, stream_id: str, filename: str):
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
 
+# ── IMAGE PROXY ──────────────────────────────────────────────────
+@app.get("/api/image-proxy")
+async def image_proxy(url: str = Query(...)):
+    """Proxy images from blocked CDNs (cmc.exchange-cdn.com) through our server."""
+    resp = await client.get(url, follow_redirects=True)
+    resp.raise_for_status()
+    content_type = resp.headers.get("content-type", "image/jpeg")
+    return StreamingResponse(
+        resp.aiter_bytes(),
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
 # SPA catch-all: serve index.html for any unmatched route
 from fastapi.responses import FileResponse
 
