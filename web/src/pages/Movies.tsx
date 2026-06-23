@@ -15,6 +15,7 @@ import MovieOverlay from "@/components/MovieOverlay";
 import { PosterCardSkeleton } from "@/components/Skeleton";
 import { getMovieContinueWatching, type MovieProgress } from "@/lib/continueWatching";
 import { isInWatchlist, toggleWatchlist as toggleWl } from "@/lib/watchlist";
+import { SearchHistory, addSearchHistory } from "@/components/SearchHistory";
 
 const PAGE_SIZE = 50;
 
@@ -61,6 +62,7 @@ export default function Movies() {
 
   // Overlay
   const [overlayMovie, setOverlayMovie] = useState<UnifiedMovie | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Continue watching
   const [continueWatching, setContinueWatching] = useState<MovieProgress[]>([]);
@@ -154,8 +156,23 @@ export default function Movies() {
           type="text"
           value={inputValue}
           onChange={(e) => handleInputChange(e.target.value)}
+          onFocus={() => { if (!inputValue) setShowHistory(true); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && inputValue.trim().length >= 2) {
+              addSearchHistory(inputValue);
+              setShowHistory(false);
+            }
+          }}
           placeholder="Search movies..."
           className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        <SearchHistory
+          show={showHistory}
+          onClose={() => setShowHistory(false)}
+          onSelect={(q) => {
+            handleInputChange(q);
+            addSearchHistory(q);
+          }}
         />
         {inputValue && (
           <button

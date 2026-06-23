@@ -10,6 +10,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { api, LiveStream, Movie, Series, imageUrl } from "@/lib/api";
+import { SearchHistory, addSearchHistory } from "@/components/SearchHistory";
 
 interface SearchResults {
   live: LiveStream[];
@@ -26,6 +27,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<SearchResults | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   // ── Request cancellation ──────────────────────────────────────
   // Each search gets a unique ID. When a new search starts, we abort
@@ -166,6 +168,8 @@ export default function SearchPage() {
     if (query.trim().length < 2) return;
     // Kill any pending debounce
     if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
+    addSearchHistory(query);
+    setShowHistory(false);
     setSearchParams({ q: query }, { replace: true });
     runSearch(query);
   }, [query, setSearchParams, runSearch]);
@@ -199,9 +203,21 @@ export default function SearchPage() {
           value={query}
           onChange={(e) => handleQueryChange(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && doSearch()}
+          onFocus={() => { if (!query) setShowHistory(true); }}
           placeholder="Search channels, movies, series..."
           aria-label="Search"
           className="w-full h-10 pl-10 pr-20 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        <SearchHistory
+          show={showHistory}
+          onClose={() => setShowHistory(false)}
+          onSelect={(q) => {
+            setQuery(q);
+            if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
+            addSearchHistory(q);
+            setSearchParams({ q }, { replace: true });
+            runSearch(q);
+          }}
         />
         <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
           {query && (
