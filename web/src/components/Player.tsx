@@ -86,6 +86,7 @@ export default function Player({ type }: PlayerProps) {
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(getVolume());
   const [muted, setMuted] = useState(false);
+  const userTouchedMuteRef = useRef(false); // once user unmutes, don't re-mute on reconnect
   const [playbackRate, setPlaybackRate] = useState(1);
   const [qualityIdx, setQualityIdx] = useState(0);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
@@ -185,7 +186,7 @@ export default function Player({ type }: PlayerProps) {
       player.on(mpegts.Events.MEDIA_INFO, () => {
         if (loadStarted) return;
         loadStarted = true;
-        video.muted = true; setMuted(true);
+        if (!userTouchedMuteRef.current) { video.muted = true; setMuted(true); }
         video.play().catch(() => {});
       });
 
@@ -193,7 +194,7 @@ export default function Player({ type }: PlayerProps) {
         // Fallback if both events fire (some stream types do)
         if (!loadStarted) {
           loadStarted = true;
-          video.muted = true; setMuted(true);
+          if (!userTouchedMuteRef.current) { video.muted = true; setMuted(true); }
           video.play().catch(() => {});
         }
         reconnectAttempts = 0;
@@ -291,7 +292,7 @@ export default function Player({ type }: PlayerProps) {
 
     player.on(mpegts.Events.LOADING_COMPLETE, () => {
       // Don't hide spinner yet — wait for video to actually advance past frame 0
-      video.muted = true; setMuted(true);
+      if (!userTouchedMuteRef.current) { video.muted = true; setMuted(true); }
       video.play().catch(() => {});
     });
 
@@ -301,7 +302,7 @@ export default function Player({ type }: PlayerProps) {
     const tryPlay = () => {
       if (playStarted) return;
       playStarted = true;
-      video.muted = true; setMuted(true);
+      if (!userTouchedMuteRef.current) { video.muted = true; setMuted(true); }
       video.play().catch(() => {});
     };
     player.on(mpegts.Events.MEDIA_INFO, () => tryPlay());
@@ -398,8 +399,7 @@ export default function Player({ type }: PlayerProps) {
         setPhase("playing");
         setDuration(hls.levels[0]?.details?.totalduration || video.duration || 0);
         // Start muted for browser autoplay policy
-        video.muted = true;
-        setMuted(true);
+        if (!userTouchedMuteRef.current) { video.muted = true; setMuted(true); }
         video.play().catch(() => setPhase("paused"));
       });
 
@@ -434,7 +434,7 @@ export default function Player({ type }: PlayerProps) {
         setDuration(video.duration || 0);
         if (startPos && startPos > 5) video.currentTime = startPos;
         setPhase("playing");
-        video.muted = true; setMuted(true);
+        if (!userTouchedMuteRef.current) { video.muted = true; setMuted(true); }
         video.play().catch(() => setPhase("paused"));
       }, { once: true });
     } else {
@@ -631,6 +631,7 @@ export default function Player({ type }: PlayerProps) {
   const toggleMute = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
+    userTouchedMuteRef.current = true;
     if (muted) { v.muted = false; v.volume = volume || 0.8; setMuted(false); setVolumeState(v.volume); }
     else { v.muted = true; v.volume = 0; setMuted(true); }
   }, [muted, volume]);
