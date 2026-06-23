@@ -1,8 +1,18 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Film, Loader2, AlertCircle, RotateCcw, Star, Play, Search, X } from "lucide-react";
+import {
+  Film,
+  Loader2,
+  AlertCircle,
+  RotateCcw,
+  Star,
+  Play,
+  Search,
+  X,
+} from "lucide-react";
 import { api, Category, Movie } from "@/lib/api";
 import ContentRow from "@/components/ContentRow";
+import MovieOverlay from "@/components/MovieOverlay";
 import { Skeleton } from "@/components/Skeleton";
 import { useSettings } from "@/context/SettingsContext";
 import { filterCategories } from "@/lib/settings";
@@ -54,9 +64,15 @@ export default function Movies() {
   const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get("q") || "";
   const setSearchQuery = useCallback(
-    (q: string) => { if (q) setSearchParams({ q }); else setSearchParams({}); },
+    (q: string) => {
+      if (q) setSearchParams({ q });
+      else setSearchParams({});
+    },
     [setSearchParams]
   );
+
+  // Overlay state
+  const [overlayMovie, setOverlayMovie] = useState<Movie | null>(null);
 
   // Load categories (with 15-min sessionStorage cache)
   useEffect(() => {
@@ -343,43 +359,53 @@ export default function Movies() {
                 {filtered.map((m) => (
                   <button
                     key={m.stream_id}
-                    onClick={() => navigate(`/watch/movie/${m.stream_id}`)}
-                    data-watch-link
-                    className="group shrink-0 w-[160px] bg-card rounded-lg border border-border overflow-hidden hover:border-primary/30 transition-all"
+                    onClick={() => setOverlayMovie(m)}
+                    className="group shrink-0 w-[170px] sm:w-[185px] flex flex-col rounded-xl overflow-hidden bg-card border border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left"
                   >
-                    <div className="aspect-[2/3] bg-muted relative overflow-hidden">
+                    {/* Poster */}
+                    <div className="relative w-full aspect-[2/3] bg-muted overflow-hidden">
                       {m.stream_icon ? (
                         <img
                           src={m.stream_icon}
                           alt=""
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
                           loading="lazy"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                              "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 3'><rect fill='%231a1a2e' width='2' height='3'/></svg>";
+                            (e.target as HTMLImageElement).style.display = "none";
                           }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Film className="h-8 w-8 text-muted-foreground/30" />
+                        <div className="w-full h-full flex items-center justify-center bg-[#141420]">
+                          <Film className="h-8 w-8 text-white/10" />
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                        <Play className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {/* Bottom gradient for title readability */}
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+                      {/* Play button on hover */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
+                        <div className="p-3 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100">
+                          <Play className="h-5 w-5 fill-white" />
+                        </div>
                       </div>
+                      {/* Rating badge */}
+                      {m.rating && (
+                        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[11px] font-semibold text-yellow-400 flex items-center gap-0.5">
+                          <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
+                          {m.rating}
+                        </div>
+                      )}
+                      {/* Format badge */}
+                      {m.container_extension && (
+                        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[10px] font-medium text-white/60">
+                          {m.container_extension.toUpperCase()}
+                        </div>
+                      )}
                     </div>
-                    <div className="p-2">
-                      <p className="text-[11px] font-medium line-clamp-2 leading-tight mb-1">
+                    {/* Title */}
+                    <div className="p-2.5 flex-1">
+                      <p className="text-xs font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">
                         {m.name}
                       </p>
-                      {m.rating && (
-                        <div className="flex items-center gap-1">
-                          <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                          <span className="text-[10px] text-muted-foreground">
-                            {m.rating}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </button>
                 ))}
@@ -405,6 +431,14 @@ export default function Movies() {
             Adjust your language or service settings to see more content
           </p>
         </div>
+      )}
+
+      {/* Movie overlay */}
+      {overlayMovie && (
+        <MovieOverlay
+          movie={overlayMovie}
+          onClose={() => setOverlayMovie(null)}
+        />
       )}
     </div>
   );
