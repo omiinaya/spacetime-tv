@@ -1,8 +1,19 @@
 const API = "/api";
 
 // Route images from blocked CDNs through our proxy
+// Also sanitizes malformed concatenated URLs (provider data quirk)
 export function imageUrl(raw: string): string {
   if (!raw) return "";
+  
+  // Fix concatenated TMDB URLs: "image.tmdb.https//image.tmdb.org/t/p/original/X.jpgorg/t/p/w600..."
+  // Extract the first valid TMDB image URL and fix any missing protocol colon
+  const m = raw.match(
+    /(https?:?\/\/image\.tmdb\.org\/t\/p\/\w+\/[a-zA-Z0-9]+\.(?:jpg|jpeg|png|webp))/i
+  );
+  if (m) {
+    return m[1].replace(/^https\/\//, "https://").replace(/^http\/\//, "http://");
+  }
+
   if (raw.includes("cmc.exchange-cdn.com")) {
     return `/api/image-proxy?url=${encodeURIComponent(raw)}`;
   }
