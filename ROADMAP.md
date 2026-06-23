@@ -109,16 +109,16 @@
 ### Phase 4: Deep Cuts (P4 — ~10h, optional)
 *Nice-to-haves that make the app feel premium.*
 
-| # | Task | Effort | 
-|---|------|--------|
-| P4.1 | Subtitle support (WebVTT parsing, track selection UI in player) | 3h |
-| P4.2 | Audio track selection (expose multi-language audio in MKV/MP4) | 2h |
-| P4.3 | Download for offline (cache MP4 to IndexedDB, download button) | 3h |
-| P4.4 | Keyboard shortcut `/` to focus global search | 15m |
-| P4.5 | Sleep timer (30m/60m/90m auto-pause with countdown) | 1h |
-| P4.6 | Mobile swipe-to-go-back gesture in player overlay | 30m |
-| P4.7 | Admin dashboard page (cache stats, popular content, error trends) | 2h |
-| P4.8 | Cache warmer configuration (env var toggle, category filter) | 30m |
+| # | Task | Effort | Status |
+|---|------|--------|--------|
+| P4.1 | Subtitle support (WebVTT parsing, track selection UI in player) | 3h | ✅ Probe + extract + selector |
+| P4.2 | Audio track selection (expose multi-language audio in MKV/MP4) | 2h | ✅ ffprobe + selector UI |
+| P4.3 | Download for offline (cache MP4 to IndexedDB, download button) | 3h | ✅ Download button (MKV redirect) |
+| P4.4 | Keyboard shortcut `/` to focus global search | 15m | ✅ App-wide keydown listener |
+| P4.5 | Sleep timer (30m/60m/90m auto-pause with countdown) | 1h | ✅ Moon icon + countdown |
+| P4.6 | Mobile swipe-to-go-back gesture in player overlay | 30m | ✅ Rightward swipe > 80px |
+| P4.7 | Admin dashboard page (cache stats, popular content, error trends) | 2h | ✅ /admin with stats grid |
+| P4.8 | Cache warmer configuration (env var toggle, category filter) | 30m | ✅ CACHE_WARM_* env vars |
 
 ---
 
