@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { api, MovieInfo, UnifiedMovie, MovieLanguage, imageUrl } from "@/lib/api";
 import MediaOverlay from "@/components/MediaOverlay";
+import SimilarMovies from "@/components/SimilarMovies";
 
 interface MovieOverlayProps {
   movie: UnifiedMovie;
@@ -201,6 +202,8 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
           </div>
         </>
       )}
+      {/* More Like This */}
+      <SimilarMovies categoryId={movie.category_id} currentId={movie.stream_id} />
     </MediaOverlay>
   );
 }
