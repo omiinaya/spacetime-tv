@@ -157,6 +157,7 @@ export interface Movie {
   tmdb?: string;
   category_id: string;
   container_extension: string;
+  added?: string;
 }
 
 export interface MovieInfo {

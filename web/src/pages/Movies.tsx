@@ -204,6 +204,43 @@ export default function Movies() {
         </div>
       )}
 
+      {/* Recently Added */}
+      {!loading && movies.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-muted-foreground mb-3">Recently Added</h2>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {[...movies]
+              .filter((m): m is typeof m & { added: string } => !!m.added)
+              .sort((a, b) => parseInt(b.added) - parseInt(a.added))
+              .slice(0, 12)
+              .map((m) => (
+                <button
+                  key={`recent-${m.stream_id}`}
+                  onClick={() => setOverlayMovie(m)}
+                  className="shrink-0 w-[120px] group"
+                >
+                  <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5">
+                    {m.stream_icon ? (
+                      <img src={imageUrl(m.stream_icon)} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-[#141420]">
+                        <Film className="h-6 w-6 text-white/10" />
+                      </div>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/70 to-transparent" />
+                    <span className="absolute bottom-1.5 left-1.5 text-[10px] font-medium text-white/80">
+                      {m.rating && `★${parseFloat(m.rating).toFixed(1)}`}
+                    </span>
+                  </div>
+                  <p className="text-[11px] leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+                    {m.base_name || m.name}
+                  </p>
+                </button>
+              ))}
+          </div>
+        </div>
+      )}
+
       {/* Loading skeleton */}
       {loading && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
