@@ -1645,6 +1645,19 @@ app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="as
 @app.get("/api/image-proxy")
 async def image_proxy(url: str = Query(...)):
     """Proxy images from blocked CDNs (cmc.exchange-cdn.com) through our server."""
+    from urllib.parse import urlparse
+    
+    # SSRF guard: only allow known image CDNs
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        raise HTTPException(400, "Invalid URL")
+    
+    allowed_hosts = {"cmc.exchange-cdn.com", "image.tmdb.org"}
+    host = parsed.hostname or ""
+    if not any(host == a or host.endswith("." + a) for a in allowed_hosts):
+        raise HTTPException(400, f"Host not allowed: {host}")
+    
     resp = await client.get(url, follow_redirects=True)
     resp.raise_for_status()
     content_type = resp.headers.get("content-type", "image/jpeg")
