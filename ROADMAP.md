@@ -98,13 +98,13 @@
 ### Phase 3: Performance & Architecture (P3 — ~6h)
 *Make the codebase maintainable and the UX snappy.*
 
-| # | Task | Effort | 
-|---|------|--------|
-| P3.1 | Extract `useVideoPlayer` hook from Player.tsx (deferred P1.2) | 2h |
-| P3.2 | Split Guide.tsx into hooks + smaller components | 1.5h |
-| P3.3 | Background EPG refresh (fetch every 30m, push updates via SSE) | 1.5h |
-| P3.4 | Search history (last 10 searches, localStorage, dropdown suggestions) | 1h |
-| P3.5 | Pagination UI (page numbers + "jump to page" for movies/series) | 1h |
+| # | Task | Effort | Status |
+|---|------|--------|--------|
+| P3.1 | Extract `useVideoPlayer` hook from Player.tsx (deferred P1.2) | 2h | ✅ Player 1031→301 lines |
+| P3.2 | Split Guide.tsx into hooks + smaller components | 1.5h | ✅ Guide 511→142 lines |
+| P3.3 | Background EPG refresh (fetch every 30m, push updates via SSE) | 1.5h | ✅ SSE + 30min poll |
+| P3.4 | Search history (last 10 searches, localStorage, dropdown suggestions) | 1h | ✅ SearchHistory component |
+| P3.5 | Pagination UI (page numbers + "jump to page" for movies/series) | 1h | ✅ Pagination component |
 
 ### Phase 4: Deep Cuts (P4 — ~10h, optional)
 *Nice-to-haves that make the app feel premium.*
