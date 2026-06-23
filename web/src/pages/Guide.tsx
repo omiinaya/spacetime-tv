@@ -21,8 +21,12 @@ function parseXmltvTime(ts: string): Date {
   const clean = ts.trim();
   const datePart = clean.slice(0, 8);
   const timePart = clean.slice(8, 14);
-  const tzPart = clean.slice(15); // after space
-  const iso = `${datePart.slice(0, 4)}-${datePart.slice(4, 6)}-${datePart.slice(6, 8)}T${timePart.slice(0, 2)}:${timePart.slice(2, 4)}:${timePart.slice(4, 6)}${tzPart}`;
+  const tzPart = clean.slice(15).trim(); // after space, e.g. "+0200"
+  // Add colon to timezone offset for valid ISO 8601 (+0200 → +02:00)
+  const tzIso = tzPart
+    ? tzPart.replace(/^([+-]\d{2})(\d{2})$/, "$1:$2")
+    : "Z";  // default to UTC if no timezone
+  const iso = `${datePart.slice(0, 4)}-${datePart.slice(4, 6)}-${datePart.slice(6, 8)}T${timePart.slice(0, 2)}:${timePart.slice(2, 4)}:${timePart.slice(4, 6)}${tzIso}`;
   return new Date(iso);
 }
 
