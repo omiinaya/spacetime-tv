@@ -311,7 +311,7 @@ export default function LiveTV() {
                     {s.stream_icon ? (
                       <img
                         src={`/api/iptv/${s.stream_icon.replace("http://", "").replace("https://", "")}`}
-                        alt=""
+                        alt={s.name ? `${s.name} logo` : ""}
                         className="w-full h-12 object-contain mb-2 rounded opacity-80"
                         loading="lazy"
                         onError={(e) => {

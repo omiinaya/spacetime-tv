@@ -346,7 +346,7 @@ export default function SeriesPage() {
                       {s.cover ? (
                         <img
                           src={s.cover}
-                          alt=""
+                          alt={s.name ? `${s.name} poster` : ""}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
                           loading="lazy"
                           onError={(e) => {
@@ -473,7 +473,7 @@ function ContinueWatchingRow({ navigate }: { navigate: (path: string) => void })
               {item.cover ? (
                 <img
                   src={imageUrl(item.cover)}
-                  alt=""
+                  alt={item.seriesName ? `${item.seriesName} poster` : ""}
                   className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity"
                   loading="lazy"
                 />

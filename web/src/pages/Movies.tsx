@@ -16,16 +16,27 @@ import { PosterCardSkeleton } from "@/components/Skeleton";
 const PAGE_SIZE = 50;
 
 export default function Movies() {
-  // ── Search (URL-persisted) ──────────────────────────────────────
+  // ── Search (URL-persisted, debounced) ──────────────────────────
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchQuery = searchParams.get("q") || "";
-  const setSearchQuery = useCallback(
-    (q: string) => {
-      if (q) setSearchParams({ q });
-      else setSearchParams({});
-    },
-    [setSearchParams]
-  );
+  const urlQuery = searchParams.get("q") || "";
+  const [inputValue, setInputValue] = useState(urlQuery);
+  const [searchQuery, setSearchQueryState] = useState(urlQuery);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleInputChange = useCallback((value: string) => {
+    setInputValue(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setSearchQueryState(value);
+      if (value) setSearchParams({ q: value }, { replace: true });
+      else setSearchParams({}, { replace: true });
+    }, 300);
+  }, [setSearchParams]);
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, []);
 
   // ── State ───────────────────────────────────────────────────────
   const [movies, setMovies] = useState<UnifiedMovie[]>([]);
@@ -123,14 +134,14 @@ export default function Movies() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
         <input
           type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          value={inputValue}
+          onChange={(e) => handleInputChange(e.target.value)}
           placeholder="Search movies..."
           className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
         />
-        {searchQuery && (
+        {inputValue && (
           <button
-            onClick={() => setSearchQuery("")}
+            onClick={() => handleInputChange("")}
             className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
           >
             <X className="h-3.5 w-3.5" />
@@ -158,7 +169,7 @@ export default function Movies() {
           </p>
           {searchQuery && (
             <button
-              onClick={() => setSearchQuery("")}
+              onClick={() => handleInputChange("")}
               className="mt-2 text-xs text-primary hover:underline"
             >
               Clear search
@@ -183,7 +194,7 @@ export default function Movies() {
                   {m.stream_icon ? (
                     <img
                       src={imageUrl(m.stream_icon)}
-                      alt=""
+                      alt={(m.base_name || m.name) ? `${m.base_name || m.name} poster` : ""}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
                       loading="lazy"
                       onError={(e) => {

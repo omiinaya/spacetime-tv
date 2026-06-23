@@ -72,7 +72,7 @@ export default function MediaOverlay({
             <>
               <img
                 src={imageUrl(bannerUrl)}
-                alt=""
+                alt={`${title} banner`}
                 className="w-full h-full object-cover opacity-60"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = "none";
@@ -91,7 +91,7 @@ export default function MediaOverlay({
               <div className="hidden sm:block w-[160px] shrink-0 rounded-lg overflow-hidden ring-1 ring-white/10 shadow-2xl -mb-2">
                 <img
                   src={imageUrl(posterUrl)}
-                  alt=""
+                  alt={`${title} poster`}
                   className="w-full aspect-[2/3] object-cover"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = "none";

@@ -263,7 +263,7 @@ export default function SearchPage() {
                     {s.stream_icon ? (
                       <img
                         src={`/api/iptv/${s.stream_icon.replace("http://", "").replace("https://", "")}`}
-                        alt=""
+                        alt={s.name ? `${s.name} logo` : ""}
                         className="w-full h-12 object-contain mb-2 rounded opacity-80"
                         loading="lazy"
                         onError={(e) => {
@@ -305,7 +305,7 @@ export default function SearchPage() {
                       {m.stream_icon ? (
                         <img
                           src={imageUrl(m.stream_icon)}
-                          alt=""
+                          alt={m.name ? `${m.name} poster` : ""}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           loading="lazy"
                           onError={(e) => {
@@ -356,7 +356,7 @@ export default function SearchPage() {
                       {s.cover ? (
                         <img
                           src={s.cover}
-                          alt=""
+                          alt={s.name ? `${s.name} poster` : ""}
                           className="w-full h-full object-cover"
                           loading="lazy"
                           onError={(e) => {

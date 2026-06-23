@@ -498,12 +498,24 @@ export default function Player({ type }: PlayerProps) {
       const p = phaseRef.current;
       if (p === "loading" || p === "probing") {
         setPhase("error");
-        setErrorMsg("Stream timed out.");
+        setErrorMsg("Stream unavailable. The content may have been removed or is temporarily offline.");
       }
-    }, 30000);
+    }, 15000);
+
+    // Fast-fail: if video has no data after 5s, the stream is empty
+    const emptyCheck = setInterval(() => {
+      if (video.readyState === 0 && phaseRef.current === "loading") {
+        clearInterval(emptyCheck);
+        setPhase("error");
+        setErrorMsg("Stream unavailable. The content may have been removed or is temporarily offline.");
+      } else if (video.readyState > 0 || phaseRef.current !== "loading") {
+        clearInterval(emptyCheck);
+      }
+    }, 2000);
 
     mpegtsCleanup.current = () => {
       clearTimeout(timeout);
+      clearInterval(emptyCheck);
       if (saveInterval) clearInterval(saveInterval);
       video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("durationchange", onDurationChange);

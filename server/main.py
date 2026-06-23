@@ -1734,9 +1734,24 @@ _IMG_CACHE_TTL = 3600  # 1 hour
 _MAX_IMG_CACHE_SIZE = 500  # evict oldest entry when exceeded
 
 @app.get("/api/image-proxy")
-async def image_proxy(url: str = Query(...)):
+async def image_proxy(request: Request, url: str = Query(...)):
     """Proxy images from blocked CDNs (cmc.exchange-cdn.com) through our server."""
     from urllib.parse import urlparse
+    
+    # Hotlink guard: only allow requests from our own frontend
+    referer = request.headers.get("referer", "")
+    origin = request.headers.get("origin", "")
+    host = request.headers.get("host", "")
+    # Allow: same-origin requests (empty referer = direct browser loads, our host, or localhost dev)
+    is_ours = (
+        not referer  # direct browser loads (CSS backgrounds, etc.)
+        or host in referer
+        or "localhost" in referer
+        or "127.0.0.1" in referer
+        or (origin and (host in origin or "localhost" in origin))
+    )
+    if not is_ours:
+        raise HTTPException(403, "Direct access not allowed — use from the Spacetime-TV app")
     
     # SSRF guard: only allow known image CDNs
     try:

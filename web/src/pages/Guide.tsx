@@ -403,7 +403,7 @@ function ChannelRow({
           {group.channel_icon ? (
             <img
               src={group.channel_icon}
-              alt=""
+              alt={group.channel_name ? `${group.channel_name} icon` : ""}
               className="w-7 h-7 object-contain"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = "none";
