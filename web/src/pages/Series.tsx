@@ -323,78 +323,57 @@ export default function SeriesPage() {
                 onScrollEnd={q ? undefined : hasMore ? () => loadMore(cat) : undefined}
               >
                 {filtered.map((s) => (
-                  <div
+                  <button
                     key={s.series_id}
-                    className="group shrink-0 w-[160px] bg-card rounded-lg border border-border overflow-hidden hover:border-primary/30 transition-all"
+                    onClick={() => setOverlaySeries(s)}
+                    className="group shrink-0 w-[170px] sm:w-[185px] flex flex-col rounded-xl overflow-hidden bg-card border border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left"
                   >
-                    {/* Cover — clicking opens overlay */}
-                    <div
-                      onClick={() => setOverlaySeries(s)}
-                      className="w-full aspect-[2/3] bg-muted relative overflow-hidden cursor-pointer"
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === 'Enter') setOverlaySeries(s); }}
-                    >
+                    {/* Poster */}
+                    <div className="relative w-full aspect-[2/3] bg-muted overflow-hidden">
                       {s.cover ? (
                         <img
                           src={s.cover}
                           alt=""
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
                           loading="lazy"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                              "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 3'><rect fill='%231a1a2e' width='2' height='3'/></svg>";
+                            (e.target as HTMLImageElement).style.display = "none";
                           }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Tv2 className="h-8 w-8 text-muted-foreground/30" />
+                        <div className="w-full h-full flex items-center justify-center bg-[#141420]">
+                          <Tv2 className="h-8 w-8 text-white/10" />
                         </div>
                       )}
-                      {/* Play button — direct play, skips overlay */}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/watch/series/${s.series_id}/1`);
-                          }}
-                          data-watch-link
-                          className="p-2 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/80"
-                        >
-                          <Play className="h-5 w-5" />
-                        </button>
+                      {/* Bottom gradient for title readability */}
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+                      {/* Play button on hover */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
+                        <div className="p-3 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100">
+                          <Play className="h-5 w-5 fill-white" />
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="p-2">
-                      <button
-                        onClick={() => setOverlaySeries(s)}
-                        className="w-full text-left"
-                      >
-                        <p className="text-[11px] font-medium line-clamp-2 leading-tight mb-1 hover:text-primary transition-colors">
-                          {s.name}
-                        </p>
-                      </button>
-                      <div className="flex items-center gap-2 mb-1">
-                        {s.rating && (
-                          <div className="flex items-center gap-1">
-                            <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                            <span className="text-[10px] text-muted-foreground">{s.rating}</span>
-                          </div>
-                        )}
-                        {s.releaseDate && (
-                          <span className="text-[10px] text-muted-foreground/60">
-                            {s.releaseDate.slice(0, 4)}
-                          </span>
-                        )}
-                      </div>
-                      {s.genre && (
-                        <p className="text-[9px] text-muted-foreground/50 line-clamp-1">
-                          {s.genre}
-                        </p>
+                      {/* Rating badge */}
+                      {s.rating && (
+                        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[11px] font-semibold text-yellow-400 flex items-center gap-0.5">
+                          <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
+                          {s.rating}
+                        </div>
+                      )}
+                      {/* Year badge */}
+                      {s.releaseDate && (
+                        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[10px] font-medium text-white/70">
+                          {s.releaseDate.slice(0, 4)}
+                        </div>
                       )}
                     </div>
-                  </div>
+                    {/* Title */}
+                    <div className="p-2.5 flex-1">
+                      <p className="text-xs font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                        {s.name}
+                      </p>
+                    </div>
+                  </button>
                 ))}
               </ContentRow>
             );
