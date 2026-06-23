@@ -1229,10 +1229,27 @@ async def epg_sse(request: Request):
 # ── Cache Warming ───────────────────────────────────────────────────────────
 # Pre-fetch all VOD/series data at startup so searches are instant.
 # Without this, the first search triggers hundreds of per-category fetches.
-CACHE_WARM_CONCURRENCY = 20  # IPTV provider handles this fine (tested)
+#
+# Configurable via env vars:
+#   CACHE_WARM_ENABLED=true        — toggle on/off (default: true)
+#   CACHE_WARM_CONCURRENCY=20      — max concurrent fetches (default: 20)
+#   CACHE_WARM_CATEGORIES=""       — comma-separated category IDs to warm (default: all)
+
+CACHE_WARM_ENABLED = os.getenv("CACHE_WARM_ENABLED", "true").lower() in ("1", "true", "yes")
+CACHE_WARM_CONCURRENCY = int(os.getenv("CACHE_WARM_CONCURRENCY", "20"))
+CACHE_WARM_CATEGORIES = os.getenv("CACHE_WARM_CATEGORIES", "")
 
 async def warm_cache():
     """Pre-fetch all VOD and series data into memory (background task)."""
+    if not CACHE_WARM_ENABLED:
+        log.info("[WARMER] Disabled via CACHE_WARM_ENABLED env var — skipping")
+        return
+
+    filter_cats = None
+    if CACHE_WARM_CATEGORIES:
+        filter_cats = set(int(x.strip()) for x in CACHE_WARM_CATEGORIES.split(",") if x.strip())
+        log.info(f"[WARMER] Filtering to {len(filter_cats)} categories: {filter_cats}")
+
     log.info("[WARMER] Starting cache warming for VOD + Series...")
     start = time.time()
 
@@ -1240,6 +1257,8 @@ async def warm_cache():
     try:
         vod_cats = await cached_fetch("vod_categories", "get_vod_categories")
         vod_cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
+        if filter_cats:
+            vod_cat_ids = [cid for cid in vod_cat_ids if cid in filter_cats]
         sem = asyncio.Semaphore(CACHE_WARM_CONCURRENCY)
         async def fetch_vod_cat(cid):
             async with sem:
@@ -1253,6 +1272,8 @@ async def warm_cache():
     try:
         series_cats = await cached_fetch("series_categories", "get_series_categories")
         series_cat_ids = [c["category_id"] for c in series_cats if c.get("category_id")]
+        if filter_cats:
+            series_cat_ids = [cid for cid in series_cat_ids if cid in filter_cats]
         sem = asyncio.Semaphore(CACHE_WARM_CONCURRENCY)
         async def fetch_series_cat(cid):
             async with sem:

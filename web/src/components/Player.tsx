@@ -8,6 +8,7 @@ import { useFullscreen } from "@/hooks/useFullscreen";
 import { useKeyboard } from "@/hooks/useKeyboard";
 import { useVideoPlayer, fmtTime, QUALITIES, SPEEDS } from "@/hooks/useVideoPlayer";
 import { SubtitleSelector } from "@/components/SubtitleSelector";
+import { SleepTimer } from "@/components/SleepTimer";
 
 // ── Types ─────────────────────────────────────────────────────
 interface PlayerProps { type: "live" | "movie" | "series"; }
@@ -29,6 +30,7 @@ export default function Player({ type }: PlayerProps) {
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showQualityMenu, setShowQualityMenu] = useState(false);
   const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
   const showControls = useCallback((temporary = false) => {
     setControlsVisible(true);
@@ -127,9 +129,33 @@ export default function Player({ type }: PlayerProps) {
       className="relative w-full bg-black group"
       onMouseMove={() => showControls(true)}
       onMouseLeave={() => { if (phase === "playing") hideControls(); }}
-      onTouchStart={() => {
+      onTouchStart={(e) => {
+        // Track swipe start for swipe-to-go-back
+        if (e.touches.length === 1) {
+          swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+        // Toggle controls on tap
         if (controlsVisible) hideControls();
         else showControls(true);
+      }}
+      onTouchMove={(e) => {
+        if (!swipeStart.current || e.touches.length !== 1) return;
+        // Only handle horizontal swipes (not vertical scrolls)
+        const dx = e.touches[0].clientX - swipeStart.current.x;
+        const dy = e.touches[0].clientY - swipeStart.current.y;
+        if (Math.abs(dx) > Math.abs(dy) && dx > 30) {
+          e.preventDefault(); // prevent page scroll during swipe
+        }
+      }}
+      onTouchEnd={(e) => {
+        if (!swipeStart.current) return;
+        const dx = (e.changedTouches[0]?.clientX || 0) - swipeStart.current.x;
+        const dy = Math.abs((e.changedTouches[0]?.clientY || 0) - swipeStart.current.y);
+        // Rightward swipe > 80px, horizontal dominance → go back
+        if (dx > 80 && dx > dy * 1.5) {
+          goBack();
+        }
+        swipeStart.current = null;
       }}
       style={{ aspectRatio: "16 / 9", maxHeight: "calc(100vh - 4rem)" }}
     >
@@ -274,6 +300,12 @@ export default function Player({ type }: PlayerProps) {
               mediaType={type === "series" ? "series" : "movie"}
               streamId={epId || id || ""}
               videoRef={videoRef}
+            />
+            <SleepTimer
+              onPause={() => {
+                const v = videoRef.current;
+                if (v && !v.paused) { v.pause(); }
+              }}
             />
             {isLive && (
               <div className="relative">

@@ -129,6 +129,25 @@ function AppLayout() {
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
+  // Global '/' keyboard shortcut: focus search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input/textarea/contenteditable
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if ((e.target as HTMLElement).isContentEditable) return;
+      // Ignore if a modifier key is held (Cmd+/ or Ctrl+/)
+      if (e.metaKey || e.ctrlKey) return;
+
+      if (e.key === "/") {
+        e.preventDefault();
+        navigate("/search");
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [navigate]);
+
   const sidebar = (
     <div
       className="flex flex-col h-full bg-sidebar border-r border-border shrink-0"
