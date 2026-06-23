@@ -17,6 +17,11 @@ import { Skeleton } from "@/components/Skeleton";
 import { PosterCardSkeleton } from "@/components/Skeleton";
 import { useSettings } from "@/context/SettingsContext";
 import { filterCategories } from "@/lib/settings";
+import {
+  getContinueWatching,
+  type SeriesProgress,
+} from "@/lib/continueWatching";
+import { imageUrl } from "@/lib/api";
 
 const ROWS_PER_PAGE = 10;
 const SERIES_PER_ROW = 20;
@@ -241,6 +246,9 @@ export default function SeriesPage() {
         </div>
       </div>
 
+      {/* Continue Watching */}
+      <ContinueWatchingRow navigate={navigate} />
+
       {/* Section search */}
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
@@ -386,7 +394,6 @@ export default function SeriesPage() {
         </div>
       )}
 
-      {/* Sentinel */}
       <div ref={sentinelRef} className="h-1" />
       {!q && visibleRows < filteredCatsBySettings.length && (
         <div className="flex justify-center py-4">
@@ -411,6 +418,97 @@ export default function SeriesPage() {
           onClose={() => setOverlaySeries(null)}
         />
       )}
+    </div>
+  );
+}
+
+function ContinueWatchingRow({ navigate }: { navigate: (path: string) => void }) {
+  const [items, setItems] = useState<SeriesProgress[]>([]);
+
+  useEffect(() => {
+    setItems(getContinueWatching());
+  }, []);
+
+  if (items.length === 0) return null;
+
+  // Enrich items with cached metadata from sessionStorage
+  const enriched = items.map((item) => {
+    try {
+      const raw = sessionStorage.getItem(`stv_series_meta_${item.seriesId}`);
+      if (raw) {
+        const meta = JSON.parse(raw);
+        return {
+          ...item,
+          seriesName: item.seriesName || meta.name || `Series ${item.seriesId}`,
+          cover: item.cover || meta.cover || "",
+        };
+      }
+    } catch {}
+    return {
+      ...item,
+      seriesName: item.seriesName || `Series ${item.seriesId}`,
+    };
+  });
+
+  const fmtTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  return (
+    <div className="space-y-3">
+      <h2 className="text-lg font-semibold px-1">Continue Watching</h2>
+      <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
+        {enriched.map((item) => (
+          <button
+            key={`${item.seriesId}-${item.seasonNumber}-${item.episodeNum}`}
+            onClick={() =>
+              navigate(`/watch/series/${item.seriesId}/${item.episodeId}`)
+            }
+            className="shrink-0 w-[280px] text-left group"
+            aria-label={`Continue ${item.seriesName}, ${item.episodeTitle}`}
+          >
+            <div className="relative aspect-video bg-[#141420] rounded-lg overflow-hidden mb-2">
+              {item.cover ? (
+                <img
+                  src={imageUrl(item.cover)}
+                  alt=""
+                  className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Play className="h-8 w-8 text-white/10" aria-hidden="true" />
+                </div>
+              )}
+              {item.durationSeconds > 0 && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/20">
+                  <div
+                    className="h-full bg-primary"
+                    style={{
+                      width: `${Math.min(100, (item.progressSeconds / item.durationSeconds) * 100)}%`,
+                    }}
+                  />
+                </div>
+              )}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="p-3 rounded-full bg-black/60">
+                  <Play className="h-5 w-5 text-white fill-white" aria-hidden="true" />
+                </div>
+              </div>
+            </div>
+            <p className="text-xs font-medium text-white/80 line-clamp-1">
+              {item.seriesName}
+            </p>
+            <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+              S{item.seasonNumber}E{item.episodeNum} · {item.episodeTitle}
+              {item.progressSeconds > 0 &&
+                ` · ${fmtTime(item.progressSeconds)} remaining`}
+            </p>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

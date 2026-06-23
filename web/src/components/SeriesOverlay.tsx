@@ -76,6 +76,16 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
   };
 
   const playEpisode = (epId: string | number) => {
+    // Save series metadata for Continue Watching
+    try {
+      sessionStorage.setItem(
+        `stv_series_meta_${series.series_id}`,
+        JSON.stringify({
+          name: series.name,
+          cover: series.cover,
+        })
+      );
+    } catch {}
     navigate(`/watch/series/${series.series_id}/${epId}`);
     onClose();
   };

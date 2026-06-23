@@ -8,6 +8,7 @@ import mpegts from "mpegts.js";
 import Hls from "hls.js";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useKeyboard } from "@/hooks/useKeyboard";
+import { saveSeriesProgress } from "@/lib/continueWatching";
 
 // ── Types ──────────────────────────────────────────────────────
 interface PlayerProps { type: "live" | "movie" | "series"; }
@@ -359,6 +360,21 @@ export default function Player({ type }: PlayerProps) {
         const t = startOffset + (Date.now() - vodStartTime) / 1000;
         if (t > 5) {
           saveWatchPos(watchKey, t);
+          // Also save series progress for Continue Watching
+          if (type === "series" && seriesId) {
+            saveSeriesProgress({
+              seriesId: parseInt(seriesId),
+              seriesName: "",
+              cover: "",
+              seasonNumber: 0,
+              episodeNum: 0,
+              episodeId: epId || "",
+              episodeTitle: "",
+              progressSeconds: t,
+              durationSeconds: video?.duration || 0,
+              updatedAt: Date.now(),
+            });
+          }
         }
       }, 5000);
     }
