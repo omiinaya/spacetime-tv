@@ -30,10 +30,24 @@ interface RowState {
 
 export default function SeriesPage() {
   const navigate = useNavigate();
-  const [categories, setCategories] = useState<Category[]>([]);
+
+  // ── Cache helper ───────────────────────────────────────────────
+  const loadCache = <T,>(key: string, field: string, ttl = 900000): T | null => {
+    try {
+      const raw = sessionStorage.getItem(key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed[field] && Date.now() - parsed.ts < ttl) return parsed[field];
+    } catch {}
+    return null;
+  };
+
+  const [categories, setCategories] = useState<Category[]>(
+    () => loadCache("stv_series_cats", "categories") ?? []
+  );
   const [rows, setRows] = useState<Map<string, RowState>>(new Map());
   const [visibleRows, setVisibleRows] = useState(ROWS_PER_PAGE);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !loadCache("stv_series_cats", "categories"));
   const [error, setError] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const fetchingRef = useRef<Set<string>>(new Set());

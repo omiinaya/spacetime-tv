@@ -12,13 +12,51 @@ const BATCH = 50;
 export default function LiveTV() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [categories, setCategories] = useState<Category[]>([]);
+
+  // ── Cache helpers ──────────────────────────────────────────────
+  const loadCache = <T,>(key: string, field: string, ttl = 900000): T | null => {
+    try {
+      const raw = sessionStorage.getItem(key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed[field] && Date.now() - parsed.ts < ttl) return parsed[field];
+    } catch {}
+    return null;
+  };
+
+  // Slim allStreams for sessionStorage (full objects are ~17MB — way over quota).
+  // Only keep fields needed for search + display: id, name, category_id.
+  // Icons are NOT cached (they're long URLs — would add ~3.8MB).
+  // Key names abbreviated to save space: id, n, c
+  const SLIM_ALL_KEY = "stv_live_all_slim";
+  const restoreAllStreams = (): LiveStream[] => {
+    try {
+      const raw = sessionStorage.getItem(SLIM_ALL_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (parsed.a && Date.now() - parsed.ts < 900000) {
+        return (parsed.a as any[]).map((s: any) => ({
+          stream_id: s.id, name: s.n, stream_icon: "",
+          category_id: s.c, num: 0, stream_type: "live",
+          epg_channel_id: "", added: "", is_adult: 0,
+          category_ids: [s.c], custom_sid: null, tv_archive: 0,
+          direct_source: "", tv_archive_duration: 0,
+        } as LiveStream));
+      }
+    } catch {}
+    return [];
+  };
+
+  // Initialize from sessionStorage so the first render has data (no spinner flash)
+  const [categories, setCategories] = useState<Category[]>(
+    () => loadCache("stv_live_cats", "categories") ?? []
+  );
   const [activeCat, setActiveCat] = useState<string>("");
   const [streams, setStreams] = useState<LiveStream[]>([]);
-  const [allStreams, setAllStreams] = useState<LiveStream[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [allStreams, setAllStreams] = useState<LiveStream[]>(() => restoreAllStreams());
+  const [loading, setLoading] = useState(() => !loadCache("stv_live_cats", "categories"));
   const [streamsLoading, setStreamsLoading] = useState(false);
-  const [allLoading, setAllLoading] = useState(true);
+  const [allLoading, setAllLoading] = useState(() => !sessionStorage.getItem(SLIM_ALL_KEY));
   const [error, setError] = useState<string | null>(null);
 
   const searchQuery = searchParams.get("q") || "";
@@ -80,16 +118,20 @@ export default function LiveTV() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
 
-    // Fetch ALL streams for cross-category search (with sessionStorage cache)
+    // Fetch ALL streams for cross-category search (slim sessionStorage cache)
     let restored = false;
-    const cached = sessionStorage.getItem("stv_live_all");
+    const cached = sessionStorage.getItem(SLIM_ALL_KEY);
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        if (parsed.streams && Date.now() - parsed.ts < 900000) {
-          setAllStreams(parsed.streams);
-          setAllLoading(false);
+        if (parsed.a && Date.now() - parsed.ts < 900000) {
           restored = true;
+          // Already loaded via useState initializer (restoreAllStreams),
+          // but re-set in case the cache was stale and we showed nothing.
+          if (allStreams.length === 0) {
+            setAllStreams(restoreAllStreams());
+          }
+          setAllLoading(false);
         }
       } catch {}
     }
@@ -98,7 +140,13 @@ export default function LiveTV() {
         .all()
         .then((d) => {
           setAllStreams(d.streams);
-          sessionStorage.setItem("stv_live_all", JSON.stringify({ streams: d.streams, ts: Date.now() }));
+          // Slim cache: only id, name, category_id (~3MB vs 17MB)
+          try {
+            const slim = d.streams.map((s) => ({
+              id: s.stream_id, n: s.name, c: s.category_id,
+            }));
+            sessionStorage.setItem(SLIM_ALL_KEY, JSON.stringify({ a: slim, ts: Date.now() }));
+          } catch {}
         })
         .catch(() => {})
         .finally(() => setAllLoading(false));
