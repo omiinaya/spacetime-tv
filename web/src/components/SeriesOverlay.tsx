@@ -12,6 +12,7 @@ import {
   Plus,
 } from "lucide-react";
 import { api, Series, SeriesDetails, Episode, imageUrl } from "@/lib/api";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
 interface SeriesOverlayProps {
   series: Series;
@@ -57,18 +58,8 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
     };
   }, [series.series_id]);
 
-  // Close on Escape, lock scroll
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handler);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", handler);
-      document.body.style.overflow = "";
-    };
-  }, [onClose]);
+  // Lock body scroll + Escape to close
+  useLockBodyScroll(onClose);
 
   // ── Derived ───────────────────────────────────────────────────
   const info = details?.info;

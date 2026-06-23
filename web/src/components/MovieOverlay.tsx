@@ -14,6 +14,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { api, MovieInfo, UnifiedMovie, MovieLanguage, imageUrl } from "@/lib/api";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
 interface MovieOverlayProps {
   movie: UnifiedMovie;
@@ -117,18 +118,8 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
     };
   }, [currentStreamId]);
 
-  // Close on Escape, lock body scroll
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handler);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", handler);
-      document.body.style.overflow = "";
-    };
-  }, [onClose]);
+  // Lock body scroll + Escape to close
+  useLockBodyScroll(onClose);
 
   // Close language menu on outside click
   useEffect(() => {

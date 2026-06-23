@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import mpegts from "mpegts.js";
 import Hls from "hls.js";
+import { useFullscreen } from "@/hooks/useFullscreen";
 
 // ── Types ──────────────────────────────────────────────────────
 interface PlayerProps { type: "live" | "movie" | "series"; }
@@ -87,7 +88,7 @@ export default function Player({ type }: PlayerProps) {
   }, []);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [transcoding, setTranscoding] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
+  const { isFullscreen, setIsFullscreen } = useFullscreen();
   const [controlsVisible, setControlsVisible] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -677,18 +678,18 @@ export default function Player({ type }: PlayerProps) {
       if ((document as any).webkitExitFullscreen) {
         (document as any).webkitExitFullscreen();
       }
-      setFullscreen(false);
+      setIsFullscreen(false);
     } else {
       // Enter fullscreen — video element only (works everywhere: Chrome, Firefox, iOS Safari)
       const el = video as any;
       if (el.requestFullscreen) {
-        el.requestFullscreen().then(() => setFullscreen(true)).catch(() => {});
+        el.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
       } else if (el.webkitRequestFullscreen) {
         el.webkitRequestFullscreen();
-        setFullscreen(true);
+        setIsFullscreen(true);
       } else if (el.webkitEnterFullscreen) {
         el.webkitEnterFullscreen();
-        setFullscreen(true);
+        setIsFullscreen(true);
       }
     }
   }, []);
@@ -773,18 +774,6 @@ export default function Player({ type }: PlayerProps) {
           if (player) { try { player.destroy(); } catch {} }
         }, 0);
       }
-    };
-  }, []);
-
-  useEffect(() => {
-    const handler = () => {
-      setFullscreen(!!(document.fullscreenElement || (document as any).webkitFullscreenElement));
-    };
-    document.addEventListener("fullscreenchange", handler);
-    document.addEventListener("webkitfullscreenchange", handler);
-    return () => {
-      document.removeEventListener("fullscreenchange", handler);
-      document.removeEventListener("webkitfullscreenchange", handler);
     };
   }, []);
 
@@ -955,8 +944,8 @@ export default function Player({ type }: PlayerProps) {
                 )}
               </div>
             )}
-            <button ref={fullscreenBtnRef} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title={fullscreen ? "Exit Fullscreen" : "Fullscreen"}>
-              {fullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+            <button ref={fullscreenBtnRef} className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
+              {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
             </button>
           </div>
         </div>
