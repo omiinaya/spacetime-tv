@@ -110,3 +110,9 @@ body {
 .zoom-in-95 {
   animation-name: zoom-in-95;
 }
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

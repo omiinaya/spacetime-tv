@@ -1,4 +1,4 @@
-// Reusable skeleton primitives with pulse animation
+// Reusable skeleton primitives with shimmer animation
 export function Skeleton({
   className = "",
   style,
@@ -8,8 +8,13 @@ export function Skeleton({
 }) {
   return (
     <div
-      className={`animate-pulse rounded bg-muted ${className}`}
-      style={style}
+      className={`rounded bg-muted ${className}`}
+      style={{
+        background: "linear-gradient(90deg, oklch(0.15 0.005 286.033) 25%, oklch(0.22 0.005 286.033) 50%, oklch(0.15 0.005 286.033) 75%)",
+        backgroundSize: "200% 100%",
+        animation: "shimmer 1.5s ease-in-out infinite",
+        ...style,
+      }}
     />
   );
 }
