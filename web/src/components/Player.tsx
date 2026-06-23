@@ -631,8 +631,8 @@ export default function Player({ type }: PlayerProps) {
   const toggleMute = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
-    if (muted) { v.volume = volume || 0.8; setMuted(false); setVolumeState(v.volume); }
-    else { v.volume = 0; setMuted(true); }
+    if (muted) { v.muted = false; v.volume = volume || 0.8; setMuted(false); setVolumeState(v.volume); }
+    else { v.muted = true; v.volume = 0; setMuted(true); }
   }, [muted, volume]);
 
   const setSpeed = useCallback((rate: number) => {
@@ -806,7 +806,6 @@ export default function Player({ type }: PlayerProps) {
         ref={videoRef}
         className="absolute inset-0 w-full h-full object-contain"
         playsInline
-        muted
         webkit-playsinline="true"
         x-webkit-airplay="allow"
         onClick={togglePlay}
