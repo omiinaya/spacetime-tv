@@ -8,13 +8,23 @@ import {
   Search,
   X,
   Globe,
+  Heart,
 } from "lucide-react";
 import { api, UnifiedMovie, imageUrl } from "@/lib/api";
 import MovieOverlay from "@/components/MovieOverlay";
 import { PosterCardSkeleton } from "@/components/Skeleton";
 import { getMovieContinueWatching, type MovieProgress } from "@/lib/continueWatching";
+import { isInWatchlist, toggleWatchlist as toggleWl } from "@/lib/watchlist";
 
 const PAGE_SIZE = 50;
+
+function useWatchlistToggle() {
+  const [, setV] = useState(0);
+  return useCallback((movieId: number) => {
+    toggleWl(movieId);
+    setV(v => v + 1);
+  }, []);
+}
 
 export default function Movies() {
   // ── Search (URL-persisted, debounced) ──────────────────────────
@@ -40,6 +50,7 @@ export default function Movies() {
   }, []);
 
   // ── State ───────────────────────────────────────────────────────
+  const toggleWatchlist = useWatchlistToggle();
   const [movies, setMovies] = useState<UnifiedMovie[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -271,6 +282,16 @@ export default function Movies() {
                       {year}
                     </div>
                   )}
+                  {/* Watchlist heart */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleWatchlist(m.stream_id); }}
+                    className="absolute bottom-2 right-2 p-1 rounded-full bg-black/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
+                    aria-label={isInWatchlist(m.stream_id) ? "Remove from watchlist" : "Add to watchlist"}
+                  >
+                    <Heart
+                      className={`h-4 w-4 ${isInWatchlist(m.stream_id) ? "fill-red-500 text-red-500" : "text-white/70"}`}
+                    />
+                  </button>
                   {/* Language count badge */}
                   {m.language_count > 1 && (
                     <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[10px] font-medium text-white/60 flex items-center gap-1">

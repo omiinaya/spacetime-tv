@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import {
   Loader2, AlertCircle, ArrowLeft, Play, Pause, Maximize, Minimize,
-  Volume2, VolumeX, SkipBack, SkipForward, Settings
+  Volume2, VolumeX, SkipBack, SkipForward, Settings, PictureInPicture2
 } from "lucide-react";
 import mpegts from "mpegts.js";
 import Hls from "hls.js";
@@ -987,6 +987,17 @@ export default function Player({ type }: PlayerProps) {
                 </div>
               )}
             </div>
+            {/* PiP */}
+            <button onClick={() => {
+              const v = videoRef.current;
+              if (v) {
+                if (document.pictureInPictureElement) document.exitPictureInPicture();
+                else v.requestPictureInPicture().catch(() => {});
+              }
+            }}
+              className="text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center" aria-label="Picture in Picture">
+              <PictureInPicture2 className="w-4 h-4" aria-hidden="true" />
+            </button>
             {isLive && (
               <div className="relative">
                 <button onClick={() => setShowQualityMenu(!showQualityMenu)}
