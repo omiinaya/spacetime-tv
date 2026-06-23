@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import {
   Tv,
@@ -13,14 +13,25 @@ import {
 import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
 import { SettingsProvider } from "@/context/SettingsContext";
-import LiveTV from "@/pages/LiveTV";
-import Guide from "@/pages/Guide";
-import Movies from "@/pages/Movies";
-import Series from "@/pages/Series";
-import SearchPage from "@/pages/Search";
-import SettingsPage from "@/pages/SettingsPage";
-import Player from "@/components/Player";
 import ErrorBoundary from "@/components/ErrorBoundary";
+
+// Lazy-loaded pages for code splitting
+const LiveTV = lazy(() => import("@/pages/LiveTV"));
+const Guide = lazy(() => import("@/pages/Guide"));
+const Movies = lazy(() => import("@/pages/Movies"));
+const Series = lazy(() => import("@/pages/Series"));
+const SearchPage = lazy(() => import("@/pages/Search"));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const Player = lazy(() => import("@/components/Player"));
+
+// Loading fallback for lazy routes
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full" />
+    </div>
+  );
+}
 
 const SIDEBAR_MIN = 200;
 const SIDEBAR_MAX = 400;
@@ -212,6 +223,7 @@ function AppLayout() {
 
         <div className="p-4 md:p-6 lg:p-8">
           <ErrorBoundary>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<LiveTV />} />
             <Route path="/live" element={<LiveTV />} />
@@ -227,6 +239,7 @@ function AppLayout() {
               element={<Player type="series" />}
             />
           </Routes>
+          </Suspense>
           </ErrorBoundary>
         </div>
       </main>
