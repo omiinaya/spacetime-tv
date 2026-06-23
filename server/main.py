@@ -977,6 +977,7 @@ async def series_details(series_id: int):
 
 SUBTITLE_CACHE: dict[str, list[dict]] = {}  # stream_id → [{index, language, codec}]
 SUBTITLE_VTT_CACHE: dict[str, str] = {}     # "stream_id:index" → VTT content
+AUDIO_CACHE: dict[str, list[dict]] = {}     # stream_id → [{index, language, codec, channels}]
 
 
 def _get_stream_url(stream_id: int, media_type: str = "movie") -> str:
@@ -1063,6 +1064,51 @@ async def get_subtitles(media_type: str, stream_id: int, track_index: int):
         raise
     except Exception as e:
         raise HTTPException(500, str(e))
+
+
+@app.get("/api/audio/probe/{media_type}/{stream_id}")
+async def probe_audio(media_type: str, stream_id: int):
+    """Probe a stream for audio tracks. Returns list of tracks with language/codec/channels."""
+    cache_key = f"{media_type}:{stream_id}"
+    if cache_key in AUDIO_CACHE:
+        return {"tracks": AUDIO_CACHE[cache_key], "cached": True}
+
+    url = _get_stream_url(stream_id, media_type)
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", url,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=20.0)
+        if proc.returncode != 0:
+            return {"tracks": [], "error": "Probe failed"}
+
+        info = json.loads(stdout)
+        tracks = []
+        for s in info.get("streams", []):
+            if s.get("codec_type") == "audio":
+                tags = s.get("tags", {})
+                tracks.append({
+                    "index": s.get("index", 0),
+                    "language": tags.get("language", "und"),
+                    "title": tags.get("title", ""),
+                    "codec": s.get("codec_name", "unknown"),
+                    "channels": s.get("channels", 0),
+                })
+        AUDIO_CACHE[cache_key] = tracks
+        return {"tracks": tracks, "cached": False}
+    except asyncio.TimeoutError:
+        return {"tracks": [], "error": "Probe timed out"}
+    except Exception as e:
+        return {"tracks": [], "error": str(e)}
+
+
+@app.get("/api/download/{media_type}/{stream_id}")
+async def download_stream(media_type: str, stream_id: int):
+    """Download a VOD stream as MKV for offline playback."""
+    url = _get_stream_url(stream_id, media_type)
+    return RedirectResponse(url=url, status_code=302)
 
 
 # ── EPG GUIDE ───────────────────────────────────────────────────────────────
