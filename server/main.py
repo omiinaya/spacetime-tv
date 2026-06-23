@@ -190,13 +190,26 @@ UA_STR = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)
 
 def build_stream_url(stream_id: int, stream_type: str) -> str:
     """Build the IPTV stream URL for a given stream ID and type."""
-    if stream_type == "live":
-        return f"{IPTV_BASE}/live/{IPTV_USER}/{IPTV_PASS}/{stream_id}.ts"
-    elif stream_type == "movie":
-        return f"{IPTV_BASE}/movie/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
-    elif stream_type == "series":
-        return f"{IPTV_BASE}/series/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
-    return ""
+    ext = "ts" if stream_type == "live" else _lookup_extension(stream_id, stream_type)
+    prefix = "live" if stream_type == "live" else stream_type
+    return f"{IPTV_BASE}/{prefix}/{IPTV_USER}/{IPTV_PASS}/{stream_id}.{ext}"
+
+
+def _lookup_extension(stream_id: int, stream_type: str) -> str:
+    """Look up the container_extension for a VOD stream from the in-memory cache.
+    Falls back to 'mkv' if not found."""
+    prefix = f"{stream_type}_" if stream_type == "series" else "vod_"
+    for key, (ts, data) in _cache.items():
+        if not key.startswith(prefix):
+            continue
+        if not isinstance(data, list):
+            continue
+        for item in data:
+            sid = item.get("stream_id") if stream_type == "movie" else item.get("series_id")
+            if sid == stream_id:
+                ext = item.get("container_extension", "mkv")
+                return ext if ext else "mkv"
+    return "mkv"
 
 
 async def get_content_length(url: str) -> Optional[int]:
