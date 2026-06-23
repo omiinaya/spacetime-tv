@@ -66,48 +66,6 @@ body {
   gap: 1rem;
 }
 
-/* EPG guide */
-.epg-container {
-  overflow-x: auto;
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
-}
-.epg-table {
-  border-collapse: collapse;
-  width: 100%;
-  min-width: 1200px;
-}
-.epg-table th,
-.epg-table td {
-  border: 1px solid oklch(var(--border));
-  padding: 6px 10px;
-  font-size: 0.75rem;
-  white-space: nowrap;
-}
-.epg-table th {
-  background: oklch(var(--card));
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  font-weight: 500;
-  color: oklch(var(--muted-foreground));
-}
-.epg-channel-name {
-  background: oklch(var(--card));
-  position: sticky;
-  left: 0;
-  z-index: 5;
-  font-weight: 500;
-  min-width: 160px;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.epg-programme-live {
-  background: oklch(var(--primary) / 0.12);
-  border-left: 2px solid oklch(var(--primary));
-}
-
 /* Scrollbar hide for horizontal rows */
 .scrollbar-none {
   -ms-overflow-style: none;

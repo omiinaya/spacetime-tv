@@ -30,9 +30,9 @@ export const api = {
     probe: (id: number, signal?: AbortSignal) => get<ProbeResult>(`/api/series/probe/${id}`, signal),
   },
   guide: {
-    get: (channel?: string, signal?: AbortSignal) =>
-      get<{ programmes: Programme[]; channels: Channel[] }>(
-        `/guide${channel ? `?channel=${encodeURIComponent(channel)}` : ""}`, signal
+    get: (offset = 0, limit = 60, signal?: AbortSignal) =>
+      get<GuideResponse>(
+        `/guide?offset=${offset}&limit=${limit}`, signal
       ),
   },
   search: (q: string, signal?: AbortSignal) =>
@@ -151,8 +151,6 @@ export interface ProbeResult {
 }
 
 export interface Programme {
-  channel: string;
-  channel_name: string;
   start: string;
   stop: string;
   title: string;
@@ -162,8 +160,17 @@ export interface Programme {
   is_live: boolean;
 }
 
-export interface Channel {
-  id: string;
-  name: string;
-  icon: string;
+export interface ChannelGroup {
+  channel_id: string;
+  channel_name: string;
+  channel_icon: string;
+  stream_id: number | null;
+  programmes: Programme[];
+}
+
+export interface GuideResponse {
+  channel_groups: ChannelGroup[];
+  total_channels: number;
+  offset: number;
+  limit: number;
 }
