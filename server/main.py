@@ -38,6 +38,41 @@ STATIC_DIR = ROOT / "web" / "dist"
 app = FastAPI(title="Spacetime-TV")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+# ── Rate Limiting (in-memory fixed window) ──────────────────────────────────
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request as StarletteRequest
+
+_rate_limits: dict[str, tuple[float, int]] = {}  # ip -> (window_start, count)
+_RATE_WINDOW = 60  # 1 minute window
+_RATE_SEARCH_LIMIT = 100    # requests per window for search/proxy
+_RATE_DEFAULT_LIMIT = 1000  # requests per window for everything else
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: StarletteRequest, call_next):
+        ip = request.client.host if request.client else "unknown"
+        now = time.time()
+        path = request.url.path
+        
+        limit = _RATE_SEARCH_LIMIT if "/api/search" in path or "/api/image-proxy" in path else _RATE_DEFAULT_LIMIT
+        
+        window_start, count = _rate_limits.get(ip, (0, 0))
+        if now - window_start > _RATE_WINDOW:
+            window_start = now
+            count = 0
+        
+        if count >= limit:
+            return Response(
+                content='{"detail":"Too many requests"}',
+                status_code=429,
+                media_type="application/json",
+                headers={"Retry-After": str(int(_RATE_WINDOW - (now - window_start)))},
+            )
+        
+        _rate_limits[ip] = (window_start, count + 1)
+        return await call_next(request)
+
+app.add_middleware(RateLimitMiddleware)
+
 # ── HTTP Client ─────────────────────────────────────────────────────────────
 client = httpx.AsyncClient(
     timeout=30.0,
