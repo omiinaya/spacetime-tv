@@ -395,7 +395,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       }, 5000);
     }
 
-    const timeoutMs = isTranscode ? 90000 : 30000;
+    const timeoutMs = isTranscode ? 60000 : 20000;
     const timeout = setTimeout(() => {
       const p = phaseRef.current;
       if (p === "loading" || p === "probing") {
@@ -585,23 +585,29 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
     const video = videoRef.current;
     if (video) { video.volume = volume; video.playbackRate = playbackRate; }
 
-    // Safety timeout — if we're still probing after 12s, force progression.
-    // This is a last-resort guard; probeStream has its own 10s timeout.
+    // Safety timeout — covers both probing and loading phases.
+    // If still probing after 10s → skip probe and start loading.
+    // If still loading after 25s total → stream is dead, show error.
     const safetyTimer = setTimeout(() => {
-      if (!cancelled && phaseRef.current === "probing") {
+      if (cancelled) return;
+      const p = phaseRef.current;
+      if (p === "probing") {
         phaseTimedOut = true;
         transcodeCache.set(streamId, "native");
         setPhase("loading");
         setLoadingStep("Starting stream…");
         setErrorMsg(null);
-        // Kick off playback directly
         if (isLive) {
           playMPEGTS(streamPath, true, false);
         } else {
           startVod(() => cancelled, undefined, false);
         }
+      } else if (p === "loading") {
+        phaseTimedOut = true;
+        setPhase("error");
+        setErrorMsg("Stream unavailable. The content may have been removed or is temporarily offline.");
       }
-    }, 12_000);
+    }, 25_000);
 
     const start = async () => {
       setPhase("probing"); setErrorMsg(null); setTranscoding(false); setLoadingStep("Detecting video format…");
