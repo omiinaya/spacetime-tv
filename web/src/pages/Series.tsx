@@ -9,7 +9,9 @@ import {
   Play,
   Search,
   X,
+  Heart,
 } from "lucide-react";
+import { isSeriesInWatchlist, toggleSeriesWatchlist as toggleSeriesWl } from "@/lib/watchlist";
 import { api, Category, Series } from "@/lib/api";
 import ContentRow from "@/components/ContentRow";
 import SeriesOverlay from "@/components/SeriesOverlay";
@@ -34,8 +36,17 @@ interface RowState {
   loaded: boolean;
 }
 
+function useSeriesWatchlistToggle() {
+  const [, setV] = useState(0);
+  return useCallback((seriesId: number) => {
+    toggleSeriesWl(seriesId);
+    setV(v => v + 1);
+  }, []);
+}
+
 export default function SeriesPage() {
   const navigate = useNavigate();
+  const toggleSeriesWatchlist = useSeriesWatchlistToggle();
 
   // ── Cache helper ───────────────────────────────────────────────
   const loadCache = <T,>(key: string, field: string, ttl = 900000): T | null => {
@@ -379,6 +390,16 @@ export default function SeriesPage() {
                           {s.releaseDate.slice(0, 4)}
                         </div>
                       )}
+                      {/* Watchlist heart */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleSeriesWatchlist(s.series_id); }}
+                        className="absolute bottom-2 right-2 p-1 rounded-full bg-black/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
+                        aria-label={isSeriesInWatchlist(s.series_id) ? "Remove from watchlist" : "Add to watchlist"}
+                      >
+                        <Heart
+                          className={`h-4 w-4 ${isSeriesInWatchlist(s.series_id) ? "fill-red-500 text-red-500" : "text-white/70"}`}
+                        />
+                      </button>
                     </div>
                     {/* Title */}
                     <div className="p-2.5 flex-1">

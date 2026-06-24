@@ -8,19 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P2.2b — Watchlist page (complete P2.2)
-Heart button + localStorage lib exist, but there's no `/watchlist` route/page
-to browse watchlisted movies. Create dedicated page + nav item.
-Files: web/src/pages/WatchlistPage.tsx, web/src/App.tsx
-Difficulty: Medium
-Est: 1h
-
-### P3.1 — Series watchlist (favorite series)
-Watchlist currently only supports movies. Extend to series.
-Files: web/src/lib/watchlist.ts, web/src/pages/Series.tsx
-Difficulty: Easy
-Est: 30 min
-
 ### P3.2 — Add tmdb v3 API fallback for richer metadata
 The TMDB proxy endpoints are in the backend but could be enhanced
 with trending/popular movie lists for the Movies homepage.
@@ -28,22 +15,44 @@ Files: server/
 Difficulty: Medium
 Est: 1h
 
-### P3.3 — Client-side search result caching
-Search results aren't cached session-side. Add sessionStorage cache
-with TTL for recent searches to improve back-button experience.
-Files: web/src/pages/Search.tsx
-Difficulty: Easy
-Est: 20 min
-
 ### P3.4 — Keyboard navigation for content grids
 Arrow-key navigation through movie/series grids with focus indicators.
 Files: web/src/pages/Movies.tsx, web/src/pages/Series.tsx
 Difficulty: Medium
 Est: 1h
 
+### P3.5 — Upgrade hls.js to v1.7.0-beta.1
+Newer hls.js adds I-frame playlist support, smoother audio switching, CMCD v2
+analytics, faster startup (parallel init-segment loading), and improved live
+resilience config options.
+Files: web/package.json, web/src/components/Player.tsx
+Difficulty: Easy
+Est: 15 min
+
+### P3.6 — Add trending/popular movies section from TMDB proxy
+The backend has TMDB proxy infrastructure but no frontend integration yet.
+Add a "Trending" or "Popular" row on the Movies page sourced from the proxy.
+Files: server/main.py, web/src/pages/Movies.tsx
+Difficulty: Medium
+Est: 45 min
+
 ---
 
 ## Recently Completed
+
+### P3.1 — Series watchlist (favorite series)
+Watchlist previously only supported movies. Extended to series with:
+- `stv_watchlist_series` localStorage key with dedicated `getSeriesWatchlist`,
+  `isSeriesInWatchlist`, `toggleSeriesWatchlist` functions
+- Heart button on series cards (Poster area, bottom-right, hover reveal)
+- Tabbed WatchlistPage with Movies and Series tabs
+- Series tab fetches details via parallel `api.series.details()` calls
+✅ Done: watchlist.ts, Series.tsx, WatchlistPage.tsx
+
+### P3.3 — Client-side search result caching
+Search results weren't cached session-side. Added sessionStorage cache
+with 2-minute TTL for recent searches to improve back-button experience.
+✅ Done: sessionStorage cache with SEARCH_CACHE_TTL=120s in Search.tsx
 
 ### P2.2b — Watchlist page (complete P2.2)
 Heart button + localStorage lib exist, but there's no `/watchlist` route/page
@@ -78,14 +87,3 @@ Missing deps or stale closures in effect hooks. Add missing deps or suppress.
 SessionStorage + UI row for partially watched movies (like series already has).
 ✅ Done: continueWatching lib with MovieProgress, UI row on Movies page
 
-### P2.2 — Watchlist / favorites (heart button + lib)
-Heart button on movie cards, dedicated watchlist page, localStorage.
-✅ Partially done: heart button on movie cards + watchlist lib exist. Page missing — tracked as P2.2b
-
-### P2.6 — Playback speed control
-0.5x–2x speed selector in player.
-✅ Done: speed selector in Player.tsx with 0.5/1/1.5/2 options
-
-### P2.7 — Picture-in-Picture support
-PiP button in player for desktop/mobile.
-✅ Done: PiP button in Player.tsx top bar with requestPictureInPicture API
