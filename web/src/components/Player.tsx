@@ -174,6 +174,13 @@ export default function Player({ type }: PlayerProps) {
         playsInline
         webkit-playsinline="true"
         x-webkit-airplay="allow"
+        style={{ pointerEvents: "none" }}
+      />
+
+      {/* Transparent click target — catches taps that pass through controls to toggle play/pause.
+          Placed below center buttons (z-10) so center buttons get priority. */}
+      <div
+        className="absolute inset-0 z-[1]"
         onClick={togglePlay}
       />
 
