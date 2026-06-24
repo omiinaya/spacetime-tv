@@ -131,6 +131,21 @@ export const api = {
       get<TmdbSimilarResponse>(`/tmdb/movie/${tmdbId}/similar?page=${page}`, signal),
     configuration: (signal?: AbortSignal) =>
       get<TmdbConfigResponse>(`/tmdb/configuration`, signal),
+    // ── TV / Series TMDB endpoints ────────────────────────────────
+    tv: {
+      trending: (timeWindow: "day" | "week" = "week", page = 1, signal?: AbortSignal) =>
+        get<TmdbTvTrendingResponse>(
+          `/tmdb/tv/trending?time_window=${timeWindow}&page=${page}`, signal
+        ),
+      search: (q: string, page = 1, signal?: AbortSignal) =>
+        get<TmdbTvSearchResponse>(
+          `/tmdb/tv/search?q=${encodeURIComponent(q)}&page=${page}`, signal
+        ),
+      details: (seriesId: number, signal?: AbortSignal) =>
+        get<TmdbTvDetailsResponse>(`/tmdb/tv/${seriesId}`, signal),
+      similar: (seriesId: number, page = 1, signal?: AbortSignal) =>
+        get<TmdbTvSimilarResponse>(`/tmdb/tv/${seriesId}/similar?page=${page}`, signal),
+    },
   },
 };
 
@@ -351,4 +366,49 @@ export interface TmdbSimilarResponse {
 export interface TmdbConfigResponse {
   enabled: boolean;
   images: Record<string, unknown> | null;
+}
+
+// ── TMDB TV / Series API types ────────────────────────────────────
+
+export interface TmdbTvResult {
+  adult: boolean;
+  backdrop_path: string | null;
+  genre_ids: number[];
+  id: number;
+  origin_country: string[];
+  original_language: string;
+  original_name: string;
+  overview: string;
+  popularity: number;
+  poster_path: string | null;
+  first_air_date: string;
+  name: string;
+  vote_average: number;
+  vote_count: number;
+}
+
+export interface TmdbTvTrendingResponse {
+  trending: TmdbTvResult[];
+  total_pages: number;
+  total_results: number;
+  enabled: boolean;
+}
+
+export interface TmdbTvSearchResponse {
+  results: TmdbTvResult[];
+  total_pages: number;
+  total_results: number;
+  enabled: boolean;
+}
+
+export interface TmdbTvDetailsResponse {
+  enabled: boolean;
+  info: Record<string, unknown> | null;
+}
+
+export interface TmdbTvSimilarResponse {
+  results: TmdbTvResult[];
+  total_pages: number;
+  total_results: number;
+  enabled: boolean;
 }

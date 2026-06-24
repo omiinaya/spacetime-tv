@@ -245,3 +245,40 @@ def test_tmdb_config_no_key(client):
     data = r.json()
     assert data["enabled"] is False
     assert data["images"] is None
+
+
+# ── TMDB TV / Series Proxy ─────────────────────────────────────────
+
+def test_tmdb_tv_trending_no_key(client):
+    """TMDB TV trending should return enabled=False when no API key."""
+    r = client.get(f"{BASE}/api/tmdb/tv/trending")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["enabled"] is False
+    assert data["trending"] == []
+
+
+def test_tmdb_tv_search_no_key(client):
+    """TMDB TV search should return enabled=False when no API key."""
+    r = client.get(f"{BASE}/api/tmdb/tv/search", params={"q": "stranger"})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["enabled"] is False
+    assert data["results"] == []
+
+
+def test_tmdb_tv_details_no_key(client):
+    """TMDB TV details should return enabled=False when no API key."""
+    r = client.get(f"{BASE}/api/tmdb/tv/1399")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["enabled"] is False
+    assert data["info"] is None
+
+
+def test_tmdb_tv_similar_no_key(client):
+    """TMDB TV similar should return enabled=False when no API key."""
+    r = client.get(f"{BASE}/api/tmdb/tv/1399/similar")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["enabled"] is False

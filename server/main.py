@@ -2206,6 +2206,84 @@ async def tmdb_configuration():
         return {"enabled": False, "images": None}
     return {"enabled": True, "images": data.get("images", {})}
 
+
+# ── TMDB TV / Series Proxy ──────────────────────────────────────────
+
+@app.get("/api/tmdb/tv/trending")
+async def tmdb_tv_trending(
+    time_window: str = Query("week", regex="^(day|week)$"),
+    page: int = Query(1, ge=1, le=20),
+):
+    """Trending TV shows from TMDB v3 API.
+
+    Mirrors the movies endpoint but for TV content.
+    Requires TMDB_API_KEY to be set. Returns empty list when unset.
+    Results are cached for 10 minutes.
+    """
+    data = await _tmdb_fetch(f"trending/tv/{time_window}?page={page}")
+    if data is None:
+        return {"trending": [], "total_pages": 0, "total_results": 0, "enabled": False}
+    return {
+        "trending": data.get("results", []),
+        "total_pages": data.get("total_pages", 0),
+        "total_results": data.get("total_results", 0),
+        "enabled": True,
+    }
+
+
+@app.get("/api/tmdb/tv/search")
+async def tmdb_tv_search(
+    q: str = Query(..., min_length=2),
+    page: int = Query(1, ge=1, le=20),
+):
+    """Search TV shows via TMDB v3 API.
+
+    Useful when the provider catalog lacks series results.
+    Requires TMDB_API_KEY to be set.
+    """
+    data = await _tmdb_fetch(f"search/tv?query={q}&page={page}")
+    if data is None:
+        return {"results": [], "total_pages": 0, "total_results": 0, "enabled": False}
+    return {
+        "results": data.get("results", []),
+        "total_pages": data.get("total_pages", 0),
+        "total_results": data.get("total_results", 0),
+        "enabled": True,
+    }
+
+
+@app.get("/api/tmdb/tv/{series_id}")
+async def tmdb_tv_details(series_id: int):
+    """Full TV series details from TMDB v3 API by TMDB series ID.
+
+    Enriches the provider metadata with TMDB plot, cast, creator, seasons,
+    runtime, networks, homepage, etc.
+    Requires TMDB_API_KEY to be set.
+    """
+    data = await _tmdb_fetch(f"tv/{series_id}")
+    if data is None:
+        return {"enabled": False, "info": None}
+    return {"enabled": True, "info": data}
+
+
+@app.get("/api/tmdb/tv/{series_id}/similar")
+async def tmdb_tv_similar(series_id: int, page: int = Query(1, ge=1, le=10)):
+    """Similar TV shows from TMDB by TMDB series ID.
+
+    Used for 'More Like This' recommendations on series.
+    Requires TMDB_API_KEY to be set.
+    """
+    data = await _tmdb_fetch(f"tv/{series_id}/similar?page={page}")
+    if data is None:
+        return {"results": [], "total_pages": 0, "total_results": 0, "enabled": False}
+    return {
+        "results": data.get("results", []),
+        "total_pages": data.get("total_pages", 0),
+        "total_results": data.get("total_results", 0),
+        "enabled": True,
+    }
+
+
 @app.get("/api/image-proxy")
 async def image_proxy(request: Request, url: str = Query(...)):
     """Proxy images from blocked CDNs (cmc.exchange-cdn.com) through our server."""

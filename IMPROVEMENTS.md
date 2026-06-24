@@ -8,9 +8,39 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-No pending items. See Recently Completed below.
+### P2.x — Series page: TMDB "Trending This Week" row
+Add a horizontal trending TV shows row on the Series page (like the Movies page has),
+sourced from the new `/api/tmdb/tv/trending` backend endpoint. Shows TMDB posters,
+year badges, rating, and maps clicks to the series overlay.
+
+### P2.x — Fix deprecated `regex` → `pattern` in FastAPI Query params
+`regex=` in FastAPI Query is deprecated in favor of `pattern=`. There are 2 occurrences
+in server/main.py (lines 2129 and 2214) for the time_window validation.
+
+### P3.x — Upgrade outdated npm deps (autoprefixer, sonner, tailwind-merge)
+Several npm packages have newer versions. Focus on minor/patch upgrades first:
+autoprefixer 10.5.0 → 10.5.2 (minor), sonner 1.7.4 → 2.0.7 (major — review changelog),
+tailwind-merge 2.6.1 → 3.6.0 (major — review changelog).
+
+### P3.x — Add TMDB series detail enrichment to SeriesOverlay
+Use the new `api.tmdb.tv.details(seriesId)` endpoint to show richer metadata
+(TMDB plot, cast, creator, seasons, runtime, networks, homepage) in SeriesOverlay
+when a TMDB ID is available on the series object.
 
 ## Recently Completed
+
+### P2.x — Add TMDB TV/Series proxy endpoints to backend + frontend
+Added 4 new TMDB v3 API proxy endpoints for TV content:
+- `/api/tmdb/tv/trending` — trending TV shows
+- `/api/tmdb/tv/search` — search TV shows
+- `/api/tmdb/tv/{series_id}` — TV series details
+- `/api/tmdb/tv/{series_id}/similar` — similar TV shows
+Follows the same pattern as the movie endpoints (caching, key-gating, response shapes).
+Added 5 TypeScript interfaces (TmdbTvResult, TmdbTvTrendingResponse, TmdbTvSearchResponse,
+TmdbTvDetailsResponse, TmdbTvSimilarResponse) and 4 methods under `api.tmdb.tv.*` in the
+frontend API client. Added 4 backend integration tests (no-key case). All 27 tests pass,
+TypeScript compiles clean, committed and pushed.
+✅ Done: server/main.py, web/src/lib/api.ts, server/test_server.py
 
 ### P3.12 — IPTV upstream returning empty VOD/series categories
 Added stale-cache fallback in `cached_fetch()`: when the provider returns an empty
@@ -41,33 +71,4 @@ cache expiry, causing >15s timeouts. Added:
   VOD categories properly cached from warmer, TypeScript clean,
   all changes committed and pushed (765c6cf)
 
-### P3.11 — Show EPG age on admin dashboard
-✅ Done: Already implemented — `epg_age` type defined in AdminStats interface
-  and rendered as a StatCard with Clock icon on AdminDashboard.tsx line 125.
-  Discovered during continuous-improvement audit on 2026-06-24.
-
-### P3.8 — Admin dashboard auto-refresh with polling
-AdminDashboard.tsx already has auto-refresh via setInterval(refresh, 30000)
-— code had been shipping with polling but backlog wasn't updated.
-✅ Done: Already implemented with 30s interval
-
-### P3.9 — Frontend build optimization with code splitting
-App.tsx already uses React.lazy() + Suspense for ALL route-level code splitting
-— all pages are lazy-loaded via dynamic imports.
-✅ Done: Already implemented with lazy imports and PageLoader fallback
-
-### P3.7 — Expose TMDB proxy endpoints in frontend API client
-Added `api.tmdb.trending()`, `api.tmdb.search()`, `api.tmdb.details()`,
-`api.tmdb.similar()`, and `api.tmdb.configuration()` functions to
-web/src/lib/api.ts with full TypeScript interfaces for all response types.
-✅ Done: 5 methods in api.ts, 6 response interfaces (TmdbMovieResult, TmdbTrendingResponse,
-  TmdbSearchResponse, TmdbDetailsResponse, TmdbSimilarResponse, TmdbConfigResponse),
-  TypeScript compiles clean
-
-### P3.6 — Add trending/popular movies section from TMDB proxy
-Added "Trending This Week" horizontal scrollable row on the Movies page using
-ContentRow component. Sourced from the TMDB proxy `/api/tmdb/trending` endpoint.
-Shows poster, year badge, TMDB rating, play overlay, and maps clicks to matching
-unified movie overlay. Gracefully hides when TMDB_API_KEY is unset.
-✅ Done: Movies.tsx fetches trending on mount, renders ContentRow with TMDB cards,
-  TypeScript and backend tests pass
+*(Older completed entries purged per cleanup policy)*
