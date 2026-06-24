@@ -212,7 +212,8 @@ export default function Player({ type }: PlayerProps) {
       )}
 
       {/* ── Top bar ─────────────────────────────────────────── */}
-      <div className={`absolute inset-x-0 top-0 z-20 transition-opacity duration-300 ${controlsVisible || phase !== "playing" ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+      <div className={`absolute inset-x-0 top-0 z-20 transition-opacity duration-300 ${controlsVisible || phase !== "playing" ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        onTouchStart={(e) => e.stopPropagation()}>
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-transparent pointer-events-none" />
         <div className="relative px-3 py-2 sm:px-4 sm:py-3 flex items-center justify-between" style={{ paddingTop: "calc(0.5rem + env(safe-area-inset-top, 0px))" }}>
           <button onClick={goBack} className="text-white/90 hover:text-white transition-colors p-2 flex items-center gap-1.5 min-w-[44px] min-h-[44px]" aria-label="Back to browsing">
@@ -239,7 +240,7 @@ export default function Player({ type }: PlayerProps) {
 
       {/* ── Center controls ────────────────────────────────── */}
       {(controlsVisible || phase !== "playing") && phase !== "error" && phase !== "loading" && phase !== "probing" && (
-        <div className="absolute inset-0 z-10" onClick={togglePlay}>
+        <div className="absolute inset-0 z-10" onClick={togglePlay} onTouchStart={(e) => e.stopPropagation()}>
           <div className="w-full h-full flex items-center justify-center">
             <div className="flex items-center gap-3 sm:gap-5" onClick={(e) => e.stopPropagation()}>
               <button
@@ -273,7 +274,8 @@ export default function Player({ type }: PlayerProps) {
       )}
 
       {/* ── Bottom controls ─────────────────────────────────── */}
-      <div className={`absolute inset-x-0 bottom-0 z-20 transition-opacity duration-300 ${controlsVisible || phase !== "playing" ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+      <div className={`absolute inset-x-0 bottom-0 z-20 transition-opacity duration-300 ${controlsVisible || phase !== "playing" ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        onTouchStart={(e) => e.stopPropagation()}>
         <div className="absolute inset-x-0 bottom-0 h-36 sm:h-32 bg-gradient-to-t from-black/95 via-black/50 to-transparent pointer-events-none" />
 
         <div className="relative px-3 pb-3 sm:px-4 sm:pb-3 pt-10 sm:pt-8" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
