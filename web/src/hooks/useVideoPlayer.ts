@@ -609,9 +609,8 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
     const video = videoRef.current;
     if (video) { video.volume = volume; video.playbackRate = playbackRate; }
 
-    // Safety timeout — covers both probing and loading phases.
-    // If still probing after 10s → skip probe and start loading.
-    // If still loading after 25s total → stream is dead, show error.
+    // Safety timeout — if probe hangs >18s, skip it and start loading.
+    // startLoadingTimeout (20s) handles the loading phase separately.
     const safetyTimer = setTimeout(() => {
       if (cancelled) return;
       const p = phaseRef.current;
@@ -627,11 +626,6 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
         } else {
           startVod(() => cancelled, undefined, false);
         }
-      } else if (p === "loading") {
-        phaseTimedOut = true;
-        clearLoadingTimeout();
-        setPhase("error");
-        setErrorMsg("Stream unavailable. The content may have been removed or is temporarily offline.");
       }
     }, 18_000);
 
