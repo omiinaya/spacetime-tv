@@ -10,9 +10,10 @@ import {
   Search,
   X,
   Heart,
+  TrendingUp,
 } from "lucide-react";
 import { isSeriesInWatchlist, toggleSeriesWatchlist as toggleSeriesWl } from "@/lib/watchlist";
-import { api, Category, Series } from "@/lib/api";
+import { api, Category, Series, TmdbTvResult } from "@/lib/api";
 import ContentRow from "@/components/ContentRow";
 import SeriesOverlay from "@/components/SeriesOverlay";
 import { Skeleton } from "@/components/Skeleton";
@@ -76,6 +77,25 @@ export default function SeriesPage() {
     (q: string) => { if (q) setSearchParams({ q }); else setSearchParams({}); },
     [setSearchParams]
   );
+
+  // ── Trending (TMDB TV) ───────────────────────────────────────────
+  const [trending, setTrending] = useState<TmdbTvResult[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(true);
+  const [trendingEnabled, setTrendingEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTrendingLoading(true);
+    api.tmdb.tv.trending("week", 1).then((res) => {
+      if (cancelled) return;
+      setTrending(res.trending || []);
+      setTrendingEnabled(res.enabled);
+      setTrendingLoading(false);
+    }).catch(() => {
+      if (!cancelled) setTrendingLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   // Overlay state
   const [overlaySeries, setOverlaySeries] = useState<Series | null>(null);
@@ -259,6 +279,84 @@ export default function SeriesPage() {
 
       {/* Continue Watching */}
       <ContinueWatchingRow navigate={navigate} />
+
+      {/* Trending (TMDB TV proxy) */}
+      {!trendingLoading && trendingEnabled && trending.length > 0 && (
+        <div>
+          <ContentRow title="Trending This Week" itemCount={trending.length}>
+            {trending.map((t, idx) => {
+              const posterUrl = t.poster_path
+                ? `https://image.tmdb.org/t/p/w342${t.poster_path}`
+                : "";
+              const year = t.first_air_date ? t.first_air_date.slice(0, 4) : "";
+              return (
+                <button
+                  key={`trending-${t.id}`}
+                  data-row-idx={idx}
+                  className="shrink-0 w-[140px] group text-left focus:outline-none"
+                  onClick={() => {
+                    // Find the matching series by TMDB ID and open its overlay
+                    for (const [, row] of rows) {
+                      const match = row.series.find(
+                        (s) => s.tmdb === String(t.id) || s.name.toLowerCase().includes(t.name.toLowerCase().slice(0, 20))
+                      );
+                      if (match) {
+                        setOverlaySeries(match);
+                        break;
+                      }
+                    }
+                  }}
+                >
+                  <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-0 group-focus:ring-2 group-focus:ring-primary/60 group-focus:ring-offset-2 group-focus:ring-offset-background transition-all">
+                    {posterUrl ? (
+                      <img
+                        src={posterUrl}
+                        alt={`${t.name} poster`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
+                        loading="lazy"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-[#141420]">
+                        <Tv2 className="h-8 w-8 text-white/10" />
+                      </div>
+                    )}
+                    {/* Bottom gradient */}
+                    <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
+                    {/* Rating badge */}
+                    {t.vote_average > 0 && (
+                      <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[11px] font-semibold text-yellow-400 flex items-center gap-0.5">
+                        <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
+                        {t.vote_average.toFixed(1)}
+                      </div>
+                    )}
+                    {/* Year badge */}
+                    {year && (
+                      <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[10px] font-medium text-white/70">
+                        {year}
+                      </div>
+                    )}
+                    {/* Play overlay on hover */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
+                      <div className="p-2.5 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100">
+                        <Play className="h-4 w-4 fill-white" />
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                    {t.name}
+                  </p>
+                  {year && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{year}</p>
+                  )}
+                </button>
+              );
+            })}
+          </ContentRow>
+        </div>
+      )}
 
       {/* Section search */}
       <div className="relative max-w-md">
