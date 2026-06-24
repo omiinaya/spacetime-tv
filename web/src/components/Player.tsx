@@ -240,40 +240,37 @@ export default function Player({ type }: PlayerProps) {
 
       {/* ── Center controls ────────────────────────────────── */}
       {(controlsVisible || phase !== "playing") && phase !== "error" && phase !== "loading" && phase !== "probing" && (
-        <>
-          {/* Backdrop — intercepts clicks from the video element underneath */}
-          <div className="absolute inset-0 z-10 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.15)_0%,transparent_70%)]"
-               onTouchStart={(e) => e.stopPropagation()}
-               onClick={(e) => e.stopPropagation()} />
-          {/* Buttons — same structure as bottom bar: direct children, no wrappers */}
-          <div className="absolute inset-0 z-10 flex items-center justify-center gap-3 sm:gap-5 pointer-events-none">
-            <button
-              onClick={() => seek(-10)}
-              className="pointer-events-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 active:bg-white/30 transition-colors"
-              aria-label="Rewind 10 seconds"
-            >
-              <SkipBack className="w-6 h-6 sm:w-7 sm:h-7 text-white" aria-hidden="true" />
-            </button>
-            <button
-              onClick={togglePlay}
-              className="pointer-events-auto w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center hover:bg-white/25 active:bg-white/35 transition-colors"
-              aria-label={phase === "playing" ? "Pause" : "Play"}
-            >
-              {phase === "playing" ? (
-                <Pause className="w-8 h-8 sm:w-10 sm:h-10 text-white" aria-hidden="true" />
-              ) : (
-                <Play className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-white ml-1" aria-hidden="true" />
-              )}
-            </button>
-            <button
-              onClick={() => seek(10)}
-              className="pointer-events-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 active:bg-white/30 transition-colors"
-              aria-label="Forward 10 seconds"
-            >
-              <SkipForward className="w-6 h-6 sm:w-7 sm:h-7 text-white" aria-hidden="true" />
-            </button>
-          </div>
-        </>
+        <div
+          className="absolute inset-0 z-10 flex items-center justify-center gap-3 sm:gap-5 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.15)_0%,transparent_70%)]"
+          onTouchStart={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => seek(-10)}
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 active:bg-white/30 transition-colors"
+            aria-label="Rewind 10 seconds"
+          >
+            <SkipBack className="w-6 h-6 sm:w-7 sm:h-7 text-white" aria-hidden="true" />
+          </button>
+          <button
+            onClick={togglePlay}
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center hover:bg-white/25 active:bg-white/35 transition-colors"
+            aria-label={phase === "playing" ? "Pause" : "Play"}
+          >
+            {phase === "playing" ? (
+              <Pause className="w-8 h-8 sm:w-10 sm:h-10 text-white" aria-hidden="true" />
+            ) : (
+              <Play className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-white ml-1" aria-hidden="true" />
+            )}
+          </button>
+          <button
+            onClick={() => seek(10)}
+            className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 active:bg-white/30 transition-colors"
+            aria-label="Forward 10 seconds"
+          >
+            <SkipForward className="w-6 h-6 sm:w-7 sm:h-7 text-white" aria-hidden="true" />
+          </button>
+        </div>
       )}
 
       {/* ── Bottom controls ─────────────────────────────────── */}
