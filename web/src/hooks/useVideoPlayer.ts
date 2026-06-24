@@ -125,6 +125,24 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
   const userTouchedMuteRef = useRef(true);
   const vodUrlRef = useRef<string | null>(null);
   const vodTranscodeRef = useRef<boolean>(false);
+  const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearLoadingTimeout = useCallback(() => {
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
+  }, []);
+
+  const startLoadingTimeout = useCallback(() => {
+    clearLoadingTimeout();
+    loadingTimeoutRef.current = setTimeout(() => {
+      if (phaseRef.current === "loading") {
+        _setPhase("error");
+        setErrorMsg("Stream unavailable. The content may have been removed or is temporarily offline.");
+      }
+    }, 20_000);
+  }, []);
 
   // ── State ──────────────────────────────────────────────────
   const [phase, _setPhase] = useState<PlayPhase>("loading");
@@ -198,7 +216,9 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
     video.removeAttribute("src");
     if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
 
+    setPhase("loading"); setErrorMsg(null);
     if (isTranscode) setTranscoding(true);
+    startLoadingTimeout();
 
     const streamUrl = url;
     let reconnectAttempts = 0;
@@ -236,6 +256,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       const onPlaying = () => {
         if (!playingFired) {
           playingFired = true;
+          clearLoadingTimeout();
           const p = phaseRef.current;
           if (p === "loading" || p === "probing") setPhase("playing");
         }
@@ -324,6 +345,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
     const tryPlay = () => {
       if (playStarted) return;
       playStarted = true;
+      clearLoadingTimeout();
       if (!userTouchedMuteRef.current) { video.muted = true; setMuted(true); }
       video.play().catch(() => {});
     };
@@ -333,6 +355,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
     const onTimeUpdate = () => {
       if (!timeAdvancing && video.currentTime > 0.1) {
         timeAdvancing = true;
+        clearLoadingTimeout();
         setCurrentTime(video.currentTime);
         const p = phaseRef.current;
         if (p === "loading" || p === "probing") setPhase("playing");
@@ -542,6 +565,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
     if (!streamUrl) return;
     setPhase("loading");
     setErrorMsg(null);
+    startLoadingTimeout();
     setLoadingStep(needsTranscode ? "Preparing H.264 conversion…" : "Starting stream…");
 
     if (needsTranscode) setTranscoding(true);
@@ -597,6 +621,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
         setPhase("loading");
         setLoadingStep("Starting stream…");
         setErrorMsg(null);
+        startLoadingTimeout();
         if (isLive) {
           playMPEGTS(streamPath, true, false);
         } else {
@@ -604,6 +629,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
         }
       } else if (p === "loading") {
         phaseTimedOut = true;
+        clearLoadingTimeout();
         setPhase("error");
         setErrorMsg("Stream unavailable. The content may have been removed or is temporarily offline.");
       }
@@ -671,6 +697,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
     return () => {
       cancelled = true;
       clearTimeout(safetyTimer);
+      clearLoadingTimeout();
       abortController.abort();
 
       const v = videoRef.current;
