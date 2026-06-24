@@ -21,6 +21,10 @@ EPG_CACHE_TTL = 3600  # 1 hour
 ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = ROOT / "web" / "dist"
 
+# TMDB v3 API (optional — enriches metadata when set)
+TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
+TMDB_BASE = "https://api.themoviedb.org/3"
+
 # User-Agent for requests
 UA_STR = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 

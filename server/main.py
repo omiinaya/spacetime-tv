@@ -2034,6 +2034,124 @@ _img_cache: dict[str, tuple[float, bytes, str]] = {}  # url -> (fetched_at, cont
 _IMG_CACHE_TTL = 3600  # 1 hour
 _MAX_IMG_CACHE_SIZE = 500  # evict oldest entry when exceeded
 
+# ── TMDB v3 API Proxy ────────────────────────────────────────────
+# Requires TMDB_API_KEY env var. When unset, endpoints return empty results.
+
+_TMDB_CACHE: dict[str, tuple[float, dict]] = {}  # cache_key -> (fetched_at, data)
+_TMDB_CACHE_TTL = 600  # 10 minutes
+
+async def _tmdb_fetch(path: str) -> dict | None:
+    """Fetch from TMDB v3 API with caching."""
+    api_key = os.getenv("TMDB_API_KEY", "")
+    tmdb_base = "https://api.themoviedb.org/3"
+
+    if not api_key:
+        return None
+
+    cache_key = f"tmdb_{path}"
+    now = time.time()
+    if cache_key in _TMDB_CACHE:
+        ts, data = _TMDB_CACHE[cache_key]
+        if now - ts < _TMDB_CACHE_TTL:
+            return data
+        del _TMDB_CACHE[cache_key]
+
+    url = f"{tmdb_base}/{path}"
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as c:
+            resp = await c.get(url, params={"api_key": api_key})
+            if resp.status_code != 200:
+                log.warning(f"TMDB API error {resp.status_code} for {path}")
+                return None
+            data = resp.json()
+            _TMDB_CACHE[cache_key] = (now, data)
+            return data
+    except Exception as e:
+        log.error(f"TMDB fetch error for {path}: {e}")
+        return None
+
+@app.get("/api/tmdb/trending")
+async def tmdb_trending(
+    time_window: str = Query("week", regex="^(day|week)$"),
+    page: int = Query(1, ge=1, le=20),
+):
+    """Trending movies from TMDB v3 API.
+
+    Requires TMDB_API_KEY to be set. Returns empty trending list when unset.
+    Results are cached for 10 minutes.
+    """
+    data = await _tmdb_fetch(f"trending/movie/{time_window}?page={page}")
+    if data is None:
+        return {"trending": [], "total_pages": 0, "total_results": 0, "enabled": False}
+    return {
+        "trending": data.get("results", []),
+        "total_pages": data.get("total_pages", 0),
+        "total_results": data.get("total_results", 0),
+        "enabled": True,
+    }
+
+@app.get("/api/tmdb/search")
+async def tmdb_search(
+    q: str = Query(..., min_length=2),
+    page: int = Query(1, ge=1, le=20),
+):
+    """Search movies via TMDB v3 API.
+
+    Useful as a fallback when the provider catalog lacks results.
+    Requires TMDB_API_KEY to be set.
+    """
+    data = await _tmdb_fetch(f"search/movie?query={q}&page={page}")
+    if data is None:
+        return {"results": [], "total_pages": 0, "total_results": 0, "enabled": False}
+    return {
+        "results": data.get("results", []),
+        "total_pages": data.get("total_pages", 0),
+        "total_results": data.get("total_results", 0),
+        "enabled": True,
+    }
+
+@app.get("/api/tmdb/movie/{tmdb_id}")
+async def tmdb_movie_details(tmdb_id: int):
+    """Full movie details from TMDB v3 API by TMDB ID.
+
+    Enriches the provider metadata with TMDB plot, cast, director, runtime,
+    IMDb ID, budget/revenue, production companies, etc.
+    Requires TMDB_API_KEY to be set.
+    """
+    data = await _tmdb_fetch(f"movie/{tmdb_id}")
+    if data is None:
+        return {"enabled": False, "info": None}
+    return {"enabled": True, "info": data}
+
+@app.get("/api/tmdb/movie/{tmdb_id}/similar")
+async def tmdb_movie_similar(tmdb_id: int, page: int = Query(1, ge=1, le=10)):
+    """Similar movies from TMDB by TMDB ID.
+
+    Used for 'More Like This' recommendations.
+    Requires TMDB_API_KEY to be set.
+    """
+    data = await _tmdb_fetch(f"movie/{tmdb_id}/similar?page={page}")
+    if data is None:
+        return {"results": [], "total_pages": 0, "total_results": 0, "enabled": False}
+    return {
+        "results": data.get("results", []),
+        "total_pages": data.get("total_pages", 0),
+        "total_results": data.get("total_results", 0),
+        "enabled": True,
+    }
+
+@app.get("/api/tmdb/configuration")
+async def tmdb_configuration():
+    """TMDB API configuration (image base URLs, sizes, etc.).
+
+    Useful for the frontend to construct correct image URLs.
+    Requires TMDB_API_KEY to be set.
+    """
+    data = await _tmdb_fetch("configuration")
+    if data is None:
+        return {"enabled": False, "images": None}
+    return {"enabled": True, "images": data.get("images", {})}
+
 @app.get("/api/image-proxy")
 async def image_proxy(request: Request, url: str = Query(...)):
     """Proxy images from blocked CDNs (cmc.exchange-cdn.com) through our server."""
