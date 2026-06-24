@@ -31,6 +31,7 @@ export default function Player({ type }: PlayerProps) {
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showQualityMenu, setShowQualityMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
@@ -236,35 +237,37 @@ export default function Player({ type }: PlayerProps) {
         </div>
       </div>
 
-      {/* ── Center play overlay ─────────────────────────────── */}
+      {/* ── Center controls ────────────────────────────────── */}
       {(controlsVisible || phase !== "playing") && phase !== "error" && phase !== "loading" && phase !== "probing" && (
-        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-          <div className="flex items-center gap-3 sm:gap-5 pointer-events-auto" onTouchStart={(e) => e.stopPropagation()}>
-            <button
-              onClick={(e) => { e.stopPropagation(); seek(-10); }}
-              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
-              aria-label="Rewind 10 seconds"
-            >
-              <SkipBack className="w-6 h-6 sm:w-7 sm:h-7 text-white" aria-hidden="true" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); togglePlay(); }}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center hover:bg-white/25 transition-colors"
-              aria-label={phase === "playing" ? "Pause" : "Play"}
-            >
-              {phase === "playing" ? (
-                <Pause className="w-8 h-8 sm:w-10 sm:h-10 text-white" aria-hidden="true" />
-              ) : (
-                <Play className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-white ml-1" aria-hidden="true" />
-              )}
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); seek(10); }}
-              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
-              aria-label="Forward 10 seconds"
-            >
-              <SkipForward className="w-6 h-6 sm:w-7 sm:h-7 text-white" aria-hidden="true" />
-            </button>
+        <div className="absolute inset-0 z-10" onClick={togglePlay}>
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="flex items-center gap-3 sm:gap-5" onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={() => seek(-10)}
+                className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 active:bg-white/30 transition-colors"
+                aria-label="Rewind 10 seconds"
+              >
+                <SkipBack className="w-6 h-6 sm:w-7 sm:h-7 text-white" aria-hidden="true" />
+              </button>
+              <button
+                onClick={togglePlay}
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center hover:bg-white/25 active:bg-white/35 transition-colors"
+                aria-label={phase === "playing" ? "Pause" : "Play"}
+              >
+                {phase === "playing" ? (
+                  <Pause className="w-8 h-8 sm:w-10 sm:h-10 text-white" aria-hidden="true" />
+                ) : (
+                  <Play className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-white ml-1" aria-hidden="true" />
+                )}
+              </button>
+              <button
+                onClick={() => seek(10)}
+                className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 active:bg-white/30 transition-colors"
+                aria-label="Forward 10 seconds"
+              >
+                <SkipForward className="w-6 h-6 sm:w-7 sm:h-7 text-white" aria-hidden="true" />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -326,9 +329,33 @@ export default function Player({ type }: PlayerProps) {
 
           {/* Row 2: Secondary controls */}
           <div className="flex items-center gap-0.5 sm:gap-1.5">
-            <button onClick={toggleMute} className="text-white/60 hover:text-white/80 transition-colors p-1.5 sm:p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center" aria-label={muted ? "Unmute" : "Mute"}>
-              {muted || volume === 0 ? <VolumeX className="w-4 h-4" aria-hidden="true" /> : <Volume2 className="w-4 h-4" aria-hidden="true" />}
-            </button>
+            {/* Volume — desktop: inline slider, mobile: tap for popup */}
+            <div className="relative">
+              <button
+                onClick={() => setShowVolumeSlider(!showVolumeSlider)}
+                className="text-white/60 hover:text-white/80 transition-colors p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
+              >
+                {muted || volume === 0 ? <VolumeX className="w-4 h-4" aria-hidden="true" /> : <Volume2 className="w-4 h-4" aria-hidden="true" />}
+              </button>
+              {showVolumeSlider && (
+                <div className="absolute bottom-full mb-2 left-0 flex flex-col items-center gap-2 bg-zinc-900/95 border border-white/10 rounded-lg px-1.5 py-3 shadow-xl z-30">
+                  <button onClick={() => { toggleMute(); }} className="text-white/60 hover:text-white/80">
+                    {muted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  </button>
+                  <input
+                    type="range"
+                    min="0" max="1" step="0.05"
+                    value={muted ? 0 : volume}
+                    onChange={e => setVolume(parseFloat(e.target.value))}
+                    aria-label="Volume"
+                    className="h-24 w-1 accent-blue-500 cursor-pointer"
+                    style={{ WebkitAppearance: "slider-vertical", writingMode: "vertical-lr", direction: "rtl" }}
+                  />
+                  <span className="text-[10px] text-white/40 tabular-nums">{Math.round((muted ? 0 : volume) * 100)}%</span>
+                </div>
+              )}
+            </div>
 
             {/* Speed */}
             <div className="relative">
