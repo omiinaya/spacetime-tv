@@ -13,10 +13,6 @@ Add a horizontal trending TV shows row on the Series page (like the Movies page 
 sourced from the new `/api/tmdb/tv/trending` backend endpoint. Shows TMDB posters,
 year badges, rating, and maps clicks to the series overlay.
 
-### P2.x — Fix deprecated `regex` → `pattern` in FastAPI Query params
-`regex=` in FastAPI Query is deprecated in favor of `pattern=`. There are 2 occurrences
-in server/main.py (lines 2129 and 2214) for the time_window validation.
-
 ### P3.x — Upgrade outdated npm deps (autoprefixer, sonner, tailwind-merge)
 Several npm packages have newer versions. Focus on minor/patch upgrades first:
 autoprefixer 10.5.0 → 10.5.2 (minor), sonner 1.7.4 → 2.0.7 (major — review changelog),
@@ -41,6 +37,11 @@ TmdbTvDetailsResponse, TmdbTvSimilarResponse) and 4 methods under `api.tmdb.tv.*
 frontend API client. Added 4 backend integration tests (no-key case). All 27 tests pass,
 TypeScript compiles clean, committed and pushed.
 ✅ Done: server/main.py, web/src/lib/api.ts, server/test_server.py
+
+### P2.x — Fix deprecated `regex` → `pattern` in FastAPI Query params
+FastAPI deprecated `regex=` in Query in favor of `pattern=`. Replaced both occurrences
+in server/main.py (tmdb_trending and tmdb_tv_trending endpoints).
+✅ Done: server/main.py — `regex` → `pattern`
 
 ### P3.12 — IPTV upstream returning empty VOD/series categories
 Added stale-cache fallback in `cached_fetch()`: when the provider returns an empty

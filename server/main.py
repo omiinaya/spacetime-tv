@@ -2126,7 +2126,7 @@ async def _tmdb_fetch(path: str) -> dict | None:
 
 @app.get("/api/tmdb/trending")
 async def tmdb_trending(
-    time_window: str = Query("week", regex="^(day|week)$"),
+    time_window: str = Query("week", pattern="^(day|week)$"),
     page: int = Query(1, ge=1, le=20),
 ):
     """Trending movies from TMDB v3 API.
@@ -2211,7 +2211,7 @@ async def tmdb_configuration():
 
 @app.get("/api/tmdb/tv/trending")
 async def tmdb_tv_trending(
-    time_window: str = Query("week", regex="^(day|week)$"),
+    time_window: str = Query("week", pattern="^(day|week)$"),
     page: int = Query(1, ge=1, le=20),
 ):
     """Trending TV shows from TMDB v3 API.
