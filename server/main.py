@@ -13,6 +13,7 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import httpx
+import httpx_socks
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -36,6 +37,15 @@ EPG_CACHE_TTL = 1800  # 30 min — background SSE refreshes
 ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = Path(os.getenv("STATIC_DIR", ROOT / "web" / "dist"))
 SERVER_START_TIME = time.time()
+PROXY_URL = os.getenv("PROXY_URL", "")
+_proxy_transport = None
+
+def get_proxy_transport():
+    global _proxy_transport
+    if _proxy_transport is None and PROXY_URL:
+        _proxy_transport = httpx_socks.AsyncProxyTransport.from_url(PROXY_URL)
+        log.info("SOCKS5 proxy enabled")
+    return _proxy_transport
 
 
 @asynccontextmanager
@@ -371,7 +381,8 @@ async def stream_bytes(url: str):
     Uses a short read timeout so abandoned upstream connections close fast."""
     headers = {"User-Agent": UA_STR}
     timeout = httpx.Timeout(10.0, read=5.0)
-    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True, headers=headers) as sc:
+    transport = get_proxy_transport()
+    async with httpx.AsyncClient(transport=transport, timeout=timeout, follow_redirects=True, headers=headers) as sc:
         async with sc.stream("GET", url) as resp:
             resp.raise_for_status()
             async for chunk in resp.aiter_bytes():
@@ -384,7 +395,8 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
     if range_header:
         headers["Range"] = range_header
     timeout = httpx.Timeout(30.0, read=10.0)
-    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True, headers=headers) as sc:
+    transport = get_proxy_transport()
+    async with httpx.AsyncClient(transport=transport, timeout=timeout, follow_redirects=True, headers=headers) as sc:
         async with sc.stream("GET", url) as resp:
             resp.raise_for_status()
             async for chunk in resp.aiter_bytes():
