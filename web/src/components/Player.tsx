@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import {
-  Loader2, AlertCircle, ArrowLeft, Play, Maximize, Minimize,
+  Loader2, AlertCircle, ArrowLeft, Play, Pause, Maximize, Minimize,
   Volume2, VolumeX, SkipBack, SkipForward, Settings, PictureInPicture2, Download
 } from "lucide-react";
 import { useFullscreen } from "@/hooks/useFullscreen";
@@ -239,7 +239,7 @@ export default function Player({ type }: PlayerProps) {
       {/* ── Center play overlay ─────────────────────────────── */}
       {(controlsVisible || phase !== "playing") && phase !== "error" && phase !== "loading" && phase !== "probing" && (
         <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-          <div className="flex items-center gap-3 sm:gap-5 pointer-events-auto">
+          <div className="flex items-center gap-3 sm:gap-5 pointer-events-auto" onTouchStart={(e) => e.stopPropagation()}>
             <button
               onClick={(e) => { e.stopPropagation(); seek(-10); }}
               className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
@@ -250,9 +250,13 @@ export default function Player({ type }: PlayerProps) {
             <button
               onClick={(e) => { e.stopPropagation(); togglePlay(); }}
               className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center hover:bg-white/25 transition-colors"
-              aria-label="Play"
+              aria-label={phase === "playing" ? "Pause" : "Play"}
             >
-              <Play className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-white ml-1" aria-hidden="true" />
+              {phase === "playing" ? (
+                <Pause className="w-8 h-8 sm:w-10 sm:h-10 text-white" aria-hidden="true" />
+              ) : (
+                <Play className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-white ml-1" aria-hidden="true" />
+              )}
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); seek(10); }}
