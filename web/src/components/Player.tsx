@@ -159,7 +159,7 @@ export default function Player({ type }: PlayerProps) {
         }
         swipeStart.current = null;
       }}
-      style={{ aspectRatio: "16 / 9", maxHeight: "min(calc(100dvh - 2rem), 90dvh)" }}
+      style={{ aspectRatio: "16 / 9", maxHeight: "100dvh" }}
     >
       <video
         ref={videoRef}
@@ -213,7 +213,7 @@ export default function Player({ type }: PlayerProps) {
       {/* ── Top bar ─────────────────────────────────────────── */}
       <div className={`absolute inset-x-0 top-0 z-20 transition-opacity duration-300 ${controlsVisible || phase !== "playing" ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-transparent pointer-events-none" />
-        <div className="relative px-3 py-2 sm:px-4 sm:py-3 flex items-center justify-between">
+        <div className="relative px-3 py-2 sm:px-4 sm:py-3 flex items-center justify-between" style={{ paddingTop: "calc(0.5rem + env(safe-area-inset-top, 0px))" }}>
           <button onClick={goBack} className="text-white/90 hover:text-white transition-colors p-2 flex items-center gap-1.5 min-w-[44px] min-h-[44px]" aria-label="Back to browsing">
             <ArrowLeft className="w-5 h-5" aria-hidden="true" />
             <span className="text-sm font-medium hidden sm:inline">Back</span>
@@ -238,11 +238,11 @@ export default function Player({ type }: PlayerProps) {
 
       {/* ── Center play overlay ─────────────────────────────── */}
       <div
-        className={`absolute inset-0 flex items-center justify-center z-10 transition-opacity duration-200 pointer-events-none ${phase !== "playing" || !controlsVisible ? "opacity-100" : "opacity-0"}`}
+        className="absolute inset-0 flex items-center justify-center z-10 transition-opacity duration-200 pointer-events-none"
         onClick={togglePlay}
       >
         <div className="pointer-events-auto">
-          {phase === "playing" ? null : (
+          {phase !== "playing" && (
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center">
               {phase === "paused" ? (
                 <Play className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-white ml-1" aria-hidden="true" />
@@ -256,7 +256,7 @@ export default function Player({ type }: PlayerProps) {
       <div className={`absolute inset-x-0 bottom-0 z-20 transition-opacity duration-300 ${controlsVisible || phase !== "playing" ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
         <div className="absolute inset-x-0 bottom-0 h-36 sm:h-32 bg-gradient-to-t from-black/95 via-black/50 to-transparent pointer-events-none" />
 
-        <div className="relative px-3 pb-3 sm:px-4 sm:pb-3 pt-10 sm:pt-8">
+        <div className="relative px-3 pb-3 sm:px-4 sm:pb-3 pt-10 sm:pt-8" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
           {/* Timeline */}
           {isVod && (
             <div

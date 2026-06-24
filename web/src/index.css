@@ -27,6 +27,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: oklch(var(--background));
   color: oklch(var(--foreground));
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Scrollbar */

@@ -129,6 +129,7 @@ function AppLayout() {
   );
 
   const isActive = (path: string) => location.pathname.startsWith(path);
+  const isWatchRoute = location.pathname.startsWith("/watch/");
 
   // Global '/' keyboard shortcut: focus search
   useEffect(() => {
@@ -216,7 +217,7 @@ function AppLayout() {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={{ height: "100dvh" }}>
       {/* Skip to content — keyboard accessibility */}
       <a
         href="#main-content"
@@ -244,7 +245,8 @@ function AppLayout() {
 
       {/* Main content */}
       <main id="main-content" className="flex-1 overflow-y-auto" role="main" tabIndex={-1}>
-        {/* Mobile header */}
+        {/* Mobile header — hidden on watch routes */}
+        {!isWatchRoute && (
         <div className="md:hidden flex items-center gap-3 px-4 h-12 border-b border-border bg-sidebar">
           <button
             onClick={() => setMobileOpen(true)}
@@ -260,8 +262,9 @@ function AppLayout() {
             <span className="font-semibold text-sm">Spacetime-TV</span>
           </div>
         </div>
+        )}
 
-        <div className="p-4 md:p-6 lg:p-8">
+        <div className={isWatchRoute ? "" : "p-4 md:p-6 lg:p-8"}>
           <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
           <Routes>
