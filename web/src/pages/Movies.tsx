@@ -15,6 +15,7 @@ import MovieOverlay from "@/components/MovieOverlay";
 import { PosterCardSkeleton } from "@/components/Skeleton";
 import { getMovieContinueWatching, type MovieProgress } from "@/lib/continueWatching";
 import { isInWatchlist, toggleWatchlist as toggleWl } from "@/lib/watchlist";
+import { useGridKeyboardNav } from "@/hooks/useGridKeyboardNav";
 import { SearchHistory, addSearchHistory } from "@/components/SearchHistory";
 import { Pagination } from "@/components/Pagination";
 
@@ -58,6 +59,7 @@ export default function Movies() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
   const fetchingRef = useRef(false);
   const searchIdRef = useRef(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -65,6 +67,14 @@ export default function Movies() {
   // Overlay
   const [overlayMovie, setOverlayMovie] = useState<UnifiedMovie | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+
+  // Keyboard navigation
+  const [focusedIdx, handleGridKeyDown] = useGridKeyboardNav(
+    movies.length,
+    (idx) => setOverlayMovie(movies[idx]),
+    gridRef,
+    !overlayMovie,
+  );
 
   // Continue watching
   const [continueWatching, setContinueWatching] = useState<MovieProgress[]>([]);
@@ -301,14 +311,21 @@ export default function Movies() {
 
       {/* Movie grid */}
       {!loading && movies.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {movies.map((m) => {
+        <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+          {movies.map((m, idx) => {
             const year = yearFromName(m.name);
             return (
               <button
                 key={m.tmdb || m.stream_id}
+                data-grid-idx={idx}
                 onClick={() => setOverlayMovie(m)}
-                className="group flex flex-col rounded-xl overflow-hidden bg-card border border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left"
+                onKeyDown={(e) => handleGridKeyDown(e, idx)}
+                tabIndex={0}
+                className={`group flex flex-col rounded-xl overflow-hidden bg-card border transition-all duration-200 text-left focus:outline-none ${
+                  focusedIdx === idx
+                    ? "border-primary ring-2 ring-primary/40 shadow-lg shadow-primary/10"
+                    : "border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
+                }`}
               >
                 {/* Poster */}
                 <div className="relative w-full aspect-[2/3] bg-muted overflow-hidden">

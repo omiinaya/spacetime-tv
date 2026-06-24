@@ -346,11 +346,19 @@ export default function SeriesPage() {
                 loading={row.loading && seriesList.length > 0}
                 onScrollEnd={q ? undefined : hasMore ? () => loadMore(cat) : undefined}
               >
-                {filtered.map((s) => (
+                {filtered.map((s, sIdx) => (
                   <button
                     key={s.series_id}
+                    data-row-idx={sIdx}
                     onClick={() => setOverlaySeries(s)}
-                    className="group shrink-0 w-[170px] sm:w-[185px] flex flex-col rounded-xl overflow-hidden bg-card border border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setOverlaySeries(s);
+                      }
+                    }}
+                    tabIndex={0}
+                    className="group shrink-0 w-[170px] sm:w-[185px] flex flex-col rounded-xl overflow-hidden bg-card border border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
                   >
                     {/* Poster */}
                     <div className="relative w-full aspect-[2/3] bg-muted overflow-hidden">

@@ -51,6 +51,51 @@ export default function ContentRow({
     return () => el.removeEventListener("scroll", handleScroll);
   }, [handleScroll, onScrollEnd]);
 
+  // Keyboard navigation: arrow keys move focus between [data-row-idx] cards
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+
+      const cards = row.querySelectorAll<HTMLElement>("[data-row-idx]");
+      if (cards.length === 0) return;
+
+      // Find currently focused card
+      let currentIdx = -1;
+      for (let i = 0; i < cards.length; i++) {
+        if (cards[i] === document.activeElement) {
+          currentIdx = i;
+          break;
+        }
+      }
+      if (currentIdx === -1) return;
+
+      e.preventDefault();
+      let nextIdx = currentIdx;
+      if (e.key === "ArrowRight") {
+        nextIdx = Math.min(currentIdx + 1, cards.length - 1);
+      } else {
+        nextIdx = Math.max(currentIdx - 1, 0);
+      }
+
+      cards[nextIdx].focus();
+
+      // Scroll to keep the card visible
+      const cardRect = cards[nextIdx].getBoundingClientRect();
+      const rowRect = row.getBoundingClientRect();
+      if (cardRect.right > rowRect.right) {
+        row.scrollBy({ left: cardRect.right - rowRect.right + 16, behavior: "smooth" });
+      } else if (cardRect.left < rowRect.left) {
+        row.scrollBy({ left: cardRect.left - rowRect.left - 16, behavior: "smooth" });
+      }
+    };
+
+    row.addEventListener("keydown", handleKeyDown);
+    return () => row.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const scroll = (dir: "left" | "right") => {
     const el = rowRef.current;
     if (!el) return;

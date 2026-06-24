@@ -8,12 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.4 — Keyboard navigation for content grids
-Arrow-key navigation through movie/series grids with focus indicators.
-Files: web/src/pages/Movies.tsx, web/src/pages/Series.tsx
-Difficulty: Medium
-Est: 1h
-
 ### P3.5 — Upgrade hls.js to v1.7.0-beta.1
 Newer hls.js adds I-frame playlist support, smoother audio switching, CMCD v2
 analytics, faster startup (parallel init-segment loading), and improved live
@@ -29,9 +23,18 @@ Files: server/main.py, web/src/pages/Movies.tsx
 Difficulty: Medium
 Est: 45 min
 
----
-
 ## Recently Completed
+
+### P3.4 — Keyboard navigation for content grids
+Arrow-key navigation through movie/series grids with focus indicators.
+Files: web/src/hooks/useGridKeyboardNav.ts, web/src/pages/Movies.tsx,
+web/src/components/ContentRow.tsx, web/src/pages/Series.tsx
+Difficulty: Medium
+Est: 1h
+✅ Done: useGridKeyboardNav hook for CSS grid layouts, useRowKeyboardNav for
+horizontal scrollable rows. Movies grid uses arrow keys + grid column awareness.
+Series ContentRow uses left/right arrow navigation with auto-scroll. Focus
+indicators (ring + border highlight). All TypeScript and backend tests pass.
 
 ### P3.2 — Add tmdb v3 API fallback for richer metadata
 Added 5 TMDB v3 API proxy endpoints (trending, search, movie details, similar,
@@ -73,16 +76,4 @@ Player sits black when CDN returns empty response. Show error state.
 ### P1.4 — Missing alt attributes on all <img> tags
 10+ images missing alt text — accessibility regression.
 ✅ Done: All images have alt attributes (empty alt="" for decorative images with text labels)
-
-### P1.5 — Fix 6 useEffect stale closures
-Missing deps or stale closures in effect hooks. Add missing deps or suppress.
-✅ Done: All effects have proper deps; intentional eslint-suppress on main useVideoPlayer effect
-
-### P1.6 — Backend tests
-1,790 lines of backend with zero tests. Add pytest for critical paths.
-✅ Done: 18 integration tests in server/test_server.py covering health, movies, series, live, search, image proxy, streams, errors, guide
-
-### P2.1 — Movie continue-watching
-SessionStorage + UI row for partially watched movies (like series already has).
-✅ Done: continueWatching lib with MovieProgress, UI row on Movies page
 
