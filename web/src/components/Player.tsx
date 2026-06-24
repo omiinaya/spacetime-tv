@@ -31,6 +31,8 @@ export default function Player({ type }: PlayerProps) {
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showQualityMenu, setShowQualityMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [flashCenter, setFlashCenter] = useState(true); // flash center controls on first load
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
@@ -110,6 +112,18 @@ export default function Player({ type }: PlayerProps) {
 
   // ── Keyboard ─────────────────────────────────────────────────
   useKeyboard({ togglePlay, seek, toggleFullscreen, toggleMute, setVolume, volume });
+
+  // ── Flash center controls when playback starts ──────────────
+  useEffect(() => {
+    if (phase === "playing") {
+      if (flashTimer.current) clearTimeout(flashTimer.current);
+      flashTimer.current = setTimeout(() => setFlashCenter(false), 2500);
+    } else if (phase === "paused") {
+      setFlashCenter(true); // show when paused
+      if (flashTimer.current) clearTimeout(flashTimer.current);
+    }
+    return () => { if (flashTimer.current) clearTimeout(flashTimer.current); };
+  }, [phase]);
 
   // ── Back navigation ──────────────────────────────────────────
   const goBack = () => {
@@ -237,8 +251,8 @@ export default function Player({ type }: PlayerProps) {
       </div>
 
       {/* ── Center play overlay ─────────────────────────────── */}
-      {phase === "paused" && (
-        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+      {flashCenter && phase !== "error" && phase !== "loading" && phase !== "probing" && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none transition-opacity duration-500" style={{ opacity: phase === "playing" ? 0.7 : 1 }}>
           <div className="flex items-center gap-3 sm:gap-5 pointer-events-auto">
             <button
               onClick={(e) => { e.stopPropagation(); seek(-10); }}
