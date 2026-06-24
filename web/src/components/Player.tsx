@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import {
-  Loader2, AlertCircle, ArrowLeft, Play, Pause, Maximize, Minimize,
+  Loader2, AlertCircle, ArrowLeft, Play, Maximize, Minimize,
   Volume2, VolumeX, SkipBack, SkipForward, Settings, PictureInPicture2, Download
 } from "lucide-react";
 import { useFullscreen } from "@/hooks/useFullscreen";
@@ -237,20 +237,33 @@ export default function Player({ type }: PlayerProps) {
       </div>
 
       {/* ── Center play overlay ─────────────────────────────── */}
-      <div
-        className="absolute inset-0 flex items-center justify-center z-10 transition-opacity duration-200 pointer-events-none"
-        onClick={togglePlay}
-      >
-        <div className="pointer-events-auto">
-          {phase !== "playing" && (
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center">
-              {phase === "paused" ? (
-                <Play className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-white ml-1" aria-hidden="true" />
-              ) : null}
-            </div>
-          )}
+      {phase === "paused" && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          <div className="flex items-center gap-3 sm:gap-5 pointer-events-auto">
+            <button
+              onClick={(e) => { e.stopPropagation(); seek(-10); }}
+              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
+              aria-label="Rewind 10 seconds"
+            >
+              <SkipBack className="w-6 h-6 sm:w-7 sm:h-7 text-white" aria-hidden="true" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center hover:bg-white/25 transition-colors"
+              aria-label="Play"
+            >
+              <Play className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-white ml-1" aria-hidden="true" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); seek(10); }}
+              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
+              aria-label="Forward 10 seconds"
+            >
+              <SkipForward className="w-6 h-6 sm:w-7 sm:h-7 text-white" aria-hidden="true" />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── Bottom controls ─────────────────────────────────── */}
       <div className={`absolute inset-x-0 bottom-0 z-20 transition-opacity duration-300 ${controlsVisible || phase !== "playing" ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
@@ -283,20 +296,10 @@ export default function Player({ type }: PlayerProps) {
             </div>
           )}
 
-          {/* Row 1: Transport + Time + Fullscreen */}
-          <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-            <button onClick={() => seek(-10)} className="text-white/80 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Rewind 10 seconds">
-              <SkipBack className="w-5 h-5" aria-hidden="true" />
-            </button>
-            <button onClick={togglePlay} className="text-white hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label={phase === "playing" ? "Pause" : "Play"}>
-              {phase === "playing" ? <Pause className="w-7 h-7" aria-hidden="true" /> : <Play className="w-7 h-7 fill-white" aria-hidden="true" />}
-            </button>
-            <button onClick={() => seek(10)} className="text-white/80 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Forward 10 seconds">
-              <SkipForward className="w-5 h-5" aria-hidden="true" />
-            </button>
-
+          {/* Row 1: Time + Status + Fullscreen */}
+          <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
             {/* Time / Status */}
-            <div className="ml-1.5 sm:ml-2">
+            <div>
               {isVod && (
                 <span className="text-white/70 text-xs sm:text-sm tabular-nums whitespace-nowrap">
                   {fmtTime(currentTime)} / {fmtTime(duration)}
