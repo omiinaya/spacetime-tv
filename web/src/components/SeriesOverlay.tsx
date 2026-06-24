@@ -4,6 +4,7 @@ import {
   Play,
   Clock,
   Calendar,
+  ExternalLink,
 } from "lucide-react";
 import { api, Series, SeriesDetails, Episode, imageUrl } from "@/lib/api";
 import MediaOverlay from "@/components/MediaOverlay";
@@ -11,6 +12,29 @@ import MediaOverlay from "@/components/MediaOverlay";
 interface SeriesOverlayProps {
   series: Series;
   onClose: () => void;
+}
+
+interface TmdbEnrichment {
+  overview?: string;
+  backdrop_path?: string;
+  poster_path?: string;
+  vote_average?: number;
+  genres?: { id: number; name: string }[];
+  networks?: { name: string; logo_path?: string }[];
+  created_by?: { name: string }[];
+  number_of_seasons?: number;
+  number_of_episodes?: number;
+  episode_run_time?: number[];
+  status?: string;
+  homepage?: string;
+  first_air_date?: string;
+  seasons?: {
+    season_number: number;
+    episode_count: number;
+    air_date?: string;
+    poster_path?: string;
+    overview?: string;
+  }[];
 }
 
 export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
@@ -21,42 +45,101 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
   const [activeSeason, setActiveSeason] = useState(1);
   const bodyRef = useRef<HTMLDivElement>(null);
 
+  // ── TMDB enrichment ──────────────────────────────────────────
+  const [tmdb, setTmdb] = useState<TmdbEnrichment | null>(null);
+  const tmdbId = series.tmdb ? parseInt(series.tmdb, 10) : null;
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true); setError(null);
-    api.series.details(series.series_id).then((d) => {
-      if (cancelled) return;
-      const info = (d as any).info;
-      const episodes = (d as any).episodes;
-      if (info && episodes) {
-        setDetails(d);
-        const seasonKeys = Object.keys(episodes).map(Number).sort((a, b) => a - b);
-        if (seasonKeys.length > 0) setActiveSeason(seasonKeys[0]);
-      } else {
-        setError("No episode data available");
-      }
-    }).catch((e) => setError(e.message))
+
+    // Fetch provider details + TMDB enrichment in parallel
+    const providerPromise = api.series.details(series.series_id);
+    const tmdbPromise = tmdbId
+      ? api.tmdb.tv.details(tmdbId).catch(() => null)
+      : Promise.resolve(null);
+
+    Promise.all([providerPromise, tmdbPromise])
+      .then(([providerData, tmdbData]) => {
+        if (cancelled) return;
+
+        // Process provider data
+        const info = (providerData as any).info;
+        const episodes = (providerData as any).episodes;
+        if (info && episodes) {
+          setDetails(providerData);
+          const seasonKeys = Object.keys(episodes).map(Number).sort((a, b) => a - b);
+          if (seasonKeys.length > 0) setActiveSeason(seasonKeys[0]);
+        } else {
+          setError("No episode data available");
+        }
+
+        // Process TMDB enrichment
+        if (tmdbData && (tmdbData as any).enabled && (tmdbData as any).info) {
+          const raw = (tmdbData as any).info;
+          setTmdb({
+            overview: raw.overview || undefined,
+            backdrop_path: raw.backdrop_path || undefined,
+            poster_path: raw.poster_path || undefined,
+            vote_average: raw.vote_average,
+            genres: raw.genres || undefined,
+            networks: raw.networks || undefined,
+            created_by: raw.created_by || undefined,
+            number_of_seasons: raw.number_of_seasons,
+            number_of_episodes: raw.number_of_episodes,
+            episode_run_time: raw.episode_run_time,
+            status: raw.status,
+            homepage: raw.homepage,
+            first_air_date: raw.first_air_date,
+            seasons: raw.seasons || undefined,
+          });
+        }
+      })
+      .catch((e) => setError(e.message))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [series.series_id]);
+  }, [series.series_id, tmdbId]);
 
   const info = details?.info;
   const seasons = details?.seasons || [];
   const episodeList: Episode[] = details?.episodes?.[String(activeSeason)] || [];
 
+  // Use TMDB data to enrich when provider data is thin
   const bannerUrl =
     info?.backdrop_path?.[0] ||
+    (tmdb?.backdrop_path ? `https://image.tmdb.org/t/p/original${tmdb.backdrop_path}` : "") ||
     series.cover ||
     seasons.find((s) => s.season_number === activeSeason)?.cover_big ||
     "";
-  const posterUrl = series.cover || info?.cover || "";
-  const rating = series.rating || info?.rating || "";
-  const year = (info?.releaseDate || series.releaseDate || "").slice(0, 4);
-  const genre = series.genre || info?.genre || "";
-  const plot = series.plot || info?.plot || "";
-  const cast = series.cast || info?.cast || "";
+  const posterUrl = series.cover || info?.cover || (tmdb?.poster_path ? `https://image.tmdb.org/t/p/w600${tmdb.poster_path}` : "") || "";
+  const rating = series.rating || info?.rating || (tmdb?.vote_average ? tmdb.vote_average.toFixed(1) : "") || "";
+  const year = (tmdb?.first_air_date || info?.releaseDate || series.releaseDate || "").slice(0, 4);
+
+  // Merge provider and TMDB genres
+  const providerGenres = series.genre || info?.genre || "";
+  const providerGenreList = providerGenres ? providerGenres.split(",").map((g) => g.trim()).filter(Boolean) : [];
+  const tmdbGenreNames = tmdb?.genres?.map((g) => g.name) || [];
+  const genres = tmdbGenreNames.length > 0 ? tmdbGenreNames : providerGenreList;
+
+  // Prefer TMDB plot when provider plot is empty
+  const plot = tmdb?.overview || series.plot || info?.plot || "";
+  const cast = series.cast || info?.cast || (tmdb?.created_by ? tmdb.created_by.map((c) => c.name).join(", ") : "") || "";
   const director = series.director || info?.director || "";
-  const genres = genre ? genre.split(",").map((g) => g.trim()).filter(Boolean) : [];
+
+  // Meta items
+  const metaItems: string[] = [];
+  if (tmdb?.number_of_seasons) metaItems.push(`${tmdb.number_of_seasons} season${tmdb.number_of_seasons > 1 ? "s" : ""}`);
+  if (tmdb?.number_of_episodes) metaItems.push(`${tmdb.number_of_episodes} episodes`);
+  if (tmdb?.episode_run_time?.[0]) {
+    const mins = tmdb.episode_run_time[0];
+    metaItems.push(`${mins}m`);
+  }
+  if (tmdb?.status) metaItems.push(tmdb.status);
+  if (tmdb?.networks?.length) metaItems.push(tmdb.networks.map((n) => n.name).join(", "));
+  // Fall back to provider season count if TMDB didn't provide it
+  if (metaItems.length === 0 && seasons.length > 0) {
+    metaItems.push(`${seasons.length} season${seasons.length > 1 ? "s" : ""}`);
+  }
 
   const seasonTabs =
     seasons.length > 0
@@ -90,15 +173,12 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
     onClose();
   };
 
-  const metaItems: string[] = [];
-  if (seasons.length > 0) metaItems.push(`${seasons.length} season${seasons.length > 1 ? "s" : ""}`);
-
   return (
     <MediaOverlay
       onClose={onClose}
       bannerUrl={bannerUrl || undefined}
       posterUrl={posterUrl || undefined}
-      title={info?.name || series.name}
+      title={tmdb?.overview ? (info?.name || series.name) : (info?.name || series.name)}
       genres={genres}
       rating={rating ? Number(rating) : undefined}
       year={year || undefined}
@@ -123,6 +203,36 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
             <div className="flex flex-wrap gap-x-8 gap-y-1 text-sm">
               {cast && <div><span className="text-white/30">Cast: </span><span className="text-white/60">{cast}</span></div>}
               {director && <div><span className="text-white/30">Director: </span><span className="text-white/60">{director}</span></div>}
+            </div>
+          )}
+
+          {/* TMDB Link & extra metadata row */}
+          {tmdbId && (
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-white/40">
+              {tmdb?.first_air_date && (
+                <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{tmdb.first_air_date}</span>
+              )}
+              {tmdb?.episode_run_time?.[0] && (
+                <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{tmdb.episode_run_time[0]}m</span>
+              )}
+              <a
+                href={`https://www.themoviedb.org/tv/${tmdbId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 hover:text-white/70 transition-colors"
+              >
+                <ExternalLink className="h-3 w-3" />TMDB
+              </a>
+              {tmdb?.homepage && (
+                <a
+                  href={tmdb.homepage}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 hover:text-white/70 transition-colors"
+                >
+                  <ExternalLink className="h-3 w-3" />Homepage
+                </a>
+              )}
             </div>
           )}
 
