@@ -376,29 +376,64 @@ async def get_content_length(url: str) -> Optional[int]:
         return None
 
 
-async def stream_bytes(url: str, use_proxy: bool = True):
+async def stream_bytes(url: str):
     """Generator that yields bytes from a streaming URL.
-    Uses a short read timeout so abandoned upstream connections close fast.
-    Set use_proxy=False for live TV (direct CDN needed for throughput)."""
+    Resolves the redirect chain through SOCKS5 proxy (to get past Cloudflare 458),
+    then streams directly from the CDN edge for full throughput."""
     headers = {"User-Agent": UA_STR}
     timeout = httpx.Timeout(10.0, read=5.0)
-    transport = get_proxy_transport() if use_proxy else None
-    async with httpx.AsyncClient(transport=transport, timeout=timeout, follow_redirects=True, headers=headers) as sc:
-        async with sc.stream("GET", url) as resp:
+    
+    # Step 1: Resolve redirect through the proxy (gets past Cloudflare)
+    cdn_url = url
+    try:
+        proxy_transport = get_proxy_transport()
+        if proxy_transport:
+            async with httpx.AsyncClient(transport=proxy_transport, timeout=10.0,
+                                         follow_redirects=True, headers=headers) as pc:
+                async with pc.stream("GET", url) as presp:
+                    presp.raise_for_status()
+                    cdn_url = str(presp.url)
+                    # Read the first chunk through proxy to confirm it works
+                    first_chunk = await presp.aiter_bytes().__anext__()
+                    # Yield the first chunk, then continue direct
+                    yield first_chunk
+    except Exception as e:
+        log.warning(f"Proxy redirect resolution failed, trying direct: {e}")
+    
+    # Step 2: Stream directly from CDN edge
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True, headers=headers) as sc:
+        async with sc.stream("GET", cdn_url) as resp:
             resp.raise_for_status()
             async for chunk in resp.aiter_bytes():
                 yield chunk
 
 
 async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
-    """Generator that yields VOD bytes, optionally with Range support."""
+    """Generator that yields VOD bytes, optionally with Range support.
+    Resolves redirect through proxy, streams directly from CDN edge."""
     headers = {"User-Agent": UA_STR}
     if range_header:
         headers["Range"] = range_header
     timeout = httpx.Timeout(30.0, read=10.0)
-    transport = get_proxy_transport()
-    async with httpx.AsyncClient(transport=transport, timeout=timeout, follow_redirects=True, headers=headers) as sc:
-        async with sc.stream("GET", url) as resp:
+    
+    # Step 1: Resolve redirect through the proxy
+    cdn_url = url
+    try:
+        proxy_transport = get_proxy_transport()
+        if proxy_transport:
+            async with httpx.AsyncClient(transport=proxy_transport, timeout=10.0,
+                                         follow_redirects=True, headers=headers) as pc:
+                async with pc.stream("GET", url) as presp:
+                    presp.raise_for_status()
+                    cdn_url = str(presp.url)
+                    first_chunk = await presp.aiter_bytes().__anext__()
+                    yield first_chunk
+    except Exception as e:
+        log.warning(f"VOD proxy redirect failed, trying direct: {e}")
+    
+    # Step 2: Stream directly from CDN edge
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True, headers=headers) as sc:
+        async with sc.stream("GET", cdn_url) as resp:
             resp.raise_for_status()
             async for chunk in resp.aiter_bytes():
                 yield chunk
@@ -547,7 +582,7 @@ async def stream_live(stream_id: int, request: Request):
     try:
         async def monitored_stream():
             try:
-                async for chunk in stream_bytes(url, use_proxy=False):
+                async for chunk in stream_bytes(url):
                     if await request.is_disconnected():
                         log.info(f"STREAM LIVE DISCONNECT id={stream_id} — stopping upstream")
                         break
