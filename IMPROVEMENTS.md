@@ -8,22 +8,42 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.5 — Upgrade hls.js to v1.7.0-beta.1
-Newer hls.js adds I-frame playlist support, smoother audio switching, CMCD v2
-analytics, faster startup (parallel init-segment loading), and improved live
-resilience config options.
-Files: web/package.json, web/src/components/Player.tsx
-Difficulty: Easy
-Est: 15 min
-
 ### P3.6 — Add trending/popular movies section from TMDB proxy
 The backend has TMDB proxy infrastructure but no frontend integration yet.
 Add a "Trending" or "Popular" row on the Movies page sourced from the proxy.
-Files: server/main.py, web/src/pages/Movies.tsx
+Files: server/main.py, web/src/lib/api.ts, web/src/pages/Movies.tsx
 Difficulty: Medium
 Est: 45 min
 
+### P3.7 — Expose TMDB proxy endpoints in frontend API client
+Add `api.tmdb.trending()`, `api.tmdb.search()`, `api.tmdb.details()`,
+`api.tmdb.similar()`, and `api.tmdb.configuration()` functions to
+web/src/lib/api.ts. Currently the TMDB v3 proxy is backend-only.
+Files: web/src/lib/api.ts
+Difficulty: Easy
+Est: 10 min
+
+### P3.8 — Admin dashboard auto-refresh with polling
+AdminDashboard.tsx only loads stats once on mount. Add a polling mechanism
+(every 60s) to refresh cache stats, stream hits, and error log.
+Files: web/src/pages/AdminDashboard.tsx
+Difficulty: Easy
+Est: 15 min
+
+### P3.9 — Frontend build optimization with code splitting
+Use React.lazy + Suspense for route-level code splitting. The app currently
+bundles all pages into a single chunk, which grows large as features are added.
+Files: web/src/App.tsx
+Difficulty: Easy
+Est: 20 min
+
 ## Recently Completed
+
+### P3.5 — Upgrade hls.js to v1.7.0-beta.1
+Upgraded from ^1.6.16 to ^1.7.0-beta.1. Gives I-frame playlist support, smoother
+audio switching, CMCD v2 analytics, faster startup, and improved live resilience.
+TypeScript check passes cleanly.
+✅ Done: web/package.json installed via `npm install hls.js@beta`, TypeScript compiles clean
 
 ### P3.4 — Keyboard navigation for content grids
 Arrow-key navigation through movie/series grids with focus indicators.
