@@ -70,13 +70,13 @@ export default function MediaOverlay({
         </button>
 
         {/* ── Hero Banner ─────────────────────────────────────── */}
-        <div className="relative shrink-0 min-h-[180px] sm:h-[400px] bg-[#141420]">
+        <div className="relative shrink-0 min-h-[180px] sm:h-[400px] bg-[#141420] flex flex-col justify-end">
           {bannerUrl ? (
             <>
               <img
                 src={imageUrl(bannerUrl)}
                 alt={`${title} banner`}
-                className="w-full h-full object-cover opacity-60"
+                className="absolute inset-0 w-full h-full object-cover opacity-60"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = "none";
                 }}
@@ -89,7 +89,7 @@ export default function MediaOverlay({
           )}
 
           {/* Hero content */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-10 flex gap-3 sm:gap-5 items-end">
+          <div className="relative z-10 p-4 sm:p-10 flex gap-3 sm:gap-5 items-end">
             {posterUrl && (
               <div className="w-[80px] sm:w-[160px] shrink-0 rounded-lg overflow-hidden ring-1 ring-white/10 shadow-2xl -mb-2">
                 <img
