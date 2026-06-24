@@ -8,11 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P2.x — Series page: TMDB "Trending This Week" row
-Add a horizontal trending TV shows row on the Series page (like the Movies page has),
-sourced from the new `/api/tmdb/tv/trending` backend endpoint. Shows TMDB posters,
-year badges, rating, and maps clicks to the series overlay.
-
 ### P3.x — Upgrade outdated npm deps (autoprefixer, sonner, tailwind-merge)
 Several npm packages have newer versions. Focus on minor/patch upgrades first:
 autoprefixer 10.5.0 → 10.5.2 (minor), sonner 1.7.4 → 2.0.7 (major — review changelog),
@@ -24,6 +19,12 @@ Use the new `api.tmdb.tv.details(seriesId)` endpoint to show richer metadata
 when a TMDB ID is available on the series object.
 
 ## Recently Completed
+
+### P2.x — Series page: TMDB "Trending This Week" row
+Added a horizontal trending TV shows row on the Series page (like the Movies page has),
+sourced from the `/api/tmdb/tv/trending` backend endpoint. Shows TMDB posters,
+year badges, rating, and maps clicks to the series overlay.
+✅ Done: web/src/pages/Series.tsx — TypeScript clean, 26 backend tests pass, committed and pushed.
 
 ### P2.x — Add TMDB TV/Series proxy endpoints to backend + frontend
 Added 4 new TMDB v3 API proxy endpoints for TV content:
