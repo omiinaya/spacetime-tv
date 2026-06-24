@@ -8,13 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.2 — Add tmdb v3 API fallback for richer metadata
-The TMDB proxy endpoints are in the backend but could be enhanced
-with trending/popular movie lists for the Movies homepage.
-Files: server/
-Difficulty: Medium
-Est: 1h
-
 ### P3.4 — Keyboard navigation for content grids
 Arrow-key navigation through movie/series grids with focus indicators.
 Files: web/src/pages/Movies.tsx, web/src/pages/Series.tsx
@@ -39,6 +32,12 @@ Est: 45 min
 ---
 
 ## Recently Completed
+
+### P3.2 — Add tmdb v3 API fallback for richer metadata
+Added 5 TMDB v3 API proxy endpoints (trending, search, movie details, similar,
+configuration). All gracefully return enabled=false when TMDB_API_KEY is unset.
+Config in config.py + .env.example.
+✅ Done: 5 endpoints in server/main.py, 5 tests, config.py, .env.example
 
 ### P3.1 — Series watchlist (favorite series)
 Watchlist previously only supported movies. Extended to series with:
