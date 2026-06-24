@@ -50,15 +50,21 @@ function saveMuted(m: boolean) {
   try { localStorage.setItem("stv_muted", String(m)); } catch {}
 }
 
-async function probeStream(url: string): Promise<ProbeResult> {
+async function probeStream(url: string, signal?: AbortSignal): Promise<ProbeResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
+  // If an external signal fires first, forward it to our controller
+  const onExternalAbort = () => controller.abort();
+  signal?.addEventListener("abort", onExternalAbort, { once: true });
+
   try {
     const r = await fetch(url, { signal: controller.signal });
     clearTimeout(timer);
+    signal?.removeEventListener("abort", onExternalAbort);
     return await r.json();
   } catch {
     clearTimeout(timer);
+    signal?.removeEventListener("abort", onExternalAbort);
     return { codec: "unknown" };
   }
 }
@@ -574,6 +580,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
   // ── Main effect ────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
+    const abortController = new AbortController();
     const video = videoRef.current;
     if (video) { video.volume = volume; video.playbackRate = playbackRate; }
 
@@ -589,8 +596,9 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
         const probeTimer = setTimeout(() => {
           if (!cancelled) setLoadingStep("Analyzing video format…");
         }, 5_000);
-        const result = await probeStream(probeUrl);
+        const result = await probeStream(probeUrl, abortController.signal);
         clearTimeout(probeTimer);
+        if (cancelled) return;
         if (result.codec === "hevc") {
           needsTranscode = true;
           probeHeight = result.height || 0;
@@ -626,11 +634,30 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
         }
       }
 
-      await startVod(() => cancelled, undefined, needsTranscode);
+      if (!cancelled) await startVod(() => cancelled, undefined, needsTranscode);
     };
 
     start();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      abortController.abort();
+
+      // Kill the video element — pause + detach source + force-load to cancel
+      // all in-flight network requests (mp4, mpegts, hls segments, etc.)
+      const v = videoRef.current;
+      if (v) {
+        v.pause();
+        v.removeAttribute("src");
+        v.load(); // cancels all pending requests on the media element
+      }
+
+      // Destroy players inline — no setTimeout deferral
+      if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
+      try { playerRef.current?.destroy(); } catch {}
+      playerRef.current = null;
+      try { hlsRef.current?.destroy(); } catch {}
+      hlsRef.current = null;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamPath]);
 
@@ -714,18 +741,18 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
         if (doc.webkitFullscreenElement) doc.webkitExitFullscreen();
       } catch {}
 
-      if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
-
-      const hls = hlsRef.current;
-      const player = playerRef.current;
-      if (hls || player) {
-        hlsRef.current = null;
-        playerRef.current = null;
-        setTimeout(() => {
-          if (hls) { try { hls.destroy(); } catch {} }
-          if (player) { try { player.destroy(); } catch {} }
-        }, 0);
+      // Aggressive kill — same pattern as main effect cleanup
+      const video = videoRef.current;
+      if (video) {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
       }
+      if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
+      try { playerRef.current?.destroy(); } catch {}
+      playerRef.current = null;
+      try { hlsRef.current?.destroy(); } catch {}
+      hlsRef.current = null;
     };
   }, []);
 
