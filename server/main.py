@@ -376,12 +376,13 @@ async def get_content_length(url: str) -> Optional[int]:
         return None
 
 
-async def stream_bytes(url: str):
+async def stream_bytes(url: str, use_proxy: bool = True):
     """Generator that yields bytes from a streaming URL.
-    Uses a short read timeout so abandoned upstream connections close fast."""
+    Uses a short read timeout so abandoned upstream connections close fast.
+    Set use_proxy=False for live TV (direct CDN needed for throughput)."""
     headers = {"User-Agent": UA_STR}
     timeout = httpx.Timeout(10.0, read=5.0)
-    transport = get_proxy_transport()
+    transport = get_proxy_transport() if use_proxy else None
     async with httpx.AsyncClient(transport=transport, timeout=timeout, follow_redirects=True, headers=headers) as sc:
         async with sc.stream("GET", url) as resp:
             resp.raise_for_status()
@@ -546,7 +547,7 @@ async def stream_live(stream_id: int, request: Request):
     try:
         async def monitored_stream():
             try:
-                async for chunk in stream_bytes(url):
+                async for chunk in stream_bytes(url, use_proxy=False):
                     if await request.is_disconnected():
                         log.info(f"STREAM LIVE DISCONNECT id={stream_id} — stopping upstream")
                         break
