@@ -241,32 +241,34 @@ export default function Player({ type }: PlayerProps) {
       {/* ── Center controls ────────────────────────────────── */}
       <div
         className={`absolute inset-0 z-10 flex items-center justify-center gap-3 sm:gap-5 transition-opacity duration-300 ${(controlsVisible || phase !== "playing") && phase !== "error" && phase !== "loading" && phase !== "probing" ? "opacity-100" : "opacity-0 pointer-events-none"}`}
-        onTouchStart={(e) => e.stopPropagation()}
       >
         <button
+          onTouchStart={(e) => e.stopPropagation()}
           onClick={() => seek(-10)}
-          className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 active:bg-white/30 transition-colors"
+          className="text-white/80 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label="Rewind 10 seconds"
         >
-          <SkipBack className="w-6 h-6 sm:w-7 sm:h-7 text-white" aria-hidden="true" />
+          <SkipBack className="w-6 h-6 sm:w-7 sm:h-7" aria-hidden="true" />
         </button>
         <button
+          onTouchStart={(e) => e.stopPropagation()}
           onClick={togglePlay}
-          className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center hover:bg-white/25 active:bg-white/35 transition-colors"
+          className="text-white/80 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label={phase === "playing" ? "Pause" : "Play"}
         >
           {phase === "playing" ? (
-            <Pause className="w-8 h-8 sm:w-10 sm:h-10 text-white" aria-hidden="true" />
+            <Pause className="w-8 h-8 sm:w-10 sm:h-10" aria-hidden="true" />
           ) : (
-            <Play className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-white ml-1" aria-hidden="true" />
+            <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-white ml-1" aria-hidden="true" />
           )}
         </button>
         <button
+          onTouchStart={(e) => e.stopPropagation()}
           onClick={() => seek(10)}
-          className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 active:bg-white/30 transition-colors"
+          className="text-white/80 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label="Forward 10 seconds"
         >
-          <SkipForward className="w-6 h-6 sm:w-7 sm:h-7 text-white" aria-hidden="true" />
+          <SkipForward className="w-6 h-6 sm:w-7 sm:h-7" aria-hidden="true" />
         </button>
       </div>
 
