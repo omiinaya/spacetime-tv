@@ -51,8 +51,16 @@ function saveMuted(m: boolean) {
 }
 
 async function probeStream(url: string): Promise<ProbeResult> {
-  try { const r = await fetch(url); return await r.json(); }
-  catch { return { codec: "unknown" }; }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const r = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    return await r.json();
+  } catch {
+    clearTimeout(timer);
+    return { codec: "unknown" };
+  }
 }
 
 // ── Time formatter ────────────────────────────────────────────
@@ -577,7 +585,12 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       if (transcodeCache.has(streamId)) {
         needsTranscode = transcodeCache.get(streamId) === "hevc";
       } else {
+        // Timeout guard: if probe takes >5s, show progress
+        const probeTimer = setTimeout(() => {
+          if (!cancelled) setLoadingStep("Analyzing video format…");
+        }, 5_000);
         const result = await probeStream(probeUrl);
+        clearTimeout(probeTimer);
         if (result.codec === "hevc") {
           needsTranscode = true;
           probeHeight = result.height || 0;
