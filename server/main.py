@@ -367,9 +367,11 @@ async def get_content_length(url: str) -> Optional[int]:
 
 
 async def stream_bytes(url: str):
-    """Generator that yields bytes from a streaming URL."""
+    """Generator that yields bytes from a streaming URL.
+    Uses a short read timeout so abandoned upstream connections close fast."""
     headers = {"User-Agent": UA_STR}
-    async with httpx.AsyncClient(timeout=60.0, follow_redirects=True, headers=headers) as sc:
+    timeout = httpx.Timeout(10.0, read=5.0)
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True, headers=headers) as sc:
         async with sc.stream("GET", url) as resp:
             resp.raise_for_status()
             async for chunk in resp.aiter_bytes():
@@ -381,7 +383,8 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
     headers = {"User-Agent": UA_STR}
     if range_header:
         headers["Range"] = range_header
-    async with httpx.AsyncClient(timeout=60.0, follow_redirects=True, headers=headers) as sc:
+    timeout = httpx.Timeout(30.0, read=10.0)
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True, headers=headers) as sc:
         async with sc.stream("GET", url) as resp:
             resp.raise_for_status()
             async for chunk in resp.aiter_bytes():
@@ -523,12 +526,34 @@ async def stream_proxy(url: str, content_type: str):
 
 
 @app.get("/api/stream/live/{stream_id}")
-async def stream_live(stream_id: int):
-    """Proxy live TV stream (raw MPEG-TS)."""
+async def stream_live(stream_id: int, request: Request):
+    """Proxy live TV stream (raw MPEG-TS). Closes upstream fast on disconnect."""
     track_hit("live", stream_id)
-    return await stream_proxy(
-        build_stream_url(stream_id, "live"), "video/mp2t"
-    )
+    url = build_stream_url(stream_id, "live")
+    log.info(f"STREAM LIVE START id={stream_id}")
+    try:
+        async def monitored_stream():
+            try:
+                async for chunk in stream_bytes(url):
+                    if await request.is_disconnected():
+                        log.info(f"STREAM LIVE DISCONNECT id={stream_id} — stopping upstream")
+                        break
+                    yield chunk
+            except Exception as e:
+                log.warning(f"STREAM LIVE ERROR id={stream_id}: {e}")
+            finally:
+                log.info(f"STREAM LIVE END id={stream_id}")
+        return StreamingResponse(
+            monitored_stream(),
+            media_type="video/mp2t",
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "no-cache",
+            },
+        )
+    except Exception as e:
+        log.error(f"Stream proxy error ({url}): {e}")
+        return Response(status_code=502, content="Stream unavailable")
 
 
 # ── Stream Probe (codec detection) ──────────────────────────────────────────
