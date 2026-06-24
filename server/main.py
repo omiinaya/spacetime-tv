@@ -370,7 +370,7 @@ async def stream_bytes(url: str):
     """Generator that yields bytes from a streaming URL.
     Uses a short read timeout so abandoned upstream connections close fast."""
     headers = {"User-Agent": UA_STR}
-    timeout = httpx.Timeout(10.0, read=5.0)
+    timeout = httpx.Timeout(60.0, read=30.0)
     async with httpx.AsyncClient(timeout=timeout, follow_redirects=True, headers=headers) as sc:
         async with sc.stream("GET", url) as resp:
             resp.raise_for_status()
