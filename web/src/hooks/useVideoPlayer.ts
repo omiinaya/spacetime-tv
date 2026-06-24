@@ -692,7 +692,19 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
   }, []);
 
   const seekTo = useCallback((time: number) => {
-    if (isLive || !vodUrlRef.current) return;
+    if (isLive) return;
+    const v = videoRef.current;
+    if (!v) return;
+
+    // HLS (cached) — native seeking, no player recreation needed
+    if (hlsRef.current) {
+      v.currentTime = Math.max(0, time);
+      setCurrentTime(v.currentTime);
+      return;
+    }
+
+    // mpegts VOD — recreate player with start offset
+    if (!vodUrlRef.current) return;
     const url = vodUrlRef.current;
     const isTC = vodTranscodeRef.current;
     if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
@@ -701,10 +713,18 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
   }, [isLive, playVodRemux]);
 
   const seek = useCallback((delta: number) => {
-    if (isLive || !vodUrlRef.current) return;
+    if (isLive) return;
     const v = videoRef.current;
     if (!v) return;
     const target = Math.max(0, (v.currentTime || 0) + delta);
+
+    // HLS — native seeking is instant
+    if (hlsRef.current) {
+      v.currentTime = target;
+      setCurrentTime(target);
+      return;
+    }
+
     seekTo(target);
   }, [isLive, seekTo]);
 
