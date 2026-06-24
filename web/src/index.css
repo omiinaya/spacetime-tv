@@ -29,6 +29,7 @@ body {
   color: oklch(var(--foreground));
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 /* Scrollbar */
