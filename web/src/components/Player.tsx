@@ -253,7 +253,7 @@ export default function Player({ type }: PlayerProps) {
 
       {/* ── Center controls ────────────────────────────────── */}
       <div
-        className={`absolute inset-0 z-10 flex items-center justify-center gap-3 sm:gap-5 transition-opacity duration-300 ${(controlsVisible || phase !== "playing") && phase !== "error" && phase !== "loading" && phase !== "probing" ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        className={`absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center gap-3 sm:gap-5 transition-opacity duration-300 ${(controlsVisible || phase !== "playing") && phase !== "error" && phase !== "loading" && phase !== "probing" ? "opacity-100" : "opacity-0 pointer-events-none"}`}
       >
         <button
           onTouchStart={() => { centerTouched.current = true; }}
