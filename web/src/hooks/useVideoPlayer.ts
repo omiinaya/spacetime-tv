@@ -580,9 +580,28 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
   // ── Main effect ────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
+    let phaseTimedOut = false;
     const abortController = new AbortController();
     const video = videoRef.current;
     if (video) { video.volume = volume; video.playbackRate = playbackRate; }
+
+    // Safety timeout — if we're still probing after 12s, force progression.
+    // This is a last-resort guard; probeStream has its own 10s timeout.
+    const safetyTimer = setTimeout(() => {
+      if (!cancelled && phaseRef.current === "probing") {
+        phaseTimedOut = true;
+        transcodeCache.set(streamId, "native");
+        setPhase("loading");
+        setLoadingStep("Starting stream…");
+        setErrorMsg(null);
+        // Kick off playback directly
+        if (isLive) {
+          playMPEGTS(streamPath, true, false);
+        } else {
+          startVod(() => cancelled, undefined, false);
+        }
+      }
+    }, 12_000);
 
     const start = async () => {
       setPhase("probing"); setErrorMsg(null); setTranscoding(false); setLoadingStep("Detecting video format…");
@@ -592,13 +611,18 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       if (transcodeCache.has(streamId)) {
         needsTranscode = transcodeCache.get(streamId) === "hevc";
       } else {
-        // Timeout guard: if probe takes >5s, show progress
         const probeTimer = setTimeout(() => {
-          if (!cancelled) setLoadingStep("Analyzing video format…");
+          if (!cancelled && !phaseTimedOut) setLoadingStep("Analyzing video format…");
         }, 5_000);
-        const result = await probeStream(probeUrl, abortController.signal);
+        let result: ProbeResult;
+        try {
+          result = await probeStream(probeUrl, abortController.signal);
+        } catch {
+          result = { codec: "unknown" };
+        }
         clearTimeout(probeTimer);
-        if (cancelled) return;
+        if (phaseTimedOut || cancelled) return;
+
         if (result.codec === "hevc") {
           needsTranscode = true;
           probeHeight = result.height || 0;
@@ -611,7 +635,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
           transcodeCache.set(streamId, "native");
         }
       }
-      if (cancelled) return;
+      if (cancelled || phaseTimedOut) return;
 
       if (needsTranscode && isLive && probeHeight >= 2160 && qualityIdx === 0) {
         setQualityIdx(1);
@@ -634,24 +658,22 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
         }
       }
 
-      if (!cancelled) await startVod(() => cancelled, undefined, needsTranscode);
+      await startVod(() => cancelled, undefined, needsTranscode);
     };
 
     start();
     return () => {
       cancelled = true;
+      clearTimeout(safetyTimer);
       abortController.abort();
 
-      // Kill the video element — pause + detach source + force-load to cancel
-      // all in-flight network requests (mp4, mpegts, hls segments, etc.)
       const v = videoRef.current;
       if (v) {
         v.pause();
         v.removeAttribute("src");
-        v.load(); // cancels all pending requests on the media element
+        v.load();
       }
 
-      // Destroy players inline — no setTimeout deferral
       if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
       try { playerRef.current?.destroy(); } catch {}
       playerRef.current = null;
