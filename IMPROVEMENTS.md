@@ -13,12 +13,16 @@ Several npm packages have newer versions. Focus on minor/patch upgrades first:
 autoprefixer 10.5.0 → 10.5.2 (minor), sonner 1.7.4 → 2.0.7 (major — review changelog),
 tailwind-merge 2.6.1 → 3.6.0 (major — review changelog).
 
-### P3.x — Add TMDB series detail enrichment to SeriesOverlay
-Use the new `api.tmdb.tv.details(seriesId)` endpoint to show richer metadata
-(TMDB plot, cast, creator, seasons, runtime, networks, homepage) in SeriesOverlay
-when a TMDB ID is available on the series object.
-
 ## Recently Completed
+
+### P3.x — Add TMDB series detail enrichment to SeriesOverlay
+Added parallel TMDB enrichment fetch in SeriesOverlay: when the series object has
+a `tmdb` field (TMDB ID), the overlay now fetches TV details from the existing
+`/api/tmdb/tv/{series_id}` endpoint and uses richer metadata (TMDB plot, genres,
+networks, episode runtime, number of seasons/episodes, status, first air date,
+backdrop, poster, homepage link, TMDB external link). Falls back gracefully when
+TMDB is unavailable or ID is missing. Parallel fetch minimizes latency impact.
+✅ Done: web/src/components/SeriesOverlay.tsx — TypeScript clean, 27 backend tests pass, committed and pushed.
 
 ### P2.x — Series page: TMDB "Trending This Week" row
 Added a horizontal trending TV shows row on the Series page (like the Movies page has),
