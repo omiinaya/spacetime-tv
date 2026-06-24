@@ -226,10 +226,24 @@ async def cached_fetch(key: str, action: str, **params) -> list | dict:
     now = time.time()
     if key in _cache and (now - _cache[key][0]) < CACHE_TTL:
         return _cache[key][1]
-    data = await fetch_iptv(action, **params)
+    try:
+        data = await fetch_iptv(action, **params)
+    except Exception as e:
+        log.warning(f"cached_fetch: {key} fetch failed ({e})", extra={"action": action, "params": params})
+        # Return stale cache if available — better than propagating the error
+        if key in _cache:
+            stale_data = _cache[key][1]
+            log.warning(f"cached_fetch: falling back to stale cache for {key} ({type(stale_data).__name__})")
+            return stale_data
+        raise
     # Don't cache empty lists — provider may have had a transient error
     if isinstance(data, list) and len(data) == 0:
         log.warning(f"cached_fetch: {key} returned empty list, not caching")
+        # Return stale cache if available — better than returning nothing
+        if key in _cache:
+            stale_data = _cache[key][1]
+            log.warning(f"cached_fetch: falling back to stale cache for {key} ({len(stale_data)} entries)")
+            return stale_data
         return data
     _cache[key] = (now, data)
     return data
@@ -1405,6 +1419,8 @@ async def warm_cache():
     # Warm VOD
     try:
         vod_cats = await cached_fetch("vod_categories", "get_vod_categories")
+        if not vod_cats:
+            log.warning("[WARMER] VOD categories empty — upstream may be degraded, will retry next cycle")
         vod_cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
         if filter_cats:
             vod_cat_ids = [cid for cid in vod_cat_ids if cid in filter_cats]
@@ -1420,6 +1436,8 @@ async def warm_cache():
     # Warm Series
     try:
         series_cats = await cached_fetch("series_categories", "get_series_categories")
+        if not series_cats:
+            log.warning("[WARMER] Series categories empty — upstream may be degraded, will retry next cycle")
         series_cat_ids = [c["category_id"] for c in series_cats if c.get("category_id")]
         if filter_cats:
             series_cat_ids = [cid for cid in series_cat_ids if cid in filter_cats]

@@ -13,7 +13,7 @@ BASE = "http://localhost:8720"
 @pytest.fixture(scope="module")
 def client():
     """httpx client — one per test module."""
-    return httpx.Client(timeout=httpx.Timeout(15.0))
+    return httpx.Client(timeout=httpx.Timeout(60.0))
 
 
 # ── Health ──────────────────────────────────────────────────────────────

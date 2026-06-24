@@ -8,29 +8,25 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.10 — Increase test_server.py timeout for guide test
-`test_guide` uses 15s httpx timeout which is too tight for EPG-first-load.
-Increase to 60s or use module-scoped fixture with longer timeout for guide tests.
-Files: server/test_server.py
-Difficulty: Easy
-Est: 5 min
-
-### P3.11 — Show EPG age on admin dashboard
-The health endpoint exposes `epg_age` but admin dashboard doesn't display it.
-Add EPG age stat card alongside existing cache/stream stats.
-Files: web/src/pages/AdminDashboard.tsx
-Difficulty: Easy
-Est: 10 min
-
-### P3.12 — IPTV upstream returning empty VOD/series categories
-The IPTV provider (`iptv-provider.example.com`) periodically returns empty `[]` for VOD
-and series categories, preventing cache warming and causing test failures. Add
-resilience: retry stale cache on empty response, log upstream health metrics.
-Files: server/main.py
-Difficulty: Medium
-Est: 30 min
+No pending items. See Recently Completed below.
 
 ## Recently Completed
+
+### P3.12 — IPTV upstream returning empty VOD/series categories
+Added stale-cache fallback in `cached_fetch()`: when the provider returns an empty
+list, the function now returns stale cache data if available instead of propagating
+the empty result. Added upstream health warnings in `warm_cache()` for empty VOD
+and series categories. This prevents cache-warming from silently doing nothing
+and ensures the UI always has data to display even during upstream blips.
+✅ Done: server/main.py — cached_fetch stale fallback + warmer empty-category warnings,
+  23 backend tests pass, TypeScript clean, committed and pushed.
+
+### P3.10 — Increase test_server.py timeout for guide test
+Increased httpx client fixture timeout from 15s → 60s. The module-scoped client
+used a 15s timeout which was too tight for EPG-first-load (which fetches XMLTV
+synchronously on first call). 60s provides enough headroom for slow upstream
+responses while still failing on genuinely hung requests.
+✅ Done: server/test_server.py — timeout 15.0 → 60.0, 23 tests pass.
 
 ### P2.5 — EPG guide: background refresh + pre-warm in cache warmer
 The `/api/guide` endpoint blocked until EPG was fully fetched/parsed during
@@ -44,6 +40,11 @@ cache expiry, causing >15s timeouts. Added:
 ✅ Done: server/main.py — `test_guide` now passes (was timing out),
   VOD categories properly cached from warmer, TypeScript clean,
   all changes committed and pushed (765c6cf)
+
+### P3.11 — Show EPG age on admin dashboard
+✅ Done: Already implemented — `epg_age` type defined in AdminStats interface
+  and rendered as a StatCard with Clock icon on AdminDashboard.tsx line 125.
+  Discovered during continuous-improvement audit on 2026-06-24.
 
 ### P3.8 — Admin dashboard auto-refresh with polling
 AdminDashboard.tsx already has auto-refresh via setInterval(refresh, 30000)
@@ -70,45 +71,3 @@ Shows poster, year badge, TMDB rating, play overlay, and maps clicks to matching
 unified movie overlay. Gracefully hides when TMDB_API_KEY is unset.
 ✅ Done: Movies.tsx fetches trending on mount, renders ContentRow with TMDB cards,
   TypeScript and backend tests pass
-
-### P3.5 — Upgrade hls.js to v1.7.0-beta.1
-Upgraded from ^1.6.16 to ^1.7.0-beta.1. Gives I-frame playlist support, smoother
-audio switching, CMCD v2 analytics, faster startup, and improved live resilience.
-TypeScript check passes cleanly.
-✅ Done: web/package.json installed via `npm install hls.js@beta`, TypeScript compiles clean
-
-### P3.4 — Keyboard navigation for content grids
-Arrow-key navigation through movie/series grids with focus indicators.
-Files: web/src/hooks/useGridKeyboardNav.ts, web/src/pages/Movies.tsx,
-web/src/components/ContentRow.tsx, web/src/pages/Series.tsx
-Difficulty: Medium
-Est: 1h
-✅ Done: useGridKeyboardNav hook for CSS grid layouts, useRowKeyboardNav for
-horizontal scrollable rows. Movies grid uses arrow keys + grid column awareness.
-Series ContentRow uses left/right arrow navigation with auto-scroll. Focus
-indicators (ring + border highlight). All TypeScript and backend tests pass.
-
-### P3.2 — Add tmdb v3 API fallback for richer metadata
-Added 5 TMDB v3 API proxy endpoints (trending, search, movie details, similar,
-configuration). All gracefully return enabled=false when TMDB_API_KEY is unset.
-Config in config.py + .env.example.
-✅ Done: 5 endpoints in server/main.py, 5 tests, config.py, .env.example
-
-### P3.1 — Series watchlist (favorite series)
-Watchlist previously only supported movies. Extended to series with:
-- `stv_watchlist_series` localStorage key with dedicated `getSeriesWatchlist`,
-  `isSeriesInWatchlist`, `toggleSeriesWatchlist` functions
-- Heart button on series cards (Poster area, bottom-right, hover reveal)
-- Tabbed WatchlistPage with Movies and Series tabs
-- Series tab fetches details via parallel `api.series.details()` calls
-✅ Done: watchlist.ts, Series.tsx, WatchlistPage.tsx
-
-### P3.3 — Client-side search result caching
-Search results weren't cached session-side. Added sessionStorage cache
-with 2-minute TTL for recent searches to improve back-button experience.
-✅ Done: sessionStorage cache with SEARCH_CACHE_TTL=120s in Search.tsx
-
-### P2.2b — Watchlist page (complete P2.2)
-Heart button + localStorage lib exist, but there's no `/watchlist` route/page
-to browse watchlisted movies. Create dedicated page + nav item.
-✅ Done: WatchlistPage.tsx created with card grid, filter by IDs, empty state, remove button
