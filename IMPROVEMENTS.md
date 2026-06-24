@@ -8,15 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P2.5 — EPG guide: background refresh + pre-warm in cache warmer
-The `/api/guide` endpoint blocks until EPG is fully fetched and parsed during
-cache expiry (exceeds 15s httpx timeout in tests). Add EPG pre-warming in
-`warm_cache()` startup and use a background refresh pattern — return stale cached
-data immediately while refreshing in background.
-Files: server/main.py
-Difficulty: Medium
-Est: 30 min
-
 ### P3.10 — Increase test_server.py timeout for guide test
 `test_guide` uses 15s httpx timeout which is too tight for EPG-first-load.
 Increase to 60s or use module-scoped fixture with longer timeout for guide tests.
@@ -31,7 +22,28 @@ Files: web/src/pages/AdminDashboard.tsx
 Difficulty: Easy
 Est: 10 min
 
+### P3.12 — IPTV upstream returning empty VOD/series categories
+The IPTV provider (`iptv-provider.example.com`) periodically returns empty `[]` for VOD
+and series categories, preventing cache warming and causing test failures. Add
+resilience: retry stale cache on empty response, log upstream health metrics.
+Files: server/main.py
+Difficulty: Medium
+Est: 30 min
+
 ## Recently Completed
+
+### P2.5 — EPG guide: background refresh + pre-warm in cache warmer
+The `/api/guide` endpoint blocked until EPG was fully fetched/parsed during
+cache expiry, causing >15s timeouts. Added:
+- EPG pre-warming in `warm_cache()` so guide data is ready at startup
+- `load_epg_background()` function returns stale data immediately while
+  refreshing in background — no more blocking on cache expiry
+- Switched `/api/guide` to use `load_epg_background()`
+- Bonus: fixed `vod_cats` vs `vod_categories` cache key mismatch that
+  prevented movie/series categories from being served from warm cache
+✅ Done: server/main.py — `test_guide` now passes (was timing out),
+  VOD categories properly cached from warmer, TypeScript clean,
+  all changes committed and pushed (765c6cf)
 
 ### P3.8 — Admin dashboard auto-refresh with polling
 AdminDashboard.tsx already has auto-refresh via setInterval(refresh, 30000)
