@@ -34,6 +34,7 @@ export default function Player({ type }: PlayerProps) {
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  const centerTouched = useRef(false);
 
   const showControls = useCallback((temporary = false) => {
     setControlsVisible(true);
@@ -133,6 +134,11 @@ export default function Player({ type }: PlayerProps) {
       onMouseMove={() => showControls(true)}
       onMouseLeave={() => { if (phase === "playing") hideControls(); }}
       onTouchStart={(e) => {
+        // If a center button was just touched, skip controls toggle
+        if (centerTouched.current) {
+          centerTouched.current = false;
+          return;
+        }
         // Track swipe start for swipe-to-go-back
         if (e.touches.length === 1) {
           swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -243,7 +249,7 @@ export default function Player({ type }: PlayerProps) {
         className={`absolute inset-0 z-10 flex items-center justify-center gap-3 sm:gap-5 transition-opacity duration-300 ${(controlsVisible || phase !== "playing") && phase !== "error" && phase !== "loading" && phase !== "probing" ? "opacity-100" : "opacity-0 pointer-events-none"}`}
       >
         <button
-          onTouchStart={(e) => e.stopPropagation()}
+          onTouchStart={() => { centerTouched.current = true; }}
           onClick={() => seek(-10)}
           className="text-white/80 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label="Rewind 10 seconds"
@@ -251,7 +257,7 @@ export default function Player({ type }: PlayerProps) {
           <SkipBack className="w-6 h-6 sm:w-7 sm:h-7" aria-hidden="true" />
         </button>
         <button
-          onTouchStart={(e) => e.stopPropagation()}
+          onTouchStart={() => { centerTouched.current = true; }}
           onClick={togglePlay}
           className="text-white/80 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label={phase === "playing" ? "Pause" : "Play"}
@@ -263,7 +269,7 @@ export default function Player({ type }: PlayerProps) {
           )}
         </button>
         <button
-          onTouchStart={(e) => e.stopPropagation()}
+          onTouchStart={() => { centerTouched.current = true; }}
           onClick={() => seek(10)}
           className="text-white/80 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label="Forward 10 seconds"
