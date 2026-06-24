@@ -395,7 +395,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       }, 5000);
     }
 
-    const timeoutMs = isTranscode ? 60000 : 20000;
+    const timeoutMs = isTranscode ? 45000 : 12000;
     const timeout = setTimeout(() => {
       const p = phaseRef.current;
       if (p === "loading" || p === "probing") {
@@ -607,7 +607,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
         setPhase("error");
         setErrorMsg("Stream unavailable. The content may have been removed or is temporarily offline.");
       }
-    }, 25_000);
+    }, 18_000);
 
     const start = async () => {
       setPhase("probing"); setErrorMsg(null); setTranscoding(false); setLoadingStep("Detecting video format…");
