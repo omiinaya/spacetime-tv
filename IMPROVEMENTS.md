@@ -8,21 +8,40 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.8 — Admin dashboard auto-refresh with polling
-AdminDashboard.tsx only loads stats once on mount. Add a polling mechanism
-(ever 60s) to refresh cache stats, stream hits, and error log.
+### P2.5 — EPG guide: background refresh + pre-warm in cache warmer
+The `/api/guide` endpoint blocks until EPG is fully fetched and parsed during
+cache expiry (exceeds 15s httpx timeout in tests). Add EPG pre-warming in
+`warm_cache()` startup and use a background refresh pattern — return stale cached
+data immediately while refreshing in background.
+Files: server/main.py
+Difficulty: Medium
+Est: 30 min
+
+### P3.10 — Increase test_server.py timeout for guide test
+`test_guide` uses 15s httpx timeout which is too tight for EPG-first-load.
+Increase to 60s or use module-scoped fixture with longer timeout for guide tests.
+Files: server/test_server.py
+Difficulty: Easy
+Est: 5 min
+
+### P3.11 — Show EPG age on admin dashboard
+The health endpoint exposes `epg_age` but admin dashboard doesn't display it.
+Add EPG age stat card alongside existing cache/stream stats.
 Files: web/src/pages/AdminDashboard.tsx
 Difficulty: Easy
-Est: 15 min
-
-### P3.9 — Frontend build optimization with code splitting
-Use React.lazy + Suspense for route-level code splitting. The app currently
-bundles all pages into a single chunk, which grows large as features are added.
-Files: web/src/App.tsx
-Difficulty: Easy
-Est: 20 min
+Est: 10 min
 
 ## Recently Completed
+
+### P3.8 — Admin dashboard auto-refresh with polling
+AdminDashboard.tsx already has auto-refresh via setInterval(refresh, 30000)
+— code had been shipping with polling but backlog wasn't updated.
+✅ Done: Already implemented with 30s interval
+
+### P3.9 — Frontend build optimization with code splitting
+App.tsx already uses React.lazy() + Suspense for ALL route-level code splitting
+— all pages are lazy-loaded via dynamic imports.
+✅ Done: Already implemented with lazy imports and PageLoader fallback
 
 ### P3.7 — Expose TMDB proxy endpoints in frontend API client
 Added `api.tmdb.trending()`, `api.tmdb.search()`, `api.tmdb.details()`,
@@ -81,4 +100,3 @@ with 2-minute TTL for recent searches to improve back-button experience.
 Heart button + localStorage lib exist, but there's no `/watchlist` route/page
 to browse watchlisted movies. Create dedicated page + nav item.
 ✅ Done: WatchlistPage.tsx created with card grid, filter by IDs, empty state, remove button
-

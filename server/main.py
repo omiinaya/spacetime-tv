@@ -151,6 +151,32 @@ async def load_epg() -> dict:
         return {"channels": [], "programmes": []}
 
 
+_epg_refresh_task: Optional[asyncio.Task] = None
+
+
+async def load_epg_background() -> dict:
+    """Load EPG — returns cached data immediately (even stale), refreshes in background."""
+    now = time.time()
+    # If we have cached data, return it straight away
+    if epg_cache["data"] is not None:
+        if (now - epg_cache["fetched"]) >= EPG_CACHE_TTL:
+            # Stale cache — refresh in background
+            global _epg_refresh_task
+            if _epg_refresh_task is None or _epg_refresh_task.done():
+                _epg_refresh_task = asyncio.create_task(_refresh_epg_background())
+        return epg_cache["data"]
+    # No cache at all — fetch synchronously (first ever load)
+    return await load_epg()
+
+
+async def _refresh_epg_background():
+    """Refresh EPG in background task — logs failures but never raises."""
+    try:
+        await load_epg()
+    except Exception as e:
+        log.warning(f"Background EPG refresh failed: {e}")
+
+
 def parse_xmltv(xml_text: str) -> dict:
     """Parse XMLTV into structured data."""
     root = ET.fromstring(xml_text)
@@ -920,7 +946,7 @@ async def stream_series_ep(req: Request, series_id: int, episode_id: int):
 @app.get("/api/movies/categories")
 async def movies_categories():
     """All VOD categories."""
-    data = await cached_fetch("vod_cats", "get_vod_categories")
+    data = await cached_fetch("vod_categories", "get_vod_categories")
     return {"categories": data}
 
 
@@ -954,7 +980,7 @@ async def movies_unified(
     groups: dict[str, dict] = {}  # tmdb → {movie, languages: {lang_code: {name, stream_id}}}
 
     for key, (ts, data) in _cache.items():
-        if not key.startswith("vod_") or key in ("vod_categories",):
+        if not key.startswith("vod_") or key in ("vod_categories", "vod_cats"):
             continue
         if not isinstance(data, list):
             continue
@@ -1201,7 +1227,7 @@ async def tv_guide(
     Returns: { channel_groups: [...], total_channels: N }
     Each group: { channel_id, channel_name, channel_icon, stream_id, programmes: [...] }
     """
-    epg = await load_epg()
+    epg = await load_epg_background()
     programmes = epg.get("programmes", [])
     channels = epg.get("channels", [])
 
@@ -1405,6 +1431,16 @@ async def warm_cache():
         log.info(f"[WARMER] Series: {len(series_cat_ids)} categories cached")
     except Exception as e:
         log.warning(f"[WARMER] Series warm failed (non-fatal): {e}")
+
+    # Warm EPG
+    try:
+        log.info("[WARMER] Pre-warming EPG...")
+        epg_data = await load_epg()
+        channels = epg_data.get("channels", [])
+        programmes = epg_data.get("programmes", [])
+        log.info(f"[WARMER] EPG: {len(channels)} channels, {len(programmes)} programmes")
+    except Exception as e:
+        log.warning(f"[WARMER] EPG warm failed (non-fatal): {e}")
 
     elapsed = time.time() - start
     log.info(f"[WARMER] Done in {elapsed:.1f}s — all searches now instant")
