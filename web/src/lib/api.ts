@@ -116,6 +116,22 @@ export const api = {
     get<{ live: LiveStream[]; movies: Movie[]; series: Series[] }>(
       `/search?q=${encodeURIComponent(q)}`, signal
     ),
+  tmdb: {
+    trending: (timeWindow: "day" | "week" = "week", page = 1, signal?: AbortSignal) =>
+      get<TmdbTrendingResponse>(
+        `/tmdb/trending?time_window=${timeWindow}&page=${page}`, signal
+      ),
+    search: (q: string, page = 1, signal?: AbortSignal) =>
+      get<TmdbSearchResponse>(
+        `/tmdb/search?q=${encodeURIComponent(q)}&page=${page}`, signal
+      ),
+    details: (tmdbId: number, signal?: AbortSignal) =>
+      get<TmdbDetailsResponse>(`/tmdb/movie/${tmdbId}`, signal),
+    similar: (tmdbId: number, page = 1, signal?: AbortSignal) =>
+      get<TmdbSimilarResponse>(`/tmdb/movie/${tmdbId}/similar?page=${page}`, signal),
+    configuration: (signal?: AbortSignal) =>
+      get<TmdbConfigResponse>(`/tmdb/configuration`, signal),
+  },
 };
 
 export interface Category {
@@ -285,4 +301,54 @@ export interface GuideResponse {
   total_channels: number;
   offset: number;
   limit: number;
+}
+
+// ── TMDB v3 API Proxy types ─────────────────────────────────────────────
+
+export interface TmdbMovieResult {
+  adult: boolean;
+  backdrop_path: string | null;
+  genre_ids: number[];
+  id: number;
+  original_language: string;
+  original_title: string;
+  overview: string;
+  popularity: number;
+  poster_path: string | null;
+  release_date: string;
+  title: string;
+  video: boolean;
+  vote_average: number;
+  vote_count: number;
+}
+
+export interface TmdbTrendingResponse {
+  trending: TmdbMovieResult[];
+  total_pages: number;
+  total_results: number;
+  enabled: boolean;
+}
+
+export interface TmdbSearchResponse {
+  results: TmdbMovieResult[];
+  total_pages: number;
+  total_results: number;
+  enabled: boolean;
+}
+
+export interface TmdbDetailsResponse {
+  enabled: boolean;
+  info: Record<string, unknown> | null;
+}
+
+export interface TmdbSimilarResponse {
+  results: TmdbMovieResult[];
+  total_pages: number;
+  total_results: number;
+  enabled: boolean;
+}
+
+export interface TmdbConfigResponse {
+  enabled: boolean;
+  images: Record<string, unknown> | null;
 }

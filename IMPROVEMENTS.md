@@ -8,24 +8,9 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.6 — Add trending/popular movies section from TMDB proxy
-The backend has TMDB proxy infrastructure but no frontend integration yet.
-Add a "Trending" or "Popular" row on the Movies page sourced from the proxy.
-Files: server/main.py, web/src/lib/api.ts, web/src/pages/Movies.tsx
-Difficulty: Medium
-Est: 45 min
-
-### P3.7 — Expose TMDB proxy endpoints in frontend API client
-Add `api.tmdb.trending()`, `api.tmdb.search()`, `api.tmdb.details()`,
-`api.tmdb.similar()`, and `api.tmdb.configuration()` functions to
-web/src/lib/api.ts. Currently the TMDB v3 proxy is backend-only.
-Files: web/src/lib/api.ts
-Difficulty: Easy
-Est: 10 min
-
 ### P3.8 — Admin dashboard auto-refresh with polling
 AdminDashboard.tsx only loads stats once on mount. Add a polling mechanism
-(every 60s) to refresh cache stats, stream hits, and error log.
+(ever 60s) to refresh cache stats, stream hits, and error log.
 Files: web/src/pages/AdminDashboard.tsx
 Difficulty: Easy
 Est: 15 min
@@ -38,6 +23,22 @@ Difficulty: Easy
 Est: 20 min
 
 ## Recently Completed
+
+### P3.7 — Expose TMDB proxy endpoints in frontend API client
+Added `api.tmdb.trending()`, `api.tmdb.search()`, `api.tmdb.details()`,
+`api.tmdb.similar()`, and `api.tmdb.configuration()` functions to
+web/src/lib/api.ts with full TypeScript interfaces for all response types.
+✅ Done: 5 methods in api.ts, 6 response interfaces (TmdbMovieResult, TmdbTrendingResponse,
+  TmdbSearchResponse, TmdbDetailsResponse, TmdbSimilarResponse, TmdbConfigResponse),
+  TypeScript compiles clean
+
+### P3.6 — Add trending/popular movies section from TMDB proxy
+Added "Trending This Week" horizontal scrollable row on the Movies page using
+ContentRow component. Sourced from the TMDB proxy `/api/tmdb/trending` endpoint.
+Shows poster, year badge, TMDB rating, play overlay, and maps clicks to matching
+unified movie overlay. Gracefully hides when TMDB_API_KEY is unset.
+✅ Done: Movies.tsx fetches trending on mount, renders ContentRow with TMDB cards,
+  TypeScript and backend tests pass
 
 ### P3.5 — Upgrade hls.js to v1.7.0-beta.1
 Upgraded from ^1.6.16 to ^1.7.0-beta.1. Gives I-frame playlist support, smoother
@@ -80,20 +81,4 @@ with 2-minute TTL for recent searches to improve back-button experience.
 Heart button + localStorage lib exist, but there's no `/watchlist` route/page
 to browse watchlisted movies. Create dedicated page + nav item.
 ✅ Done: WatchlistPage.tsx created with card grid, filter by IDs, empty state, remove button
-
-### P1.1 — Search debounce (300ms)
-Every keystroke fires an API call. Add 300ms debounce on Movies/Search pages.
-✅ Done: debounceRef implemented in Movies.tsx and Search.tsx
-
-### P1.2 — Image proxy referrer check
-Anyone can use /api/image-proxy as a free proxy. Add referrer/origin check.
-✅ Done: origin/referrer validation in server/main.py image_proxy endpoint
-
-### P1.3 — 0-byte stream error UI
-Player sits black when CDN returns empty response. Show error state.
-✅ Done: Player.tsx has full error UI with AlertCircle icon, errorMsg, Retry button
-
-### P1.4 — Missing alt attributes on all <img> tags
-10+ images missing alt text — accessibility regression.
-✅ Done: All images have alt attributes (empty alt="" for decorative images with text labels)
 
