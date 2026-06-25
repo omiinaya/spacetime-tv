@@ -26,6 +26,11 @@ export function useInfiniteScroll<T>(
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
 
+    // Content scrolls inside <main> (not the viewport), so the sentinel
+    // must be observed relative to that container. Default root=null
+    // (viewport) never fires because the sentinel is clipped by main.
+    const root = document.querySelector("main");
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && visibleCount < items.length) {
@@ -34,7 +39,7 @@ export function useInfiniteScroll<T>(
           );
         }
       },
-      { rootMargin: "300px" }
+      { root, rootMargin: "300px" }
     );
 
     observer.observe(sentinel);

@@ -36,6 +36,9 @@ export default function Player({ type }: PlayerProps) {
   const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const centerTouched = useRef(false);
+  // Force a fresh video element on each mount (page refresh) to avoid
+  // any browser-cached state interfering with mpegts.js initialization.
+  const mountKey = useRef(Date.now()).current;
 
   const showControls = useCallback((temporary = false) => {
     setControlsVisible(true);
@@ -171,6 +174,7 @@ export default function Player({ type }: PlayerProps) {
     >
       <video
         ref={videoRef}
+        key={mountKey}
         className="absolute inset-0 w-full h-full object-contain"
         playsInline
         webkit-playsinline="true"

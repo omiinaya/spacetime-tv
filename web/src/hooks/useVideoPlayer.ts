@@ -152,6 +152,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
   const vodTranscodeRef = useRef<boolean>(false);
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCount = useRef(0);
+  const autoRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   // Stable callback — syncs React mute state when browser mutes video for autoplay fallback.
   // Does NOT persist to localStorage (user didn't intentionally mute).
@@ -168,11 +169,25 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
     clearLoadingTimeout();
     loadingTimeoutRef.current = setTimeout(() => {
       if (phaseRef.current === "loading") {
+        // For live, auto-retry instead of showing a dead error.
+        // The mpegts player may need more time or a fresh connection.
+        if (type === "live" && retryCount.current < 5) {
+          retryCount.current++;
+          const v = videoRef.current;
+          if (v) { v.pause(); v.removeAttribute("src"); v.load(); }
+          if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
+          try { playerRef.current?.destroy(); } catch {}
+          playerRef.current = null;
+          try { hlsRef.current?.destroy(); } catch {}
+          hlsRef.current = null;
+          setRetryKey(k => k + 1);
+          return;
+        }
         _setPhase("error");
         setErrorMsg("Stream unavailable. The content may have been removed or is temporarily offline.");
       }
     }, 20_000);
-  }, []);
+  }, [type]);
 
   // ── State ──────────────────────────────────────────────────
   const [phase, _setPhase] = useState<PlayPhase>("loading");
@@ -699,9 +714,16 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
           probeHeight = result.height || 0;
           transcodeCache.set(streamId, "hevc");
         } else if (result.codec === "unavailable") {
-          setPhase("error");
-          setErrorMsg("This video is not available on the current CDN edge server.");
-          return;
+          // For live, probe "unavailable" is typically a transient CDN edge issue.
+          // Don't block playback — skip transcode and try native playback.
+          if (isLive) {
+            needsTranscode = false;
+            transcodeCache.set(streamId, "native");
+          } else {
+            setPhase("error");
+            setErrorMsg("This video is not available on the current CDN edge server.");
+            return;
+          }
         } else {
           transcodeCache.set(streamId, "native");
         }

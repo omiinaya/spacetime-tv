@@ -10,6 +10,16 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          mpegts: ["mpegts.js"],
+          hls: ["hls.js"],
+        },
+      },
+    },
+  },
   server: {
     port: 5180,
     proxy: {
