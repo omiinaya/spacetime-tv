@@ -364,16 +364,17 @@ export default function SearchPage() {
               </div>
               <div className="poster-grid">
                 {results.series.map((s) => (
-                  <div
+                  <button
                     key={s.series_id}
-                    className="bg-card rounded-lg border border-border overflow-hidden"
+                    onClick={() => navigate('/series', { state: { openSeries: s } })}
+                    className="group bg-card rounded-lg border border-border overflow-hidden hover:border-primary/30 transition-all text-left"
                   >
                     <div className="aspect-[2/3] bg-muted">
                       {s.cover ? (
                         <img
                           src={s.cover}
                           alt={s.name ? `${s.name} poster` : ""}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           loading="lazy"
                           onError={(e) => {
                             (e.target as HTMLImageElement).style.display = "none";
@@ -398,7 +399,7 @@ export default function SearchPage() {
                         </div>
                       )}
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </section>

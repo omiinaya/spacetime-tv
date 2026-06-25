@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Loader2, AlertCircle, ArrowLeft, Play, Pause, Maximize, Minimize,
   Volume2, VolumeX, SkipBack, SkipForward, Settings, PictureInPicture2, Download, Tv
@@ -17,6 +17,7 @@ interface PlayerProps { type: "live" | "movie" | "series"; }
 // ── Component ─────────────────────────────────────────────────
 export default function Player({ type }: PlayerProps) {
   const { id, seriesId, epId } = useParams();
+  const navigate = useNavigate();
   const {
     videoRef, containerRef, phase, errorMsg, errorType, loadingStep, transcoding,
     volume, muted, playbackRate, qualityIdx, currentTime, duration, buffered,
@@ -24,7 +25,12 @@ export default function Player({ type }: PlayerProps) {
     togglePlay, seekTo, seek, setVolume, toggleMute, setSpeed, setQuality,
     resumePlayback, startFromBeginning,
     retryStream,
-  } = useVideoPlayer({ type, id, seriesId, epId });
+  } = useVideoPlayer({
+    type, id, seriesId, epId,
+    onAutoAdvance: useCallback((url: string) => {
+      navigate(url);
+    }, [navigate]),
+  });
 
   // ── UI State ─────────────────────────────────────────────────
   const { isFullscreen, setIsFullscreen } = useFullscreen();

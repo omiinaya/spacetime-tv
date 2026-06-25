@@ -164,6 +164,8 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
   const playEpisode = (epId: string | number) => {
     // Find the episode to get its metadata
     const ep = episodeList.find((e) => String(e.id) === String(epId));
+    const epNum = ep?.episode_num || 0;
+    const epTitle = ep?.title || `Episode ${epNum || ''}`;
     // Save rich series + episode metadata for Continue Watching
     try {
       sessionStorage.setItem(
@@ -172,11 +174,32 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
           name: series.name,
           cover: series.cover,
           seasonNumber: activeSeason,
-          episodeNum: ep?.episode_num || 0,
-          episodeTitle: ep?.title || `Episode ${ep?.episode_num || ''}`,
+          episodeNum: epNum,
+          episodeTitle: epTitle,
           episodeImage: ep?.info?.movie_image || series.cover || '',
           durationSeconds: ep?.info?.duration_secs || 0,
         })
+      );
+      // Store the full episode list for auto-advance
+      sessionStorage.setItem(
+        `stv_series_episodes_${series.series_id}_${activeSeason}`,
+        JSON.stringify(
+          episodeList.map((e) => ({
+            id: e.id,
+            episode_num: e.episode_num,
+            title: e.title,
+          }))
+        )
+      );
+      // Track which index we're currently playing
+      const currentIdx = episodeList.findIndex((e) => String(e.id) === String(epId));
+      sessionStorage.setItem(
+        `stv_series_current_idx_${series.series_id}`,
+        String(currentIdx >= 0 ? currentIdx : 0)
+      );
+      sessionStorage.setItem(
+        `stv_series_active_season_${series.series_id}`,
+        String(activeSeason)
       );
     } catch {}
     navigate(`/watch/series/${series.series_id}/${epId}`);

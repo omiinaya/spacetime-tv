@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  Activity, Database, Tv, AlertTriangle, Radio, Clock, BarChart3
+  Activity, Database, Tv, AlertTriangle, Radio, Clock, BarChart3,
+  Trash2, RefreshCw, RotateCcw, Loader2,
 } from "lucide-react";
 
 interface AdminStats {
@@ -40,6 +41,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cacheMsg, setCacheMsg] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -124,6 +126,69 @@ export default function AdminDashboard() {
           sub={`${stats.streams.unique_streams} unique streams`} />
         <StatCard icon={Clock} label="EPG Age" value={stats.cache.epg_age != null ? `${Math.round(stats.cache.epg_age)}s` : "N/A"} />
         <StatCard icon={Radio} label="SSE Clients" value={stats.sse_clients} />
+      </div>
+
+      {/* Cache Controls */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Database className="h-4 w-4 text-primary" />
+          <h2 className="text-sm font-semibold">Cache Controls</h2>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={async () => {
+              setCacheMsg("Clearing…");
+              try {
+                const r = await fetch("/api/admin/cache/clear", { method: "POST" });
+                const d = await r.json();
+                setCacheMsg(d.message || "Cache cleared");
+                refresh();
+              } catch { setCacheMsg("Failed"); }
+            }}
+            disabled={!!cacheMsg}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-xs hover:bg-destructive/20 hover:text-destructive transition-colors disabled:opacity-50"
+          >
+            {cacheMsg === "Clearing…" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            Clear Cache
+          </button>
+          <button
+            onClick={async () => {
+              setCacheMsg("Warming…");
+              try {
+                const r = await fetch("/api/admin/cache/warm", { method: "POST" });
+                const d = await r.json();
+                setCacheMsg(d.message || "Warming started");
+                setTimeout(() => { setCacheMsg(null); }, 3000);
+                refresh();
+              } catch { setCacheMsg("Failed"); }
+            }}
+            disabled={!!cacheMsg}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-xs hover:bg-primary/20 hover:text-primary transition-colors disabled:opacity-50"
+          >
+            {cacheMsg === "Warming…" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            Warm Cache
+          </button>
+          <button
+            onClick={async () => {
+              setCacheMsg("Full re-warm…");
+              try {
+                const r = await fetch("/api/admin/cache/warm-full", { method: "POST" });
+                const d = await r.json();
+                setCacheMsg(d.message || "Full re-warm started");
+                setTimeout(() => { setCacheMsg(null); }, 3000);
+                refresh();
+              } catch { setCacheMsg("Failed"); }
+            }}
+            disabled={!!cacheMsg}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-xs hover:bg-amber-500/20 hover:text-amber-400 transition-colors disabled:opacity-50"
+          >
+            {cacheMsg === "Full re-warm…" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+            Full Rewarm
+          </button>
+          {cacheMsg && !cacheMsg.endsWith("…") && (
+            <span className="flex items-center text-xs text-muted-foreground ml-2">{cacheMsg}</span>
+          )}
+        </div>
       </div>
 
       {/* Popular content */}

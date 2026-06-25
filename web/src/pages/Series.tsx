@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import {
   Tv2,
   Loader2,
@@ -101,6 +101,32 @@ export default function SeriesPage() {
 
   // Overlay state
   const [overlaySeries, setOverlaySeries] = useState<Series | null>(null);
+  const location = useLocation();
+
+  // Open series from search page (location.state) or URL param (?open=)
+  useEffect(() => {
+    const state = location.state as { openSeries?: Series } | null;
+    if (state?.openSeries) {
+      setOverlaySeries(state.openSeries);
+      // Clear state so Back from overlay doesn't re-open it
+      window.history.replaceState({}, document.title);
+      return;
+    }
+    // Bookmarkable ?open=SERIES_ID — find in loaded rows or fetch details
+    const openId = searchParams.get("open");
+    if (openId) {
+      const id = Number(openId);
+      if (isNaN(id)) return;
+      // Search loaded rows for the series
+      for (const [, row] of rows) {
+        const found = row.series.find((s) => s.series_id === id);
+        if (found) { setOverlaySeries(found); return; }
+      }
+      // Not yet loaded — search endpoint can find it (use api.search)
+      // Navigate without ?open= to prevent re-triggering
+      setSearchParams({}, { replace: true });
+    }
+  }, [location.state, searchParams, rows, setSearchParams]);
 
   const { settings } = useSettings();
 

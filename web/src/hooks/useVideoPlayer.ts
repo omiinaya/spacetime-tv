@@ -117,6 +117,7 @@ interface UseVideoPlayerParams {
   id: string | undefined;
   seriesId: string | undefined;
   epId: string | undefined;
+  onAutoAdvance?: (nextUrl: string) => void;
 }
 
 export interface UseVideoPlayerReturn {
@@ -148,9 +149,10 @@ export interface UseVideoPlayerReturn {
   resumePlayback: () => void;
   startFromBeginning: () => void;
   retryStream: () => void;
+  onAutoAdvance?: (nextUrl: string) => void;
 }
 
-export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParams): UseVideoPlayerReturn {
+export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseVideoPlayerParams): UseVideoPlayerReturn {
   const videoRef = useRef<HTMLVideoElement>(null!);
   const containerRef = useRef<HTMLDivElement>(null!);
   const playerRef = useRef<mpegts.Player | null>(null);
@@ -495,6 +497,29 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
               durationSeconds: metaDuration,
               updatedAt: Date.now(),
             });
+            // Auto-advance: at >= 95% progress, check for next episode
+            if (onAutoAdvance && metaDuration > 0 && (t / metaDuration) >= 0.95) {
+              const autoAdvanced = sessionStorage.getItem(`stv_auto_advanced_${seriesId}`);
+              if (!autoAdvanced && seriesId) {
+                sessionStorage.setItem(`stv_auto_advanced_${seriesId}`, "1");
+                const currentIdx = parseInt(sessionStorage.getItem(`stv_series_current_idx_${seriesId}`) || "0", 10);
+                const activeSeason = parseInt(sessionStorage.getItem(`stv_series_active_season_${seriesId}`) || "1", 10);
+                const episodesRaw = sessionStorage.getItem(`stv_series_episodes_${seriesId}_${activeSeason}`);
+                if (episodesRaw) {
+                  try {
+                    const episodes = JSON.parse(episodesRaw) as { id: string; episode_num: number; title: string }[];
+                    const nextEp = episodes[currentIdx + 1];
+                    if (nextEp) {
+                      // Update stored index for the next episode
+                      sessionStorage.setItem(`stv_series_current_idx_${seriesId}`, String(currentIdx + 1));
+                      // Remove the advance flag after a short delay so it resets for next time
+                      setTimeout(() => sessionStorage.removeItem(`stv_auto_advanced_${seriesId}`), 1000);
+                      onAutoAdvance(`/watch/series/${seriesId}/${nextEp.id}`);
+                    }
+                  } catch {}
+                }
+              }
+            }
           } else if (type === "movie" && id) {
             // Read movie metadata from sessionStorage
             let movieName = "", moviePoster = "";
@@ -998,5 +1023,6 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
     resumePlayback,
     startFromBeginning,
     retryStream,
+    onAutoAdvance,
   };
 }

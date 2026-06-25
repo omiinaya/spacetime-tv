@@ -47,6 +47,7 @@
 | P3.5 — Multi-language audio track selector for VOD | Some VOD streams offer multiple audio tracks. Probe/selector UI could be extended. |
 | P3.7 — EPG programme → TMDB enrichment | Lazy enrichment endpoint `/api/epg/enrich` for programme title → TMDB metadata lookup. |
 | P3.8 — ManagedMediaSource API for MSE optimization | Modern browsers support ManagedMediaSource (Chrome 120+, Safari 17+). hls.js v1.6+ has partial support. |
+| **P3.9 — Auto-advance next episode (series)** | ✅ **Done** — Player auto-navigates to next episode in season at ≥95% progress. Stores episode list + index in sessionStorage. |
 
 ### P4 — Deep Cuts
 
