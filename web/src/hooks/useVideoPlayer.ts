@@ -113,6 +113,7 @@ export interface UseVideoPlayerReturn {
   setQuality: (idx: number) => void;
   resumePlayback: () => void;
   startFromBeginning: () => void;
+  retryStream: () => void;
 }
 
 export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParams): UseVideoPlayerReturn {
@@ -889,5 +890,6 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
     setQuality,
     resumePlayback,
     startFromBeginning,
+    retryStream,
   };
 }
