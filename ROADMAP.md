@@ -48,6 +48,8 @@
 | P3.7 — EPG programme → TMDB enrichment | Lazy enrichment endpoint `/api/epg/enrich` for programme title → TMDB metadata lookup. |
 | P3.8 — ManagedMediaSource API for MSE optimization | Modern browsers support ManagedMediaSource (Chrome 120+, Safari 17+). hls.js v1.6+ has partial support. |
 | **P3.9 — Auto-advance next episode (series)** | ✅ **Done** — Player auto-navigates to next episode in season at ≥95% progress. Stores episode list + index in sessionStorage. |
+| **Bug: unified endpoint limit** | ✅ **Fixed** — `/api/movies/unified` raised 422 for limit >100. Backend bumped to 1000. Watchlist page now uses 1000. |
+| **Bug: nested buttons** | ✅ **Fixed** — Card wrappers changed from `<button>` to `<div role="button">` to fix `validateDOMNesting` warnings on Movies, Series, Watchlist pages. |
 
 ### P4 — Deep Cuts
 

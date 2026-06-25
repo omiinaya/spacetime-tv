@@ -469,13 +469,17 @@ export default function Movies() {
           {movies.map((m, idx) => {
             const year = yearFromName(m.name);
             return (
-              <button
+              <div
                 key={m.tmdb || m.stream_id}
                 data-grid-idx={idx}
                 onClick={() => setOverlayMovie(m)}
-                onKeyDown={(e) => handleGridKeyDown(e, idx)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOverlayMovie(m); }
+                  handleGridKeyDown(e, idx);
+                }}
+                role="button"
                 tabIndex={0}
-                className={`group flex flex-col rounded-xl overflow-hidden bg-card border transition-all duration-200 text-left focus:outline-none ${
+                className={`group flex flex-col rounded-xl overflow-hidden bg-card border transition-all duration-200 text-left focus:outline-none cursor-pointer ${
                   focusedIdx === idx
                     ? "border-primary ring-2 ring-primary/40 shadow-lg shadow-primary/10"
                     : "border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
@@ -537,7 +541,7 @@ export default function Movies() {
                     {m.base_name || m.name}
                   </p>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>

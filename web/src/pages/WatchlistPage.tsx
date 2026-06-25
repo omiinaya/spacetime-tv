@@ -153,11 +153,16 @@ function MoviesTab() {
           const year = m.added ? m.added.slice(0, 4) : "";
           const rating = parseFloat(m.rating);
           return (
-            <button
+            <div
               key={m.stream_id}
               data-watch-link
               onClick={() => setOverlayMovie(m)}
-              className="group relative bg-card rounded-lg overflow-hidden border border-border hover:border-primary/50 transition-all duration-200 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOverlayMovie(m); }
+              }}
+              role="button"
+              tabIndex={0}
+              className="group relative bg-card rounded-lg overflow-hidden border border-border hover:border-primary/50 transition-all duration-200 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
               aria-label={`${m.base_name || m.name} — movie details`}
             >
               <div className="aspect-[2/3] overflow-hidden bg-muted">
@@ -201,7 +206,7 @@ function MoviesTab() {
                   {m.base_name || m.name}
                 </p>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -342,10 +347,15 @@ function SeriesTab() {
         {seriesList.map((s) => {
           const rating = parseFloat(s.rating);
           return (
-            <button
+            <div
               key={s.series_id}
               onClick={() => setOverlaySeries(s)}
-              className="group relative bg-card rounded-lg overflow-hidden border border-border hover:border-primary/50 transition-all duration-200 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOverlaySeries(s); }
+              }}
+              role="button"
+              tabIndex={0}
+              className="group relative bg-card rounded-lg overflow-hidden border border-border hover:border-primary/50 transition-all duration-200 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
               aria-label={`${s.name} — series details`}
             >
               <div className="aspect-[2/3] overflow-hidden bg-muted">
@@ -394,7 +404,7 @@ function SeriesTab() {
                   {s.name}
                 </p>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
