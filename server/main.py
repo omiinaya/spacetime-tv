@@ -1594,6 +1594,13 @@ CACHE_DIR = Path("/tmp/stv_cache")
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 _converting: dict[str, asyncio.Task] = {}  # stream_id → conversion task
 
+# Image proxy disk cache (L2 — survives restarts, larger capacity)
+IMG_CACHE_DIR = CACHE_DIR / "images"
+IMG_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+_IMG_DISK_TTL = 86400  # 24 hours (images rarely change)
+_IMG_DISK_MAX_BYTES = 500 * 1024 * 1024  # 500 MB total disk budget
+_IMG_DISK_MAX_PER_FILE = 10 * 1024 * 1024  # 10 MB per image
+
 # ── Cache TTL / Auto-cleanup ────────────────────────────────────────────────
 CACHE_TTL_HOURS = 2  # Delete entries not accessed in this many hours
 CLEANUP_INTERVAL = 600  # Run cleanup every 10 minutes
@@ -1613,6 +1620,136 @@ def get_last_access(cache_key: str) -> Optional[float]:
         return float(stamp_path.read_text().strip())
     except Exception:
         return None
+
+
+# ── Image disk cache helpers ─────────────────────────────────────────────
+_IMG_CLEANUP_INTERVAL = 600  # same cadence as VOD cache cleanup
+
+
+def _img_cache_key(url: str) -> str:
+    """Return a safe filesystem key for a URL."""
+    import hashlib
+    return hashlib.md5(url.encode()).hexdigest()
+
+
+def _img_cache_path(cache_key: str) -> Path:
+    return IMG_CACHE_DIR / cache_key
+
+
+def _img_meta_path(cache_key: str) -> Path:
+    return IMG_CACHE_DIR / f"{cache_key}.meta"
+
+
+def _img_stamp_path(cache_key: str) -> Path:
+    return IMG_CACHE_DIR / f".{cache_key}.accessed"
+
+
+def _img_touch(cache_key: str):
+    """Record that an image cache entry was just accessed."""
+    _img_stamp_path(cache_key).write_text(str(time.time()))
+
+
+def _img_get_last_access(cache_key: str) -> float | None:
+    try:
+        return float(_img_stamp_path(cache_key).read_text().strip())
+    except Exception:
+        return None
+
+
+def _img_read_disk(cache_key: str) -> tuple[bytes, str, float] | None:
+    """Read image from disk cache. Returns (content, content_type, stored_at) or None."""
+    img_path = _img_cache_path(cache_key)
+    meta_path = _img_meta_path(cache_key)
+    if not img_path.exists() or not meta_path.exists():
+        return None
+    now = time.time()
+    last = _img_get_last_access(cache_key)
+    if last is not None and (now - last) > _IMG_DISK_TTL:
+        # Expired — delete
+        try:
+            img_path.unlink(missing_ok=True)
+            meta_path.unlink(missing_ok=True)
+            _img_stamp_path(cache_key).unlink(missing_ok=True)
+        except Exception:
+            pass
+        return None
+    try:
+        content = img_path.read_bytes()
+        meta = meta_path.read_text().strip()
+        ct, stored_at_str = meta.split("|", 1)
+        stored_at = float(stored_at_str)
+        _img_touch(cache_key)
+        return content, ct, stored_at
+    except Exception:
+        return None
+
+
+def _img_write_disk(cache_key: str, content: bytes, content_type: str):
+    """Write image to disk cache."""
+    # Check per-file size limit
+    if len(content) > _IMG_DISK_MAX_PER_FILE:
+        return
+    try:
+        _img_cache_path(cache_key).write_bytes(content)
+        meta = f"{content_type}|{time.time()}"
+        _img_meta_path(cache_key).write_text(meta)
+        _img_touch(cache_key)
+    except Exception:
+        pass
+
+
+def _img_enforce_disk_budget():
+    """Evict oldest entries when total disk cache exceeds budget."""
+    import hashlib
+    total = 0
+    entries: list[tuple[float, str, int]] = []
+    for f in IMG_CACHE_DIR.iterdir():
+        if f.name.startswith(".") or f.suffix == ".meta":
+            continue
+        key = f.name
+        last = _img_get_last_access(key)
+        if last is None:
+            last = f.stat().st_mtime
+        total += f.stat().st_size
+        entries.append((last, key, f.stat().st_size))
+    if total <= _IMG_DISK_MAX_BYTES:
+        return
+    # Sort oldest-first, delete until under 80% of budget
+    entries.sort(key=lambda x: x[0])
+    target = int(_IMG_DISK_MAX_BYTES * 0.8)
+    for last, key, size in entries:
+        if total <= target:
+            break
+        try:
+            _img_cache_path(key).unlink(missing_ok=True)
+            _img_meta_path(key).unlink(missing_ok=True)
+            _img_stamp_path(key).unlink(missing_ok=True)
+        except Exception:
+            pass
+        total -= size
+
+
+async def cleanup_image_cache():
+    """Remove expired image entries and enforce budget."""
+    now = time.time()
+    cutoff = now - _IMG_DISK_TTL
+    deleted = 0
+    for f in list(IMG_CACHE_DIR.iterdir()):
+        if f.name.startswith(".") or f.suffix == ".meta":
+            continue
+        key = f.name
+        last = _img_get_last_access(key)
+        if last is not None and last < cutoff:
+            try:
+                _img_cache_path(key).unlink(missing_ok=True)
+                _img_meta_path(key).unlink(missing_ok=True)
+                _img_stamp_path(key).unlink(missing_ok=True)
+                deleted += 1
+            except Exception:
+                pass
+    if deleted:
+        log.info(f"[IMG_CACHE] Removed {deleted} expired entries")
+    _img_enforce_disk_budget()
 
 
 async def cleanup_stale_cache():
@@ -1658,6 +1795,10 @@ async def cleanup_loop():
             await cleanup_stale_cache()
         except Exception as e:
             log.error(f"[CLEANUP] Error: {e}")
+        try:
+            await cleanup_image_cache()
+        except Exception as e:
+            log.error(f"[IMG_CACHE] Cleanup error: {e}")
 
 
 def start_cleanup_task():
@@ -2315,7 +2456,7 @@ async def image_proxy(request: Request, url: str = Query(...)):
     if not any(host == a or host.endswith("." + a) for a in allowed_hosts):
         raise HTTPException(400, f"Host not allowed: {host}")
     
-    # Check server-side cache
+    # Check in-memory cache (L1)
     now = time.time()
     if url in _img_cache:
         cached_at, content, ct = _img_cache[url]
@@ -2324,17 +2465,32 @@ async def image_proxy(request: Request, url: str = Query(...)):
                           headers={"Cache-Control": "public, max-age=86400"})
         del _img_cache[url]
     
+    # Check disk cache (L2) — survive restarts, larger capacity
+    img_key = _img_cache_key(url)
+    disk_hit = _img_read_disk(img_key)
+    if disk_hit is not None:
+        content, ct, stored_at = disk_hit
+        # Re-populate L1 (shorter TTL — will refetch from disk on expiry)
+        if len(_img_cache) >= _MAX_IMG_CACHE_SIZE:
+            oldest_key = min(_img_cache, key=lambda k: _img_cache[k][0])
+            del _img_cache[oldest_key]
+        _img_cache[url] = (now, content, ct)
+        return Response(content=content, media_type=ct,
+                       headers={"Cache-Control": "public, max-age=86400"})
+    
     resp = await client.get(url, follow_redirects=True)
     resp.raise_for_status()
     content = resp.content
     content_type = resp.headers.get("content-type", "image/jpeg")
     
-    # Evict oldest entry if cache is full
+    # Save to L1
     if len(_img_cache) >= _MAX_IMG_CACHE_SIZE:
         oldest_key = min(_img_cache, key=lambda k: _img_cache[k][0])
         del _img_cache[oldest_key]
-    
     _img_cache[url] = (now, content, content_type)
+    
+    # Save to L2 (async — fire and forget, non-blocking)
+    _img_write_disk(img_key, content, content_type)
     return Response(content=content, media_type=content_type,
                   headers={"Cache-Control": "public, max-age=86400"})
 

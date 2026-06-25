@@ -8,25 +8,15 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.1 — Wire up retryStream in player UI
-The `retryStream` callback is defined in `useVideoPlayer.ts` but not exposed in
-the hook's return value, making it dead code. Need to:
-- Add `retryStream` to the returned object
-- Add a "Retry" button (or tap-to-retry) to the player overlay when in error/loading-stuck state
-- The button should appear when `phase === "error"` or when loading hangs
-
 ### P3.2 — Tailwind CSS v4 migration planning
 tailwind-merge v3+ requires Tailwind CSS v4 (it drops v3 support). We're on
-Tailwind 3.4.10 and tailwind-merge 2.6.1. When we eventually migrate to Tailwind v4:
-- Install `tailwindcss` v4 and update `postcss.config` / `tailwind.config`
-- Bump `tailwind-merge` to 3.x at the same time
-- Review utility class changes (some old utilities removed/renamed in v4)
-- For now: stay on tailwind-merge ^2.6.x — no action needed.
-
-### P3.3 — Explore: Image proxy server-side caching
-Currently `/api/image-proxy` fetches images on-demand. Could add a disk cache
-layer (like the VOD convert cache) to reduce TMDB CDN load and speed up subsequent
-loads. Would need a TTL-based eviction policy and size cap.
+Tailwind 3.4.10 and tailwind-merge 2.6.0. Latest npm versions as of this tick:
+Tailwind CSS v4.3.1, tailwind-merge v3.6.0.
+- Migration path: install `@tailwindcss/vite` (replaces postcss plugin), update
+  `vite.config.ts`, replace `@tailwind` directives with `@import "tailwindcss"`,
+  migrate `tailwind.config.js` to CSS-based config, bump `tailwind-merge` to 3.x.
+- This is a significant refactor — best done in a dedicated session with UI
+  verification. For now: stay on tailwind-merge ^2.6.x — no action needed.
 
 ### P3.4 — Explore: Rich EPG with program metadata
 The guide endpoint currently returns raw XMLTV data. Could enrich with TMDB/IMDB
@@ -44,6 +34,21 @@ heartbeat/ping mechanism to detect and reconnect stale SSE sessions.
 ---
 
 ## Recently Completed
+
+### P3.3 — Image proxy server-side disk caching
+Added a disk-backed L2 cache (`/tmp/stv_cache/images/`) for `/api/image-proxy`
+that persists across server restarts (in-memory L1 only lasted 1 hour / 500
+entries before). Uses the same access-stamp / TTL eviction pattern as the VOD
+convert cache: 24-hour TTL, 500 MB total budget, 10 MB per-file limit.
+Automatic cleanup integated with the existing cleanup loop.
+✅ Done: server/main.py — image disk cache L2, 27 backend tests pass, committed and pushed.
+
+### P3.1 — Wire up retryStream in player UI
+The `retryStream` callback was defined in `useVideoPlayer.ts` but not exposed
+in the hook's return value. Now fully wired: returned from the hook, hooked to
+a "Retry" button in the player error overlay, and the autoplay logic was also
+fixed to try unmuted first before falling back to muted.
+✅ Done: web/src/hooks/useVideoPlayer.ts, web/src/components/Player.tsx — TypeScript clean, committed and pushed.
 
 ### P3.x — Upgrade outdated npm deps
 Upgraded:
@@ -95,25 +100,5 @@ and series categories. This prevents cache-warming from silently doing nothing
 and ensures the UI always has data to display even during upstream blips.
 ✅ Done: server/main.py — cached_fetch stale fallback + warmer empty-category warnings,
   23 backend tests pass, TypeScript clean, committed and pushed.
-
-### P3.10 — Increase test_server.py timeout for guide test
-Increased httpx client fixture timeout from 15s → 60s. The module-scoped client
-used a 15s timeout which was too tight for EPG-first-load (which fetches XMLTV
-synchronously on first call). 60s provides enough headroom for slow upstream
-responses while still failing on genuinely hung requests.
-✅ Done: server/test_server.py — timeout 15.0 → 60.0, 23 tests pass.
-
-### P2.5 — EPG guide: background refresh + pre-warm in cache warmer
-The `/api/guide` endpoint blocked until EPG was fully fetched/parsed during
-cache expiry, causing >15s timeouts. Added:
-- EPG pre-warming in `warm_cache()` so guide data is ready at startup
-- `load_epg_background()` function returns stale data immediately while
-  refreshing in background — no more blocking on cache expiry
-- Switched `/api/guide` to use `load_epg_background()`
-- Bonus: fixed `vod_cats` vs `vod_categories` cache key mismatch that
-  prevented movie/series categories from being served from warm cache
-✅ Done: server/main.py — `test_guide` now passes (was timing out),
-  VOD categories properly cached from warmer, TypeScript clean,
-  all changes committed and pushed (765c6cf)
 
 *(Older completed entries purged per cleanup policy)*
