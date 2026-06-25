@@ -8,10 +8,12 @@ import {
   Calendar,
   Globe,
   ChevronDown,
+  Heart,
 } from "lucide-react";
 import { api, MovieInfo, UnifiedMovie, MovieLanguage, imageUrl } from "@/lib/api";
 import MediaOverlay from "@/components/MediaOverlay";
 import SimilarMovies from "@/components/SimilarMovies";
+import { isInWatchlist, toggleWatchlist } from "@/lib/watchlist";
 
 interface MovieOverlayProps {
   movie: UnifiedMovie;
@@ -37,6 +39,7 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   const [showLangMenu, setShowLangMenu] = useState(false);
   const langMenuRef = useRef<HTMLDivElement>(null);
   const currentStreamId = selectedLang.stream_id;
+  const [inWatchlist, setInWatchlist] = useState(() => isInWatchlist(movie.stream_id));
 
   const [info, setInfo] = useState<MovieInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -154,6 +157,13 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
           >
             <Play className="h-4 w-4 fill-black text-black" />
             Play
+          </button>
+          <button
+            onClick={() => { toggleWatchlist(movie.stream_id); setInWatchlist(!inWatchlist); }}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 text-xs sm:text-sm text-white/60 hover:bg-white/10 hover:text-white/80 transition-colors"
+            aria-label={inWatchlist ? "Remove from watchlist" : "Add to watchlist"}
+          >
+            <Heart className={`h-3.5 w-3.5 ${inWatchlist ? "fill-red-500 text-red-500" : ""}`} />
           </button>
           {trailer && (
             <button

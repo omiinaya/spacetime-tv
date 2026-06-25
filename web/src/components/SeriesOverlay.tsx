@@ -5,9 +5,11 @@ import {
   Clock,
   Calendar,
   ExternalLink,
+  Heart,
 } from "lucide-react";
 import { api, Series, SeriesDetails, Episode, imageUrl } from "@/lib/api";
 import MediaOverlay from "@/components/MediaOverlay";
+import { isSeriesInWatchlist, toggleSeriesWatchlist } from "@/lib/watchlist";
 
 interface SeriesOverlayProps {
   series: Series;
@@ -48,6 +50,7 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
   // ── TMDB enrichment ──────────────────────────────────────────
   const [tmdb, setTmdb] = useState<TmdbEnrichment | null>(null);
   const tmdbId = series.tmdb ? parseInt(series.tmdb, 10) : null;
+  const [inWatchlist, setInWatchlist] = useState(() => isSeriesInWatchlist(series.series_id));
 
   useEffect(() => {
     let cancelled = false;
@@ -187,13 +190,22 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
       loading={loading}
       error={error}
       playButton={
-        <button
-          onClick={() => playEpisode(episodeList[0]?.id || 1)}
-          className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 transition-colors"
-        >
-          <Play className="h-4 w-4 fill-black text-black" />
-          Play {episodeList[0] ? `S${activeSeason} E${episodeList[0].episode_num}` : ""}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => playEpisode(episodeList[0]?.id || 1)}
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 transition-colors"
+          >
+            <Play className="h-4 w-4 fill-black text-black" />
+            Play {episodeList[0] ? `S${activeSeason} E${episodeList[0].episode_num}` : ""}
+          </button>
+          <button
+            onClick={() => { toggleSeriesWatchlist(series.series_id); setInWatchlist(!inWatchlist); }}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 text-xs sm:text-sm text-white/60 hover:bg-white/10 hover:text-white/80 transition-colors"
+            aria-label={inWatchlist ? "Remove from watchlist" : "Add to watchlist"}
+          >
+            <Heart className={`h-3.5 w-3.5 ${inWatchlist ? "fill-red-500 text-red-500" : ""}`} />
+          </button>
+        </div>
       }
     >
       {!loading && !error && (

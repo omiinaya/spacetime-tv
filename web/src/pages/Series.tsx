@@ -477,12 +477,6 @@ export default function SeriesPage() {
                       )}
                       {/* Bottom gradient for title readability */}
                       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
-                      {/* Play button on hover */}
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
-                        <div className="p-3 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100">
-                          <Play className="h-5 w-5 fill-white" />
-                        </div>
-                      </div>
                       {/* Rating badge */}
                       {s.rating && (
                         <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[11px] font-semibold text-yellow-400 flex items-center gap-0.5">
@@ -496,10 +490,10 @@ export default function SeriesPage() {
                           {s.releaseDate.slice(0, 4)}
                         </div>
                       )}
-                      {/* Watchlist heart */}
+                      {/* Watchlist heart — always visible on mobile, brighter on hover */}
                       <button
                         onClick={(e) => { e.stopPropagation(); toggleSeriesWatchlist(s.series_id); }}
-                        className="absolute bottom-2 right-2 p-1 rounded-full bg-black/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
+                        className="absolute bottom-2 right-2 p-1 rounded-full bg-black/60 backdrop-blur-sm opacity-70 hover:opacity-100 transition-opacity hover:scale-110"
                         aria-label={isSeriesInWatchlist(s.series_id) ? "Remove from watchlist" : "Add to watchlist"}
                       >
                         <Heart
