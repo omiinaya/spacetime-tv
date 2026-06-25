@@ -10,6 +10,16 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    port: 5180,
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:8720",
+        changeOrigin: true,
+        ws: false,
+      },
+    },
+  },
   test: {
     environment: "jsdom",
     globals: true,

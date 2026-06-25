@@ -126,6 +126,8 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
   const vodUrlRef = useRef<string | null>(null);
   const vodTranscodeRef = useRef<boolean>(false);
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryCount = useRef(0);
+  const [retryKey, setRetryKey] = useState(0);
 
   const clearLoadingTimeout = useCallback(() => {
     if (loadingTimeoutRef.current) {
@@ -240,14 +242,28 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
         if (loadStarted) return;
         loadStarted = true;
         if (!userTouchedMuteRef.current) { video.muted = true; setMuted(true); }
-        video.play().catch(() => {});
+        video.play().catch(() => {
+          // Autoplay blocked (no user gesture) — show paused state with play button
+          clearLoadingTimeout();
+          const p = phaseRef.current;
+          if (p === "loading" || p === "probing") {
+            setPhase("paused");
+          }
+        });
       });
 
       player.on(mpegts.Events.LOADING_COMPLETE, () => {
         if (!loadStarted) {
           loadStarted = true;
           if (!userTouchedMuteRef.current) { video.muted = true; setMuted(true); }
-          video.play().catch(() => {});
+          video.play().catch(() => {
+            // Autoplay blocked — show paused state
+            clearLoadingTimeout();
+            const p = phaseRef.current;
+            if (p === "loading" || p === "probing") {
+              setPhase("paused");
+            }
+          });
         }
         reconnectAttempts = 0;
       });
@@ -708,7 +724,28 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       hlsRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streamPath]);
+  }, [streamPath, retryKey]);
+
+  // ── Retry ──────────────────────────────────────────────────
+  const retryStream = useCallback(() => {
+    // Kill everything
+    clearLoadingTimeout();
+    const video = videoRef.current;
+    if (video) {
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+    }
+    if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
+    try { playerRef.current?.destroy(); } catch {}
+    playerRef.current = null;
+    try { hlsRef.current?.destroy(); } catch {}
+    hlsRef.current = null;
+    retryCount.current++;
+    setPhase("loading");
+    setErrorMsg(null);
+    setRetryKey(k => k + 1);
+  }, [clearLoadingTimeout]);
 
   // ── Controls ───────────────────────────────────────────────
   const togglePlay = useCallback(() => {
