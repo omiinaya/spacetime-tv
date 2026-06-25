@@ -117,16 +117,49 @@ export function useGuideData() {
 
   // SSE: listen for EPG refresh broadcasts from server
   useEffect(() => {
-    const evt = new EventSource("/api/epg/events");
-    evt.addEventListener("update", () => {
-      // Invalidate sessionStorage cache and reload
-      try { sessionStorage.removeItem(CACHE_KEY); } catch {}
-      loadPage(0);
-    });
-    evt.onerror = () => {
-      // EventSource auto-reconnects — no action needed
+    let lastPing = Date.now();
+    let staleTimer: ReturnType<typeof setInterval> | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function connect() {
+      const evt = new EventSource("/api/epg/events");
+
+      evt.addEventListener("update", () => {
+        // Invalidate sessionStorage cache and reload
+        try { sessionStorage.removeItem(CACHE_KEY); } catch {}
+        loadPage(0);
+      });
+
+      evt.addEventListener("ping", (e: MessageEvent) => {
+        lastPing = Date.now();
+      });
+
+      evt.onerror = () => {
+        // EventSource auto-reconnects — but we add our own heartbeat check below
+      };
+
+      return evt;
+    }
+
+    let evt = connect();
+
+    // Check for stale heartbeat every 30s; reconnect if no ping in 90s
+    staleTimer = setInterval(() => {
+      if (Date.now() - lastPing > 90_000) {
+        // No heartbeat received — connection may be stale
+        evt.close();
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(() => {
+          evt = connect();
+        }, 1000);
+      }
+    }, 30_000);
+
+    return () => {
+      evt.close();
+      if (staleTimer) clearInterval(staleTimer);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
     };
-    return () => evt.close();
   }, [loadPage]);
 
   // Settings-based filtering

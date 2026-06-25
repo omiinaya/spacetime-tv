@@ -1372,8 +1372,9 @@ async def epg_sse(request: Request):
                     msg = await asyncio.wait_for(q.get(), timeout=30.0)
                     yield f"event: {msg}\ndata: refreshed\n\n"
                 except asyncio.TimeoutError:
-                    # Send keepalive
-                    yield ": keepalive\n\n"
+                    # Send heartbeat ping with server timestamp
+                    ts = int(time.time())
+                    yield f"event: ping\ndata: {ts}\n\n"
         finally:
             if q in _epg_clients:
                 _epg_clients.remove(q)

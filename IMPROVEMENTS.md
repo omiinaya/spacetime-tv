@@ -26,10 +26,25 @@ lookups to show program descriptions, ratings, and posters in the TV Guide grid.
 Some VOD streams offer multiple audio tracks. The probe/selector UI (P4.2) could
 be extended to show and switch audio tracks alongside subtitle tracks.
 
-### P3.6 — Explore: Background SSE heartbeat for stale-session recovery
+### P3.6 — SSE heartbeat for stale-session recovery
 Currently the EPG SSE (P3.3) refreshes every 30 min. If the browser tab is in
 background for extended periods, the connection may drop silently. Add a
 heartbeat/ping mechanism to detect and reconnect stale SSE sessions.
+
+### P3.7 — Explore: EPG programme → TMDB enrichment
+Research done this tick: TMDB `/search/tv` and `/search/movie` endpoints can
+be used to look up programme titles from XMLTV. Challenge: title matching is
+often inexact (XMLTV titles differ from TMDB). Best approach: lazy enrichment
+on the frontend when viewing a programme detail, rather than batch enrichment
+on the backend. Could add a "/api/epg/enrich" endpoint that takes programme
+title + channel info and returns TMDB metadata.
+
+### P3.8 — Explore: ManagedMediaSource API for MSE optimization
+Modern browsers support `ManagedMediaSource` (Chrome 120+, Safari 17+) which
+handles MSE SourceBuffer management more efficiently. Could replace raw MSE 
+usage in hls.js or add as an optimization for direct MPEG-TS playback.
+- hls.js v1.6+ already has partial ManagedMediaSource support
+- Worth testing when we upgrade to Tailwind v4 / refresh the player
 
 ---
 
@@ -40,7 +55,7 @@ Added a disk-backed L2 cache (`/tmp/stv_cache/images/`) for `/api/image-proxy`
 that persists across server restarts (in-memory L1 only lasted 1 hour / 500
 entries before). Uses the same access-stamp / TTL eviction pattern as the VOD
 convert cache: 24-hour TTL, 500 MB total budget, 10 MB per-file limit.
-Automatic cleanup integated with the existing cleanup loop.
+Automatic cleanup integrated with the existing cleanup loop.
 ✅ Done: server/main.py — image disk cache L2, 27 backend tests pass, committed and pushed.
 
 ### P3.1 — Wire up retryStream in player UI
@@ -91,14 +106,5 @@ TypeScript compiles clean, committed and pushed.
 FastAPI deprecated `regex=` in Query in favor of `pattern=`. Replaced both occurrences
 in server/main.py (tmdb_trending and tmdb_tv_trending endpoints).
 ✅ Done: server/main.py — `regex` → `pattern`
-
-### P3.12 — IPTV upstream returning empty VOD/series categories
-Added stale-cache fallback in `cached_fetch()`: when the provider returns an empty
-list, the function now returns stale cache data if available instead of propagating
-the empty result. Added upstream health warnings in `warm_cache()` for empty VOD
-and series categories. This prevents cache-warming from silently doing nothing
-and ensures the UI always has data to display even during upstream blips.
-✅ Done: server/main.py — cached_fetch stale fallback + warmer empty-category warnings,
-  23 backend tests pass, TypeScript clean, committed and pushed.
 
 *(Older completed entries purged per cleanup policy)*
