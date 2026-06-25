@@ -26,11 +26,6 @@ lookups to show program descriptions, ratings, and posters in the TV Guide grid.
 Some VOD streams offer multiple audio tracks. The probe/selector UI (P4.2) could
 be extended to show and switch audio tracks alongside subtitle tracks.
 
-### P3.6 — SSE heartbeat for stale-session recovery
-Currently the EPG SSE (P3.3) refreshes every 30 min. If the browser tab is in
-background for extended periods, the connection may drop silently. Add a
-heartbeat/ping mechanism to detect and reconnect stale SSE sessions.
-
 ### P3.7 — Explore: EPG programme → TMDB enrichment
 Research done this tick: TMDB `/search/tv` and `/search/movie` endpoints can
 be used to look up programme titles from XMLTV. Challenge: title matching is
@@ -49,6 +44,14 @@ usage in hls.js or add as an optimization for direct MPEG-TS playback.
 ---
 
 ## Recently Completed
+
+### P3.6 — SSE heartbeat for stale-session recovery
+Upgraded the EPG SSE keepalive from a silent comment to a real `event: ping`
+with server timestamp. Frontend now tracks the last ping; if no heartbeat is
+received within 90 seconds, it force-closes and reconnects the EventSource.
+This prevents silent connection drops when tabs are backgrounded.
+✅ Done: server/main.py, web/src/hooks/useGuideData.ts — TypeScript clean,
+  27 backend tests pass, committed and pushed.
 
 ### P3.3 — Image proxy server-side disk caching
 Added a disk-backed L2 cache (`/tmp/stv_cache/images/`) for `/api/image-proxy`
