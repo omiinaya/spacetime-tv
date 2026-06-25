@@ -25,7 +25,7 @@ export default function SimilarMovies({ categoryId, currentId }: SimilarMoviesPr
   return (
     <div className="mt-6">
       <h3 className="text-sm font-semibold text-white/50 mb-3">More Like This</h3>
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <div className="flex gap-3 overflow-x-auto pb-2" style={{ touchAction: "manipulation" }}>
         {movies.map((m) => (
           <button
             key={m.stream_id}

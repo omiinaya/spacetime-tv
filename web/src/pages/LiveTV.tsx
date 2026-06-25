@@ -252,7 +252,7 @@ export default function LiveTV() {
             ))}
           </div>
         ) : (
-          <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin">
+          <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin" style={{ touchAction: "manipulation" }}>
             {filteredCategories.map((cat) => (
               <button
                 key={cat.category_id}

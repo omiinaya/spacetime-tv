@@ -281,7 +281,7 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
           {/* ── Season Selector ─────────────────────────── */}
           {seasonTabs.length > 1 && (
             <div>
-              <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none" style={{ touchAction: "manipulation" }}>
                 {seasonTabs.map((s) => {
                   const isActive = activeSeason === s;
                   const se = seasons.find((sn) => sn.season_number === s);

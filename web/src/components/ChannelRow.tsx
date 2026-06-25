@@ -59,7 +59,7 @@ export function ChannelRow({
       </button>
 
       {/* Programme cards */}
-      <div ref={scrollRef} className="flex-1 flex gap-2 overflow-x-auto scrollbar-none min-w-0">
+      <div ref={scrollRef} className="flex-1 flex gap-2 overflow-x-auto scrollbar-none min-w-0" style={{ touchAction: "manipulation" }}>
         {sorted.length === 0 ? (
           <div className="flex items-center h-[52px] text-[11px] text-muted-foreground/40">
             <Clock className="h-3 w-3 mr-1" />
