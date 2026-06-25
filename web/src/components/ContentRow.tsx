@@ -122,7 +122,7 @@ export default function ContentRow({
         <button
           onClick={() => scroll("left")}
           className="absolute left-0 top-0 bottom-0 z-10 w-10 flex items-center justify-center
-                     opacity-0 group-hover/row:opacity-100 transition-opacity
+                     opacity-0 group-hover/row:opacity-100 pointer-events-none group-hover/row:pointer-events-auto transition-opacity
                      bg-gradient-to-r from-background/90 to-transparent"
         >
           <ChevronLeft className="h-5 w-5 text-white drop-shadow" />
@@ -155,7 +155,7 @@ export default function ContentRow({
         <button
           onClick={() => scroll("right")}
           className="absolute right-0 top-0 bottom-0 z-10 w-10 flex items-center justify-center
-                     opacity-0 group-hover/row:opacity-100 transition-opacity
+                     opacity-0 group-hover/row:opacity-100 pointer-events-none group-hover/row:pointer-events-auto transition-opacity
                      bg-gradient-to-l from-background/90 to-transparent"
         >
           <ChevronRight className="h-5 w-5 text-white drop-shadow" />
