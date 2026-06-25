@@ -26,7 +26,9 @@ export function programmeProgress(p: { start: string; stop: string; is_live?: bo
     const stop = parseXmltvTime(p.stop);
     if (now < start) return 0;
     if (now > stop) return 1;
-    return (now.getTime() - start.getTime()) / (stop.getTime() - start.getTime());
+    const duration = stop.getTime() - start.getTime();
+    if (duration <= 0) return 0;
+    return (now.getTime() - start.getTime()) / duration;
   } catch {
     return 0;
   }

@@ -72,7 +72,12 @@ describe("SeriesProgress CRUD", () => {
 
   it("filters out entries older than 30 days", () => {
     const old = Date.now() - 31 * 86400_000;
-    saveSeriesProgress(makeProgress({ updatedAt: old }));
+    // Write directly to localStorage since saveSeriesProgress always
+    // overwrites updatedAt to Date.now()
+    localStorage.setItem(
+      "stv_continue_watching",
+      JSON.stringify([makeProgress({ updatedAt: old })])
+    );
     const items = getContinueWatching();
     expect(items).toHaveLength(0);
   });
@@ -135,7 +140,12 @@ describe("MovieProgress CRUD", () => {
 
   it("filters out stale entries", () => {
     const old = Date.now() - 31 * 86400_000;
-    saveMovieProgress(makeProgress({ updatedAt: old }));
+    // Write directly to localStorage since saveMovieProgress always
+    // overwrites updatedAt to Date.now()
+    localStorage.setItem(
+      "stv_movie_watching",
+      JSON.stringify([makeProgress({ updatedAt: old })])
+    );
     expect(getMovieContinueWatching()).toHaveLength(0);
   });
 
