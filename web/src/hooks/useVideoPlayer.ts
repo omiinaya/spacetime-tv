@@ -50,6 +50,30 @@ function saveMuted(m: boolean) {
   try { localStorage.setItem("stv_muted", String(m)); } catch {}
 }
 
+/**
+ * Try to autoplay a video element. Browsers block autoplay with sound.
+ * Strategy: try unmuted first, if rejected → mute and retry.
+ * Returns true if playback started (possibly muted), false if fully blocked.
+ * When muted fallback is used, onMutedFallback() is called so the caller
+ * can sync React state without persisting to localStorage.
+ */
+async function tryAutoplay(video: HTMLVideoElement, onMutedFallback?: () => void): Promise<boolean> {
+  try {
+    await video.play();
+    return true; // unmuted autoplay succeeded
+  } catch {
+    // Autoplay with sound was blocked — retry muted
+    try {
+      video.muted = true;
+      await video.play();
+      onMutedFallback?.();
+      return true; // muted autoplay succeeded
+    } catch {
+      return false; // fully blocked (no user gesture at all)
+    }
+  }
+}
+
 async function probeStream(url: string, signal?: AbortSignal): Promise<ProbeResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
@@ -129,6 +153,9 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCount = useRef(0);
   const [retryKey, setRetryKey] = useState(0);
+  // Stable callback — syncs React mute state when browser mutes video for autoplay fallback.
+  // Does NOT persist to localStorage (user didn't intentionally mute).
+  const onAutoplayMuted = useCallback(() => { setMuted(true); }, []);
 
   const clearLoadingTimeout = useCallback(() => {
     if (loadingTimeoutRef.current) {
@@ -242,13 +269,14 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       player.on(mpegts.Events.MEDIA_INFO, () => {
         if (loadStarted) return;
         loadStarted = true;
-        if (!userTouchedMuteRef.current) { video.muted = true; setMuted(true); }
-        video.play().catch(() => {
-          // Autoplay blocked (no user gesture) — show paused state with play button
-          clearLoadingTimeout();
-          const p = phaseRef.current;
-          if (p === "loading" || p === "probing") {
-            setPhase("paused");
+        tryAutoplay(video, onAutoplayMuted).then((started) => {
+          if (!started) {
+            // Fully blocked (no user gesture at all) — show paused state
+            clearLoadingTimeout();
+            const p = phaseRef.current;
+            if (p === "loading" || p === "probing") {
+              setPhase("paused");
+            }
           }
         });
       });
@@ -256,13 +284,13 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       player.on(mpegts.Events.LOADING_COMPLETE, () => {
         if (!loadStarted) {
           loadStarted = true;
-          if (!userTouchedMuteRef.current) { video.muted = true; setMuted(true); }
-          video.play().catch(() => {
-            // Autoplay blocked — show paused state
-            clearLoadingTimeout();
-            const p = phaseRef.current;
-            if (p === "loading" || p === "probing") {
-              setPhase("paused");
+          tryAutoplay(video, onAutoplayMuted).then((started) => {
+            if (!started) {
+              clearLoadingTimeout();
+              const p = phaseRef.current;
+              if (p === "loading" || p === "probing") {
+                setPhase("paused");
+              }
             }
           });
         }
@@ -326,7 +354,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
     };
 
     createPlayer();
-  }, []);
+  }, [onAutoplayMuted]);
 
   // ── Playback: VOD via mpegts remux ──────────────────────────
   const playVodRemux = useCallback((streamUrl: string, startPos: number | null = null, isTranscode: boolean = false) => {
@@ -354,8 +382,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
     player.load();
 
     player.on(mpegts.Events.LOADING_COMPLETE, () => {
-      if (!userTouchedMuteRef.current) { video.muted = true; setMuted(true); }
-      video.play().catch(() => {});
+      tryAutoplay(video, onAutoplayMuted).then(() => {});
     });
 
     let playStarted = false;
@@ -363,8 +390,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       if (playStarted) return;
       playStarted = true;
       clearLoadingTimeout();
-      if (!userTouchedMuteRef.current) { video.muted = true; setMuted(true); }
-      video.play().catch(() => {});
+      tryAutoplay(video, onAutoplayMuted).then(() => {});
     };
     player.on(mpegts.Events.MEDIA_INFO, () => tryPlay());
 
@@ -451,7 +477,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       if (saveInterval) clearInterval(saveInterval);
       video.removeEventListener("timeupdate", onTimeUpdate);
     };
-  }, [watchKey, type, seriesId, epId, id]);
+  }, [watchKey, type, seriesId, epId, id, onAutoplayMuted]);
 
   // ── Playback: HLS via hls.js (VOD, cached) ──────────────────
   const playHLS = useCallback((playlistUrl: string, startPos: number | null = null) => {
@@ -480,8 +506,9 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         setPhase("playing");
         setDuration(hls.levels[0]?.details?.totalduration || video.duration || 0);
-        if (!userTouchedMuteRef.current) { video.muted = true; setMuted(true); }
-        video.play().catch(() => setPhase("paused"));
+        tryAutoplay(video, onAutoplayMuted).then((started) => {
+          if (!started) setPhase("paused");
+        });
       });
 
       hls.on(Hls.Events.ERROR, (_event, data) => {
@@ -515,8 +542,9 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
         setDuration(video.duration || 0);
         if (startPos && startPos > 5) video.currentTime = startPos;
         setPhase("playing");
-        if (!userTouchedMuteRef.current) { video.muted = true; setMuted(true); }
-        video.play().catch(() => setPhase("paused"));
+        tryAutoplay(video, onAutoplayMuted).then((started) => {
+          if (!started) setPhase("paused");
+        });
       }, { once: true });
     } else {
       setPhase("error");
@@ -574,7 +602,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       video.removeEventListener("durationchange", onDurationChange);
       video.removeEventListener("ended", onEnded);
     };
-  }, [watchKey]);
+  }, [watchKey, onAutoplayMuted]);
 
   // ── VOD startup ────────────────────────────────────────────
   const startVod = useCallback(async (isCancelled: () => boolean, seekPos?: number, needsTranscode: boolean = false) => {
