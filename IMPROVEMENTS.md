@@ -8,12 +8,51 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.x — Upgrade outdated npm deps (autoprefixer, sonner, tailwind-merge)
-Several npm packages have newer versions. Focus on minor/patch upgrades first:
-autoprefixer 10.5.0 → 10.5.2 (minor), sonner 1.7.4 → 2.0.7 (major — review changelog),
-tailwind-merge 2.6.1 → 3.6.0 (major — review changelog).
+### P3.1 — Wire up retryStream in player UI
+The `retryStream` callback is defined in `useVideoPlayer.ts` but not exposed in
+the hook's return value, making it dead code. Need to:
+- Add `retryStream` to the returned object
+- Add a "Retry" button (or tap-to-retry) to the player overlay when in error/loading-stuck state
+- The button should appear when `phase === "error"` or when loading hangs
+
+### P3.2 — Tailwind CSS v4 migration planning
+tailwind-merge v3+ requires Tailwind CSS v4 (it drops v3 support). We're on
+Tailwind 3.4.10 and tailwind-merge 2.6.1. When we eventually migrate to Tailwind v4:
+- Install `tailwindcss` v4 and update `postcss.config` / `tailwind.config`
+- Bump `tailwind-merge` to 3.x at the same time
+- Review utility class changes (some old utilities removed/renamed in v4)
+- For now: stay on tailwind-merge ^2.6.x — no action needed.
+
+### P3.3 — Explore: Image proxy server-side caching
+Currently `/api/image-proxy` fetches images on-demand. Could add a disk cache
+layer (like the VOD convert cache) to reduce TMDB CDN load and speed up subsequent
+loads. Would need a TTL-based eviction policy and size cap.
+
+### P3.4 — Explore: Rich EPG with program metadata
+The guide endpoint currently returns raw XMLTV data. Could enrich with TMDB/IMDB
+lookups to show program descriptions, ratings, and posters in the TV Guide grid.
+
+### P3.5 — Explore: Multi-language audio track selector for VOD
+Some VOD streams offer multiple audio tracks. The probe/selector UI (P4.2) could
+be extended to show and switch audio tracks alongside subtitle tracks.
+
+### P3.6 — Explore: Background SSE heartbeat for stale-session recovery
+Currently the EPG SSE (P3.3) refreshes every 30 min. If the browser tab is in
+background for extended periods, the connection may drop silently. Add a
+heartbeat/ping mechanism to detect and reconnect stale SSE sessions.
+
+---
 
 ## Recently Completed
+
+### P3.x — Upgrade outdated npm deps
+Upgraded:
+- `autoprefixer` ^10.4.20 → ^10.5.2 (minor)
+- `sonner` ^1.7.0 → ^2.0.7 (major — API compatible, Toaster props unchanged)
+- `tailwind-merge` evaluated: v3 drops Tailwind CSS v3 support — staying at v2
+  until we migrate to Tailwind v4.
+TypeScript compiles clean, 27 backend tests pass, committed and pushed.
+✅ Done: web/package.json — npm install, tsc clean, all tests pass.
 
 ### P3.x — Add TMDB series detail enrichment to SeriesOverlay
 Added parallel TMDB enrichment fetch in SeriesOverlay: when the series object has
