@@ -22,19 +22,12 @@ from fastapi.staticfiles import StaticFiles
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("spacetime-tv")
 
-# Load .env from server directory
-from dotenv import load_dotenv
-_env_path = Path(__file__).parent / ".env"
-load_dotenv(_env_path)
-
-# ── Config ──────────────────────────────────────────────────────────────────
-IPTV_BASE = os.getenv("IPTV_BASE", "http://iptv-provider.example.com")
-IPTV_USER = os.getenv("IPTV_USER", "")
-IPTV_PASS = os.getenv("IPTV_PASS", "")
-EPG_CACHE_FILE = Path(__file__).parent / "epg_cache.json"
-EPG_CACHE_TTL = 1800  # 30 min — background SSE refreshes
-ROOT = Path(__file__).resolve().parent.parent
-STATIC_DIR = Path(os.getenv("STATIC_DIR", ROOT / "web" / "dist"))
+# ── Config (imported from config.py to avoid duplication) ─────────────────
+from config import (
+    IPTV_BASE, IPTV_USER, IPTV_PASS, EPG_CACHE_FILE, EPG_CACHE_TTL,
+    ROOT, STATIC_DIR, TMDB_API_KEY, TMDB_BASE, UA_STR,
+    RATE_WINDOW, RATE_SEARCH_LIMIT, RATE_DEFAULT_LIMIT,
+)
 SERVER_START_TIME = time.time()
 
 
@@ -54,9 +47,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
 
 _rate_limits: dict[str, tuple[float, int]] = {}  # ip -> (window_start, count)
-_RATE_WINDOW = 60  # 1 minute window
-_RATE_SEARCH_LIMIT = 100    # requests per window for search/proxy
-_RATE_DEFAULT_LIMIT = 1000  # requests per window for everything else
+# Rate window & limits imported from config.py:
+# RATE_WINDOW, RATE_SEARCH_LIMIT, RATE_DEFAULT_LIMIT
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: StarletteRequest, call_next):
@@ -64,10 +56,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         now = time.time()
         path = request.url.path
         
-        limit = _RATE_SEARCH_LIMIT if "/api/search" in path or "/api/image-proxy" in path else _RATE_DEFAULT_LIMIT
+        limit = RATE_SEARCH_LIMIT if "/api/search" in path or "/api/image-proxy" in path else RATE_DEFAULT_LIMIT
         
         window_start, count = _rate_limits.get(ip, (0, 0))
-        if now - window_start > _RATE_WINDOW:
+        if now - window_start > RATE_WINDOW:
             window_start = now
             count = 0
         
@@ -76,7 +68,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 content='{"detail":"Too many requests"}',
                 status_code=429,
                 media_type="application/json",
-                headers={"Retry-After": str(int(_RATE_WINDOW - (now - window_start)))},
+                headers={"Retry-After": str(int(RATE_WINDOW - (now - window_start)))},
             )
         
         _rate_limits[ip] = (window_start, count + 1)
@@ -365,9 +357,6 @@ async def live_streams(category_id: str = Query(...)):
 # ── STREAM PROXY ─────────────────────────────────────────────────────────────
 
 from starlette.responses import StreamingResponse
-from fastapi.responses import Response
-
-UA_STR = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 def build_stream_url(stream_id: int, stream_type: str) -> str:
     """Build the IPTV stream URL for a given stream ID and type."""
