@@ -283,7 +283,7 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
                   >
                     <div className="w-[140px] sm:w-[160px] shrink-0 aspect-video bg-[#141420] rounded-lg overflow-hidden relative">
                       {ep.info?.movie_image ? (
-                        <img src={imageUrl(ep.info.movie_image)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy"
+                        <img src={imageUrl(ep.info.movie_image)} alt={ep.title || `Episode ${ep.episode_num}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center"><Play className="h-6 w-6 text-white/10" /></div>

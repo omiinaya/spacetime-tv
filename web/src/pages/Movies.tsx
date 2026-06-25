@@ -244,7 +244,7 @@ export default function Movies() {
                 >
                   <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5">
                     {movie.stream_icon ? (
-                      <img src={imageUrl(movie.stream_icon)} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={imageUrl(movie.stream_icon)} alt={movie.name ? `${movie.name} poster` : ''} className="w-full h-full object-cover" loading="lazy" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-[#141420]">
                         <Film className="h-6 w-6 text-white/10" />
@@ -281,7 +281,7 @@ export default function Movies() {
                 >
                   <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5">
                     {m.stream_icon ? (
-                      <img src={imageUrl(m.stream_icon)} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={imageUrl(m.stream_icon)} alt={m.name ? `${m.name} poster` : ''} className="w-full h-full object-cover" loading="lazy" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-[#141420]">
                         <Film className="h-6 w-6 text-white/10" />
