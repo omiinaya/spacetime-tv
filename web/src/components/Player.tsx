@@ -2,7 +2,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import {
   Loader2, AlertCircle, ArrowLeft, Play, Pause, Maximize, Minimize,
-  Volume2, VolumeX, SkipBack, SkipForward, Settings, PictureInPicture2, Download
+  Volume2, VolumeX, SkipBack, SkipForward, Settings, PictureInPicture2, Download, Tv
 } from "lucide-react";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useKeyboard } from "@/hooks/useKeyboard";
@@ -18,7 +18,7 @@ interface PlayerProps { type: "live" | "movie" | "series"; }
 export default function Player({ type }: PlayerProps) {
   const { id, seriesId, epId } = useParams();
   const {
-    videoRef, containerRef, phase, errorMsg, loadingStep, transcoding,
+    videoRef, containerRef, phase, errorMsg, errorType, loadingStep, transcoding,
     volume, muted, playbackRate, qualityIdx, currentTime, duration, buffered,
     resumePos, showResumePrompt, isLive, isVod,
     togglePlay, seekTo, seek, setVolume, toggleMute, setSpeed, setQuality,
@@ -199,8 +199,38 @@ export default function Player({ type }: PlayerProps) {
       {/* Error */}
       {phase === "error" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-10 gap-4">
-          <AlertCircle className="w-10 h-10 text-red-400" />
+          {errorType === "retry_exhausted" ? (
+            <Tv className="w-10 h-10 text-orange-400" />
+          ) : errorType === "transcode_timeout" ? (
+            <Loader2 className="w-10 h-10 text-yellow-400 animate-spin" />
+          ) : errorType === "empty_stream" ? (
+            <AlertCircle className="w-10 h-10 text-orange-400" />
+          ) : errorType === "not_supported" ? (
+            <AlertCircle className="w-10 h-10 text-yellow-400" />
+          ) : (
+            <AlertCircle className="w-10 h-10 text-red-400" />
+          )}
           <p className="text-white/70 text-sm max-w-md text-center">{errorMsg || "Playback failed."}</p>
+          {errorType === "retry_exhausted" && (
+            <p className="text-white/40 text-xs max-w-sm text-center">
+              The channel may be offline or experiencing high traffic.
+            </p>
+          )}
+          {errorType === "not_supported" && (
+            <p className="text-white/40 text-xs max-w-sm text-center">
+              Try switching to transcode mode or use a different browser.
+            </p>
+          )}
+          {errorType === "empty_stream" && (
+            <p className="text-white/40 text-xs max-w-sm text-center">
+              The CDN edge server does not have this content. Try again or pick a different source.
+            </p>
+          )}
+          {errorType === "transcode_timeout" && (
+            <p className="text-white/40 text-xs max-w-sm text-center">
+              The video requires on-the-fly conversion which is taking too long.
+            </p>
+          )}
           <button
             onClick={retryStream}
             className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white text-sm transition-colors"

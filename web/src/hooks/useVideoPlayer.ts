@@ -11,6 +11,15 @@ export interface ProbeResult {
 
 export type PlayPhase = "probing" | "loading" | "playing" | "paused" | "error";
 
+export type ErrorType =
+  | "timeout"           // Generic loading timeout
+  | "transcode_timeout" // ffmpeg transcode took too long
+  | "retry_exhausted"   // Live TV gave up after 5 retries
+  | "stream_error"      // mpegts/HLS internal error
+  | "not_supported"     // Browser can't play this format
+  | "empty_stream"      // CDN returned 0 bytes / 405
+  ;
+
 export const QUALITIES = [
   { label: "Original", height: null },
   { label: "1080p", height: 1080 },
@@ -115,6 +124,7 @@ export interface UseVideoPlayerReturn {
   containerRef: React.RefObject<HTMLDivElement>;
   phase: PlayPhase;
   errorMsg: string | null;
+  errorType: ErrorType | null;
   loadingStep: string;
   transcoding: boolean;
   volume: number;
@@ -184,7 +194,13 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
           return;
         }
         _setPhase("error");
-        setErrorMsg("Stream unavailable. The content may have been removed or is temporarily offline.");
+        if (type === "live") {
+          setErrorType("retry_exhausted");
+          setErrorMsg("Unable to connect after several attempts. This channel may be temporarily offline.");
+        } else {
+          setErrorType("timeout");
+          setErrorMsg("Stream timed out. The server may be slow or the content may be temporarily unavailable.");
+        }
       }
     }, 20_000);
   }, [type]);
@@ -196,6 +212,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
     _setPhase(p);
   }, []);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<ErrorType | null>(null);
   const [transcoding, setTranscoding] = useState(false);
   const [loadingStep, setLoadingStep] = useState("");
   const [currentTime, setCurrentTime] = useState(0);
@@ -432,7 +449,8 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       if (detail?.response?.code === 0 || errorCount < 3) return;
       if (!timedOut) {
         setPhase("error");
-        setErrorMsg("Stream unavailable.");
+        setErrorType("stream_error");
+        setErrorMsg("Stream interrupted. The connection may have been lost.");
       }
     });
 
@@ -450,23 +468,50 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
         if (t > 5) {
           saveWatchPos(watchKey, t);
           if (type === "series" && seriesId) {
+            // Read rich metadata from sessionStorage (set by SeriesOverlay)
+            let metaName = "", metaCover = "", metaSeason = 0, metaEpNum = 0, metaEpTitle = "";
+            let metaDuration = video?.duration || 0;
+            try {
+              const raw = sessionStorage.getItem(`stv_series_meta_${seriesId}`);
+              if (raw) {
+                const m = JSON.parse(raw);
+                metaName = m.name || "";
+                metaCover = m.cover || m.episodeImage || "";
+                metaSeason = m.seasonNumber || 0;
+                metaEpNum = m.episodeNum || 0;
+                metaEpTitle = m.episodeTitle || "";
+                if (m.durationSeconds) metaDuration = m.durationSeconds;
+              }
+            } catch {}
             saveSeriesProgress({
               seriesId: parseInt(seriesId),
-              seriesName: "",
-              cover: "",
-              seasonNumber: 0,
-              episodeNum: 0,
+              seriesName: metaName,
+              cover: metaCover,
+              seasonNumber: metaSeason,
+              episodeNum: metaEpNum,
               episodeId: epId || "",
-              episodeTitle: "",
+              episodeTitle: metaEpTitle,
               progressSeconds: t,
-              durationSeconds: video?.duration || 0,
+              durationSeconds: metaDuration,
               updatedAt: Date.now(),
             });
           } else if (type === "movie" && id) {
+            // Read movie metadata from sessionStorage
+            let movieName = "", moviePoster = "";
+            try {
+              const raw = sessionStorage.getItem("stv_movie_meta");
+              if (raw) {
+                const m = JSON.parse(raw);
+                if (String(m.id) === id) {
+                  movieName = m.name || "";
+                  moviePoster = m.poster || "";
+                }
+              }
+            } catch {}
             saveMovieProgress({
               movieId: parseInt(id),
-              movieName: "",
-              poster: "",
+              movieName: movieName,
+              poster: moviePoster,
               progressSeconds: t,
               durationSeconds: video?.duration || 0,
               updatedAt: Date.now(),
@@ -482,7 +527,13 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       if (p === "loading" || p === "probing") {
         timedOut = true;
         setPhase("error");
-        setErrorMsg(isTranscode ? "Transcode is taking too long. Try again." : "Stream timed out. Try again.");
+        if (isTranscode) {
+          setErrorType("transcode_timeout");
+          setErrorMsg("Video conversion is taking longer than expected. Try again.");
+        } else {
+          setErrorType("timeout");
+          setErrorMsg("Stream is taking too long to load. The server may be slow.");
+        }
       }
     }, timeoutMs);
 
@@ -537,6 +588,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
               break;
             default:
               setPhase("error");
+              setErrorType("stream_error");
               setErrorMsg("Playback error. Try again.");
               hls.destroy();
               break;
@@ -563,7 +615,8 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       }, { once: true });
     } else {
       setPhase("error");
-      setErrorMsg("HLS playback not supported.");
+      setErrorType("not_supported");
+      setErrorMsg("This video format is not supported by your browser.");
       return;
     }
 
@@ -595,7 +648,8 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       const p = phaseRef.current;
       if (p === "loading" || p === "probing") {
         setPhase("error");
-        setErrorMsg("Stream unavailable. The content may have been removed or is temporarily offline.");
+        setErrorType("timeout");
+        setErrorMsg("Video is taking too long to start. Try again.");
       }
     }, 15000);
 
@@ -603,7 +657,8 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
       if (video.readyState === 0 && phaseRef.current === "loading") {
         clearInterval(emptyCheck);
         setPhase("error");
-        setErrorMsg("Stream unavailable. The content may have been removed or is temporarily offline.");
+        setErrorType("empty_stream");
+        setErrorMsg("Stream returned empty data. The content may not be available on this server.");
       } else if (video.readyState > 0 || phaseRef.current !== "loading") {
         clearInterval(emptyCheck);
       }
@@ -721,6 +776,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
             transcodeCache.set(streamId, "native");
           } else {
             setPhase("error");
+            setErrorType("empty_stream");
             setErrorMsg("This video is not available on the current CDN edge server.");
             return;
           }
@@ -918,6 +974,7 @@ export function useVideoPlayer({ type, id, seriesId, epId }: UseVideoPlayerParam
     containerRef: containerRef as React.RefObject<HTMLDivElement>,
     phase,
     errorMsg,
+    errorType,
     loadingStep,
     transcoding,
     volume,

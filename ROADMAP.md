@@ -1,6 +1,6 @@
 # SpacetimeTV Roadmap v3
 
-> **Audit date:** 2026-06-25
+> **Audit date:** 2026-06-26
 > **Architecture:** FastAPI monolith + React/Vite SPA | 28 backend tests | Docker-ready
 
 ---
@@ -13,7 +13,7 @@
 - Watchlist, continue-watching, recently added, similar movies
 - Inline trailer playback, playback speed, PiP, sleep timer
 - Search with 300ms debounce + history dropdown
-- Keyboard shortcuts (/ for search, space/j/k/f/m for player)
+- Keyboard shortcuts (`/` for search, `?` for help, space/j/k/f/m for player)
 - Subtitle + audio track selection, download button
 - Admin dashboard (cache stats, error log, popular content)
 - PWA support, ARIA labels, error beacon, health endpoint
@@ -25,20 +25,44 @@
 
 ## What's Still Open
 
-### P1.3 — 0-byte stream error UI (~45 min)
-The player has a 20s loading timeout that shows "Stream unavailable" generically.
-When the CDN returns 0 bytes (truncated content) without closing the connection,
-the player shows the generic error. No dedicated UI for "empty stream" vs
-"connection refused" vs "transcode timeout". Improvement: detect the specific
-failure mode and show a contextual message.
+### P1 — Priorities
 
-### P2.8 — Live TV DVR buffer (~2h)
-Live TV can't pause or rewind. A 5-minute ring buffer via MediaSource
-Extension (MSE appendWindow) would let users pause live TV and seek back
-within the buffer window. Complex: requires managing the MSE source buffer
-append window and coordinating with mpegts.js.
+| Item | Status |
+|------|--------|
+| P1.3 — 0-byte stream error UI | ✅ **Done** — Added `errorType` system (timeout, transcode_timeout, retry_exhausted, stream_error, not_supported, empty_stream). Player shows contextual icon + message + secondary help text per error mode. |
+| P1.5 — Series continue-watching data | ✅ **Done** — `SeriesOverlay` now stores rich metadata (season, episode num, title, image, duration) to sessionStorage. `useVideoPlayer` reads it when saving progress. Movies similarly store poster/name. |
+
+### P2 — UX Quality
+
+| Item | Status |
+|------|--------|
+| P2.8 — Live TV DVR buffer | ~2h — Live TV can't pause or rewind. 5-minute ring buffer via MSE appendWindow. Complex: requires managing MSE source buffer and coordinating with mpegts.js. |
+
+### P3 — Architecture & Technical Debt
+
+| Item | Status |
+|------|--------|
+| P3.2 — Tailwind CSS v4 migration planning | tailwind-merge v3+ requires Tailwind CSS v4. Currently on Tailwind 3.4.10. Migration path known but significant refactor. |
+| P3.4 — Rich EPG with program metadata | Guide endpoint returns raw XMLTV. Could enrich with TMDB/IMDB lookups. |
+| P3.5 — Multi-language audio track selector for VOD | Some VOD streams offer multiple audio tracks. Probe/selector UI could be extended. |
+| P3.7 — EPG programme → TMDB enrichment | Lazy enrichment endpoint `/api/epg/enrich` for programme title → TMDB metadata lookup. |
+| P3.8 — ManagedMediaSource API for MSE optimization | Modern browsers support ManagedMediaSource (Chrome 120+, Safari 17+). hls.js v1.6+ has partial support. |
+
+### P4 — Deep Cuts
+
+| Item | Status |
+|------|--------|
+| Report from CW | Keyboard shortcut help overlay (`?`) — ✅ **Done** |
 
 ---
+
+## Completed (this session)
+
+| Item | Description |
+|------|-------------|
+| P1.3 — Error differentiation | Added `errorType` enum (retry_exhausted, timeout, transcode_timeout, stream_error, not_supported, empty_stream). Player shows contextual icon + error message + secondary tip per error type. |
+| P1.5 — Series CW metadata | `SeriesOverlay.playEpisode()` stores season/episode/title/duration to sessionStorage. `useVideoPlayer` reads it for `saveSeriesProgress()`. Same pattern for movie CW metadata. |
+| Keyboard shortcut help | New `KeyboardShortcuts` component — press `?` to toggle overlay showing all global + player shortcuts with icons. Wired in App.tsx. |
 
 ## Completed (previous sessions)
 
@@ -49,4 +73,5 @@ append window and coordinating with mpegts.js.
 | **P3 — Architecture** | Player hook extracted ✅ | Guide split ✅ | EPG background refresh ✅ | Search history ✅ | Pagination UI ✅ |
 | **P4 — Deep Cuts** | Subtitles ✅ | Audio tracks ✅ | Download offline ✅ | `/` keyboard shortcut ✅ | Sleep timer ✅ | Mobile swipe-back ✅ | Admin dashboard ✅ | Cache warmer config ✅ |
 | **Perf** | Split mpegts.js/hls.js → async chunks (882 kB -> 38 kB Player) ✅ | IntersectionObserver root fix for LiveTV infinite scroll ✅ |
-| **Stability** | `retryStream` wired to error button for live TV recovery ✅ |
+| **Stability** | `retryStream` wired to error button for live TV recovery ✅ | SSE heartbeat for stale-session recovery ✅ | Image proxy disk cache (L2, 24h TTL, 500MB) ✅ |
+| **Series** | TMDB Trending This Week row ✅ | TMDB TV/series proxy endpoints ✅ | TMDB series detail enrichment in SeriesOverlay ✅ | Series continue-watching ✅ |

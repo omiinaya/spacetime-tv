@@ -98,7 +98,18 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   const genres = genre ? genre.split(",").map((g) => g.trim()).filter(Boolean) : [];
   const displayName = movie.languages.length > 1 ? movie.base_name : movie.name;
 
-  const play = () => { navigate(`/watch/movie/${currentStreamId}`); onClose(); };
+  const play = () => {
+    // Save movie metadata for Continue Watching
+    try {
+      sessionStorage.setItem("stv_movie_meta", JSON.stringify({
+        id: currentStreamId,
+        name: displayName || movie.name || movie.base_name || "",
+        poster: movie.stream_icon || "",
+      }));
+    } catch {}
+    navigate(`/watch/movie/${currentStreamId}`);
+    onClose();
+  };
 
   // Meta items shown in the hero row
   const metaItems: string[] = [];

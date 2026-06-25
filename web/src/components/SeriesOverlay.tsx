@@ -162,13 +162,20 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
   };
 
   const playEpisode = (epId: string | number) => {
-    // Save series metadata for Continue Watching
+    // Find the episode to get its metadata
+    const ep = episodeList.find((e) => String(e.id) === String(epId));
+    // Save rich series + episode metadata for Continue Watching
     try {
       sessionStorage.setItem(
         `stv_series_meta_${series.series_id}`,
         JSON.stringify({
           name: series.name,
           cover: series.cover,
+          seasonNumber: activeSeason,
+          episodeNum: ep?.episode_num || 0,
+          episodeTitle: ep?.title || `Episode ${ep?.episode_num || ''}`,
+          episodeImage: ep?.info?.movie_image || series.cover || '',
+          durationSeconds: ep?.info?.duration_secs || 0,
         })
       );
     } catch {}

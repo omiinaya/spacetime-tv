@@ -17,6 +17,7 @@ import { SettingsProvider } from "@/context/SettingsContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ErrorReporter from "@/components/ErrorReporter";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 
 // Lazy-loaded pages for code splitting
 const LiveTV = lazy(() => import("@/pages/LiveTV"));
@@ -294,6 +295,7 @@ function AppLayout() {
 
       <ErrorReporter />
       <PWAInstallPrompt />
+      <KeyboardShortcuts />
       <Toaster richColors theme="dark" position="bottom-right" />
     </div>
   );
