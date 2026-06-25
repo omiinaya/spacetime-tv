@@ -11,6 +11,7 @@ import {
   X,
   Heart,
   TrendingUp,
+  Check,
 } from "lucide-react";
 import { isSeriesInWatchlist, toggleSeriesWatchlist as toggleSeriesWl } from "@/lib/watchlist";
 import { api, Category, Series, TmdbTvResult } from "@/lib/api";
@@ -280,6 +281,9 @@ export default function SeriesPage() {
       {/* Continue Watching */}
       <ContinueWatchingRow navigate={navigate} />
 
+      {/* Recently Completed */}
+      <RecentlyCompletedRow navigate={navigate} />
+
       {/* Trending (TMDB TV proxy) */}
       {!trendingLoading && trendingEnabled && trending.length > 0 && (
         <div>
@@ -544,10 +548,15 @@ function ContinueWatchingRow({ navigate }: { navigate: (path: string) => void })
     setItems(getContinueWatching());
   }, []);
 
-  if (items.length === 0) return null;
+  // Only show items where progress < 90% (still in-progress)
+  const inProgress = items.filter(
+    (i) => i.durationSeconds <= 0 || i.progressSeconds / i.durationSeconds < 0.9
+  );
+
+  if (inProgress.length === 0) return null;
 
   // Enrich items with cached metadata from sessionStorage
-  const enriched = items.map((item) => {
+  const enriched = inProgress.map((item) => {
     try {
       const raw = sessionStorage.getItem(`stv_series_meta_${item.seriesId}`);
       if (raw) {
@@ -620,6 +629,92 @@ function ContinueWatchingRow({ navigate }: { navigate: (path: string) => void })
               S{item.seasonNumber}E{item.episodeNum} · {item.episodeTitle}
               {item.progressSeconds > 0 &&
                 ` · ${fmtTime(item.progressSeconds)} remaining`}
+            </p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RecentlyCompletedRow({ navigate }: { navigate: (path: string) => void }) {
+  const [items, setItems] = useState<SeriesProgress[]>([]);
+
+  useEffect(() => {
+    setItems(getContinueWatching());
+  }, []);
+
+  // Only show items where progress >= 90%
+  const completed = items.filter(
+    (i) => i.durationSeconds > 0 && i.progressSeconds / i.durationSeconds >= 0.9
+  );
+
+  if (completed.length === 0) return null;
+
+  // Enrich with sessionStorage metadata
+  const enriched = completed.map((item) => {
+    try {
+      const raw = sessionStorage.getItem(`stv_series_meta_${item.seriesId}`);
+      if (raw) {
+        const meta = JSON.parse(raw);
+        return {
+          ...item,
+          seriesName: item.seriesName || meta.name || `Series ${item.seriesId}`,
+          cover: item.cover || meta.cover || "",
+        };
+      }
+    } catch {}
+    return {
+      ...item,
+      seriesName: item.seriesName || `Series ${item.seriesId}`,
+    };
+  });
+
+  return (
+    <div className="space-y-3">
+      <h2 className="text-lg font-semibold px-1 flex items-center gap-2">
+        <Check className="h-4 w-4 text-green-400" />
+        Recently Completed
+      </h2>
+      <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
+        {enriched.map((item) => (
+          <button
+            key={`done-${item.seriesId}-${item.seasonNumber}-${item.episodeNum}`}
+            onClick={() =>
+              navigate(`/watch/series/${item.seriesId}/${item.episodeId}`)
+            }
+            className="shrink-0 w-[280px] text-left group"
+            aria-label={`Revisit ${item.seriesName}, ${item.episodeTitle}`}
+          >
+            <div className="relative aspect-video bg-[#141420] rounded-lg overflow-hidden mb-2 ring-1 ring-green-500/20 group-hover:ring-green-500/40 transition-all">
+              {item.cover ? (
+                <img
+                  src={imageUrl(item.cover)}
+                  alt={item.seriesName ? `${item.seriesName} poster` : ""}
+                  className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Play className="h-8 w-8 text-white/10" aria-hidden="true" />
+                </div>
+              )}
+              {/* Completed check overlay */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="p-2 rounded-full bg-green-500/20 backdrop-blur-sm">
+                  <Check className="h-6 w-6 text-green-400" />
+                </div>
+              </div>
+              {/* Progress bar — full */}
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/20">
+                <div className="h-full bg-green-500" style={{ width: "100%" }} />
+              </div>
+            </div>
+            <p className="text-xs font-medium text-white/80 line-clamp-1">
+              {item.seriesName}
+            </p>
+            <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+              S{item.seasonNumber}E{item.episodeNum} · {item.episodeTitle} · Done
             </p>
           </button>
         ))}
