@@ -366,12 +366,6 @@ function SeriesTab() {
                 )}
                 {/* Bottom gradient */}
                 <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
-                {/* Play overlay on hover */}
-                <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
-                  <div className="p-3 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100">
-                    <Play className="h-5 w-5 fill-white" />
-                  </div>
-                </div>
                 {/* Rating */}
                 {!isNaN(rating) && (
                   <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[11px] font-semibold text-yellow-400 flex items-center gap-0.5">

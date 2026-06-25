@@ -338,12 +338,6 @@ export default function SeriesPage() {
                         {year}
                       </div>
                     )}
-                    {/* Play overlay on hover */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors">
-                      <div className="p-2.5 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100">
-                        <Play className="h-4 w-4 fill-white" />
-                      </div>
-                    </div>
                   </div>
                   <p className="text-xs font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">
                     {t.name}
