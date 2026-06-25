@@ -23,6 +23,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { filterCategories } from "@/lib/settings";
 import {
   getContinueWatching,
+  removeSeriesProgress,
   type SeriesProgress,
 } from "@/lib/continueWatching";
 import { imageUrl } from "@/lib/api";
@@ -585,12 +586,15 @@ function ContinueWatchingRow({ navigate }: { navigate: (path: string) => void })
       <h2 className="text-lg font-semibold px-1">Continue Watching</h2>
       <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
         {enriched.map((item) => (
-          <button
+          <div
             key={`${item.seriesId}-${item.seasonNumber}-${item.episodeNum}`}
+            className="shrink-0 w-[280px] group relative"
+          >
+          <button
             onClick={() =>
               navigate(`/watch/series/${item.seriesId}/${item.episodeId}`)
             }
-            className="shrink-0 w-[280px] text-left group"
+            className="w-full text-left"
             aria-label={`Continue ${item.seriesName}, ${item.episodeTitle}`}
           >
             <div className="relative aspect-video bg-[#141420] rounded-lg overflow-hidden mb-2">
@@ -631,6 +635,15 @@ function ContinueWatchingRow({ navigate }: { navigate: (path: string) => void })
                 ` · ${fmtTime(item.progressSeconds)} remaining`}
             </p>
           </button>
+            {/* Dismiss button */}
+            <button
+              onClick={(e) => { e.stopPropagation(); removeSeriesProgress(item.seriesId); setItems(prev => prev.filter(i => !(i.seriesId === item.seriesId && i.seasonNumber === item.seasonNumber && i.episodeNum === item.episodeNum))); }}
+              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 backdrop-blur-sm text-white/60 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[11px] z-10"
+              aria-label="Remove from continue watching"
+            >
+              ✕
+            </button>
+          </div>
         ))}
       </div>
     </div>
@@ -678,12 +691,15 @@ function RecentlyCompletedRow({ navigate }: { navigate: (path: string) => void }
       </h2>
       <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
         {enriched.map((item) => (
-          <button
+          <div
             key={`done-${item.seriesId}-${item.seasonNumber}-${item.episodeNum}`}
+            className="shrink-0 w-[280px] group relative"
+          >
+          <button
             onClick={() =>
               navigate(`/watch/series/${item.seriesId}/${item.episodeId}`)
             }
-            className="shrink-0 w-[280px] text-left group"
+            className="w-full text-left"
             aria-label={`Revisit ${item.seriesName}, ${item.episodeTitle}`}
           >
             <div className="relative aspect-video bg-[#141420] rounded-lg overflow-hidden mb-2 ring-1 ring-green-500/20 group-hover:ring-green-500/40 transition-all">
@@ -717,6 +733,15 @@ function RecentlyCompletedRow({ navigate }: { navigate: (path: string) => void }
               S{item.seasonNumber}E{item.episodeNum} · {item.episodeTitle} · Done
             </p>
           </button>
+            {/* Dismiss button */}
+            <button
+              onClick={(e) => { e.stopPropagation(); removeSeriesProgress(item.seriesId); setItems(prev => prev.filter(i => !(i.seriesId === item.seriesId && i.seasonNumber === item.seasonNumber && i.episodeNum === item.episodeNum))); }}
+              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 backdrop-blur-sm text-white/60 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[11px] z-10"
+              aria-label="Remove from recently completed"
+            >
+              ✕
+            </button>
+          </div>
         ))}
       </div>
     </div>

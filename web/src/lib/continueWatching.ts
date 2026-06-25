@@ -91,3 +91,10 @@ export function saveMovieProgress(progress: MovieProgress) {
     localStorage.setItem(MOVIE_KEY, JSON.stringify(filtered.slice(0, MAX_ITEMS)));
   } catch {}
 }
+
+export function removeMovieProgress(movieId: number) {
+  const items = getMovieContinueWatching().filter((i) => i.movieId !== movieId);
+  try {
+    localStorage.setItem(MOVIE_KEY, JSON.stringify(items));
+  } catch {}
+}

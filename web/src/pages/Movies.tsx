@@ -15,7 +15,7 @@ import { api, UnifiedMovie, TmdbMovieResult, imageUrl } from "@/lib/api";
 import MovieOverlay from "@/components/MovieOverlay";
 import ContentRow from "@/components/ContentRow";
 import { PosterCardSkeleton } from "@/components/Skeleton";
-import { getMovieContinueWatching, type MovieProgress } from "@/lib/continueWatching";
+import { getMovieContinueWatching, removeMovieProgress, type MovieProgress } from "@/lib/continueWatching";
 import { isInWatchlist, toggleWatchlist as toggleWl } from "@/lib/watchlist";
 import { useGridKeyboardNav } from "@/hooks/useGridKeyboardNav";
 import { SearchHistory, addSearchHistory } from "@/components/SearchHistory";
@@ -227,42 +227,107 @@ export default function Movies() {
         )}
       </div>
 
-      {/* Continue Watching */}
-      {!loading && continueWatching.length > 0 && continueWatching.some(cw => movies.some(m => m.stream_id === cw.movieId)) && (
-        <div>
-          <h2 className="text-sm font-semibold text-muted-foreground mb-3">Continue Watching</h2>
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {continueWatching.filter(cw => movies.some(m => m.stream_id === cw.movieId)).slice(0, 8).map((cw) => {
-              const movie = movies.find(m => m.stream_id === cw.movieId);
-              if (!movie) return null;
-              const pct = cw.durationSeconds > 0 ? Math.min(100, (cw.progressSeconds / cw.durationSeconds) * 100) : 0;
-              return (
-                <button
-                  key={cw.movieId}
-                  onClick={() => setOverlayMovie(movie)}
-                  className="shrink-0 w-[120px] group"
-                >
-                  <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5">
-                    {movie.stream_icon ? (
-                      <img src={imageUrl(movie.stream_icon)} alt={movie.name ? `${movie.name} poster` : ''} className="w-full h-full object-cover" loading="lazy" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-[#141420]">
-                        <Film className="h-6 w-6 text-white/10" />
+      {/* Continue Watching — in-progress only */}
+      {!loading && continueWatching.length > 0 && (() => {
+        const cwMovies = continueWatching.filter(cw => movies.some(m => m.stream_id === cw.movieId));
+        const inProgress = cwMovies.filter(cw => cw.durationSeconds <= 0 || (cw.progressSeconds / cw.durationSeconds) < 0.9);
+        if (inProgress.length === 0) return null;
+        return (
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground mb-3">Continue Watching</h2>
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {inProgress.slice(0, 10).map((cw) => {
+                const movie = movies.find(m => m.stream_id === cw.movieId);
+                if (!movie) return null;
+                const pct = cw.durationSeconds > 0 ? Math.min(100, (cw.progressSeconds / cw.durationSeconds) * 100) : 0;
+                return (
+                  <div key={cw.movieId} className="shrink-0 w-[120px] group relative">
+                    <button onClick={() => setOverlayMovie(movie)} className="w-full text-left">
+                      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5">
+                        {movie.stream_icon ? (
+                          <img src={imageUrl(movie.stream_icon)} alt={movie.name ? `${movie.name} poster` : ''} className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-[#141420]">
+                            <Film className="h-6 w-6 text-white/10" />
+                          </div>
+                        )}
+                        <div className="absolute inset-x-0 bottom-0 h-1 bg-white/10">
+                          <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                        </div>
                       </div>
-                    )}
-                    <div className="absolute inset-x-0 bottom-0 h-1 bg-white/10">
-                      <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
-                    </div>
+                      <p className="text-[11px] leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+                        {movie.base_name || movie.name}
+                      </p>
+                    </button>
+                    {/* Dismiss button */}
+                    <button
+                      onClick={() => removeMovieProgress(cw.movieId)}
+                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-black/70 backdrop-blur-sm text-white/60 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] z-10"
+                      aria-label="Remove from continue watching"
+                    >
+                      ✕
+                    </button>
                   </div>
-                  <p className="text-[11px] leading-tight line-clamp-2 group-hover:text-primary transition-colors">
-                    {movie.base_name || movie.name}
-                  </p>
-                </button>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
+      {/* Recently Completed */}
+      {!loading && continueWatching.length > 0 && (() => {
+        const cwMovies = continueWatching.filter(cw => movies.some(m => m.stream_id === cw.movieId));
+        const completed = cwMovies.filter(cw => cw.durationSeconds > 0 && (cw.progressSeconds / cw.durationSeconds) >= 0.9);
+        if (completed.length === 0) return null;
+        return (
+          <div>
+            <h2 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-1.5">
+              <span className="text-green-400">✓</span>
+              Recently Completed
+            </h2>
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {completed.slice(0, 8).map((cw) => {
+                const movie = movies.find(m => m.stream_id === cw.movieId);
+                if (!movie) return null;
+                return (
+                  <div key={cw.movieId} className="shrink-0 w-[120px] group relative">
+                    <button onClick={() => setOverlayMovie(movie)} className="w-full text-left">
+                      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-1 ring-green-500/20 group-hover:ring-green-500/40 transition-all">
+                        {movie.stream_icon ? (
+                          <img src={imageUrl(movie.stream_icon)} alt={movie.name ? `${movie.name} poster` : ''} className="w-full h-full object-cover opacity-70" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-[#141420]">
+                            <Film className="h-6 w-6 text-white/10" />
+                          </div>
+                        )}
+                        {/* Completed check */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="p-1.5 rounded-full bg-green-500/20 backdrop-blur-sm">
+                            <span className="text-green-400 text-sm">✓</span>
+                          </div>
+                        </div>
+                        <div className="absolute inset-x-0 bottom-0 h-0.5 bg-green-500" />
+                      </div>
+                      <p className="text-[11px] leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+                        {movie.base_name || movie.name}
+                      </p>
+                    </button>
+                    {/* Dismiss button */}
+                    <button
+                      onClick={() => removeMovieProgress(cw.movieId)}
+                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-black/70 backdrop-blur-sm text-white/60 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] z-10"
+                      aria-label="Remove from recently completed"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Recently Added */}
       {!loading && movies.length > 0 && (

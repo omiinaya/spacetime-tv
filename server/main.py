@@ -331,6 +331,43 @@ async def admin_stats():
     }
 
 
+
+# ── Admin cache controls ─────────────────────────────────────────────────────
+
+@app.post("/api/admin/cache/clear")
+async def admin_clear_cache():
+    """Clear all in-memory cache entries. Triggers a fresh warm."""
+    global _cache
+    count = len(_cache)
+    _cache.clear()
+    epg_cache["data"] = None
+    epg_cache["fetched"] = 0
+    start_cache_warmer()
+    return {"cleared": count, "message": f"Cleared {count} cache entries. Warming started."}
+
+
+@app.post("/api/admin/cache/warm")
+async def admin_warm_cache():
+    """Force a cache warm cycle (no-op if already warming)."""
+    global _warm_task
+    if _warm_task is not None and not _warm_task.done():
+        return {"message": "Cache warming already in progress."}
+    start_cache_warmer()
+    return {"message": "Cache warming started."}
+
+
+@app.post("/api/admin/cache/warm-full")
+async def admin_warm_full_cache():
+    """Clear THEN warm the full cache."""
+    global _cache
+    count = len(_cache)
+    _cache.clear()
+    epg_cache["data"] = None
+    epg_cache["fetched"] = 0
+    start_cache_warmer()
+    return {"message": f"Full re-warm started. Cleared {count} stale entries."}
+
+
 # ── LIVE TV ─────────────────────────────────────────────────────────────────
 
 @app.get("/api/live/categories")
