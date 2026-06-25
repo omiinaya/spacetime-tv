@@ -1,5 +1,6 @@
+import { useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Tv, Loader2, AlertCircle, RotateCcw } from "lucide-react";
+import { Tv, Loader2, AlertCircle, RotateCcw, Search, X } from "lucide-react";
 import { Skeleton } from "@/components/Skeleton";
 import { ChannelRow } from "@/components/ChannelRow";
 import { useSettings } from "@/context/SettingsContext";
@@ -13,7 +14,36 @@ export default function Guide() {
     error, sentinelRef, timeSlots, now, nowPct, loadPage,
   } = useGuideData();
 
-  const showEmpty = !loading && filteredChannels.length === 0 && allData.length > 0;
+  // ── Guide search ──────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState("");
+  const q = searchQuery.toLowerCase().trim();
+
+  const searchedChannels = useMemo(() => {
+    if (!q) return filteredChannels;
+    return filteredChannels
+      .map((ch) => {
+        // Filter programmes that match the search query
+        const matchingProgs = ch.programmes.filter(
+          (p) =>
+            p.title.toLowerCase().includes(q) ||
+            p.subtitle.toLowerCase().includes(q) ||
+            p.category.toLowerCase().includes(q) ||
+            p.desc.toLowerCase().includes(q)
+        );
+        if (matchingProgs.length === 0) return null;
+        return { ...ch, programmes: matchingProgs };
+      })
+      .filter(Boolean) as typeof filteredChannels;
+  }, [filteredChannels, q]);
+
+  const matchCount = useMemo(() => {
+    if (!q) return 0;
+    return searchedChannels.reduce((acc, ch) => acc + ch.programmes.length, 0);
+  }, [searchedChannels, q]);
+
+  const showEmpty = !loading && searchedChannels.length === 0 && allData.length > 0;
+
+  const clearSearch = useCallback(() => setSearchQuery(""), []);
 
   return (
     <div className="space-y-5">
@@ -27,22 +57,49 @@ export default function Guide() {
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Tv className="h-5 w-5 text-primary" />
+        <>
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Tv className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold">TV Guide</h1>
+              <p className="text-sm text-muted-foreground">
+                {totalChannels.toLocaleString()} channels · showing {searchedChannels.length.toLocaleString()}
+                {settings.languages.length > 0 && (
+                  <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                    {settings.languages.join(", ")}
+                  </span>
+                )}
+                {q && matchCount > 0 && (
+                  <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                    {matchCount} programme{matchCount !== 1 ? "s" : ""}
+                  </span>
+                )}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-semibold">TV Guide</h1>
-            <p className="text-sm text-muted-foreground">
-              {totalChannels.toLocaleString()} channels · showing {filteredChannels.length.toLocaleString()}
-              {settings.languages.length > 0 && (
-                <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                  {settings.languages.join(", ")}
-                </span>
-              )}
-            </p>
+
+          {/* Search */}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search programmes..."
+              className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            {searchQuery && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
-        </div>
+        </>
       )}
 
       {error && (
@@ -97,15 +154,27 @@ export default function Guide() {
         </div>
       ) : showEmpty ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Tv className="h-10 w-10 text-muted-foreground/20 mb-3" />
-          <p className="text-sm text-muted-foreground">No channels match your settings</p>
-          <p className="text-xs text-muted-foreground/50 mt-1">
-            {allData.length.toLocaleString()} channels available — adjust filters to see them
-          </p>
+          {q ? (
+            <>
+              <Search className="h-10 w-10 text-muted-foreground/20 mb-3" />
+              <p className="text-sm text-muted-foreground">No programmes matching &quot;{searchQuery}&quot;</p>
+              <button onClick={clearSearch} className="mt-2 text-xs text-primary hover:underline">
+                Clear search
+              </button>
+            </>
+          ) : (
+            <>
+              <Tv className="h-10 w-10 text-muted-foreground/20 mb-3" />
+              <p className="text-sm text-muted-foreground">No channels match your settings</p>
+              <p className="text-xs text-muted-foreground/50 mt-1">
+                {allData.length.toLocaleString()} channels available — adjust filters to see them
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <div className="divide-y divide-border/30 -mx-0">
-          {filteredChannels.map((group) => (
+          {searchedChannels.map((group) => (
             <ChannelRow
               key={group.channel_id}
               group={group}
@@ -128,7 +197,7 @@ export default function Guide() {
         </div>
       )}
 
-      {!loading && filteredChannels.length === 0 && allData.length === 0 && (
+      {!loading && searchedChannels.length === 0 && allData.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Tv className="h-10 w-10 text-muted-foreground/20 mb-3" />
           <p className="text-sm text-muted-foreground">No EPG data available</p>
