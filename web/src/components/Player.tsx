@@ -176,11 +176,14 @@ export default function Player({ type }: PlayerProps) {
         ref={videoRef}
         key={mountKey}
         className="absolute inset-0 w-full h-full object-contain"
+        style={{ pointerEvents: "none" }}
         playsInline
         webkit-playsinline="true"
         x-webkit-airplay="allow"
-        onClick={togglePlay}
       />
+
+      {/* Transparent overlay to handle play/pause taps — fixes iOS Safari click suppression on video element */}
+      <div className="absolute inset-0 z-[1]" onClick={togglePlay} />
 
       {/* Loading */}
       {(phase === "loading" || phase === "probing") && (
