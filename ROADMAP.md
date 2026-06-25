@@ -65,6 +65,9 @@
 | Keyboard shortcut help | New `KeyboardShortcuts` component — press `?` to toggle overlay showing all global + player shortcuts with icons. Wired in App.tsx. |
 | EPG programme descriptions | Hover any programme card in the Guide to see a popover with full XMLTV description, subtitle (italic), and category tags. Info icon indicator on cards with descriptions. |
 | Guide search | Search bar filters programmes across all channels by title, subtitle, category, or description. Shows match count badge, hides non-matching channels. |
+| Shortcuts in player menu | "Shortcuts" button in player's More menu dispatches custom event to toggle keyboard shortcut overlay. |
+| Backend config dedup | `main.py` now imports from `config.py` instead of re-defining IPTV_BASE, UA_STR, rate limits, etc. |
+| Frontend test coverage | Added 38 vitest tests for `guideUtils` (XMLTV timestamp parsing, time formatting, programme progress) and `continueWatching` (series/movie progress CRUD, expiry, ordering, edge cases). |
 
 ## Completed (previous sessions)
 

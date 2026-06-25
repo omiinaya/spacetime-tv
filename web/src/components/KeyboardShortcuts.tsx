@@ -27,12 +27,12 @@ export default function KeyboardShortcuts() {
   const toggle = useCallback(() => setOpen((v) => !v), []);
   const close = useCallback(() => setOpen(false), []);
 
-  // Global ? key listener
+  // Global ? key listener + custom event from player
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
-      if (e.key === "?" && !e.shiftKey) return; // unshifted ? is / on some layouts
+      if (e.key === "?" && !e.shiftKey) return;
       if (e.key === "?" || (e.key === "/" && e.shiftKey)) {
         e.preventDefault();
         toggle();
@@ -41,8 +41,13 @@ export default function KeyboardShortcuts() {
         close();
       }
     };
+    const onCustomToggle = () => toggle();
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener("stv:toggle-shortcuts", onCustomToggle);
+    return () => {
+      window.removeEventListener("keydown", handler);
+      window.removeEventListener("stv:toggle-shortcuts", onCustomToggle);
+    };
   }, [open, toggle, close]);
 
   if (!open) return null;

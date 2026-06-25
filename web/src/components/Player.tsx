@@ -461,6 +461,18 @@ export default function Player({ type }: PlayerProps) {
                       }}
                     />
                   </div>
+                  {/* Keyboard shortcuts */}
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                      // Dispatch custom event to toggle KeyboardShortcuts overlay
+                      window.dispatchEvent(new CustomEvent("stv:toggle-shortcuts"));
+                    }}
+                    className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-sm text-white/70 hover:bg-white/10 transition-colors"
+                  >
+                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-mono text-white/60">?</span>
+                    Shortcuts
+                  </button>
                   {/* Audio selector */}
                   <div className="px-2">
                     <AudioSelector
