@@ -15,6 +15,19 @@ see what users are looking for. Store anonymized search terms in a
 ring buffer (in-memory, last 1000 queries).
 **Filed**: 2026-06-26
 
+### P3.23 — Upgrade @vitejs/plugin-react 5.2.0 → 6.0.3 + Vite 6.4.3 → 8.1.0
+Combined upgrade: plugin-react v6 requires Vite ^8.0.0. Vite 8 drops Node 20
+support (we're on Node 22.23.1 — fine). New features include Rolldown-based
+bundling, improved CSS handling, and faster HMR. Test compatibility thoroughly.
+**Filed**: 2026-06-26
+
+### P3.24 — Upgrade lucide-react 0.577.0 → 1.21.0
+Major version bump from v0 to v1. Check for icon renames or removed icons
+(Tv, CalendarClock, Film, Tv2, Search, Heart, Menu, X, Settings, Activity,
+Database, AlertTriangle, Radio, Clock, BarChart3, Trash2, RefreshCw,
+RotateCcw, Loader2 must all exist). Verify TreeShaking still works.
+**Filed**: 2026-06-26
+
 ---
 
 ## Monitoring

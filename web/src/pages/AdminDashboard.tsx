@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Activity, Database, Tv, AlertTriangle, Radio, Clock, BarChart3,
-  Trash2, RefreshCw, RotateCcw, Loader2,
+  Trash2, RefreshCw, RotateCcw, Loader2, Search,
 } from "lucide-react";
 
 interface AdminStats {
@@ -20,6 +20,10 @@ interface AdminStats {
   errors: {
     total: number;
     recent: { ts: number; message: string; path: string }[];
+  };
+  searches: {
+    total: number;
+    recent: { ts: number; query: string }[];
   };
   sse_clients: number;
 }
@@ -239,6 +243,28 @@ export default function AdminDashboard() {
                 {" — "}
                 <span className="text-red-400">{e.message}</span>
                 {e.path && <span className="text-muted-foreground/50 ml-2">{e.path}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Search queries */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Search className="h-4 w-4 text-blue-400" />
+          <h2 className="text-sm font-semibold">
+            Recent Searches ({stats.searches.total} total)
+          </h2>
+        </div>
+        {stats.searches.recent.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No search queries yet.</p>
+        ) : (
+          <div className="bg-card border border-border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
+            {stats.searches.recent.map((s, i) => (
+              <div key={i} className="px-4 py-2 border-b border-border/30 last:border-0 text-xs flex items-center gap-2">
+                <span className="text-muted-foreground shrink-0 w-16">{fmtTime(s.ts)}</span>
+                <span className="font-mono">"{s.query}"</span>
               </div>
             ))}
           </div>

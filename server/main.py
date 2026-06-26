@@ -248,6 +248,7 @@ STREAM_HITS_FILE = "/tmp/stv_stream_hits.json"
 
 _stream_hits: dict[str, int] = {}  # "type:id" → count
 _error_log: list[dict] = []  # [{ts, message, path}] — last 100
+_search_queries: list[dict] = []  # [{ts, query}] — ring buffer, last 1000
 
 
 def _load_stream_hits():
@@ -281,6 +282,12 @@ def log_error(msg: str, path: str = ""):
     _error_log.append({"ts": time.time(), "message": msg, "path": path})
     if len(_error_log) > 100:
         _error_log.pop(0)
+
+def record_search(query: str):
+    """Record an anonymized search query in the ring buffer (last 1000)."""
+    _search_queries.append({"ts": time.time(), "query": query[:80]})
+    if len(_search_queries) > 1000:
+        _search_queries.pop(0)
 
 @app.get("/api/health")
 async def health_check():
@@ -353,6 +360,10 @@ async def admin_stats():
         "errors": {
             "total": len(_error_log),
             "recent": recent_errors,
+        },
+        "searches": {
+            "total": len(_search_queries),
+            "recent": list(reversed(_search_queries[-20:])),
         },
         "sse_clients": len(_epg_clients),
     }
@@ -1719,6 +1730,7 @@ async def search(
     knows if more results are available.
     """
     query = q.lower().strip()
+    record_search(query)
     results: dict = {"live": [], "movies": [], "series": []}
     all_live: list = []
     all_movies: list = []
