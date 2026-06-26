@@ -18,18 +18,6 @@ Tailwind CSS v4.3.1, tailwind-merge v3.6.0.
 - This is a significant refactor — best done in a dedicated session with UI
   verification. For now: stay on tailwind-merge ^2.6.x — no action needed.
 
-### P3.4 — Explore: Multi-language audio track selector for VOD
-Some VOD streams offer multiple audio tracks. The probe/selector UI (P4.2) could
-be extended to show and switch audio tracks alongside subtitle tracks.
-
-### P3.7 — Explore: EPG programme → TMDB enrichment
-Research done this tick: TMDB `/search/tv` and `/search/movie` endpoints can
-be used to look up programme titles from XMLTV. Challenge: title matching is
-often inexact (XMLTV titles differ from TMDB). Best approach: lazy enrichment
-on the frontend when viewing a programme detail, rather than batch enrichment
-on the backend. Could add a "/api/epg/enrich" endpoint that takes programme
-title + channel info and returns TMDB metadata.
-
 ### P3.8 — Explore: ManagedMediaSource API for MSE optimization
 Modern browsers support `ManagedMediaSource` (Chrome 120+, Safari 17+) which
 handles MSE SourceBuffer management more efficiently. Could replace raw MSE 
@@ -46,6 +34,15 @@ Prevents the "No stream data yet" message from appearing after every restart.
 ---|---
 
 ## Recently Completed
+
+### Channel favorites for Live TV & Guide
+Added star/toggle favorites on Live TV channel cards and Guide ChannelRow. Favorites
+are persisted to localStorage and shown in a dedicated "⭐ Favorites" section at the
+top of the LiveTV page. Star button appears on hover (opacity transition) on channel
+cards. Works across both LiveTV grid and EPG Guide views.
+✅ Done: web/src/hooks/useChannelFavorites.ts, web/src/pages/LiveTV.tsx,
+   web/src/pages/Guide.tsx, web/src/components/ChannelRow.tsx — TypeScript clean,
+   28 backend + 40 frontend tests pass.
 
 ### P3.7 — EPG programme → TMDB enrichment
 Added `/api/guide/enrich` endpoint that searches TMDB movie + TV databases

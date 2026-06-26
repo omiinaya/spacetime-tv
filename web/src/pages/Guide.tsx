@@ -5,10 +5,12 @@ import { Skeleton } from "@/components/Skeleton";
 import { ChannelRow } from "@/components/ChannelRow";
 import { useSettings } from "@/context/SettingsContext";
 import { useGuideData, formatTime } from "@/hooks/useGuideData";
+import { useChannelFavorites } from "@/hooks/useChannelFavorites";
 
 export default function Guide() {
   const navigate = useNavigate();
   const { settings } = useSettings();
+  const { favorites, toggleFavorite, isFavorite } = useChannelFavorites();
   const {
     filteredChannels, allData, totalChannels, loading, loadingMore,
     error, sentinelRef, timeSlots, now, nowPct, loadPage,
@@ -184,6 +186,8 @@ export default function Guide() {
                   navigate(`/watch/live/${group.stream_id}`);
                 }
               }}
+              isFavorite={group.stream_id ? favorites.has(group.stream_id) : false}
+              onToggleFavorite={group.stream_id ? () => toggleFavorite(group.stream_id!) : undefined}
             />
           ))}
         </div>
