@@ -2551,62 +2551,61 @@ async def tmdb_tv_similar(series_id: int, page: int = Query(1, ge=1, le=10)):
     }
 
 
-# ── TMDB Person / Cast Proxy ─────────────────────────────────────────
+# ── TMDB Person / Cast (CLI-backed) ──────────────────────────────────
+# Uses the tmdb-enrich CLI tool (browserless SSR extraction)
+# No API key needed.
+
+_TMDB_ENRICH = "/home/user/.local/share/hermes-cli-tools-venv/bin/tmdb-enrich"
+
+
+async def _tmdb_enrich_cli(*args: str) -> dict | None:
+    """Call tmdb-enrich CLI and return parsed JSON result."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            _TMDB_ENRICH, "--json", *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=20)
+        if proc.returncode != 0:
+            log.warning(f"tmdb-enrich failed (exit {proc.returncode}): {stderr.decode()[:200]}")
+            return None
+        result = json.loads(stdout.decode())
+        return result
+    except asyncio.TimeoutError:
+        log.warning(f"tmdb-enrich timed out for: {' '.join(args)[:80]}")
+        return None
+    except Exception as e:
+        log.warning(f"tmdb-enrich error: {e}")
+        return None
 
 
 @app.get("/api/tmdb/person/search")
 async def tmdb_person_search(
     q: str = Query(..., min_length=2),
-    page: int = Query(1, ge=1, le=20),
 ):
-    """Search for a person by name via TMDB v3 API.
+    """Search for a person by name via tmdb-enrich CLI.
 
-    Returns matching persons with known_for department and credits.
-    Requires TMDB_API_KEY to be set.
-    Results are cached for 10 minutes.
+    No API key needed — mines TMDB's internal API via browserless SSR.
+    Returns best match person detail when found.
     """
-    data = await _tmdb_fetch(f"search/person?query={q}&page={page}")
-    if data is None:
-        return {"results": [], "total_pages": 0, "total_results": 0, "enabled": False}
-    return {
-        "results": data.get("results", []),
-        "total_pages": data.get("total_pages", 0),
-        "total_results": data.get("total_results", 0),
-        "enabled": True,
-    }
-
-
-@app.get("/api/tmdb/person/{person_id}")
-async def tmdb_person_details(person_id: int):
-    """Full person details from TMDB v3 API by person ID.
-
-    Returns biography, birthday, deathday, place of birth, profile photo,
-    known_for_department, also_known_as, external IDs, etc.
-    Requires TMDB_API_KEY to be set.
-    """
-    data = await _tmdb_fetch(f"person/{person_id}")
+    data = await _tmdb_enrich_cli("person", q)
     if data is None:
         return {"enabled": False, "info": None}
     return {"enabled": True, "info": data}
 
 
-@app.get("/api/tmdb/person/{person_id}/combined_credits")
-async def tmdb_person_combined_credits(person_id: int):
-    """Combined movie + TV credits for a person via TMDB v3 API.
+@app.get("/api/tmdb/person/{person_id}")
+async def tmdb_person_details(person_id: int):
+    """Full person details + filmography via tmdb-enrich CLI.
 
-    Returns cast and crew credits sorted by popularity.
-    Requires TMDB_API_KEY to be set.
-    Results are cached for 10 minutes.
+    Returns name, photo, birthday, roles, and known_for credits.
+    No API key needed.
     """
-    data = await _tmdb_fetch(f"person/{person_id}/combined_credits")
+    data = await _tmdb_enrich_cli("person", str(person_id))
     if data is None:
-        return {"enabled": False, "credits": None}
-
-    # Sort credits by popularity (descending), limit to most relevant
-    cast = sorted(data.get("cast", []), key=lambda c: c.get("popularity", 0), reverse=True)[:40]
-    crew = sorted(data.get("crew", []), key=lambda c: c.get("popularity", 0), reverse=True)[:20]
-
-    return {"enabled": True, "credits": {"cast": cast, "crew": crew}}
+        return {"enabled": False, "info": None}
+    return {"enabled": True, "info": data}
 
 
 # ── EPG Enrichment: TMDB lookups for programme popovers ────────────────────

@@ -166,8 +166,6 @@ export const api = {
         ),
       details: (personId: number, signal?: AbortSignal) =>
         get<TmdbPersonDetailsResponse>(`/tmdb/person/${personId}`, signal),
-      credits: (personId: number, signal?: AbortSignal) =>
-        get<TmdbPersonCreditsResponse>(`/tmdb/person/${personId}/combined_credits`, signal),
     },
   },
 };
@@ -461,73 +459,29 @@ export interface TmdbTvSimilarResponse {
   enabled: boolean;
 }
 
-// ── TMDB Person / Cast API types ──────────────────────────────────
+// ── TMDB Person / Cast API types (CLI-backed, no API key needed) ──
 
-export interface TmdbPersonResult {
+export interface TmdbPersonInfo {
   id: number;
   name: string;
-  known_for_department: string;
-  profile_path: string | null;
-  popularity: number;
-  known_for: TmdbMovieResult[];
-  also_known_as?: string[];
-  gender?: number;
-  adult?: boolean;
-}
-
-export interface TmdbPersonSearchResponse {
-  results: TmdbPersonResult[];
-  total_pages: number;
-  total_results: number;
-  enabled: boolean;
-}
-
-export interface TmdbPersonDetails {
-  id: number;
-  name: string;
-  biography: string;
   birthday: string | null;
-  deathday: string | null;
-  place_of_birth: string | null;
-  profile_path: string | null;
-  known_for_department: string;
-  also_known_as: string[];
-  gender: number;
-  popularity: number;
-  homepage: string | null;
-  imdb_id: string | null;
-  adult: boolean;
-}
-
-export interface TmdbPersonDetailsResponse {
-  enabled: boolean;
-  info: TmdbPersonDetails | null;
+  gender: string;
+  image: string;
+  roles: string[];
+  known_for: TmdbPersonCredit[];
 }
 
 export interface TmdbPersonCredit {
-  id: number;
-  title?: string;       // movies
-  name?: string;        // TV
-  original_title?: string;
-  original_name?: string;
-  media_type: string;   // "movie" | "tv"
-  popularity: number;
-  poster_path: string | null;
-  backdrop_path: string | null;
-  overview: string;
-  release_date?: string;
-  first_air_date?: string;
-  character?: string;
-  department?: string;
-  job?: string;
-  vote_average: number;
-  vote_count: number;
-  genre_ids: number[];
-  credit_id: string;
-  episode_count?: number;
+  path: string;
+  tmdb_id: number;
+  type: "movie" | "tv";
+  title: string;
+  poster: string;
 }
 
-export interface TmdbPersonCreditsResponse {
+export interface TmdbPersonSearchResponse {
   enabled: boolean;
-  credits: { cast: TmdbPersonCredit[]; crew: TmdbPersonCredit[] } | null;
+  info: TmdbPersonInfo | null;
 }
+
+export type TmdbPersonDetailsResponse = TmdbPersonSearchResponse;
