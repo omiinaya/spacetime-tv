@@ -25,6 +25,17 @@ enrich movie/series results with TMDB posters, genres, and ratings when
 TMDB IDs are available.
 **Filed**: 2026-06-26
 
+### P3.15 — TMDB "Recommended TV Shows" in SeriesOverlay
+Add a second "TMDB Recommendations" row in SeriesOverlay (when TMDB ID is
+available), similar to P3.12 for movies. Uses existing
+`/api/tmdb/tv/{id}/similar` endpoint.
+**Filed**: 2026-06-26
+
+### P3.16 — Search page category filter tabs
+Search results currently show all types in one list. Add tab bar to filter
+between All/Movies/Series/Live categories above results for quicker scanning.
+**Filed**: 2026-06-26
+
 ---
 
 ## Monitoring
@@ -82,20 +93,5 @@ indicators in series grid (checkmark for ≥90%, progress bar for in-progress).
 Backend `/api/streams/batch-info` endpoint for bulk channel info. Recently
 played channels row on HomePage (last 8, persisted in localStorage).
 ✅ Done: server/main.py, web/src/pages/HomePage.tsx, web/src/lib/recentChannels.ts — 28 tests pass, committed and pushed.
-
-### Now-playing EPG programme info on LiveTV channel cards
-`/api/guide/now` batch endpoint + `useNowPlaying` hook. Fetches current programme
-for the first 200 visible channels every 30s. Programme title shown as subtitle
-on channel grid cards.
-✅ Done: server/main.py, web/src/hooks/useNowPlaying.ts, web/src/pages/LiveTV.tsx — 28 tests pass, committed and pushed.
-
-### Channel number badges on LiveTV grid cards
-Channel number badges (top-left) on all LiveTV grid cards. Shows when `num > 0`.
-✅ Done: web/src/pages/LiveTV.tsx — TypeScript clean, committed and pushed.
-
-### VOD timeline scrubbing fixes (3 fixes for movies + series)
-Fixed VOD timeline scrubbing for both movies and series: seek position handling,
-progress bar sync, and continue-watching resume position accuracy.
-✅ Done: web/src/hooks/useVideoPlayer.ts, web/src/lib/continueWatching.ts — TypeScript clean, committed and pushed.
 
 *(Older completed entries purged per cleanup policy)*

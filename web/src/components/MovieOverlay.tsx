@@ -13,6 +13,7 @@ import {
 import { api, MovieInfo, UnifiedMovie, MovieLanguage, imageUrl } from "@/lib/api";
 import MediaOverlay from "@/components/MediaOverlay";
 import SimilarMovies from "@/components/SimilarMovies";
+import TmdbSimilarMovies from "@/components/TmdbSimilarMovies";
 import { isInWatchlist, toggleWatchlist } from "@/lib/watchlist";
 
 interface MovieOverlayProps {
@@ -288,6 +289,8 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
       )}
       {/* More Like This */}
       <SimilarMovies categoryId={movie.category_id} currentId={movie.stream_id} />
+      {/* TMDB Recommendations */}
+      <TmdbSimilarMovies tmdbId={tmdbIdFromMovie} />
     </MediaOverlay>
   );
 }
