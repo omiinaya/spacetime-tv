@@ -212,13 +212,18 @@ def parse_xmltv(xml_text: str) -> dict:
 
 # ── Cache helpers ───────────────────────────────────────────────────────────
 _cache: dict[str, tuple[float, list | dict]] = {}
+_cache_hits: int = 0
+_cache_misses: int = 0
 CACHE_TTL = 300  # 5 min for API data
 
 
 async def cached_fetch(key: str, action: str, **params) -> list | dict:
+    global _cache_hits, _cache_misses
     now = time.time()
     if key in _cache and (now - _cache[key][0]) < CACHE_TTL:
+        _cache_hits += 1
         return _cache[key][1]
+    _cache_misses += 1
     try:
         data = await fetch_iptv(action, **params)
     except Exception as e:
@@ -330,6 +335,7 @@ async def report_error(request: Request):
 @app.get("/api/admin/stats")
 async def admin_stats():
     """Admin dashboard: cache stats, popular content, error trends."""
+    global _cache_hits, _cache_misses
     uptime = time.time() - SERVER_START_TIME
 
     # Popular content — top 20 by hit count
@@ -348,6 +354,9 @@ async def admin_stats():
         "uptime": round(uptime, 1),
         "cache": {
             "total_entries": cache_entries,
+            "hits": _cache_hits,
+            "misses": _cache_misses,
+            "hit_rate": round(_cache_hits / max(_cache_hits + _cache_misses, 1) * 100, 1),
             "vod_categories": vod_cached,
             "series_categories": series_cached,
             "epg_age": round(time.time() - epg_cache["fetched"], 0) if epg_cache["fetched"] else None,

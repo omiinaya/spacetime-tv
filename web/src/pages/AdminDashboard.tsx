@@ -8,6 +8,9 @@ interface AdminStats {
   uptime: number;
   cache: {
     total_entries: number;
+    hits: number;
+    misses: number;
+    hit_rate: number;
     vod_categories: number;
     series_categories: number;
     epg_age: number | null;
@@ -123,11 +126,14 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
         <StatCard icon={Database} label="Cache Entries" value={stats.cache.total_entries}
           sub={`${stats.cache.vod_categories} VOD · ${stats.cache.series_categories} series`} />
         <StatCard icon={Tv} label="Stream Hits" value={stats.streams.total_hits.toLocaleString()}
           sub={`${stats.streams.unique_streams} unique streams`} />
+        <StatCard icon={Activity} label="Cache Hit Rate"
+          value={stats.cache.hit_rate >= 0 ? `${stats.cache.hit_rate}%` : "—"}
+          sub={`${stats.cache.hits} hits · ${stats.cache.misses} misses`} />
         <StatCard icon={Clock} label="EPG Age" value={stats.cache.epg_age != null ? `${Math.round(stats.cache.epg_age)}s` : "N/A"} />
         <StatCard icon={Radio} label="SSE Clients" value={stats.sse_clients} />
       </div>
