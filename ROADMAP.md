@@ -36,7 +36,7 @@
 
 | Item | Status |
 |------|--------|
-| P2.8 — Live TV DVR buffer | ~2h — Live TV can't pause or rewind. 5-minute ring buffer via MSE appendWindow. Complex: requires managing MSE source buffer and coordinating with mpegts.js. |
+| P2.8 — Live TV DVR buffer | ✅ **Shipped** — 5-min ring buffer via mpegts.js auto-cleanup. Pause, seek back, rewind/forward, Go Live button. Requires MSE/SourceBuffer support (Chrome, Firefox, Safari). |
 
 ### P3 — Architecture & Technical Debt
 
