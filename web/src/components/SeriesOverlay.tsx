@@ -313,6 +313,11 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
                         />
                       )}
                       {se?.name || `Season ${s}`}
+                      {se?.episode_count ? (
+                        <span className={`text-[10px] font-medium ${isActive ? "text-black/40" : "text-white/30"}`}>
+                          {se.episode_count}ep
+                        </span>
+                      ) : null}
                     </button>
                   );
                 })}
