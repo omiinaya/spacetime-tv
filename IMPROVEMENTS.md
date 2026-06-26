@@ -8,12 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.10 — "More Like This" (Similar TV Shows) for SeriesOverlay
-SeriesOverlay has no "More Like This" section, unlike MovieOverlay which shows SimilarMovies.
-Create SimilarSeries component (mirroring SimilarMovies pattern) that loads other series
-from the same category via `/api/series?category_id=...`. Wire into SeriesOverlay.
-**Filed**: 2026-06-26
-
 ### P3.11 — Upgrade outdated npm packages (non-breaking)
 Several npm packages have newer versions:
 - `@vitejs/plugin-react`: 4.7.0 → 6.0.3
@@ -58,6 +52,12 @@ Research complete this tick (2026-06-26):
 ---
 
 ## Recently Completed
+
+### P3.10 — "More Like This" (Similar TV Shows) for SeriesOverlay
+Created SimilarSeries component (mirroring SimilarMovies pattern) that loads
+other series from the same category via `/api/series?category_id=...`. Wired
+into SeriesOverlay with a horizontal scrollable row at the bottom of the overlay.
+✅ Done: web/src/components/SimilarSeries.tsx, SeriesOverlay.tsx — TypeScript clean, 28 backend tests pass, committed and pushed.
 
 ### P3.x — Vite 6 upgrade (shipped)
 Upgraded Vite from ^5.4.2 (5.4.21) to ^6.4.3. Companions already compatible:
@@ -107,11 +107,5 @@ section appears above the channel grid. localStorage-backed persistence via
 `useChannelFavorites` hook (Set<stream_id>). Toggle button with count badge
 next to search bar for favorites-only filter.
 ✅ Done: web/src/hooks/useChannelFavorites.ts, ChannelRow.tsx, LiveTV.tsx — TypeScript clean, committed and pushed.
-
-### P3.5 — Multi-language audio track switching for VOD
-Backend `/api/audio/stream/...` ffmpeg remux with -map for selected audio track.
-Frontend AudioSelector now functional — switchAudioTrack() destroys/recreates
-player with audio-stream proxy URL and seeks to current position.
-✅ Done: server/main.py, AudioSelector.tsx, Player.tsx, useVideoPlayer.ts — TypeScript clean, 28 backend tests pass, committed and pushed.
 
 *(Older completed entries purged per cleanup policy)*
