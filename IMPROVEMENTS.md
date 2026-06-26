@@ -8,12 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.17 — Search result sorting options
-Search results currently show in arbitrary order. Add a sort dropdown/buttons
-to let users sort search results by name (A-Z), rating (high to low), or
-relevance (default). Should work with the new category filter tabs.
-**Filed**: 2026-06-26
-
 ### P3.18 — Clean up remaining `any` type casts
 Found 12 `any` type casts across 6 files (MovieOverlay.tsx, SeriesOverlay.tsx,
 PWAInstallPrompt.tsx, Player.tsx, useFullscreen.ts, useVideoPlayer.ts).
@@ -71,6 +65,14 @@ current setup before upgrading.
 ---
 
 ## Recently Completed
+
+### P3.17 — Search result sorting options
+Added a sort button bar below the category filter tabs with three options:
+Relevance (default), Name A–Z (alphabetical), and Rating (highest first, uses
+TMDB enrichment rating when available, falls back to rating_5based). Works
+within the active filter tab.
+✅ Done: web/src/pages/Search.tsx — TypeScript clean, 30 backend tests pass,
+build succeeds (7.13s), committed and pushed.
 
 ### P3.16 — Search page category filter tabs
 Added tab bar above search results to filter between All/Live/Movies/Series
