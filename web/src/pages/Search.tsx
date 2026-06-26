@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
@@ -9,9 +9,12 @@ import {
   Star,
   AlertCircle,
   Tags,
+  List,
 } from "lucide-react";
 import { api, LiveStream, Movie, Series, imageUrl, TmdbEnrichData } from "@/lib/api";
 import { SearchHistory, addSearchHistory } from "@/components/SearchHistory";
+
+type FilterTab = "all" | "live" | "movies" | "series";
 
 interface SearchResults {
   live: LiveStream[];
@@ -32,6 +35,9 @@ export default function SearchPage() {
   const [results, setResults] = useState<SearchResults | null>(null);
   const [enrichData, setEnrichData] = useState<Record<string, TmdbEnrichData> | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [filter, setFilter] = useState<FilterTab>("all");
+
+  // Tab definitions for the filter bar
 
   // ── Request cancellation ──────────────────────────────────────
   // Each search gets a unique ID. When a new search starts, we abort
@@ -208,6 +214,28 @@ export default function SearchPage() {
     results
       ? results.live.length + results.movies.length + results.series.length
       : 0;
+  const liveCount = results?.live.length ?? 0;
+  const movieCount = results?.movies.length ?? 0;
+  const seriesCount = results?.series.length ?? 0;
+
+  const filteredResults = useMemo(() => {
+    if (!results) return null;
+    switch (filter) {
+      case "live":
+        return { ...results, movies: [], series: [] };
+      case "movies":
+        return { ...results, live: [], series: [] };
+      case "series":
+        return { ...results, live: [], movies: [] };
+      default:
+        return results;
+    }
+  }, [results, filter]);
+
+  const filteredTotal =
+    filteredResults
+      ? filteredResults.live.length + filteredResults.movies.length + filteredResults.series.length
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -219,7 +247,10 @@ export default function SearchPage() {
         <div>
           <h1 className="text-xl font-semibold">Search</h1>
           <p className="text-sm text-muted-foreground">
-            Search across {total > 0 ? total.toLocaleString() : "all"} content
+            {results
+              ? `${filteredTotal.toLocaleString()} result${filteredTotal !== 1 ? "s" : ""} · ${total.toLocaleString()} total` +
+                (filter !== "all" ? ` (${filter})` : "")
+              : "Search across all live TV channels, movies, and series"}
           </p>
         </div>
       </div>
@@ -285,20 +316,51 @@ export default function SearchPage() {
         </div>
       )}
 
-      {/* Results */}
+      {/* Category filter tabs — show only when results exist */}
       {results && (
+        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin" style={{ touchAction: "manipulation" }}>
+          {[
+            { key: "all" as FilterTab, label: "All", count: total },
+            { key: "live" as FilterTab, label: "Live", count: liveCount, icon: Tv },
+            { key: "movies" as FilterTab, label: "Movies", count: movieCount, icon: Film },
+            { key: "series" as FilterTab, label: "Series", count: seriesCount, icon: Tv2 },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setFilter(tab.key)}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  filter === tab.key
+                    ? "bg-primary/15 text-primary border border-primary/20"
+                    : "bg-muted text-muted-foreground hover:text-foreground border border-transparent"
+                }`}
+              >
+                {Icon && <Icon className="h-3.5 w-3.5" />}
+                {tab.label}
+                {tab.count > 0 && (
+                  <span className="text-[10px] opacity-60">{tab.count.toLocaleString()}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Results */}
+      {filteredResults && (
         <div className="space-y-8">
           {/* Live */}
-          {results.live.length > 0 && (
+          {filteredResults.live.length > 0 && (
             <section>
               <div className="flex items-center gap-2 mb-3">
                 <Tv className="h-4 w-4 text-primary" />
                 <h2 className="text-sm font-semibold">
-                  Live TV ({results.live.length})
+                  Live TV ({filteredResults.live.length})
                 </h2>
               </div>
               <div className="channel-grid">
-                {results.live.map((s) => (
+                {filteredResults.live.map((s) => (
                   <button
                     key={s.stream_id}
                     onClick={() => navigate(`/watch/live/${s.stream_id}`)}
@@ -330,16 +392,16 @@ export default function SearchPage() {
           )}
 
           {/* Movies */}
-          {results.movies.length > 0 && (
+          {filteredResults.movies.length > 0 && (
             <section>
               <div className="flex items-center gap-2 mb-3">
                 <Film className="h-4 w-4 text-primary" />
                 <h2 className="text-sm font-semibold">
-                  Movies ({results.movies.length})
+                  Movies ({filteredResults.movies.length})
                 </h2>
               </div>
               <div className="poster-grid">
-                {results.movies.map((m) => {
+                {filteredResults.movies.map((m) => {
                   const enr = enrichData?.[String(m.stream_id)];
                   const posterSrc = enr?.poster
                     ? TMDB_IMAGE_BASE + enr.poster
@@ -403,16 +465,16 @@ export default function SearchPage() {
           )}
 
           {/* Series */}
-          {results.series.length > 0 && (
+          {filteredResults.series.length > 0 && (
             <section>
               <div className="flex items-center gap-2 mb-3">
                 <Tv2 className="h-4 w-4 text-primary" />
                 <h2 className="text-sm font-semibold">
-                  Series ({results.series.length})
+                  Series ({filteredResults.series.length})
                 </h2>
               </div>
               <div className="poster-grid">
-                {results.series.map((s) => {
+                {filteredResults.series.map((s) => {
                   const enr = enrichData?.[String(s.series_id)];
                   const posterSrc = enr?.poster
                     ? TMDB_IMAGE_BASE + enr.poster
@@ -472,10 +534,10 @@ export default function SearchPage() {
             </section>
           )}
 
-          {total === 0 && (
+          {total > 0 && filteredTotal === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Search className="h-10 w-10 text-muted-foreground/20 mb-3" />
-              <p className="text-sm text-muted-foreground">No results for &quot;{query}&quot;</p>
+              <p className="text-sm text-muted-foreground">No results for &quot;{query}&quot; in this category</p>
             </div>
           )}
         </div>
