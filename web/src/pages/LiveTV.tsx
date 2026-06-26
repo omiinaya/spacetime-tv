@@ -351,6 +351,12 @@ export default function LiveTV() {
                           className={`h-3.5 w-3.5 ${favorites.has(s.stream_id) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/40"}`}
                         />
                       </button>
+                      {/* Channel number badge */}
+                      {s.num > 0 && (
+                        <span className="absolute top-2 left-2 z-10 text-[9px] font-mono font-semibold text-muted-foreground/40 bg-black/40 px-1 py-0.5 rounded">
+                          {s.num}
+                        </span>
+                      )}
                       {s.stream_icon ? (
                         <img
                           src={`/api/iptv/${s.stream_icon.replace("http://", "").replace("https://", "")}`}
@@ -407,6 +413,11 @@ export default function LiveTV() {
                         className={`h-3.5 w-3.5 ${favorites.has(s.stream_id) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/40"}`}
                       />
                     </button>
+                    {s.num > 0 && (
+                      <span className="absolute top-2 left-2 z-10 text-[9px] font-mono font-semibold text-muted-foreground/40 bg-black/40 px-1 py-0.5 rounded">
+                        {s.num}
+                      </span>
+                    )}
                     {s.stream_icon ? (
                       <img
                         src={`/api/iptv/${s.stream_icon.replace("http://", "").replace("https://", "")}`}

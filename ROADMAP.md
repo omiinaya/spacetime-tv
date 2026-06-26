@@ -63,6 +63,8 @@
 
 | Item | Description |
 |------|-------------|
+| **Home dashboard** | New landing page with continue-watching rows (series + movies), TMDB trending movies/series rows, quick-link grid to Live/Movies/Series/Watchlist. Empty state with browse buttons for first-time users. |
+| **Live TV channel numbers** | Channel number badges (top-left) on all LiveTV grid cards. Shows when `num > 0`. |
 | **Channel favorites** | Star/toggle favorite Live TV channels. Persisted to localStorage. Dedicated "⭐ Favorites" section at top of LiveTV page. Star buttons on channel cards in both LiveTV grid and EPG Guide. |
 | P1.3 — Error differentiation | Added `errorType` enum (retry_exhausted, timeout, transcode_timeout, stream_error, not_supported, empty_stream). Player shows contextual icon + error message + secondary tip per error type. |
 | P1.5 — Series CW metadata | `SeriesOverlay.playEpisode()` stores season/episode/title/duration to sessionStorage. `useVideoPlayer` reads it for `saveSeriesProgress()`. Same pattern for movie CW metadata. |
