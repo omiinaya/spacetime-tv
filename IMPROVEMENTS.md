@@ -30,13 +30,7 @@ handles MSE SourceBuffer management more efficiently. Research this tick:
   supported or worth adding as an optimization pass.
 - Best approached together with the Tailwind v4 / player refresh cycle.
 
-### P3.x — Channel favorites UX: filter/view toggle
-The newly-added channel favorites (star button, Favorites section on LiveTV)
-could benefit from:
-- A "Favorites only" toggle that hides non-favorited channels/groups
-- Sort-by-favorites option on the search results
-- Keyboard shortcut to toggle favorites view (e.g. `f` key)
-These are small, well-scoped frontend-only changes.
+### P3.x — Channel favorites UX: filter/view toggle (done — see Recently Completed)
 
 ### P3.x — Vite 6 upgrade evaluation
 Current: vite ^5.4.2. Vite 6 has been stable for several months and brings
@@ -46,9 +40,29 @@ plugins (@vitejs/plugin-react, @vitest/ui, vitest) to compatible versions.
 - Check: @vitest/ui ^4.1.9 may need version alignment with Vite 6
 - Worth doing before the Tailwind v4 migration to reduce upgrade complexity
 
+### P3.x — Home dashboard: quick-link sections polish
+The newly-added HomePage has continue-watching, TMDB trending rows, and quick
+links. Potential polish items:
+- Loading skeletons for trending rows
+- Empty states for continue-watching
+- "View all" links for trending rows that navigate to full Movies/Series pages
+- Section-specific keyboard shortcuts (e.g. 'm' for movies, 's' for series)
+
 ---
 
 ## Recently Completed
+
+### Home dashboard landing page
+New HomePage with continue-watching rows (series + movies), TMDB trending
+movies row, TMDB trending series row, and quick-link cards to Live TV,
+Movies, Series, and Guide. Wired into App.tsx as the "/" route.
+✅ Done: web/src/pages/HomePage.tsx, web/src/App.tsx — committed and pushed.
+
+### Live TV favorites-only filter toggle
+Toggle button (star icon with count badge) next to search bar on LiveTV.
+When active, channel grid shows only favorited channels. Category tabs and
+the separate Favorites section are hidden. Header text reflects filter mode.
+✅ Done: web/src/pages/LiveTV.tsx — part of Home dashboard commit, TypeScript clean.
 
 ### Live TV channel favorites
 Star button on channel cards and guide rows to favorite channels. Favorites
