@@ -8,12 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.23 — Upgrade @vitejs/plugin-react 5.2.0 → 6.0.3 + Vite 6.4.3 → 8.1.0
-Combined upgrade: plugin-react v6 requires Vite ^8.0.0. Vite 8 drops Node 20
-support (we're on Node 22.23.1 — fine). New features include Rolldown-based
-bundling, improved CSS handling, and faster HMR. Test compatibility thoroughly.
-**Filed**: 2026-06-26
-
 ### P3.24 — Upgrade lucide-react 0.577.0 → 1.21.0
 Major version bump from v0 to v1. Check for icon renames or removed icons
 (Tv, CalendarClock, Film, Tv2, Search, Heart, Menu, X, Settings, Activity,
@@ -56,15 +50,20 @@ Research complete (2026-06-26):
   hls.js releases for "sourceended" event recovery for ManagedMediaSource.
 
 ### P3.22 — Monitor Vite 8 + @vitejs/plugin-react v6
-Vite 8.1.0 and @vitejs/plugin-react 6.0.3 are available but need
-compatibility verification. Plugin-react v6 requires Vite 6+ and has
-new RSC/AST-based transform. Vite 8 drops Node 20 support. Test with
-current setup before upgrading.
-**Filed**: 2026-06-26
+✅ COMPLETED — Vite 8.1.0 and @vitejs/plugin-react 6.0.3 successfully deployed.
+See Recently Completed (P3.23).
 
 ---
 
 ## Recently Completed
+
+### P3.23 — Upgrade Vite 6.4.3 → 8.1.0 + @vitejs/plugin-react 5.2.0 → 6.0.3
+Successful upgrade completed (2026-06-26):
+- Vite 8 brings Rolndown-based bundling — build took 1.87s (was 8.76s, 4.7× faster)
+- Changed manualChunks from object to function form for Rolldown compat
+- @tailwindcss/vite fully compatible (supports Vite ^8)
+- All 71 tests pass (31 backend + 40 frontend), TypeScript and build clean
+✅ Done: web/package.json, web/vite.config.ts — committed and pushed.
 
 ### P2.1 — React 19 + React Router v7 migration
 Major upgrade completed (2026-06-26):
