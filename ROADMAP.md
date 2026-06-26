@@ -45,7 +45,7 @@
 | P3.2 — Tailwind CSS v4 migration planning | tailwind-merge v3+ requires Tailwind CSS v4. Currently on Tailwind 3.4.10. Migration path known but significant refactor. |
 | P3.4 — Rich EPG with program metadata | ✅ **Done** — TMDB enrichment on hover + fallback images via tmdb-enrich CLI. Guide also has search + programme descriptions. |
 | P3.5 — Multi-language audio track selector for VOD | ✅ **Done** — Backend ffmpeg remux + frontend switchAudioTrack(). Click a track in the AudioSelector to switch — player recreates with selected audio, seeks to current position. |
-| P3.7 — EPG programme → TMDB enrichment | Lazy enrichment endpoint `/api/epg/enrich` for programme title → TMDB metadata lookup. |
+| P3.7 — EPG programme → TMDB enrichment | ✅ **Done** — `/api/guide/enrich` endpoint with tmdb-enrich CLI. Programme hover popovers show poster, rating, overview. |
 | P3.8 — ManagedMediaSource API for MSE optimization | Modern browsers support ManagedMediaSource (Chrome 120+, Safari 17+). hls.js v1.6+ has partial support. |
 | **P3.9 — Auto-advance next episode (series)** | ✅ **Done** — Player auto-navigates to next episode in season at ≥95% progress. Stores episode list + index in sessionStorage. |
 | **Bug: unified endpoint limit** | ✅ **Fixed** — `/api/movies/unified` raised 422 for limit >100. Backend bumped to 1000. Watchlist page now uses 1000. |
@@ -64,7 +64,8 @@
 | Item | Description |
 |------|-------------|
 | **Home dashboard** | New landing page with continue-watching rows (series + movies), TMDB trending movies/series rows, quick-link grid to Live/Movies/Series/Watchlist. Empty state with browse buttons for first-time users. |
-| **Live TV channel numbers** | Channel number badges (top-left) on all LiveTV grid cards. Shows when `num > 0`. |
+| **Live TV "Now Playing" EPG** | `/api/guide/now` batch endpoint + `useNowPlaying` hook. Fetches current programme for the first 200 visible channels every 30s. Programme title shown as subtitle on channel grid cards. |
+| **Channel number badges** | Channel number badges (top-left) on all LiveTV grid cards. Shows when `num > 0`. |
 | **Channel favorites** | Star/toggle favorite Live TV channels. Persisted to localStorage. Dedicated "⭐ Favorites" section at top of LiveTV page. Star buttons on channel cards in both LiveTV grid and EPG Guide. |
 | P1.3 — Error differentiation | Added `errorType` enum (retry_exhausted, timeout, transcode_timeout, stream_error, not_supported, empty_stream). Player shows contextual icon + error message + secondary tip per error type. |
 | P1.5 — Series CW metadata | `SeriesOverlay.playEpisode()` stores season/episode/title/duration to sessionStorage. `useVideoPlayer` reads it for `saveSeriesProgress()`. Same pattern for movie CW metadata. |
