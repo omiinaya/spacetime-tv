@@ -8,12 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.19 — Search result pagination / "Load more"
-Current search endpoint caps at 20 results per category with no way to
-load more. Add limit/offset params to the search endpoint and "Load more"
-button on the search page for each section that has additional results.
-**Filed**: 2026-06-26
-
 ### P3.20 — Live TV search result enrichment with EPG now-playing
 Live TV search results currently show channel name + icon only. When a
 live channel search result appears, show the current EPG programme title
@@ -60,6 +54,18 @@ current setup before upgrading.
 
 ## Recently Completed
 
+### P3.19 — Search result pagination / "Load more"
+Added `limit` (default 20, max 50), `offset`, and `section` params to
+`/api/search`. The endpoint now returns `totals` per category so the
+frontend knows whether more results are available. The Search page has
+"Load more" buttons below each section (Live, Movies, Series) that load
+the next 20 items and append them. Buttons show visible count vs total
+(e.g. "Load more movies (20 of 156)"), with a spinner while loading.
+Backwards-compatible — old calls without pagination params work identically.
+✅ Done: server/main.py, web/src/lib/api.ts, web/src/pages/Search.tsx,
+server/tests/test_search.py — 31 backend tests pass, TypeScript clean,
+build succeeds (8.24s), committed and pushed.
+
 ### P3.18 — Clean up remaining `any` type casts
 Removed all 12 `as any` casts across 6 files (Player.tsx, MovieOverlay.tsx,
 SeriesOverlay.tsx, PWAInstallPrompt.tsx, useFullscreen.ts, useVideoPlayer.ts).
@@ -95,48 +101,5 @@ Search page now shows TMDB poster artwork (with fallback), TMDB rating
 badge overlay on posters, and genre badges below titles.
 Uses TMDB_API_KEY path when available, falls back to tmdb-enrich CLI.
 ✅ Done: server/main.py, web/src/lib/api.ts, web/src/pages/Search.tsx — 30 backend tests pass, TypeScript clean, committed and pushed.
-
-### P3.15 — TMDB "Recommended TV Shows" in SeriesOverlay
-Added a new `TmdbSimilarShows` component that loads TMDB similar TV series
-recommendations when a TMDB ID is available on the series. Renders below the
-existing provider-based "More Like This" row with TMDB poster artwork, ratings,
-and year labels. Clicking navigates to a series search by title.
-Uses existing `/api/tmdb/tv/{id}/similar` endpoint.
-✅ Done: web/src/components/TmdbSimilarShows.tsx, SeriesOverlay.tsx — TypeScript clean, 28 backend tests pass, committed and pushed.
-
-### P3.13 — Live TV category filtering
-The LiveTV page previously locked users into a single category tab with no way
-to see all channels at once. Added an "All" tab at the start of the category bar
-that shows every channel across all categories (uses the existing `/api/live/all`
-endpoint with infinite scroll). Now users can browse the full channel catalog or
-filter down to a specific category.
-✅ Done: web/src/pages/LiveTV.tsx — TypeScript clean, 28 backend tests pass.
-
-### P3.12 — TMDB "Recommended Movies" in MovieOverlay
-Added a new `TmdbSimilarMovies` component that loads TMDB similar movie
-recommendations when a TMDB ID is available on the movie. Renders below the
-existing provider-based "More Like This" row with TMDB poster artwork, ratings,
-and year labels. Clicking navigates to a provider search by title.
-✅ Done: web/src/components/TmdbSimilarMovies.tsx, MovieOverlay.tsx — TypeScript clean, 28 backend tests pass, committed and pushed.
-
-### P3.11 — Upgrade outdated npm packages (non-breaking batch)
-Upgraded three packages on the non-breaking path:
-- TypeScript 5.9.3 → 6.0.3: added `"ignoreDeprecations": "6.0"` to
-  tsconfig.json for the `baseUrl`+`paths` deprecation. No code changes needed.
-- @vitejs/plugin-react 4.7.0 → 5.2.0: compatible with React 18 + Vite 6;
-  v6.x would require React 19.
-- lucide-react 0.441.0 → 0.577.0: latest v0 release. All icon names unchanged.
-✅ Done: web/package.json, web/tsconfig.json — tsc clean, 28 backend tests pass, build succeeds (8.22s), committed and pushed (2 commits).
-
-### P3.10 — "More Like This" (Similar TV Shows) for SeriesOverlay
-Created SimilarSeries component (mirroring SimilarMovies pattern) that loads
-other series from the same category via `/api/series?category_id=...`. Wired
-into SeriesOverlay with a horizontal scrollable row at the bottom of the overlay.
-✅ Done: web/src/components/SimilarSeries.tsx, SeriesOverlay.tsx — TypeScript clean, 28 backend tests pass, committed and pushed.
-
-### P3.x — Vite 6 upgrade (shipped)
-Upgraded Vite from ^5.4.2 (5.4.21) to ^6.4.3. Companions already compatible:
-@vitejs/plugin-react 4.7.0, vitest 4.1.9, @tailwindcss/vite 4.3.1.
-✅ Done: web/package.json, web/package-lock.json — TypeScript clean, 28 backend tests pass, build succeeds (1618 modules, 7.54s), committed and pushed.
 
 *(Older completed entries purged per cleanup policy)*
