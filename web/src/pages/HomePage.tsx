@@ -189,7 +189,7 @@ export default function HomePage() {
                   key={`trending-m-${t.id}`}
                   data-row-idx={idx}
                   className="shrink-0 w-[140px] group text-left focus:outline-none"
-                  onClick={() => navigate(`/movies?tmdb=${t.id}`)}
+                  onClick={() => navigate(`/movies?q=${encodeURIComponent(t.title)}`)}
                 >
                   <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-0 group-focus:ring-2 group-focus:ring-primary/60 transition-all">
                     {posterUrl ? (
@@ -236,7 +236,7 @@ export default function HomePage() {
                   key={`trending-tv-${t.id}`}
                   data-row-idx={idx}
                   className="shrink-0 w-[140px] group text-left focus:outline-none"
-                  onClick={() => navigate(`/series?tmdb=${t.id}`)}
+                  onClick={() => navigate(`/series?q=${encodeURIComponent(t.name)}`)}
                 >
                   <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-0 group-focus:ring-2 group-focus:ring-primary/60 transition-all">
                     {posterUrl ? (
