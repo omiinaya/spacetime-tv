@@ -115,6 +115,10 @@ export const api = {
       get<GuideEnrichResponse>(
         `/guide/enrich?q=${encodeURIComponent(q)}`, signal
       ),
+    now: (streamIds: number[], signal?: AbortSignal) =>
+      get<GuideNowResponse>(
+        `/guide/now?stream_ids=${streamIds.join(",")}`, signal
+      ),
   },
   search: (q: string, signal?: AbortSignal) =>
     get<{ live: LiveStream[]; movies: Movie[]; series: Series[] }>(
@@ -336,6 +340,15 @@ export interface GuideEnrichResult {
 export interface GuideEnrichResponse {
   enabled: boolean;
   result: GuideEnrichResult | null;
+}
+
+export interface GuideNowResult {
+  title: string;
+  channel_name: string;
+}
+
+export interface GuideNowResponse {
+  programmes: Record<string, GuideNowResult | null>;
 }
 
 // ── TMDB v3 API Proxy types ─────────────────────────────────────────────

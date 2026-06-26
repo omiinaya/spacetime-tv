@@ -2536,6 +2536,83 @@ _EPG_ENRICH_CACHE: dict[str, tuple[float, dict | None]] = {}
 _EPG_ENRICH_TTL = 3600
 
 
+@app.get("/api/guide/now")
+async def guide_now(
+    stream_ids: str = Query(..., description="Comma-separated stream IDs"),
+):
+    """Batch lookup: returns currently-airing programme for each stream_id.
+
+    Uses the in-memory EPG cache. Results are a dict of stream_id → programme
+    title (or null if no current programme / no EPG data).
+    """
+    ids = []
+    for part in stream_ids.split(","):
+        part = part.strip()
+        if part.isdigit():
+            ids.append(int(part))
+    if not ids:
+        return {"programmes": {}}
+
+    epg = await load_epg_background()
+    programmes = epg.get("programmes", [])
+    channels = epg.get("channels", [])
+
+    # Build channel_id → channel_name map
+    ch_map = {c["id"]: c["name"] for c in channels}
+
+    # Build stream_id → channel_id mapping from live_all cache
+    stream_to_ch: dict[int, str] = {}
+    try:
+        live_all = await cached_fetch("live_all", "get_live_streams")
+        for s in live_all:
+            sid = s["stream_id"]
+            epg_id = s.get("epg_channel_id")
+            if sid in ids and epg_id:
+                stream_to_ch[sid] = epg_id
+    except Exception as e:
+        log.warning(f"[GUIDE/NOW] Failed to load live_all: {e}")
+
+    now = datetime.now(timezone.utc)
+    cutoff_past = now - timedelta(minutes=30)
+
+    def parse_ts(raw: str) -> datetime:
+        iso = f"{raw[:4]}-{raw[4:6]}-{raw[6:8]}T{raw[8:10]}:{raw[10:12]}:{raw[12:14]}{raw[15:18]}:{raw[18:20]}"
+        return datetime.fromisoformat(iso)
+
+    # Build result: for each requested stream_id, find the current programme
+    result: dict[str, dict | None] = {}
+    for sid in ids:
+        ch_id = stream_to_ch.get(sid)
+        if not ch_id:
+            result[str(sid)] = None
+            continue
+
+        # Find current programme for this channel
+        current = None
+        for p in programmes:
+            if p["channel"] != ch_id:
+                continue
+            try:
+                start = parse_ts(p["start"])
+                stop = parse_ts(p["stop"])
+                # Must be currently airing (started in the last 30 min or not yet ended)
+                if start <= now <= stop:
+                    current = {
+                        "title": p.get("title", ""),
+                        "channel_name": ch_map.get(ch_id, ch_id),
+                    }
+                    break
+                if stop < cutoff_past:
+                    # Past programmes are skipped (but we keep scanning)
+                    continue
+            except (ValueError, IndexError):
+                continue
+
+        result[str(sid)] = current
+
+    return {"programmes": result}
+
+
 @app.get("/api/guide/enrich")
 async def guide_enrich(
     q: str = Query(..., min_length=2, max_length=200),

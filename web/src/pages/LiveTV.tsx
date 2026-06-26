@@ -7,6 +7,7 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useSettings } from "@/context/SettingsContext";
 import { filterCategories } from "@/lib/settings";
 import { useChannelFavorites } from "@/hooks/useChannelFavorites";
+import { useNowPlaying } from "@/hooks/useNowPlaying";
 
 const BATCH = 50;
 
@@ -83,6 +84,13 @@ export default function LiveTV() {
   const { settings } = useSettings();
   const { favorites, toggleFavorite, isFavorite } = useChannelFavorites();
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+
+  // Now-playing EPG data for visible channels
+  const nowPlayingStreamIds = useMemo(() => {
+    if (q) return allStreams.slice(0, 200).map((s) => s.stream_id);
+    return streams.slice(0, 200).map((s) => s.stream_id);
+  }, [q, allStreams, streams]);
+  const { getNowPlaying } = useNowPlaying(nowPlayingStreamIds);
 
   const filteredCategories = useMemo(
     () => filterCategories(categories, settings, true),
@@ -375,6 +383,11 @@ export default function LiveTV() {
                       <p className="text-xs font-medium leading-tight line-clamp-2">
                         {s.name}
                       </p>
+                      {getNowPlaying(s.stream_id) && (
+                        <p className="text-[9px] text-muted-foreground/50 mt-0.5 truncate leading-tight">
+                          {getNowPlaying(s.stream_id)}
+                        </p>
+                      )}
                     </button>
                   ))}
               </div>
@@ -436,6 +449,11 @@ export default function LiveTV() {
                     <p className="text-xs font-medium leading-tight line-clamp-2">
                       {s.name}
                     </p>
+                    {getNowPlaying(s.stream_id) && (
+                      <p className="text-[9px] text-muted-foreground/50 mt-0.5 truncate leading-tight">
+                        {getNowPlaying(s.stream_id)}
+                      </p>
+                    )}
                   </button>
                 ))}
               </div>
