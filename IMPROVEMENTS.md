@@ -21,6 +21,28 @@ Database, AlertTriangle, Radio, Clock, BarChart3, Trash2, RefreshCw,
 RotateCcw, Loader2 must all exist). Verify TreeShaking still works.
 **Filed**: 2026-06-26
 
+### P2.2 — Cache hit/miss metrics in admin dashboard
+Add `_cache_hits` and `_cache_misses` counters to the in-memory cache
+system. Track every `_cache.get()` call and expose counts via
+`/api/admin/stats`. Display a "Cache Hit Rate" card on the AdminDashboard
+so operators can monitor cache effectiveness. Useful for tuning cache TTLs
+and warm strategies.
+**Filed**: 2026-06-26
+
+### P2.3 — Episode watched badges on season tabs in SeriesOverlay
+The EpisodeGrid already shows green checkmarks for watched episodes
+(≥90% progress), but the season tabs don't reflect which seasons have
+watched episodes. Add a small progress indicator or "X/Y watched" count
+on each season tab so users know which seasons they've started.
+**Filed**: 2026-06-26
+
+### P2.4 — Guide keyboard navigation improvements
+The TV Guide currently supports mouse/touch navigation but lacks
+keyboard arrow-key support for navigating between channels and
+programmes. Add keyboard focus management with arrow keys to move
+up/down between channels and left/right between time slots.
+**Filed**: 2026-06-26
+
 ---
 
 ## Monitoring
@@ -97,24 +119,4 @@ web/src/components/Player.tsx, web/src/components/MovieOverlay.tsx,
 web/src/components/SeriesOverlay.tsx — TypeScript clean, 30 backend tests pass,
 build succeeds (7.85s).
 
-### P3.17 — Search result sorting options
-Added a sort button bar below the category filter tabs with three options:
-Relevance (default), Name A–Z (alphabetical), and Rating (highest first, uses
-TMDB enrichment rating when available, falls back to rating_5based). Works
-within the active filter tab.
-✅ Done: web/src/pages/Search.tsx — TypeScript clean, 30 backend tests pass,
-build succeeds (7.13s), committed and pushed.
 
-### P3.16 — Search page category filter tabs
-Added tab bar above search results to filter between All/Live/Movies/Series
-categories. Each tab shows the result count. Uses memoized filtered results
-to only render the active section. Pattern matches the LiveTV category tab bar.
-✅ Done: web/src/pages/Search.tsx — TypeScript clean, 30 backend tests pass, committed and pushed.
-
-### P3.14 — Search page TMDB enrichment
-Added batch `/api/search/enrich` endpoint that fetches TMDB genres,
-ratings, and poster paths for movies/series items with TMDB IDs.
-Search page now shows TMDB poster artwork (with fallback), TMDB rating
-badge overlay on posters, and genre badges below titles.
-Uses TMDB_API_KEY path when available, falls back to tmdb-enrich CLI.
-✅ Done: server/main.py, web/src/lib/api.ts, web/src/pages/Search.tsx — 30 backend tests pass, TypeScript clean, committed and pushed.

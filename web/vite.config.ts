@@ -14,9 +14,9 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          mpegts: ["mpegts.js"],
-          hls: ["hls.js"],
+        manualChunks(id: string) {
+          if (id.includes("mpegts.js")) return "mpegts";
+          if (id.includes("hls.js")) return "hls";
         },
       },
     },
