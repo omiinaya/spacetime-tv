@@ -153,6 +153,16 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
 
   const activeSeasonData = seasons.find((s) => s.season_number === activeSeason);
 
+  // ── Season poster fallback ──────────────────────────────
+  // Prefer TMDB season poster over provider cover for the episode grid fallback
+  const activeTmdbSeason = tmdb?.seasons?.find((s) => s.season_number === activeSeason);
+  const seasonPosterUrl =
+    activeSeasonData?.cover_big ||
+    (activeTmdbSeason?.poster_path
+      ? `https://image.tmdb.org/t/p/w342${activeTmdbSeason.poster_path}`
+      : "") ||
+    "";
+
   const formatDuration = (secs?: number) => {
     if (!secs) return "";
     const h = Math.floor(secs / 3600);
@@ -289,10 +299,19 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
                     <button
                       key={s}
                       onClick={() => { setActiveSeason(s); bodyRef.current?.scrollTo({ top: 0, behavior: "smooth" }); }}
-                      className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                         isActive ? "bg-white text-black" : "bg-white/5 text-white/50 hover:text-white/80 hover:bg-white/10"
                       }`}
                     >
+                      {(se?.cover_big || (tmdb?.seasons?.find((ts) => ts.season_number === s)?.poster_path ? `https://image.tmdb.org/t/p/w92${tmdb?.seasons?.find((ts) => ts.season_number === s)?.poster_path}` : "")) && (
+                        <img
+                          src={se?.cover_big || `https://image.tmdb.org/t/p/w92${tmdb?.seasons?.find((ts) => ts.season_number === s)?.poster_path}`}
+                          alt=""
+                          className="w-8 h-8 rounded object-cover shrink-0"
+                          loading="lazy"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      )}
                       {se?.name || `Season ${s}`}
                     </button>
                   );
@@ -327,6 +346,12 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
                       {ep.info?.movie_image ? (
                         <img src={imageUrl(ep.info.movie_image)} alt={ep.title || `Episode ${ep.episode_num}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                      ) : seasonPosterUrl ? (
+                        <div className="w-full h-full bg-cover bg-center" style={{backgroundImage: `url(${seasonPosterUrl})`}}>
+                          <div className="w-full h-full bg-black/40 flex items-center justify-center">
+                            <Play className="h-6 w-6 text-white/20" />
+                          </div>
+                        </div>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center"><Play className="h-6 w-6 text-white/10" /></div>
                       )}
