@@ -10,11 +10,15 @@ import {
   AlertCircle,
   Tags,
   List,
+  ArrowUpDown,
+  ArrowUpAZ,
+  TrendingUp,
 } from "lucide-react";
 import { api, LiveStream, Movie, Series, imageUrl, TmdbEnrichData } from "@/lib/api";
 import { SearchHistory, addSearchHistory } from "@/components/SearchHistory";
 
 type FilterTab = "all" | "live" | "movies" | "series";
+type SortBy = "relevance" | "name" | "rating";
 
 interface SearchResults {
   live: LiveStream[];
@@ -36,6 +40,7 @@ export default function SearchPage() {
   const [enrichData, setEnrichData] = useState<Record<string, TmdbEnrichData> | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [filter, setFilter] = useState<FilterTab>("all");
+  const [sortBy, setSortBy] = useState<SortBy>("relevance");
 
   // Tab definitions for the filter bar
 
@@ -218,19 +223,67 @@ export default function SearchPage() {
   const movieCount = results?.movies.length ?? 0;
   const seriesCount = results?.series.length ?? 0;
 
+  // ── Sort helper ────────────────────────────────────────────────
+  const getSortValue = useCallback(
+    (item: Movie | Series | LiveStream, section: "movies" | "series"): number => {
+      if (sortBy === "rating") {
+        // Try TMDB enrichment rating first, fall back to rating_5based
+        const id = section === "movies"
+          ? (item as Movie).stream_id
+          : (item as Series).series_id;
+        const enr = enrichData?.[String(id)];
+        if (enr?.rating != null) return -enr.rating; // descending: higher = first
+        // Fallback: rating_5based (0-5 scale, higher = first)
+        const rb = (item as Movie).rating_5based ?? 0;
+        return -rb;
+      }
+      return 0; // relevance: keep original order
+    },
+    [sortBy, enrichData],
+  );
+
+  const sortByName = useCallback((a: { name?: string }, b: { name?: string }) => {
+    return (a.name || "").localeCompare(b.name || "");
+  }, []);
+
   const filteredResults = useMemo(() => {
     if (!results) return null;
+    let filtered: SearchResults;
     switch (filter) {
       case "live":
-        return { ...results, movies: [], series: [] };
+        filtered = { ...results, movies: [], series: [] };
+        break;
       case "movies":
-        return { ...results, live: [], series: [] };
+        filtered = { ...results, live: [], series: [] };
+        break;
       case "series":
-        return { ...results, live: [], movies: [] };
+        filtered = { ...results, live: [], movies: [] };
+        break;
       default:
-        return results;
+        filtered = { ...results };
     }
-  }, [results, filter]);
+
+    // Apply sorting
+    if (sortBy === "name") {
+      filtered = {
+        live: [...filtered.live].sort(sortByName),
+        movies: [...filtered.movies].sort(sortByName),
+        series: [...filtered.series].sort(sortByName),
+      };
+    } else if (sortBy === "rating") {
+      filtered = {
+        live: filtered.live, // no rating for live
+        movies: [...filtered.movies].sort(
+          (a, b) => getSortValue(a, "movies") - getSortValue(b, "movies"),
+        ),
+        series: [...filtered.series].sort(
+          (a, b) => getSortValue(a, "series") - getSortValue(b, "series"),
+        ),
+      };
+    }
+
+    return filtered;
+  }, [results, filter, sortBy, sortByName, getSortValue]);
 
   const filteredTotal =
     filteredResults
@@ -344,6 +397,39 @@ export default function SearchPage() {
               </button>
             );
           })}
+        </div>
+      )}
+
+      {/* Sort controls — show only when results exist */}
+      {results && (
+        <div className="flex items-center gap-4 text-xs">
+          <span className="text-muted-foreground/60 font-medium flex items-center gap-1">
+            <ArrowUpDown className="h-3 w-3" />
+            Sort
+          </span>
+          <div className="flex gap-1">
+            {[
+              { key: "relevance" as SortBy, label: "Relevance", icon: TrendingUp },
+              { key: "name" as SortBy, label: "Name A–Z", icon: ArrowUpAZ },
+              { key: "rating" as SortBy, label: "Rating", icon: Star },
+            ].map((opt) => {
+              const Icon = opt.icon;
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => setSortBy(opt.key)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md font-medium transition-colors ${
+                    sortBy === opt.key
+                      ? "bg-primary/10 text-primary border border-primary/15"
+                      : "bg-muted/40 text-muted-foreground hover:text-foreground border border-transparent"
+                  }`}
+                >
+                  <Icon className="h-3 w-3" />
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
