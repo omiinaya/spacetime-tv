@@ -10,6 +10,7 @@ import {
   type SeriesProgress,
   type MovieProgress,
 } from "@/lib/continueWatching";
+import { getRecentChannels, type RecentChannel } from "@/lib/recentChannels";
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -17,6 +18,9 @@ export default function HomePage() {
   // ── Continue Watching ──────────────────────────────────────
   const [seriesCW, setSeriesCW] = useState<SeriesProgress[]>([]);
   const [movieCW, setMovieCW] = useState<MovieProgress[]>([]);
+
+  // ── Recently Played Live Channels ──────────────────────────
+  const [recentChannels, setRecentChannels] = useState<RecentChannel[]>([]);
 
   // ── TMDB Trending ──────────────────────────────────────────
   const [trendingMovies, setTrendingMovies] = useState<TmdbMovieResult[]>([]);
@@ -26,6 +30,7 @@ export default function HomePage() {
   useEffect(() => {
     setSeriesCW(getContinueWatching());
     setMovieCW(getMovieContinueWatching());
+    setRecentChannels(getRecentChannels());
 
     Promise.allSettled([
       api.tmdb.trending("week", 1),
@@ -74,6 +79,41 @@ export default function HomePage() {
           </button>
         ))}
       </div>
+
+      {/* ── Recently Played Channels ──────────────────────────── */}
+      {recentChannels.length > 0 && (
+        <section>
+          <h2 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            Recently Played
+          </h2>
+          <div className="channel-grid">
+            {recentChannels.slice(0, 8).map((ch) => (
+              <button
+                key={`recent-${ch.stream_id}`}
+                onClick={() => navigate(`/watch/live/${ch.stream_id}`)}
+                data-watch-link
+                className="channel-card bg-card rounded-lg border border-border p-3 text-left hover:border-primary/30 relative"
+              >
+                {ch.icon ? (
+                  <img
+                    src={`/api/iptv/${ch.icon.replace("http://", "").replace("https://", "")}`}
+                    alt={`${ch.name} logo`}
+                    className="w-full h-10 object-contain mb-2 rounded opacity-80"
+                    loading="lazy"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                ) : (
+                  <div className="w-full h-10 bg-muted rounded mb-2 flex items-center justify-center">
+                    <Tv className="h-4 w-4 text-muted-foreground/40" />
+                  </div>
+                )}
+                <p className="text-xs font-medium leading-tight line-clamp-1">{ch.name}</p>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── Loading state ────────────────────────────────────── */}
       {trendingLoading && !hasCW && (

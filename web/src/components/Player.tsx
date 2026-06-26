@@ -10,6 +10,8 @@ import { useVideoPlayer, fmtTime, QUALITIES, SPEEDS } from "@/hooks/useVideoPlay
 import { SubtitleSelector } from "@/components/SubtitleSelector";
 import { AudioSelector } from "@/components/AudioSelector";
 import { SleepTimer } from "@/components/SleepTimer";
+import { saveRecentChannel } from "@/lib/recentChannels";
+import { api } from "@/lib/api";
 
 // ── Types ─────────────────────────────────────────────────────
 interface PlayerProps { type: "live" | "movie" | "series"; }
@@ -156,6 +158,20 @@ export default function Player({ type }: PlayerProps) {
     }
     window.location.href = backUrl;
   };
+
+  // ── Track recently played live channels ──────────────────────
+  useEffect(() => {
+    if (type !== "live" || !id) return;
+    const sid = parseInt(id, 10);
+    if (!sid) return;
+    // Try to fetch channel name; if it fails, just record the ID
+    api.live.info([sid]).then((res) => {
+      const ch = res.streams[0];
+      saveRecentChannel({ stream_id: sid, name: ch?.name || `Channel ${sid}`, icon: ch?.stream_icon || "" });
+    }).catch(() => {
+      saveRecentChannel({ stream_id: sid, name: `Channel ${sid}`, icon: "" });
+    });
+  }, [type, id]);
 
   // ── Derived ──────────────────────────────────────────────────
   const progressPct = isLive

@@ -81,6 +81,10 @@ export const api = {
     streams: (catId: string, signal?: AbortSignal) =>
       get<{ streams: LiveStream[] }>(`/live/streams?category_id=${catId}`, signal),
     all: (signal?: AbortSignal) => get<{ streams: LiveStream[] }>("/live/all", signal),
+    info: (ids: number[], signal?: AbortSignal) =>
+      get<{ streams: { stream_id: number; name: string; stream_icon: string }[] }>(
+        `/live/info?ids=${ids.join(",")}`, signal
+      ),
   },
   movies: {
     categories: (signal?: AbortSignal) => get<{ categories: Category[] }>("/movies/categories", signal),
