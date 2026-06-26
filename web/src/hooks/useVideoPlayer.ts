@@ -139,6 +139,11 @@ export interface UseVideoPlayerReturn {
   showResumePrompt: boolean;
   isLive: boolean;
   isVod: boolean;
+  isBehindLive: boolean;
+  secondsBehindLive: number;
+  liveSeekableStart: number;
+  liveSeekableEnd: number;
+  seekToLive: () => void;
   togglePlay: () => void;
   seekTo: (time: number) => void;
   seek: (delta: number) => void;
@@ -293,6 +298,12 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
         type: "mpegts",
         isLive: liveFlag,
         url: streamUrl,
+      }, {
+        // DVR buffer: keep ~5 minutes of backward data for seek/pause support
+        liveBufferLatencyChasing: false,
+        autoCleanupSourceBuffer: true,
+        autoCleanupMaxBackwardDuration: 360,
+        autoCleanupMinBackwardDuration: 240,
       });
       playerRef.current = player;
 
@@ -364,6 +375,24 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
         }
       });
 
+      // DVR time tracking: update currentTime + detect if user is behind live
+      const onTimeUpdate = () => {
+        if (!video || !liveFlag) return;
+        const ct = video.currentTime;
+        setCurrentTime(ct);
+        const buf = video.buffered;
+        if (buf.length > 0) {
+          const s = buf.start(0);
+          const e = buf.end(buf.length - 1);
+          setLiveSeekableStart(s);
+          setLiveSeekableEnd(e);
+          const behind = Math.max(0, e - ct);
+          setSecondsBehindLive(behind);
+          setIsBehindLive(behind > 3);
+        }
+      };
+      video.addEventListener("timeupdate", onTimeUpdate);
+
       const healthCheck = setInterval(() => {
         if (Date.now() - lastStatsTime > 15000 && liveFlag) {
           clearInterval(healthCheck);
@@ -384,6 +413,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       mpegtsCleanup.current = () => {
         clearInterval(healthCheck);
         video.removeEventListener("playing", onPlaying);
+        video.removeEventListener("timeupdate", onTimeUpdate);
       };
     };
 
@@ -879,6 +909,27 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     setRetryKey(k => k + 1);
   }, [clearLoadingTimeout]);
 
+  // ── DVR (Live TV buffer) ───────────────────────────────────
+  const [isBehindLive, setIsBehindLive] = useState(false);
+  const [secondsBehindLive, setSecondsBehindLive] = useState(0);
+  const [liveSeekableStart, setLiveSeekableStart] = useState(0);
+  const [liveSeekableEnd, setLiveSeekableEnd] = useState(0);
+  const dvrLiveEdgeRef = useRef(0);
+
+  const seekToLive = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const buf = v.buffered;
+    if (buf.length === 0) return;
+    // Jump to 2 seconds behind live edge for smooth playback
+    const liveEdge = Math.max(buf.end(0) - 2, 0);
+    v.currentTime = liveEdge;
+    setCurrentTime(liveEdge);
+    if (v.paused) v.play().catch(() => {});
+    setIsBehindLive(false);
+    setSecondsBehindLive(0);
+  }, []);
+
   // ── Controls ───────────────────────────────────────────────
   const togglePlay = useCallback(() => {
     const v = videoRef.current;
@@ -888,9 +939,18 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   }, []);
 
   const seekTo = useCallback((time: number) => {
-    if (isLive) return;
     const v = videoRef.current;
     if (!v) return;
+
+    // Live TV DVR — seek within the buffered range
+    if (isLive) {
+      const buf = v.buffered;
+      if (buf.length === 0) return;
+      const clampedTime = Math.max(buf.start(0), Math.min(time, buf.end(0) - 1));
+      v.currentTime = clampedTime;
+      setCurrentTime(clampedTime);
+      return;
+    }
 
     // HLS (cached) — native seeking, no player recreation needed
     if (hlsRef.current) {
@@ -909,9 +969,18 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   }, [isLive, playVodRemux]);
 
   const seek = useCallback((delta: number) => {
-    if (isLive) return;
     const v = videoRef.current;
     if (!v) return;
+
+    // Live TV DVR — seek within buffered range
+    if (isLive) {
+      const buf = v.buffered;
+      if (buf.length === 0) return;
+      const target = Math.max(buf.start(0), Math.min((v.currentTime || 0) + delta, buf.end(0) - 1));
+      v.currentTime = target;
+      setCurrentTime(target);
+      return;
+    }
     const target = Math.max(0, (v.currentTime || 0) + delta);
 
     // HLS — native seeking is instant
@@ -1013,6 +1082,11 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     showResumePrompt,
     isLive,
     isVod,
+    isBehindLive,
+    secondsBehindLive,
+    liveSeekableStart,
+    liveSeekableEnd,
+    seekToLive,
     togglePlay,
     seekTo,
     seek,

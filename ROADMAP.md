@@ -43,7 +43,7 @@
 | Item | Status |
 |------|--------|
 | P3.2 — Tailwind CSS v4 migration planning | tailwind-merge v3+ requires Tailwind CSS v4. Currently on Tailwind 3.4.10. Migration path known but significant refactor. |
-| P3.4 — Rich EPG with program metadata | Guide endpoint returns raw XMLTV. Could enrich with TMDB/IMDB lookups. |
+| P3.4 — Rich EPG with program metadata | ✅ **Done** — TMDB enrichment on hover + fallback images via tmdb-enrich CLI. Guide also has search + programme descriptions. |
 | P3.5 — Multi-language audio track selector for VOD | Some VOD streams offer multiple audio tracks. Probe/selector UI could be extended. |
 | P3.7 — EPG programme → TMDB enrichment | Lazy enrichment endpoint `/api/epg/enrich` for programme title → TMDB metadata lookup. |
 | P3.8 — ManagedMediaSource API for MSE optimization | Modern browsers support ManagedMediaSource (Chrome 120+, Safari 17+). hls.js v1.6+ has partial support. |
@@ -72,6 +72,9 @@
 | Backend config dedup | `main.py` now imports from `config.py` instead of re-defining IPTV_BASE, UA_STR, rate limits, etc. |
 | Frontend test coverage | Added 38 vitest tests for `guideUtils` (XMLTV timestamp parsing, time formatting, programme progress) and `continueWatching` (series/movie progress CRUD, expiry, ordering, edge cases). |
 | Recently Completed row | Series page now shows a "Recently Completed" row with green checkmark overlay for episodes watched >=90%. Splits from "Continue Watching" which only shows in-progress (<90%) items. |
+| EPG programme TMDB enrichment (P3.7) | Browserless tmdb-enrich CLI (no API key) wired into `/api/guide/enrich` — hover popovers show poster + rating + overview. |
+| Persistent stream hit tracking | Popular content in admin dashboard survives restarts via `/tmp/stv_stream_hits.json`. |
+| Episode thumbnail fallback to season poster | Missing thumbnails fall back to TMDB season poster; season tab buttons get poster thumbnails. |
 
 ## Completed (previous sessions)
 

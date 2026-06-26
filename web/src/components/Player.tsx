@@ -2,7 +2,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Loader2, AlertCircle, ArrowLeft, Play, Pause, Maximize, Minimize,
-  Volume2, VolumeX, SkipBack, SkipForward, Settings, PictureInPicture2, Download, Tv
+  Volume2, VolumeX, SkipBack, SkipForward, Settings, PictureInPicture2, Download, Tv, RadioTower,
 } from "lucide-react";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useKeyboard } from "@/hooks/useKeyboard";
@@ -24,7 +24,8 @@ export default function Player({ type }: PlayerProps) {
     resumePos, showResumePrompt, isLive, isVod,
     togglePlay, seekTo, seek, setVolume, toggleMute, setSpeed, setQuality,
     resumePlayback, startFromBeginning,
-    retryStream,
+    retryStream, isBehindLive, secondsBehindLive, seekToLive,
+    liveSeekableStart, liveSeekableEnd,
   } = useVideoPlayer({
     type, id, seriesId, epId,
     onAutoAdvance: useCallback((url: string) => {
@@ -89,32 +90,55 @@ export default function Player({ type }: PlayerProps) {
   const progressDragRef = useRef(false);
 
   const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (isLive || !duration) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    seekTo(fraction * duration);
+    if (isLive) {
+      // Live DVR: seek within buffered range
+      const v = videoRef.current;
+      if (!v || v.buffered.length === 0) return;
+      const buf = v.buffered;
+      const seekRange = buf.end(buf.length - 1) - buf.start(0);
+      seekTo(buf.start(0) + fraction * seekRange);
+    } else if (duration) {
+      seekTo(fraction * duration);
+    }
     showControls(true);
-  }, [isLive, duration, seekTo, showControls]);
+  }, [isLive, duration, seekTo, showControls, videoRef]);
 
   const handleProgressTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (isLive || !duration) return;
     e.preventDefault();
     progressDragRef.current = true;
     const rect = e.currentTarget.getBoundingClientRect();
     const touch = e.touches[0];
     const fraction = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
-    seekTo(fraction * duration);
+    if (isLive) {
+      const v = videoRef.current;
+      if (!v || v.buffered.length === 0) return;
+      const buf = v.buffered;
+      const seekRange = buf.end(buf.length - 1) - buf.start(0);
+      seekTo(buf.start(0) + fraction * seekRange);
+    } else if (duration) {
+      seekTo(fraction * duration);
+    }
     showControls(true);
-  }, [isLive, duration, seekTo, showControls]);
+  }, [isLive, duration, seekTo, showControls, videoRef]);
 
   const handleProgressTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
-    if (!progressDragRef.current || isLive || !duration) return;
+    if (!progressDragRef.current) return;
     e.preventDefault();
     const rect = e.currentTarget.getBoundingClientRect();
     const touch = e.touches[0];
     const fraction = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
-    seekTo(fraction * duration);
-  }, [isLive, duration, seekTo]);
+    if (isLive) {
+      const v = videoRef.current;
+      if (!v || v.buffered.length === 0) return;
+      const buf = v.buffered;
+      const seekRange = buf.end(buf.length - 1) - buf.start(0);
+      seekTo(buf.start(0) + fraction * seekRange);
+    } else if (duration) {
+      seekTo(fraction * duration);
+    }
+  }, [isLive, duration, seekTo, videoRef]);
 
   const handleProgressTouchEnd = useCallback(() => {
     progressDragRef.current = false;
@@ -134,8 +158,14 @@ export default function Player({ type }: PlayerProps) {
   };
 
   // ── Derived ──────────────────────────────────────────────────
-  const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const bufferedPct = duration > 0 ? (buffered / duration) * 100 : 0;
+  const progressPct = isLive
+    ? (liveSeekableEnd - liveSeekableStart > 0
+        ? ((currentTime - liveSeekableStart) / (liveSeekableEnd - liveSeekableStart)) * 100
+        : 0)
+    : duration > 0 ? (currentTime / duration) * 100 : 0;
+  const bufferedPct = isLive
+    ? 100
+    : duration > 0 ? (buffered / duration) * 100 : 0;
 
   return (
     <div
@@ -328,8 +358,8 @@ export default function Player({ type }: PlayerProps) {
         <div className="absolute inset-x-0 bottom-0 h-36 sm:h-32 bg-gradient-to-t from-black/95 via-black/50 to-transparent pointer-events-none" />
 
         <div className="relative px-3 pb-3 sm:px-4 sm:pb-3 pt-10 sm:pt-8" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
-          {/* Timeline */}
-          {isVod && (
+          {/* Timeline — VOD always, Live TV when there's a buffer */}
+          {(isVod || (isLive && duration > 0)) && (
             <div
               className="relative w-full cursor-pointer group/progress mb-3 sm:mb-3"
               onClick={handleProgressClick}
@@ -338,10 +368,13 @@ export default function Player({ type }: PlayerProps) {
               onTouchEnd={handleProgressTouchEnd}
               role="slider"
               aria-label="Seek"
-              aria-valuemin={0}
-              aria-valuemax={duration}
+              aria-valuemin={isLive ? liveSeekableStart : 0}
+              aria-valuemax={isLive ? liveSeekableEnd : duration}
               aria-valuenow={Math.round(currentTime)}
-              aria-valuetext={`${fmtTime(currentTime)} of ${fmtTime(duration)}`}
+              aria-valuetext={isLive
+                ? `${Math.round(secondsBehindLive)}s behind live`
+                : `${fmtTime(currentTime)} of ${fmtTime(duration)}`
+              }
               tabIndex={0}
             >
               <div className="absolute inset-x-0 -top-2 -bottom-2" />
@@ -364,7 +397,20 @@ export default function Player({ type }: PlayerProps) {
                 </span>
               )}
               {isLive && (
-                <span className="text-red-500 text-xs font-bold tracking-wider px-2 py-0.5 bg-red-500/10 rounded whitespace-nowrap">LIVE</span>
+                <span className={`text-xs font-bold tracking-wider px-2 py-0.5 rounded whitespace-nowrap flex items-center gap-1 ${
+                  isBehindLive
+                    ? "text-yellow-400 bg-yellow-400/10"
+                    : "text-red-500 bg-red-500/10"
+                }`}>
+                  {isBehindLive ? (
+                    <>
+                      <RadioTower className="h-3 w-3" />
+                      {-Math.round(secondsBehindLive)}s
+                    </>
+                  ) : (
+                    "LIVE"
+                  )}
+                </span>
               )}
               {transcoding && (
                 <span className="text-yellow-500 text-xs px-2 py-0.5 bg-yellow-500/10 rounded whitespace-nowrap ml-1">⏳</span>
@@ -372,6 +418,18 @@ export default function Player({ type }: PlayerProps) {
             </div>
 
             <div className="flex-1" />
+
+            {/* Go Live — show when user is behind live edge */}
+            {isLive && isBehindLive && (
+              <button
+                onClick={seekToLive}
+                className="flex items-center gap-1 px-2.5 py-1 mr-1 rounded bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-[11px] font-medium transition-colors"
+                aria-label="Return to live"
+              >
+                <RadioTower className="h-3 w-3" />
+                Go Live
+              </button>
+            )}
 
             <button ref={fullscreenBtnRef} className="text-white/80 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}>
               {isFullscreen ? <Minimize className="w-5 h-5" aria-hidden="true" /> : <Maximize className="w-5 h-5" aria-hidden="true" />}
