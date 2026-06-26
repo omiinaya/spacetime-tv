@@ -8,12 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.26 — Connection quality indicator for video player
-Monitor hls.js/mpegts.js buffering events and expose a quality/signal
-indicator in the Player UI. When the stream buffers repeatedly, suggest
-switching to a lower quality. Useful for users on poor connections.
-**Filed**: 2026-06-26
-
 ### P3.27 — Admin dashboard: EPG refresh trigger
 There's no manual "Refresh EPG now" button in the Admin Dashboard.
 Add a `POST /api/admin/epg/refresh` endpoint that calls
@@ -59,6 +53,20 @@ Moved here from Recently Completed upon reaching the 10-entry cap.
 ---
 
 ## Recently Completed
+
+### P3.26 — Connection quality indicator for video player
+Added real-time connection quality monitoring for both live and VOD playback:
+- Tracks download speed (KB/s) from mpegts.js STATISTICS_INFO events
+- Tracks playback stalls via video element `waiting` events (30s rolling window)
+- Tracks dropped/decoded frame ratio for quality degradation detection
+- Computes quality tier (excellent/good/fair/poor) every 3 seconds
+- New 4-bar signal strength indicator in Player bottom controls
+- "Lower quality" suggestion chip appears when connection is poor and a
+  lower quality tier is available
+- All three playback paths instrumented: live MPEG-TS, VOD remux, HLS
+✅ Done: web/src/hooks/useVideoPlayer.ts, web/src/components/Player.tsx
+— 31 backend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-26
 
 ### P3.25 — PWA service worker: API caching + offline indicator
 Enhanced the service worker with three caching strategies:
@@ -107,47 +115,3 @@ and warm strategies.
 ✅ Done: server/main.py, web/src/pages/AdminDashboard.tsx — 31 backend tests
 pass, TypeScript clean, committed and pushed.
 **Filed**: 2026-06-26
-
-### P3.23 — Upgrade Vite 6.4.3 → 8.1.0 + @vitejs/plugin-react 5.2.0 → 6.0.3
-Successful upgrade completed (2026-06-26):
-- Vite 8 brings Rolndown-based bundling — build took 1.87s (was 8.76s, 4.7× faster)
-- Changed manualChunks from object to function form for Rolldown compat
-- @tailwindcss/vite fully compatible (supports Vite ^8)
-- All 71 tests pass (31 backend + 40 frontend), TypeScript and build clean
-✅ Done: web/package.json, web/vite.config.ts — committed and pushed.
-
-### P2.1 — React 19 + React Router v7 migration
-Major upgrade completed (2026-06-26):
-- React 18.3.1 → 19.2.7, react-dom 18.3.1 → 19.2.7
-- react-router-dom 6.30.4 → 7.18.0
-- @types/react 18.3.31 → 19.2.17, @types/react-dom 18.3.7 → 19.2.3
-- No breaking changes encountered — React 19 backward-compatible with existing
-  patterns (children as ReactNode, no forwardRef usage), React Router v7
-  library-mode fully compatible with v6 BrowserRouter/Routes/Route API.
-- TypeScript clean, 31 backend tests pass, build succeeds (8.76s).
-✅ Done: web/package.json, web/package-lock.json — committed and pushed.
-
-### P3.24 — Upgrade lucide-react 0.577.0 → 1.21.0
-Major version bump from v0 to v1 (now ESM-only, aligns with Vite 8).
-All 56 icons used across 20 files still exist in v1.21.0 — TypeScript
-compilation clean, no icon renames needed. Tree shaking verified (Rolldown
-successfully eliminates dead code, bundle sizes in line with previous build).
-✅ Done: web/package.json, web/package-lock.json — 31+40=71 tests pass,
-TypeScript clean, build 871ms, committed and pushed.
-**Filed**: 2026-06-26
-
-### P3.21 — Admin dashboard: search query analytics
-Added search query analytics to admin dashboard:
-- In-memory ring buffer (last 1000 queries, anonymized, capped at 80 chars)
-- `record_search()` called from `/api/search` endpoint
-- `searches` field in `/api/admin/stats` response (total + last 20)
-- New "Recent Searches" card with timestamps in AdminDashboard UI
-✅ Done: server/main.py, web/src/pages/AdminDashboard.tsx — 31 backend tests
-pass, TypeScript clean, build succeeds (8.50s), committed and pushed.
-
-### P3.20 — Live TV search result enrichment with EPG now-playing
-Live TV search results now show the current EPG programme title below
-the channel name, matching the LiveTV page now-playing display. Uses
-the existing `useNowPlaying` hook (30s auto-refresh). Added to Search.tsx.
-✅ Done: web/src/pages/Search.tsx — TypeScript clean, 31 backend tests
-pass, build succeeds (6.93s), committed and pushed.
