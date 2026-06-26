@@ -43,10 +43,12 @@ behaviour with real streams.
 ## Monitoring
 
 ### P3.8 — ManagedMediaSource API for MSE optimization
-Research complete (2026-06-26):
+Research update (2026-06-26):
 - hls.js latest stable still v1.6.16. Beta v1.7.0-beta.1 with MMS support
   has many canary builds but hasn't shipped stable yet.
-- mpegts.js ^1.8.0 — needs separate investigation for MMS support.
+- mpegts.js v1.8.0 ✅ — supports ManagedMediaSource API for iOS Safari
+  (iOS 17.1+). Already installed (^1.8.0). MMS is automatically used
+  when available; no config changes needed.
 - **Action**: upgrade hls.js from beta once v1.7.0 stable ships. Monitor
   hls.js releases for "sourceended" event recovery for ManagedMediaSource.
 
