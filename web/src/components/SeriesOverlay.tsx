@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Play,
@@ -57,6 +57,20 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
 
   // ── Episode progress (from localStorage) ────────────────────────
   const [episodeProgress] = useState(() => getSeriesProgress(series.series_id));
+
+  // ── Compute watched count per season for season tab badges ──────
+  const seasonWatched = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const [key, prog] of episodeProgress) {
+      if (prog.durationSeconds > 0 && (prog.progressSeconds / prog.durationSeconds) * 100 >= 90) {
+        const season = parseInt(key.split(':')[0], 10);
+        if (!isNaN(season)) {
+          counts.set(season, (counts.get(season) || 0) + 1);
+        }
+      }
+    }
+    return counts;
+  }, [episodeProgress]);
 
   useEffect(() => {
     let cancelled = false;
@@ -342,6 +356,9 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
                       {se?.episode_count ? (
                         <span className={`text-[10px] font-medium ${isActive ? "text-black/40" : "text-white/30"}`}>
                           {se.episode_count}ep
+                          {(seasonWatched.get(s) || 0) > 0 && (
+                            <span className="ml-1 text-green-500/70">✓{seasonWatched.get(s)}</span>
+                          )}
                         </span>
                       ) : null}
                     </button>
