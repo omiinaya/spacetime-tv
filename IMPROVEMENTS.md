@@ -45,6 +45,15 @@ usage in hls.js or add as an optimization for direct MPEG-TS playback.
 
 ## Recently Completed
 
+### P3.7 — EPG programme → TMDB enrichment
+Added `/api/guide/enrich` endpoint that searches TMDB movie + TV databases
+for EPG programme titles and returns poster, rating, overview, year.
+Frontend ProgrammeCard popover now shows TMDB poster thumbnail, rating
+badge, and TMDB overview alongside existing XMLTV data. 400ms debounce
+prevents spam. Graceful fallback when TMDB_API_KEY is unset.
+✅ Done: server/main.py, web/src/lib/api.ts, web/src/components/ChannelRow.tsx
+   — TypeScript clean, 28 backend tests pass, committed and pushed.
+
 ### P3.6 — Fix: scroll arrow buttons intercepting clicks when invisible
 The left/right scroll arrow buttons in ContentRow were invisible (opacity-0) by
 default but still captured click events because `opacity: 0` doesn't prevent
