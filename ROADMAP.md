@@ -42,7 +42,7 @@
 
 | Item | Status |
 |------|--------|
-| P3.2 — Tailwind CSS v4 migration planning | tailwind-merge v3+ requires Tailwind CSS v4. Currently on Tailwind 3.4.10. Migration path known but significant refactor. |
+| P3.2 — Tailwind CSS v4 migration | ✅ **Done** — Migrated to Tailwind v4 (CSS-first config, `@theme` block, `@tailwindcss/vite`). Removed postcss, autoprefixer, JS config. Upgraded `tailwind-merge` to v3. Build clean. |
 | P3.4 — Rich EPG with program metadata | ✅ **Done** — TMDB enrichment on hover + fallback images via tmdb-enrich CLI. Guide also has search + programme descriptions. |
 | P3.5 — Multi-language audio track selector for VOD | ✅ **Done** — Backend ffmpeg remux + frontend switchAudioTrack(). Click a track in the AudioSelector to switch — player recreates with selected audio, seeks to current position. |
 | P3.7 — EPG programme → TMDB enrichment | ✅ **Done** — `/api/guide/enrich` endpoint with tmdb-enrich CLI. Programme hover popovers show poster, rating, overview. |
@@ -64,6 +64,7 @@
 | Item | Description |
 |------|-------------|
 | **Home dashboard** | New landing page with continue-watching rows (series + movies), TMDB trending movies/series rows, recently played live channels, quick-link grid to Live/Movies/Series/Watchlist. Empty state with browse buttons for first-time users. |
+| **P3.2 — Tailwind v4 migration** | Migrated from postcss+JS-config to `@tailwindcss/vite` + CSS `@theme`. Removed postcss, autoprefixer, tailwind.config.js. Upgraded `tailwind-merge` to v3. Build clean, all tests pass. |
 | **Live TV "Now Playing" EPG** | `/api/guide/now` batch endpoint + `useNowPlaying` hook. Fetches current programme for the first 200 visible channels every 30s. Programme title shown as subtitle on channel grid cards. |
 | **Channel number badges** | Channel number badges (top-left) on all LiveTV grid cards. Shows when `num > 0`. |
 | **Channel favorites** | Star/toggle favorite Live TV channels. Persisted to localStorage. Dedicated "⭐ Favorites" section at top of LiveTV page. Star buttons on channel cards in both LiveTV grid and EPG Guide. |
