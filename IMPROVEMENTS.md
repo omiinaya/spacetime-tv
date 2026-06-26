@@ -8,12 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.20 — Live TV search result enrichment with EPG now-playing
-Live TV search results currently show channel name + icon only. When a
-live channel search result appears, show the current EPG programme title
-below the channel name (like the main LiveTV page does with now-playing).
-**Filed**: 2026-06-26
-
 ### P2.1 — React 19 + React Router v7 migration
 Major upgrade: React 18.3.1 → 19.2.7, react-dom 18.3.1 → 19.2.7,
 react-router-dom 6.30.4 → 7.18.0, @types/react 18.3.31 → 19.2.17,
@@ -24,7 +18,7 @@ react-router-dom 6.30.4 → 7.18.0, @types/react 18.3.31 → 19.2.17,
 - Keep React 18 compatibility layer if possible for a smooth migration
 **Filed**: 2026-06-26
 
-### P3.21 — Admin dashboard: add search query analytics
+### P3.21 — Admin dashboard: search query analytics
 The admin dashboard shows cache stats, popular content, and error logs.
 Add a section showing popular/recent search queries so operators can
 see what users are looking for. Store anonymized search terms in a
@@ -53,6 +47,13 @@ current setup before upgrading.
 ---
 
 ## Recently Completed
+
+### P3.20 — Live TV search result enrichment with EPG now-playing
+Live TV search results now show the current EPG programme title below
+the channel name, matching the LiveTV page now-playing display. Uses the
+existing `useNowPlaying` hook (30s auto-refresh). Added to Search.tsx.
+✅ Done: web/src/pages/Search.tsx — TypeScript clean, 31 backend tests
+pass, build succeeds (6.93s), committed and pushed.
 
 ### P3.19 — Search result pagination / "Load more"
 Added `limit` (default 20, max 50), `offset`, and `section` params to
