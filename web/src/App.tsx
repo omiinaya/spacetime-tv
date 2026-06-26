@@ -20,6 +20,7 @@ import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 
 // Lazy-loaded pages for code splitting
+const HomePage = lazy(() => import("@/pages/HomePage"));
 const LiveTV = lazy(() => import("@/pages/LiveTV"));
 const Guide = lazy(() => import("@/pages/Guide"));
 const Movies = lazy(() => import("@/pages/Movies"));
@@ -71,6 +72,7 @@ if (typeof document !== "undefined") {
 }
 
 const NAV_ITEMS = [
+  { id: "/", label: "Home", icon: Tv },
   { id: "/live", label: "Live TV", icon: Tv },
   { id: "/guide", label: "TV Guide", icon: CalendarClock },
   { id: "/movies", label: "Movies", icon: Film },
@@ -272,7 +274,7 @@ function AppLayout() {
           <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="/" element={<LiveTV />} />
+            <Route path="/" element={<HomePage />} />
             <Route path="/live" element={<LiveTV />} />
             <Route path="/guide" element={<Guide />} />
             <Route path="/movies" element={<Movies />} />
