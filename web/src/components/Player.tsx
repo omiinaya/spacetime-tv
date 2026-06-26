@@ -39,6 +39,7 @@ export default function Player({ type }: PlayerProps) {
     resumePlayback, startFromBeginning,
     retryStream, isBehindLive, secondsBehindLive, seekToLive,
     liveSeekableStart, liveSeekableEnd, switchAudioTrack,
+    connectionQuality, stallCount, suggestLowerQuality, downloadSpeed,
   } = useVideoPlayer({
     type, id, seriesId, epId,
     onAutoAdvance: useCallback((url: string) => {
@@ -443,6 +444,32 @@ export default function Player({ type }: PlayerProps) {
               {transcoding && (
                 <span className="text-yellow-500 text-xs px-2 py-0.5 bg-yellow-500/10 rounded whitespace-nowrap ml-1">⏳</span>
               )}
+              {/* Connection quality indicator */}
+              <span
+                className="inline-flex items-center gap-[2px] ml-1.5 align-middle"
+                title={`Connection: ${connectionQuality}${downloadSpeed > 0 ? ` (${Math.round(downloadSpeed)} KB/s)` : ""}${stallCount > 0 ? `, ${stallCount} stall(s)` : ""}`}
+                aria-label={`Connection quality: ${connectionQuality}`}
+              >
+                {[0, 1, 2, 3].map((i) => {
+                  const level = connectionQuality === "excellent" ? 4 : connectionQuality === "good" ? 3 : connectionQuality === "fair" ? 2 : 1;
+                  const active = i < level;
+                  const color =
+                    connectionQuality === "poor"
+                      ? "bg-red-500"
+                      : connectionQuality === "fair"
+                        ? "bg-yellow-400"
+                        : "bg-green-500";
+                  return (
+                    <span
+                      key={i}
+                      className={`block w-[3px] rounded-sm transition-all duration-300 ${
+                        active ? color : "bg-white/15"
+                      }`}
+                      style={{ height: `${4 + i * 3}px` }}
+                    />
+                  );
+                })}
+              </span>
             </div>
 
             <div className="flex-1" />
@@ -456,6 +483,19 @@ export default function Player({ type }: PlayerProps) {
               >
                 <RadioTower className="h-3 w-3" />
                 Go Live
+              </button>
+            )}
+
+            {/* Lower quality suggestion — show when connection is poor and quality can be reduced */}
+            {suggestLowerQuality && qualityIdx < QUALITIES.length - 1 && (
+              <button
+                onClick={() => setQuality(qualityIdx + 1)}
+                className="flex items-center gap-1 px-2 py-1 mr-1 rounded bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 text-[11px] font-medium transition-colors"
+                aria-label="Lower video quality for smoother playback"
+                title={`Connection is poor (${connectionQuality}). Switch to ${QUALITIES[qualityIdx + 1]?.label || "lower"} quality?`}
+              >
+                <span className="h-3 w-3">⬇</span>
+                Lower quality
               </button>
             )}
 

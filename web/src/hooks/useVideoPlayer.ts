@@ -4,6 +4,8 @@ import Hls from "hls.js";
 import { saveSeriesProgress, saveMovieProgress } from "@/lib/continueWatching";
 
 // ── Types ──────────────────────────────────────────────────────
+export type ConnectionQuality = "excellent" | "good" | "fair" | "poor";
+
 export interface ProbeResult {
   codec: string; codec_long?: string; width?: number; height?: number;
   profile?: string; container?: string; error?: string;
@@ -149,6 +151,12 @@ export interface UseVideoPlayerReturn {
   secondsBehindLive: number;
   liveSeekableStart: number;
   liveSeekableEnd: number;
+  // Connection quality
+  connectionQuality: ConnectionQuality;
+  stallCount: number;
+  suggestLowerQuality: boolean;
+  downloadSpeed: number;
+  // Actions
   seekToLive: () => void;
   togglePlay: () => void;
   seekTo: (time: number) => void;
@@ -238,6 +246,52 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   const [resumePos, setResumePos] = useState<number | null>(null);
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [buffered, setBuffered] = useState(0);
+
+  // ── Connection quality ───────────────────────────────────────
+  const [connectionQuality, setConnectionQuality] = useState<ConnectionQuality>("excellent");
+  const [stallCount, setStallCount] = useState(0);
+  const [suggestLowerQuality, setSuggestLowerQuality] = useState(false);
+  const [downloadSpeed, setDownloadSpeed] = useState(0);
+  const droppedFramesRef = useRef(0);
+  const decodedFramesRef = useRef(0);
+  const stallTimestampsRef = useRef<number[]>([]);
+  const lastQualityComputeRef = useRef(0);
+
+  const computeConnectionQuality = useCallback(() => {
+    const now = Date.now();
+    // Prune stalls older than 30 seconds (rolling window)
+    const recentStalls = stallTimestampsRef.current.filter(t => now - t < 30000);
+    stallTimestampsRef.current = recentStalls;
+    const recentStallCount = recentStalls.length;
+
+    const speed = downloadSpeed;
+    const dropped = droppedFramesRef.current;
+    const decoded = decodedFramesRef.current || 1;
+    const dropRatio = dropped / decoded;
+
+    let quality: ConnectionQuality;
+    if (speed > 2000 && recentStallCount < 2 && dropRatio < 0.02) {
+      quality = "excellent";
+    } else if (speed > 500 && recentStallCount < 4 && dropRatio < 0.05) {
+      quality = "good";
+    } else if (speed > 100 && recentStallCount < 8) {
+      quality = "fair";
+    } else {
+      quality = "poor";
+    }
+
+    setConnectionQuality(quality);
+    setStallCount(recentStallCount);
+    // Suggest lowering quality if poor AND not already at lowest quality
+    setSuggestLowerQuality(quality === "poor" && qualityIdx < QUALITIES.length - 1);
+    lastQualityComputeRef.current = now;
+  }, [downloadSpeed, qualityIdx]);
+
+  // Recompute quality on a periodic interval (every 3 seconds)
+  useEffect(() => {
+    const interval = setInterval(computeConnectionQuality, 3000);
+    return () => clearInterval(interval);
+  }, [computeConnectionQuality]);
 
   // ── Derived ────────────────────────────────────────────────
   const isLive = type === "live";
@@ -361,9 +415,25 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       video.addEventListener("playing", onPlaying);
 
       let lastStatsTime = Date.now();
-      player.on(mpegts.Events.STATISTICS_INFO, () => {
+      player.on(mpegts.Events.STATISTICS_INFO, (stats: any) => {
         lastStatsTime = Date.now();
+        // Extract download speed (KB/s) and frame stats from mpegts.js
+        if (typeof stats?.speed === "number") {
+          setDownloadSpeed(stats.speed);
+        }
+        if (typeof stats?.droppedFrames === "number") {
+          droppedFramesRef.current = stats.droppedFrames;
+        }
+        if (typeof stats?.decodedFrames === "number") {
+          decodedFramesRef.current = stats.decodedFrames;
+        }
       });
+
+      // Track buffering stalls via video element waiting event
+      const onWaiting = () => {
+        stallTimestampsRef.current.push(Date.now());
+      };
+      video.addEventListener("waiting", onWaiting);
 
       player.on(mpegts.Events.ERROR, (_t: string, detail: { response?: { code?: number } }) => {
         if (detail?.response?.code === 0) return;
@@ -420,6 +490,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       mpegtsCleanup.current = () => {
         clearInterval(healthCheck);
         video.removeEventListener("playing", onPlaying);
+        video.removeEventListener("waiting", onWaiting);
         video.removeEventListener("timeupdate", onTimeUpdate);
       };
     };
@@ -490,6 +561,25 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
         setDuration(info.duration);
       }
     });
+
+    // Track mpegts.js statistics for VOD connection quality
+    player.on(mpegts.Events.STATISTICS_INFO, (stats: any) => {
+      if (typeof stats?.speed === "number") {
+        setDownloadSpeed(stats.speed);
+      }
+      if (typeof stats?.droppedFrames === "number") {
+        droppedFramesRef.current = stats.droppedFrames;
+      }
+      if (typeof stats?.decodedFrames === "number") {
+        decodedFramesRef.current = stats.decodedFrames;
+      }
+    });
+
+    // Track buffering stalls for VOD playback
+    const onWaiting = () => {
+      stallTimestampsRef.current.push(Date.now());
+    };
+    video.addEventListener("waiting", onWaiting);
 
     player.on(mpegts.Events.ERROR, (_t: string, detail: { response?: { code?: number } }) => {
       errorCount++;
@@ -607,6 +697,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       if (saveInterval) clearInterval(saveInterval);
       video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("durationchange", onDurationChange);
+      video.removeEventListener("waiting", onWaiting);
     };
   }, [watchKey, type, seriesId, epId, id, onAutoplayMuted]);
 
@@ -696,10 +787,14 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       if (d && isFinite(d)) setDuration(d);
     };
     const onEnded = () => { setPhase("paused"); };
+    const onWaiting = () => {
+      stallTimestampsRef.current.push(Date.now());
+    };
 
     video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("durationchange", onDurationChange);
     video.addEventListener("ended", onEnded);
+    video.addEventListener("waiting", onWaiting);
 
     if (watchKey) {
       saveInterval = setInterval(() => {
@@ -736,6 +831,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("durationchange", onDurationChange);
       video.removeEventListener("ended", onEnded);
+      video.removeEventListener("waiting", onWaiting);
     };
   }, [watchKey, onAutoplayMuted]);
 
@@ -1128,6 +1224,12 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     secondsBehindLive,
     liveSeekableStart,
     liveSeekableEnd,
+    // Connection quality
+    connectionQuality,
+    stallCount,
+    suggestLowerQuality,
+    downloadSpeed,
+    // Actions
     seekToLive,
     switchAudioTrack,
     togglePlay,
