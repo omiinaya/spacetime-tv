@@ -10,6 +10,7 @@ import {
 import { api, Series, SeriesDetails, Episode, imageUrl } from "@/lib/api";
 import MediaOverlay from "@/components/MediaOverlay";
 import SimilarSeries from "@/components/SimilarSeries";
+import TmdbSimilarShows from "@/components/TmdbSimilarShows";
 import { isSeriesInWatchlist, toggleSeriesWatchlist } from "@/lib/watchlist";
 import { getSeriesProgress } from "@/lib/continueWatching";
 
@@ -449,6 +450,8 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
 
           {/* More Like This */}
           <SimilarSeries categoryId={series.category_id} currentId={series.series_id} />
+          {/* TMDB Recommendations */}
+          <TmdbSimilarShows tmdbId={tmdbId} />
         </>
       )}
     </MediaOverlay>
