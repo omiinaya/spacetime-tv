@@ -28,6 +28,7 @@ const Series = lazy(() => import("@/pages/Series"));
 const SearchPage = lazy(() => import("@/pages/Search"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const WatchlistPage = lazy(() => import("@/pages/WatchlistPage"));
+const PersonPage = lazy(() => import("@/pages/PersonPage"));
 const Player = lazy(() => import("@/components/Player"));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
 
@@ -281,6 +282,7 @@ function AppLayout() {
             <Route path="/series" element={<Series />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/watchlist" element={<WatchlistPage />} />
+            <Route path="/person/:encodedName" element={<PersonPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/watch/live/:id" element={<Player type="live" />} />

@@ -158,6 +158,17 @@ export const api = {
       similar: (seriesId: number, page = 1, signal?: AbortSignal) =>
         get<TmdbTvSimilarResponse>(`/tmdb/tv/${seriesId}/similar?page=${page}`, signal),
     },
+    // ── Person / Cast TMDB endpoints ──────────────────────────────────
+    person: {
+      search: (q: string, page = 1, signal?: AbortSignal) =>
+        get<TmdbPersonSearchResponse>(
+          `/tmdb/person/search?q=${encodeURIComponent(q)}&page=${page}`, signal
+        ),
+      details: (personId: number, signal?: AbortSignal) =>
+        get<TmdbPersonDetailsResponse>(`/tmdb/person/${personId}`, signal),
+      credits: (personId: number, signal?: AbortSignal) =>
+        get<TmdbPersonCreditsResponse>(`/tmdb/person/${personId}/combined_credits`, signal),
+    },
   },
 };
 
@@ -448,4 +459,75 @@ export interface TmdbTvSimilarResponse {
   total_pages: number;
   total_results: number;
   enabled: boolean;
+}
+
+// ── TMDB Person / Cast API types ──────────────────────────────────
+
+export interface TmdbPersonResult {
+  id: number;
+  name: string;
+  known_for_department: string;
+  profile_path: string | null;
+  popularity: number;
+  known_for: TmdbMovieResult[];
+  also_known_as?: string[];
+  gender?: number;
+  adult?: boolean;
+}
+
+export interface TmdbPersonSearchResponse {
+  results: TmdbPersonResult[];
+  total_pages: number;
+  total_results: number;
+  enabled: boolean;
+}
+
+export interface TmdbPersonDetails {
+  id: number;
+  name: string;
+  biography: string;
+  birthday: string | null;
+  deathday: string | null;
+  place_of_birth: string | null;
+  profile_path: string | null;
+  known_for_department: string;
+  also_known_as: string[];
+  gender: number;
+  popularity: number;
+  homepage: string | null;
+  imdb_id: string | null;
+  adult: boolean;
+}
+
+export interface TmdbPersonDetailsResponse {
+  enabled: boolean;
+  info: TmdbPersonDetails | null;
+}
+
+export interface TmdbPersonCredit {
+  id: number;
+  title?: string;       // movies
+  name?: string;        // TV
+  original_title?: string;
+  original_name?: string;
+  media_type: string;   // "movie" | "tv"
+  popularity: number;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  overview: string;
+  release_date?: string;
+  first_air_date?: string;
+  character?: string;
+  department?: string;
+  job?: string;
+  vote_average: number;
+  vote_count: number;
+  genre_ids: number[];
+  credit_id: string;
+  episode_count?: number;
+}
+
+export interface TmdbPersonCreditsResponse {
+  enabled: boolean;
+  credits: { cast: TmdbPersonCredit[]; crew: TmdbPersonCredit[] } | null;
 }
