@@ -18,6 +18,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import ErrorReporter from "@/components/ErrorReporter";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
+import OfflineBanner from "@/components/OfflineBanner";
 
 // Lazy-loaded pages for code splitting
 const HomePage = lazy(() => import("@/pages/HomePage"));
@@ -299,6 +300,7 @@ function AppLayout() {
 
       <ErrorReporter />
       <PWAInstallPrompt />
+      <OfflineBanner />
       <KeyboardShortcuts />
       <Toaster richColors theme="dark" position="bottom-right" />
     </div>
