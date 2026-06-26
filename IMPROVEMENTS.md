@@ -8,25 +8,32 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.24 — Upgrade lucide-react 0.577.0 → 1.21.0
-Major version bump from v0 to v1. Check for icon renames or removed icons
-(Tv, CalendarClock, Film, Tv2, Search, Heart, Menu, X, Settings, Activity,
-Database, AlertTriangle, Radio, Clock, BarChart3, Trash2, RefreshCw,
-RotateCcw, Loader2 must all exist). Verify TreeShaking still works.
-**Filed**: 2026-06-26
-
-### P2.3 — Episode watched badges on season tabs in SeriesOverlay
-The EpisodeGrid already shows green checkmarks for watched episodes
-(≥90% progress), but the season tabs don't reflect which seasons have
-watched episodes. Add a small progress indicator or "X/Y watched" count
-on each season tab so users know which seasons they've started.
-**Filed**: 2026-06-26
-
 ### P2.4 — Guide keyboard navigation improvements
 The TV Guide currently supports mouse/touch navigation but lacks
 keyboard arrow-key support for navigating between channels and
 programmes. Add keyboard focus management with arrow keys to move
 up/down between channels and left/right between time slots.
+**Filed**: 2026-06-26
+
+### P3.25 — PWA service worker: API caching + offline indicator
+Current sw.js is bare-bones (cache-first for static, skip API entirely).
+Enhancements:
+- Network-first strategy for `/api/` GET endpoints (fallback to cached)
+- Offline status banner in the React app when fetch fails
+- Pre-cache TMDB image requests (common poster URLs)
+**Filed**: 2026-06-26
+
+### P3.26 — Connection quality indicator for video player
+Monitor hls.js/mpegts.js buffering events and expose a quality/signal
+indicator in the Player UI. When the stream buffers repeatedly, suggest
+switching to a lower quality. Useful for users on poor connections.
+**Filed**: 2026-06-26
+
+### P3.27 — Admin dashboard: EPG refresh trigger
+There's no manual "Refresh EPG now" button in the Admin Dashboard.
+Add a `POST /api/admin/epg/refresh` endpoint that calls
+`_refresh_epg_background()` and a button in the admin UI to trigger
+it, showing last refresh time and status.
 **Filed**: 2026-06-26
 
 ---
@@ -41,9 +48,21 @@ Research complete (2026-06-26):
 - **Action**: upgrade hls.js from beta once v1.7.0 stable ships. Monitor
   hls.js releases for "sourceended" event recovery for ManagedMediaSource.
 
+### P3.22 — Monitor Vite 8 + @vitejs/plugin-react v6
+✅ COMPLETED — Vite 8.1.0 and @vitejs/plugin-react 6.0.3 successfully deployed.
+Moved here from Recently Completed upon reaching the 10-entry cap.
+
 ---
 
 ## Recently Completed
+
+### P2.3 — Episode watched badges on season tabs in SeriesOverlay
+Added `seasonWatched` memo that counts episodes with ≥90% progress per
+season from localStorage. Each season tab now shows a green ✓N alongside
+the total episode count when episodes in that season have been watched.
+✅ Done: web/src/components/SeriesOverlay.tsx — 31 backend tests pass,
+40 frontend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-26
 
 ### P2.2 — Cache hit/miss metrics in admin dashboard
 Added `_cache_hits` and `_cache_misses` counters to the in-memory cache
@@ -74,9 +93,14 @@ Major upgrade completed (2026-06-26):
 - TypeScript clean, 31 backend tests pass, build succeeds (8.76s).
 ✅ Done: web/package.json, web/package-lock.json — committed and pushed.
 
-### P3.22 — Monitor Vite 8 + @vitejs/plugin-react v6
-✅ COMPLETED — Vite 8.1.0 and @vitejs/plugin-react 6.0.3 successfully deployed.
-See P3.23 above. (Moved from Monitoring section upon completion.)
+### P3.24 — Upgrade lucide-react 0.577.0 → 1.21.0
+Major version bump from v0 to v1 (now ESM-only, aligns with Vite 8).
+All 56 icons used across 20 files still exist in v1.21.0 — TypeScript
+compilation clean, no icon renames needed. Tree shaking verified (Rolldown
+successfully eliminates dead code, bundle sizes in line with previous build).
+✅ Done: web/package.json, web/package-lock.json — 31+40=71 tests pass,
+TypeScript clean, build 871ms, committed and pushed.
+**Filed**: 2026-06-26
 
 ### P3.21 — Admin dashboard: search query analytics
 Added search query analytics to admin dashboard:
@@ -93,5 +117,3 @@ the channel name, matching the LiveTV page now-playing display. Uses
 the existing `useNowPlaying` hook (30s auto-refresh). Added to Search.tsx.
 ✅ Done: web/src/pages/Search.tsx — TypeScript clean, 31 backend tests
 pass, build succeeds (6.93s), committed and pushed.
-
-
