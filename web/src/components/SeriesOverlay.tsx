@@ -318,12 +318,19 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
                 })}
               </div>
               {activeSeasonData && (
-                <div className="flex items-center gap-4 mt-2 text-xs text-white/40">
-                  {activeSeasonData.air_date && (
-                    <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{activeSeasonData.air_date}</span>
-                  )}
-                  {activeSeasonData.episode_count && (
-                    <span>{activeSeasonData.episode_count} episodes</span>
+                <div className="text-xs text-white/40 space-y-2 mt-2">
+                  <div className="flex items-center gap-4">
+                    {activeSeasonData.air_date && (
+                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{activeSeasonData.air_date}</span>
+                    )}
+                    {activeSeasonData.episode_count && (
+                      <span>{activeSeasonData.episode_count} episodes</span>
+                    )}
+                  </div>
+                  {activeTmdbSeason?.overview && (
+                    <p className="text-xs text-white/40 leading-relaxed max-w-2xl line-clamp-3">
+                      {activeTmdbSeason.overview}
+                    </p>
                   )}
                 </div>
               )}

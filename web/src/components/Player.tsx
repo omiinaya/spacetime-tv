@@ -358,8 +358,8 @@ export default function Player({ type }: PlayerProps) {
         <div className="absolute inset-x-0 bottom-0 h-36 sm:h-32 bg-gradient-to-t from-black/95 via-black/50 to-transparent pointer-events-none" />
 
         <div className="relative px-3 pb-3 sm:px-4 sm:pb-3 pt-10 sm:pt-8" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}>
-          {/* Timeline — VOD always, Live TV when there's a buffer */}
-          {(isVod || (isLive && duration > 0)) && (
+          {/* Timeline — VOD always, Live TV when there's a DVR buffer */}
+          {(isVod || (isLive && liveSeekableEnd > 0)) && (
             <div
               className="relative w-full cursor-pointer group/progress mb-3 sm:mb-3"
               onClick={handleProgressClick}
