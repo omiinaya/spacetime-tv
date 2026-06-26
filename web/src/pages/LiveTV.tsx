@@ -1,11 +1,12 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Tv, Loader2, AlertCircle, RotateCcw, Search, X } from "lucide-react";
+import { Tv, Loader2, AlertCircle, RotateCcw, Search, X, Star } from "lucide-react";
 import { api, Category, LiveStream } from "@/lib/api";
 import { Skeleton, ChannelCardSkeleton, TabSkeleton } from "@/components/Skeleton";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useSettings } from "@/context/SettingsContext";
 import { filterCategories } from "@/lib/settings";
+import { useChannelFavorites } from "@/hooks/useChannelFavorites";
 
 const BATCH = 50;
 
@@ -80,6 +81,7 @@ export default function LiveTV() {
     q ? allStreams : streams, BATCH
   );
   const { settings } = useSettings();
+  const { favorites, toggleFavorite, isFavorite } = useChannelFavorites();
 
   const filteredCategories = useMemo(
     () => filterCategories(categories, settings, true),
@@ -285,6 +287,58 @@ export default function LiveTV() {
         </div>
       ) : (
         <>
+          {/* ⭐ Favorites section — only when not searching and favorites exist */}
+          {!isSearching && favorites.size > 0 && (
+            <div className="mb-8">
+              <h2 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+                <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
+                Favorites
+                <span className="text-[10px] text-muted-foreground/50 font-normal">{favorites.size}</span>
+              </h2>
+              <div className="channel-grid">
+                {allStreams
+                  .filter((s) => favorites.has(s.stream_id))
+                  .slice(0, 50)
+                  .map((s) => (
+                    <button
+                      key={`fav-${s.stream_id}`}
+                      onClick={() => navigate(`/watch/live/${s.stream_id}`)}
+                      data-watch-link
+                      className="channel-card bg-card rounded-lg border border-border p-3 text-left hover:border-primary/30 relative group/card"
+                    >
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleFavorite(s.stream_id); }}
+                        className="absolute top-2 right-2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity"
+                        aria-label={favorites.has(s.stream_id) ? "Remove from favorites" : "Add to favorites"}
+                      >
+                        <Star
+                          className={`h-3.5 w-3.5 ${favorites.has(s.stream_id) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/40"}`}
+                        />
+                      </button>
+                      {s.stream_icon ? (
+                        <img
+                          src={`/api/iptv/${s.stream_icon.replace("http://", "").replace("https://", "")}`}
+                          alt={s.name ? `${s.name} logo` : ""}
+                          className="w-full h-12 object-contain mb-2 rounded opacity-80"
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-12 bg-muted rounded mb-2 flex items-center justify-center">
+                          <Tv className="h-4 w-4 text-muted-foreground/40" />
+                        </div>
+                      )}
+                      <p className="text-xs font-medium leading-tight line-clamp-2">
+                        {s.name}
+                      </p>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
           {isSearching && searchMatches.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Search className="h-10 w-10 text-muted-foreground/20 mb-3" />
@@ -306,8 +360,17 @@ export default function LiveTV() {
                     key={s.stream_id}
                     onClick={() => navigate(`/watch/live/${s.stream_id}`)}
                     data-watch-link
-                    className="channel-card bg-card rounded-lg border border-border p-3 text-left hover:border-primary/30"
+                    className="channel-card bg-card rounded-lg border border-border p-3 text-left hover:border-primary/30 relative group/card"
                   >
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleFavorite(s.stream_id); }}
+                      className="absolute top-2 right-2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity"
+                      aria-label={favorites.has(s.stream_id) ? "Remove from favorites" : "Add to favorites"}
+                    >
+                      <Star
+                        className={`h-3.5 w-3.5 ${favorites.has(s.stream_id) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/40"}`}
+                      />
+                    </button>
                     {s.stream_icon ? (
                       <img
                         src={`/api/iptv/${s.stream_icon.replace("http://", "").replace("https://", "")}`}

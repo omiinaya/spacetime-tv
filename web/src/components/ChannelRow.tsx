@@ -10,10 +10,14 @@ export function ChannelRow({
   group,
   now,
   onPlay,
+  isFavorite,
+  onToggleFavorite,
 }: {
   group: ChannelGroup;
   now: Date;
   onPlay: () => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasStream = group.stream_id != null;
@@ -29,14 +33,15 @@ export function ChannelRow({
   return (
     <div className="flex py-2 px-4 hover:bg-muted/30 transition-colors group">
       {/* Channel info */}
-      <button
-        onClick={onPlay}
-        disabled={!hasStream}
-        className={`shrink-0 w-[184px] flex items-center gap-2.5 text-left pr-3 ${
-          hasStream ? "cursor-pointer hover:opacity-80" : "cursor-default opacity-60"
-        }`}
-        aria-label={hasStream ? `Watch ${group.channel_name}` : `${group.channel_name} — no stream available`}
-      >
+      <div className="flex items-center gap-1 shrink-0 w-[184px] pr-1">
+        <button
+          onClick={onPlay}
+          disabled={!hasStream}
+          className={`flex items-center gap-2.5 text-left flex-1 min-w-0 ${
+            hasStream ? "cursor-pointer hover:opacity-80" : "cursor-default opacity-60"
+          }`}
+          aria-label={hasStream ? `Watch ${group.channel_name}` : `${group.channel_name} — no stream available`}
+        >
         <div className="shrink-0 w-9 h-9 rounded-lg bg-[#141420] flex items-center justify-center overflow-hidden">
           {group.channel_icon ? (
             <img
@@ -58,6 +63,20 @@ export function ChannelRow({
           )}
         </div>
       </button>
+      {/* Favorite star */}
+      {onToggleFavorite && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+          className="shrink-0 p-1 rounded hover:bg-muted/50 transition-colors opacity-0 group-hover:opacity-100"
+          aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+          title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+        >
+          <Star
+            className={`h-3.5 w-3.5 ${isFavorite ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/40"}`}
+          />
+        </button>
+      )}
+      </div>
 
       {/* Programme cards */}
       <div ref={scrollRef} className="flex-1 flex gap-2 overflow-x-auto scrollbar-none min-w-0" style={{ touchAction: "manipulation" }}>
