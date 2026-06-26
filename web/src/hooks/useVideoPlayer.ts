@@ -432,13 +432,13 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
 
     const url = startPos && startPos > 5 ? `${streamUrl}?start=${startPos}` : streamUrl;
-    const startOffset = startPos && startPos > 5 ? startPos : 0;
-    const vodStartTime = Date.now();
 
     vodUrlRef.current = streamUrl;
     vodTranscodeRef.current = isTranscode;
 
-    const player = mpegts.createPlayer({ type: "mpegts", isLive: true, url });
+    const player = mpegts.createPlayer({ type: "mpegts", isLive: false, url }, {
+      autoCleanupSourceBuffer: false,
+    });
     playerRef.current = player;
     let errorCount = 0;
     let timedOut = false;
@@ -459,17 +459,25 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     };
     player.on(mpegts.Events.MEDIA_INFO, () => tryPlay());
 
-    let timeAdvancing = false;
+    // Track time and buffered natively from the video element
     const onTimeUpdate = () => {
-      if (!timeAdvancing && video.currentTime > 0.1) {
-        timeAdvancing = true;
+      setCurrentTime(video.currentTime);
+      if (video.buffered.length > 0) {
+        setBuffered(video.buffered.end(video.buffered.length - 1));
+      }
+      // Transition from loading→playing once time starts advancing
+      const p = phaseRef.current;
+      if ((p === "loading" || p === "probing") && video.currentTime > 0.1) {
         clearLoadingTimeout();
-        setCurrentTime(video.currentTime);
-        const p = phaseRef.current;
-        if (p === "loading" || p === "probing") setPhase("playing");
+        setPhase("playing");
       }
     };
+    const onDurationChange = () => {
+      const d = video.duration;
+      if (d && isFinite(d)) setDuration(d);
+    };
     video.addEventListener("timeupdate", onTimeUpdate);
+    video.addEventListener("durationchange", onDurationChange);
 
     player.on(mpegts.Events.MEDIA_INFO, (info: { duration?: number }) => {
       if (info.duration && isFinite(info.duration)) {
@@ -487,18 +495,12 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       }
     });
 
-    const timeInterval = setInterval(() => {
-      if (video && !video.paused) {
-        const elapsed = (Date.now() - vodStartTime) / 1000;
-        setCurrentTime(startOffset + elapsed);
-      }
-    }, 500);
-
     let saveInterval: ReturnType<typeof setInterval> | null = null;
     if (watchKey) {
       saveInterval = setInterval(() => {
-        const t = startOffset + (Date.now() - vodStartTime) / 1000;
-        if (t > 5) {
+        if (video && !video.paused) {
+          const t = video.currentTime;
+          if (t > 5) {
           saveWatchPos(watchKey, t);
           if (type === "series" && seriesId) {
             // Read rich metadata from sessionStorage (set by SeriesOverlay)
@@ -573,6 +575,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
               updatedAt: Date.now(),
             });
           }
+          }
         }
       }, 5000);
     }
@@ -595,9 +598,9 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
 
     mpegtsCleanup.current = () => {
       clearTimeout(timeout);
-      clearInterval(timeInterval);
       if (saveInterval) clearInterval(saveInterval);
       video.removeEventListener("timeupdate", onTimeUpdate);
+      video.removeEventListener("durationchange", onDurationChange);
     };
   }, [watchKey, type, seriesId, epId, id, onAutoplayMuted]);
 
@@ -986,13 +989,19 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       return;
     }
 
-    // mpegts VOD — recreate player with start offset
+    // mpegts VOD — try native seeking first (works with isLive: false)
     if (!vodUrlRef.current) return;
-    const url = vodUrlRef.current;
-    const isTC = vodTranscodeRef.current;
-    if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
-    setPhase("loading");
-    playVodRemux(url, Math.max(0, time), isTC);
+    try {
+      v.currentTime = Math.max(0, time);
+      setCurrentTime(v.currentTime);
+    } catch {
+      // Fall back: recreate player with start offset
+      const url = vodUrlRef.current;
+      const isTC = vodTranscodeRef.current;
+      if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
+      setPhase("loading");
+      playVodRemux(url, Math.max(0, time), isTC);
+    }
   }, [isLive, playVodRemux]);
 
   const seek = useCallback((delta: number) => {
