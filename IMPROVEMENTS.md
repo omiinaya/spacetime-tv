@@ -8,14 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.25 — PWA service worker: API caching + offline indicator
-Current sw.js is bare-bones (cache-first for static, skip API entirely).
-Enhancements:
-- Network-first strategy for `/api/` GET endpoints (fallback to cached)
-- Offline status banner in the React app when fetch fails
-- Pre-cache TMDB image requests (common poster URLs)
-**Filed**: 2026-06-26
-
 ### P3.26 — Connection quality indicator for video player
 Monitor hls.js/mpegts.js buffering events and expose a quality/signal
 indicator in the Player UI. When the stream buffers repeatedly, suggest
@@ -48,6 +40,24 @@ Moved here from Recently Completed upon reaching the 10-entry cap.
 ---
 
 ## Recently Completed
+
+### P3.25 — PWA service worker: API caching + offline indicator
+Enhanced the service worker with three caching strategies:
+- **Network-first** for `/api/` GET endpoints — caches responses on success,
+  falls back to cached data when offline or network fails
+- **Stale-while-revalidate** for TMDB image requests — serves cached
+  images immediately while freshening cache in background
+- **Cache-first** for static assets (unchanged)
+- Added cache eviction (API: 100 entries max, images: 200 max) with
+  timestamp-based trimming
+- New `OfflineBanner.tsx` component — listens to `navigator.onLine` and
+  `online`/`offline` events, shows amber banner when disconnected with
+  `WifiOff` icon and descriptive message, auto-hides on reconnect
+- Integrated OfflineBanner into `App.tsx` layout
+✅ Done: web/public/sw.js, web/src/components/OfflineBanner.tsx, web/src/App.tsx
+— 31 backend tests pass, 40 frontend tests pass, TypeScript clean,
+committed and pushed.
+**Filed**: 2026-06-26
 
 ### P2.4 — Guide keyboard navigation improvements
 Arrow-key navigation for the TV Guide:
