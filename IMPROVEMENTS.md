@@ -8,16 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P2.1 — React 19 + React Router v7 migration
-Major upgrade: React 18.3.1 → 19.2.7, react-dom 18.3.1 → 19.2.7,
-react-router-dom 6.30.4 → 7.18.0, @types/react 18.3.31 → 19.2.17,
-@types/react-dom 18.3.7 → 19.2.3.
-- React 19: concurrent features, new hooks, automatic batching improvements
-- React Router v7: new data loading patterns, RRv7 router changes
-- May need to update some patterns (forwardRef, children types, context)
-- Keep React 18 compatibility layer if possible for a smooth migration
-**Filed**: 2026-06-26
-
 ### P3.21 — Admin dashboard: search query analytics
 The admin dashboard shows cache stats, popular content, and error logs.
 Add a section showing popular/recent search queries so operators can
@@ -48,10 +38,21 @@ current setup before upgrading.
 
 ## Recently Completed
 
+### P2.1 — React 19 + React Router v7 migration
+Major upgrade completed (2026-06-26):
+- React 18.3.1 → 19.2.7, react-dom 18.3.1 → 19.2.7
+- react-router-dom 6.30.4 → 7.18.0
+- @types/react 18.3.31 → 19.2.17, @types/react-dom 18.3.7 → 19.2.3
+- No breaking changes encountered — React 19 backward-compatible with existing
+  patterns (children as ReactNode, no forwardRef usage), React Router v7
+  library-mode fully compatible with v6 BrowserRouter/Routes/Route API.
+- TypeScript clean, 31 backend tests pass, build succeeds (8.76s).
+✅ Done: web/package.json, web/package-lock.json — committed and pushed.
+
 ### P3.20 — Live TV search result enrichment with EPG now-playing
 Live TV search results now show the current EPG programme title below
-the channel name, matching the LiveTV page now-playing display. Uses the
-existing `useNowPlaying` hook (30s auto-refresh). Added to Search.tsx.
+the channel name, matching the LiveTV page now-playing display. Uses
+the existing `useNowPlaying` hook (30s auto-refresh). Added to Search.tsx.
 ✅ Done: web/src/pages/Search.tsx — TypeScript clean, 31 backend tests
 pass, build succeeds (6.93s), committed and pushed.
 
@@ -102,5 +103,3 @@ Search page now shows TMDB poster artwork (with fallback), TMDB rating
 badge overlay on posters, and genre badges below titles.
 Uses TMDB_API_KEY path when available, falls back to tmdb-enrich CLI.
 ✅ Done: server/main.py, web/src/lib/api.ts, web/src/pages/Search.tsx — 30 backend tests pass, TypeScript clean, committed and pushed.
-
-*(Older completed entries purged per cleanup policy)*
