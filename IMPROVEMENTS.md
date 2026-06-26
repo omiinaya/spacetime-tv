@@ -8,16 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.11 — Upgrade outdated npm packages (non-breaking)
-Several npm packages have newer versions:
-- `@vitejs/plugin-react`: 4.7.0 → 6.0.3
-- `lucide-react`: 0.441.0 → 1.21.0
-- `typescript`: 5.9.3 → 6.0.3
-- `vite`: 6.4.3 → 8.1.0
-- `react`/`react-dom`: 18.3.1 → 19.2.7 (needs careful testing)
-- `react-router-dom`: 6.30.4 → 7.18.0 (breaking — data router APIs)
-**Filed**: 2026-06-26 — tackle non-breaking upgrades first.
-
 ### P3.12 — TMDB "Recommended Movies" in MovieOverlay
 SimilarMovies currently loads same-category movies from the IPTV provider. Could
 add a second "TMDB Recommendations" row when TMDB ID is available, using the
@@ -40,18 +30,25 @@ TMDB IDs are available.
 ## Monitoring
 
 ### P3.8 — ManagedMediaSource API for MSE optimization
-Research complete this tick (2026-06-26):
-- hls.js ^1.7.0-beta.1 already includes ManagedMediaSource recovery support.
-- hls.js v1.7.0 stable has NOT shipped yet (latest beta is same beta.1 with
-  many canary builds after). Latest stable is v1.6.16.
-- mpegts.js ^1.8.0 (latest) — needs separate investigation for MMS support.
-- Not Baseline yet — some browsers lack support.
+Research complete (2026-06-26):
+- hls.js latest stable still v1.6.16. Beta v1.7.0-beta.1 with MMS support
+  has many canary builds but hasn't shipped stable yet.
+- mpegts.js ^1.8.0 — needs separate investigation for MMS support.
 - **Action**: upgrade hls.js from beta once v1.7.0 stable ships. Monitor
   hls.js releases for "sourceended" event recovery for ManagedMediaSource.
 
 ---
 
 ## Recently Completed
+
+### P3.11 — Upgrade outdated npm packages (non-breaking batch)
+Upgraded three packages on the non-breaking path:
+- TypeScript 5.9.3 → 6.0.3: added `"ignoreDeprecations": "6.0"` to
+  tsconfig.json for the `baseUrl`+`paths` deprecation. No code changes needed.
+- @vitejs/plugin-react 4.7.0 → 5.2.0: compatible with React 18 + Vite 6;
+  v6.x would require React 19.
+- lucide-react 0.441.0 → 0.577.0: latest v0 release. All icon names unchanged.
+✅ Done: web/package.json, web/tsconfig.json — tsc clean, 28 backend tests pass, build succeeds (8.22s), committed and pushed (2 commits).
 
 ### P3.10 — "More Like This" (Similar TV Shows) for SeriesOverlay
 Created SimilarSeries component (mirroring SimilarMovies pattern) that loads
@@ -100,12 +97,5 @@ Channel number badges (top-left) on all LiveTV grid cards. Shows when `num > 0`.
 Fixed VOD timeline scrubbing for both movies and series: seek position handling,
 progress bar sync, and continue-watching resume position accuracy.
 ✅ Done: web/src/hooks/useVideoPlayer.ts, web/src/lib/continueWatching.ts — TypeScript clean, committed and pushed.
-
-### Live TV channel favorites
-Star button on channel cards and guide rows to favorite channels. Favorites
-section appears above the channel grid. localStorage-backed persistence via
-`useChannelFavorites` hook (Set<stream_id>). Toggle button with count badge
-next to search bar for favorites-only filter.
-✅ Done: web/src/hooks/useChannelFavorites.ts, ChannelRow.tsx, LiveTV.tsx — TypeScript clean, committed and pushed.
 
 *(Older completed entries purged per cleanup policy)*
