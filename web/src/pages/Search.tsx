@@ -13,6 +13,7 @@ import {
   ArrowUpDown,
   ArrowUpAZ,
   TrendingUp,
+  ChevronDown,
 } from "lucide-react";
 import { api, LiveStream, Movie, Series, imageUrl, TmdbEnrichData } from "@/lib/api";
 import { SearchHistory, addSearchHistory } from "@/components/SearchHistory";
@@ -25,6 +26,14 @@ interface SearchResults {
   movies: Movie[];
   series: Series[];
 }
+
+interface SearchTotals {
+  live: number;
+  movies: number;
+  series: number;
+}
+
+type LoadingSection = "live" | "movies" | "series" | null;
 
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w342";
 
@@ -41,6 +50,10 @@ export default function SearchPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [filter, setFilter] = useState<FilterTab>("all");
   const [sortBy, setSortBy] = useState<SortBy>("relevance");
+
+  // ── Pagination state ──────────────────────────────────
+  const [totals, setTotals] = useState<SearchTotals | null>(null);
+  const [loadingMore, setLoadingMore] = useState<LoadingSection>(null);
 
   // Tab definitions for the filter bar
 
@@ -88,6 +101,7 @@ export default function SearchPage() {
     const trimmed = q.trim();
     if (trimmed.length < 2) {
       setResults(null);
+      setTotals(null);
       setError(null);
       setLoading(false);
       return;
@@ -110,6 +124,7 @@ export default function SearchPage() {
       if (searchIdRef.current === myId && !controller.signal.aborted) {
         setCached(trimmed, r);  // cache for instant back-nav
         setResults(r);
+        setTotals(r.totals ?? null);
         setLoading(false);
       }
     } catch (e: unknown) {
@@ -122,6 +137,50 @@ export default function SearchPage() {
       }
     }
   }, [cancelPending]);
+
+  // ── Load more results for a specific section ────────────────
+  const loadMore = useCallback(async (section: "live" | "movies" | "series") => {
+    if (!results || loadingMore) return;
+    const trimmed = query.trim();
+    if (trimmed.length < 2) return;
+
+    setLoadingMore(section);
+
+    try {
+      const offset = results[section].length;
+      const r = await api.search(trimmed, undefined, 20, offset, section);
+      if (r && r[section]) {
+        setResults((prev) => {
+          if (!prev) return prev;
+          const existingIds = new Set(
+            prev[section].map((item: any) => item.stream_id ?? item.series_id)
+          );
+          const newItems = r[section].filter(
+            (item: any) => !existingIds.has(item.stream_id ?? item.series_id)
+          );
+          // Build merged result with safe indexed access
+          const merged: SearchResults = {
+            live: prev.live,
+            movies: prev.movies,
+            series: prev.series,
+          };
+          if (section === "live") {
+            merged.live = [...prev.live, ...(newItems as LiveStream[])];
+          } else if (section === "movies") {
+            merged.movies = [...prev.movies, ...(newItems as Movie[])];
+          } else if (section === "series") {
+            merged.series = [...prev.series, ...(newItems as Series[])];
+          }
+          return merged;
+        });
+        setTotals(r.totals ?? null);
+      }
+    } catch (e: unknown) {
+      // Silently ignore — non-critical
+    } finally {
+      setLoadingMore(null);
+    }
+  }, [results, query, loadingMore]);
 
   // ── Auto-search from URL (Back navigation / direct link) ──────
   // Restore cached results instantly (no loading state), then refresh
@@ -137,6 +196,7 @@ export default function SearchPage() {
     if (cached) {
       // Instant: show cached results (no spinner)
       setResults(cached);
+      setTotals("totals" in cached ? (cached as any).totals : null);
       setLoading(false);
       setError(null);
       // Background: refresh from API if not already refreshing
@@ -193,6 +253,7 @@ export default function SearchPage() {
       setSearchParams({}, { replace: true });
       cancelPending();
       setResults(null);
+      setTotals(null);
       setError(null);
       setLoading(false);
     }
@@ -338,6 +399,7 @@ export default function SearchPage() {
               onClick={() => {
                 setQuery("");
                 setResults(null);
+                setTotals(null);
                 setError(null);
                 cancelPending();
                 if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
@@ -474,6 +536,23 @@ export default function SearchPage() {
                   </button>
                 ))}
               </div>
+              {/* Load more — only show when filter is "all" or "live" */}
+              {(filter === "all" || filter === "live") && totals && totals.live > filteredResults.live.length && (
+                <div className="mt-4 flex justify-center">
+                  <button
+                    onClick={() => loadMore("live")}
+                    disabled={loadingMore === "live"}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                  >
+                    {loadingMore === "live" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    )}
+                    Load more live channels ({filteredResults.live.length} of {totals.live})
+                  </button>
+                </div>
+              )}
             </section>
           )}
 
@@ -547,6 +626,23 @@ export default function SearchPage() {
                   );
                 })}
               </div>
+              {/* Load more — only show when filter is "all" or "movies" */}
+              {(filter === "all" || filter === "movies") && totals && totals.movies > filteredResults.movies.length && (
+                <div className="mt-4 flex justify-center">
+                  <button
+                    onClick={() => loadMore("movies")}
+                    disabled={loadingMore === "movies"}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                  >
+                    {loadingMore === "movies" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    )}
+                    Load more movies ({filteredResults.movies.length} of {totals.movies})
+                  </button>
+                </div>
+              )}
             </section>
           )}
 
@@ -617,6 +713,23 @@ export default function SearchPage() {
                   );
                 })}
               </div>
+              {/* Load more — only show when filter is "all" or "series" */}
+              {(filter === "all" || filter === "series") && totals && totals.series > filteredResults.series.length && (
+                <div className="mt-4 flex justify-center">
+                  <button
+                    onClick={() => loadMore("series")}
+                    disabled={loadingMore === "series"}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                  >
+                    {loadingMore === "series" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    )}
+                    Load more series ({filteredResults.series.length} of {totals.series})
+                  </button>
+                </div>
+              )}
             </section>
           )}
 

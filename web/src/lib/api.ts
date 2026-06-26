@@ -124,9 +124,9 @@ export const api = {
         `/guide/now?stream_ids=${streamIds.join(",")}`, signal
       ),
   },
-  search: (q: string, signal?: AbortSignal) =>
-    get<{ live: LiveStream[]; movies: Movie[]; series: Series[] }>(
-      `/search?q=${encodeURIComponent(q)}`, signal
+  search: (q: string, signal?: AbortSignal, limit = 20, offset = 0, section?: string) =>
+    get<{ live: LiveStream[]; movies: Movie[]; series: Series[]; totals: { live: number; movies: number; series: number } }>(
+      `/search?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}${section ? `&section=${section}` : ""}`, signal
     ),
   searchEnrich: (
     movies: { stream_id: number; tmdb_id: string }[],

@@ -15,6 +15,10 @@ def test_search_returns_all_sections(client):
     assert "live" in data
     assert "movies" in data
     assert "series" in data
+    assert "totals" in data
+    assert "live" in data["totals"]
+    assert "movies" in data["totals"]
+    assert "series" in data["totals"]
 
 
 def test_search_filters_live(client_with_cache):
@@ -61,6 +65,50 @@ def test_search_empty_query_returns_empty(client):
     assert data["live"] == []
     assert data["movies"] == []
     assert data["series"] == []
+    assert data["totals"] == {"live": 0, "movies": 0, "series": 0}
+
+
+def test_search_pagination_limit_offset_section(client_with_cache):
+    """Search with limit, offset, and section params should return sliced results."""
+    from main import _cache
+
+    _cache["live_all"] = (1000.0, [
+        {"stream_id": 101, "name": "Channel One", "stream_icon": "", "category_id": "1"},
+        {"stream_id": 102, "name": "Channel Two", "stream_icon": "", "category_id": "1"},
+        {"stream_id": 103, "name": "Channel Three", "stream_icon": "", "category_id": "1"},
+        {"stream_id": 104, "name": "Channel Four", "stream_icon": "", "category_id": "1"},
+    ])
+
+    # Default limit=20 should return all 4 matching channels
+    resp = client_with_cache.get("/api/search?q=channel")
+    data = resp.json()
+    assert len(data["live"]) == 4
+    assert data["live"][0]["name"] == "Channel One"
+    assert data["totals"] == {"live": 4, "movies": 0, "series": 0}
+
+    # limit=2 should return first 2
+    resp = client_with_cache.get("/api/search?q=channel&limit=2&offset=0")
+    data = resp.json()
+    assert len(data["live"]) == 2
+    assert data["live"][0]["name"] == "Channel One"
+
+    # offset=2 should return last 2
+    resp = client_with_cache.get("/api/search?q=channel&limit=2&offset=2")
+    data = resp.json()
+    assert len(data["live"]) == 2
+    assert data["live"][0]["name"] == "Channel Three"
+    assert data["live"][1]["name"] == "Channel Four"
+
+    # section=live should only return live section
+    resp = client_with_cache.get("/api/search?q=channel&section=live")
+    data = resp.json()
+    assert len(data["live"]) == 4
+    assert data["movies"] == []
+    assert data["series"] == []
+
+    # limit max 50
+    resp = client_with_cache.get("/api/search?q=channel&limit=100")
+    assert resp.status_code == 422  # FastAPI validation
 
 
 def test_search_enrich_empty_body(client):

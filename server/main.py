@@ -1706,21 +1706,36 @@ async def search_enrich(body: dict):
 # ── SEARCH ───────────────────────────────────────────────────────────────────
 
 @app.get("/api/search")
-async def search(q: str = Query(..., min_length=2)):
-    """Search across live TV, movies, and series (cache-aware fast path)."""
-    query = q.lower().strip()
-    results = {"live": [], "movies": [], "series": []}
+async def search(
+    q: str = Query(..., min_length=2),
+    limit: int = Query(20, ge=1, le=50),
+    offset: int = Query(0, ge=0),
+    section: str | None = Query(None, pattern="^(live|movies|series)$"),
+):
+    """Search across live TV, movies, and series with pagination support.
 
+    Returns all three sections when section is omitted, or a single section
+    when loading additional pages.  Always includes 'totals' so the frontend
+    knows if more results are available.
+    """
+    query = q.lower().strip()
+    results: dict = {"live": [], "movies": [], "series": []}
+    all_live: list = []
+    all_movies: list = []
+    all_series: list = []
+
+    # Always collect *all* matching items for totals, even if we only
+    # return a single section.
     try:
         live_data = await cached_fetch("live_all", "get_live_streams")
-        results["live"] = [s for s in live_data if query in s.get("name", "").lower()][:20]
+        all_live = [s for s in live_data if query in s.get("name", "").lower()]
     except Exception as e:
         log.error(f"Live search error: {e}")
 
-    def _search_cached(prefix: str, id_field: str, name_fields=("name",)):
-        """Search in-memory cache — scan ALL categories, return top 20 matches."""
-        seen = set()
-        out = []
+    def _search_all(prefix: str, id_field: str, name_fields=("name",)):
+        """Scan ALL cache entries for this prefix, return ALL matches."""
+        seen: set = set()
+        out: list = []
         for key, (ts, data) in _cache.items():
             if not key.startswith(prefix):
                 continue
@@ -1734,23 +1749,23 @@ async def search(q: str = Query(..., min_length=2)):
                 text = " ".join(str(s.get(f, "") or "") for f in name_fields).lower()
                 if query in text:
                     out.append(s)
-        return out[:20]
+        return out
 
-    # Fast path: if caches are warm, scan in-memory directly (no async overhead)
-    results["movies"] = _search_cached("vod_", "stream_id")
-    results["series"] = _search_cached("series_", "series_id", ("name", "plot"))
+    # Fast path: if caches are warm, scan in-memory directly
+    all_movies = _search_all("vod_", "stream_id")
+    all_series = _search_all("series_", "series_id", ("name", "plot"))
 
-    # If caches weren't warm, fall back to per-category fetch
-    if not results["movies"]:
-        async def get_vod_results():
+    # Fallback if caches weren't warm
+    if not all_movies:
+        async def get_all_vod():
             try:
                 vod_cats = await cached_fetch("vod_categories", "get_vod_categories")
-                vod_cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
+                cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
                 sem = asyncio.Semaphore(20)
-                async def fetch_cat(cid):
+                async def f(cid):
                     async with sem:
                         return await cached_fetch(f"vod_{cid}", "get_vod_streams", category_id=cid)
-                all_streams = await asyncio.gather(*[fetch_cat(cid) for cid in vod_cat_ids], return_exceptions=True)
+                all_streams = await asyncio.gather(*[f(cid) for cid in cat_ids], return_exceptions=True)
                 seen = set()
                 out = []
                 for streams in all_streams:
@@ -1762,27 +1777,25 @@ async def search(q: str = Query(..., min_length=2)):
                             seen.add(sid)
                             if query in s.get("name", "").lower():
                                 out.append(s)
-                                if len(out) >= 20:
-                                    return out
                 return out
             except Exception as e:
                 log.error(f"VOD search error: {e}")
                 return []
-        results["movies"] = await get_vod_results()
+        all_movies = await get_all_vod()
 
-    if not results["series"]:
-        async def get_series_results():
+    if not all_series:
+        async def get_all_series():
             try:
-                series_cats = await cached_fetch("series_categories", "get_series_categories")
-                series_cat_ids = [c["category_id"] for c in series_cats if c.get("category_id")]
+                cats = await cached_fetch("series_categories", "get_series_categories")
+                cat_ids = [c["category_id"] for c in cats if c.get("category_id")]
                 sem = asyncio.Semaphore(20)
-                async def fetch_cat(cid):
+                async def f(cid):
                     async with sem:
                         return await cached_fetch(f"series_{cid}", "get_series", category_id=cid)
-                all_series = await asyncio.gather(*[fetch_cat(cid) for cid in series_cat_ids], return_exceptions=True)
+                all_series_data = await asyncio.gather(*[f(cid) for cid in cat_ids], return_exceptions=True)
                 seen = set()
                 out = []
-                for slist in all_series:
+                for slist in all_series_data:
                     if isinstance(slist, Exception):
                         continue
                     for s in slist:
@@ -1793,15 +1806,32 @@ async def search(q: str = Query(..., min_length=2)):
                             plot = (s.get("plot") or "").lower()
                             if query in name or query in plot:
                                 out.append(s)
-                                if len(out) >= 20:
-                                    return out
                 return out
             except Exception as e:
                 log.error(f"Series search error: {e}")
                 return []
-        results["series"] = await get_series_results()
+        all_series = await get_all_series()
 
-    return results
+    # Totals
+    totals = {
+        "live": len(all_live),
+        "movies": len(all_movies),
+        "series": len(all_series),
+    }
+
+    # Slice per section (un-sliced sections still return their first `limit` items
+    # for the initial call; for section-specific calls we only return that section)
+    def _slice(items, sec):
+        return items[offset:offset + limit]
+
+    if section is None or section == "live":
+        results["live"] = _slice(all_live, "live")
+    if section is None or section == "movies":
+        results["movies"] = _slice(all_movies, "movies")
+    if section is None or section == "series":
+        results["series"] = _slice(all_series, "series")
+
+    return {**results, "totals": totals}
 
 
 # ── GENERAL ─────────────────────────────────────────────────────────────────
