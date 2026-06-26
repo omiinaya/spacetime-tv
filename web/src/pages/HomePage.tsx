@@ -115,12 +115,12 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* ── Loading state ────────────────────────────────────── */}
-      {trendingLoading && !hasCW && (
+      {/* ── Loading state (always show for trending rows) ──────── */}
+      {trendingLoading && (
         <div className="space-y-10">
-          {Array.from({ length: 3 }).map((_, i) => (
+          {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="space-y-3">
-              <Skeleton className="w-32 h-5" />
+              <Skeleton className="w-40 h-5" />
               <div className="flex gap-3">
                 {Array.from({ length: 6 }).map((_, j) => (
                   <Skeleton key={j} className="shrink-0 w-[140px] aspect-[2/3] rounded-lg" />
@@ -218,7 +218,11 @@ export default function HomePage() {
       {/* ── Trending Movies ──────────────────────────────────── */}
       {!trendingLoading && trendingMovies.length > 0 && (
         <section>
-          <ContentRow title="Trending Movies This Week" itemCount={trendingMovies.length}>
+          <ContentRow
+            title="Trending Movies This Week"
+            itemCount={trendingMovies.length}
+            action={{ label: "View all →", onClick: () => navigate("/movies") }}
+          >
             {trendingMovies.map((t, idx) => {
               const posterUrl = t.poster_path
                 ? `https://image.tmdb.org/t/p/w342${t.poster_path}`
@@ -265,7 +269,11 @@ export default function HomePage() {
       {/* ── Trending Series ──────────────────────────────────── */}
       {!trendingLoading && trendingSeries.length > 0 && (
         <section>
-          <ContentRow title="Trending Series This Week" itemCount={trendingSeries.length}>
+          <ContentRow
+            title="Trending Series This Week"
+            itemCount={trendingSeries.length}
+            action={{ label: "View all →", onClick: () => navigate("/series") }}
+          >
             {trendingSeries.map((t, idx) => {
               const posterUrl = t.poster_path
                 ? `https://image.tmdb.org/t/p/w342${t.poster_path}`

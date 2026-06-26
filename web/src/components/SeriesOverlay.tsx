@@ -10,6 +10,7 @@ import {
 import { api, Series, SeriesDetails, Episode, imageUrl } from "@/lib/api";
 import MediaOverlay from "@/components/MediaOverlay";
 import { isSeriesInWatchlist, toggleSeriesWatchlist } from "@/lib/watchlist";
+import { getSeriesProgress } from "@/lib/continueWatching";
 
 interface SeriesOverlayProps {
   series: Series;
@@ -51,6 +52,9 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
   const [tmdb, setTmdb] = useState<TmdbEnrichment | null>(null);
   const tmdbId = series.tmdb ? parseInt(series.tmdb, 10) : null;
   const [inWatchlist, setInWatchlist] = useState(() => isSeriesInWatchlist(series.series_id));
+
+  // ── Episode progress (from localStorage) ────────────────────────
+  const [episodeProgress] = useState(() => getSeriesProgress(series.series_id));
 
   useEffect(() => {
     let cancelled = false;
@@ -395,6 +399,27 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
                           {formatDuration(ep.info.duration_secs)}
                         </span>
                       )}
+                      {/* Progress / watched indicator */}
+                      {(() => {
+                        const key = `${ep.info?.season ?? activeSeason}:${ep.episode_num}`;
+                        const prog = episodeProgress.get(key);
+                        if (!prog) return null;
+                        const pct = prog.durationSeconds > 0
+                          ? Math.min(100, (prog.progressSeconds / prog.durationSeconds) * 100)
+                          : 0;
+                        if (pct >= 90) {
+                          return (
+                            <div className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-green-500/80 flex items-center justify-center">
+                              <span className="text-white text-[10px] font-bold">✓</span>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-white/10">
+                            <div className="h-full bg-primary/70" style={{ width: `${pct}%` }} />
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="flex-1 min-w-0 py-0.5">
                       <div className="flex items-baseline gap-2 mb-0.5">

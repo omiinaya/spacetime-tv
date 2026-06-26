@@ -98,3 +98,22 @@ export function removeMovieProgress(movieId: number) {
     localStorage.setItem(MOVIE_KEY, JSON.stringify(items));
   } catch {}
 }
+
+/**
+ * Get progress for all episodes of a specific series.
+ * Returns a map keyed by "season:episodeNum" → progress info.
+ */
+export function getSeriesProgress(
+  seriesId: number
+): Map<string, { progressSeconds: number; durationSeconds: number; updatedAt: number }> {
+  const items = getContinueWatching().filter((i) => i.seriesId === seriesId);
+  const map = new Map<string, { progressSeconds: number; durationSeconds: number; updatedAt: number }>();
+  for (const item of items) {
+    map.set(`${item.seasonNumber}:${item.episodeNum}`, {
+      progressSeconds: item.progressSeconds,
+      durationSeconds: item.durationSeconds,
+      updatedAt: item.updatedAt,
+    });
+  }
+  return map;
+}

@@ -7,6 +7,7 @@ interface ContentRowProps {
   children: React.ReactNode;
   onScrollEnd?: () => void; // fired when scrolled near the end
   loading?: boolean;
+  action?: { label: string; onClick: () => void };
 }
 
 export default function ContentRow({
@@ -15,6 +16,7 @@ export default function ContentRow({
   children,
   onScrollEnd,
   loading,
+  action,
 }: ContentRowProps) {
   const rowRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -114,6 +116,14 @@ export default function ContentRow({
           <span className="text-[11px] text-muted-foreground shrink-0">
             {itemCount.toLocaleString()}
           </span>
+        )}
+        {action && (
+          <button
+            onClick={action.onClick}
+            className="ml-auto text-[11px] font-medium text-muted-foreground/60 hover:text-primary transition-colors shrink-0"
+          >
+            {action.label}
+          </button>
         )}
       </div>
 
