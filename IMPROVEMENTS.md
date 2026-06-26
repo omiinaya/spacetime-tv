@@ -8,13 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.21 — Admin dashboard: search query analytics
-The admin dashboard shows cache stats, popular content, and error logs.
-Add a section showing popular/recent search queries so operators can
-see what users are looking for. Store anonymized search terms in a
-ring buffer (in-memory, last 1000 queries).
-**Filed**: 2026-06-26
-
 ### P3.23 — Upgrade @vitejs/plugin-react 5.2.0 → 6.0.3 + Vite 6.4.3 → 8.1.0
 Combined upgrade: plugin-react v6 requires Vite ^8.0.0. Vite 8 drops Node 20
 support (we're on Node 22.23.1 — fine). New features include Rolldown-based
@@ -61,6 +54,15 @@ Major upgrade completed (2026-06-26):
   library-mode fully compatible with v6 BrowserRouter/Routes/Route API.
 - TypeScript clean, 31 backend tests pass, build succeeds (8.76s).
 ✅ Done: web/package.json, web/package-lock.json — committed and pushed.
+
+### P3.21 — Admin dashboard: search query analytics
+Added search query analytics to admin dashboard:
+- In-memory ring buffer (last 1000 queries, anonymized, capped at 80 chars)
+- `record_search()` called from `/api/search` endpoint
+- `searches` field in `/api/admin/stats` response (total + last 20)
+- New "Recent Searches" card with timestamps in AdminDashboard UI
+✅ Done: server/main.py, web/src/pages/AdminDashboard.tsx — 31 backend tests
+pass, TypeScript clean, build succeeds (8.50s), committed and pushed.
 
 ### P3.20 — Live TV search result enrichment with EPG now-playing
 Live TV search results now show the current EPG programme title below
