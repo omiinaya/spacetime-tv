@@ -1,32 +1,36 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
-  --background: 0.09 0.004 285.823;
-  --foreground: 0.97 0 0;
-  --card: 0.13 0.005 285.885;
-  --primary: 0.62 0.19 262.881;
-  --secondary: 0.18 0.006 286.033;
-  --muted: 0.15 0.005 286.033;
-  --muted-foreground: 0.6 0.015 286.067;
-  --border: 0.18 0.005 286.033;
-  --sidebar: 0.07 0.003 285.823;
-  --destructive: 0.55 0.21 21.519;
+/* ── Dark mode via class ─────────────────────────────────────── */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Theme tokens ────────────────────────────────────────────── */
+@theme {
+  --color-background: oklch(0.09 0.004 285.823);
+  --color-foreground: oklch(0.97 0 0);
+  --color-card: oklch(0.13 0.005 285.885);
+  --color-primary: oklch(0.62 0.19 262.881);
+  --color-secondary: oklch(0.18 0.006 286.033);
+  --color-muted: oklch(0.15 0.005 286.033);
+  --color-muted-foreground: oklch(0.6 0.015 286.067);
+  --color-border: oklch(0.18 0.005 286.033);
+  --color-sidebar: oklch(0.07 0.003 285.823);
+  --color-destructive: oklch(0.55 0.21 21.519);
+
+  --font-family-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --radius: 0.5rem;
 }
 
 * {
-  border-color: oklch(var(--border));
+  border-color: var(--color-border);
 }
 
 body {
-  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-family: var(--font-family-sans);
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: oklch(var(--background));
-  color: oklch(var(--foreground));
+  background-color: var(--color-background);
+  color: var(--color-foreground);
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
@@ -41,11 +45,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: oklch(var(--muted));
+  background: var(--color-muted);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(var(--muted-foreground) / 0.3);
+  background: color-mix(in oklch, var(--color-muted-foreground) 30%, transparent);
 }
 
 /* Channel grid */
@@ -85,7 +89,7 @@ body {
   max-width: 100%;
   aspect-ratio: 16 / 9;
   background: #000;
-  border-radius: 0.5rem;
+  border-radius: var(--radius);
   overflow: hidden;
 }
 .video-container video {
