@@ -111,6 +111,10 @@ export const api = {
       get<GuideResponse>(
         `/guide?offset=${offset}&limit=${limit}`, signal
       ),
+    enrich: (q: string, signal?: AbortSignal) =>
+      get<GuideEnrichResponse>(
+        `/guide/enrich?q=${encodeURIComponent(q)}`, signal
+      ),
   },
   search: (q: string, signal?: AbortSignal) =>
     get<{ live: LiveStream[]; movies: Movie[]; series: Series[] }>(
@@ -316,6 +320,22 @@ export interface GuideResponse {
   total_channels: number;
   offset: number;
   limit: number;
+}
+
+export interface GuideEnrichResult {
+  type: "movie" | "tv";
+  title: string;
+  overview: string;
+  poster: string | null;
+  rating: number;
+  year: string;
+  tmdb_id: number;
+  score: number;
+}
+
+export interface GuideEnrichResponse {
+  enabled: boolean;
+  result: GuideEnrichResult | null;
 }
 
 // ── TMDB v3 API Proxy types ─────────────────────────────────────────────

@@ -45,6 +45,14 @@ usage in hls.js or add as an optimization for direct MPEG-TS playback.
 
 ## Recently Completed
 
+### P3.6 — Fix: scroll arrow buttons intercepting clicks when invisible
+The left/right scroll arrow buttons in ContentRow were invisible (opacity-0) by
+default but still captured click events because `opacity: 0` doesn't prevent
+pointer interaction. Added `pointer-events-none` / `group-hover/row:pointer-events-auto`
+to match the opacity transition. Also fixed first-click swallow on scrollable
+rows with `touch-action: manipulation`.
+✅ Done: web/src/components/ContentRow.tsx + 6 other scroll container files — TypeScript clean, 27 backend tests pass, committed and pushed.
+
 ### P3.6 — SSE heartbeat for stale-session recovery
 Upgraded the EPG SSE keepalive from a silent comment to a real `event: ping`
 with server timestamp. Frontend now tracks the last ping; if no heartbeat is

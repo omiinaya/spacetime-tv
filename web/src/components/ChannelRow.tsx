@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
-import { Play, Tv, Circle, Clock, Info } from "lucide-react";
-import type { ChannelGroup, Programme } from "@/lib/api";
+import { useRef, useState, useEffect } from "react";
+import { Play, Tv, Circle, Clock, Info, Star, Film, Loader2 } from "lucide-react";
+import type { ChannelGroup, Programme, GuideEnrichResult } from "@/lib/api";
+import { api } from "@/lib/api";
 import { programmeProgress, programmeTimeRange } from "@/lib/guideUtils";
 
 // ── ChannelRow ─────────────────────────────────────────────────
@@ -95,6 +96,43 @@ function ProgrammeCard({
   const progress = isLive ? programmeProgress(programme, now) : 0;
   const timeStr = programmeTimeRange(programme);
   const [showInfo, setShowInfo] = useState(false);
+  const [enrichResult, setEnrichResult] = useState<GuideEnrichResult | null | undefined>(undefined);
+  const [enrichLoading, setEnrichLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Fetch TMDB enrichment when hovering, with 400ms debounce
+  useEffect(() => {
+    if (showInfo && !enrichResult && !enrichLoading) {
+      setEnrichLoading(true);
+      debounceRef.current = setTimeout(async () => {
+        try {
+          const resp = await api.guide.enrich(programme.title);
+          setEnrichResult(resp.result ?? null);
+        } catch {
+          setEnrichResult(null);
+        } finally {
+          setEnrichLoading(false);
+        }
+      }, 400);
+    }
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+    };
+  }, [showInfo, programme.title, enrichResult, enrichLoading]);
+
+  // Reset enrich state when popover closes
+  useEffect(() => {
+    if (!showInfo) {
+      // Keep cached result — only reset loading state
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+    }
+  }, [showInfo]);
 
   return (
     <div className="relative shrink-0">
@@ -135,8 +173,8 @@ function ProgrammeCard({
         )}
       </button>
 
-      {/* Description popover */}
-      {showInfo && programme.desc && (
+      {/* Enriched popover */}
+      {showInfo && (programme.desc || enrichResult || enrichLoading) && (
         <>
           {/* Invisible bridge to prevent hover gap */}
           <div
@@ -145,28 +183,71 @@ function ProgrammeCard({
             onMouseEnter={() => setShowInfo(false)}
           />
           <div
-            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-72 bg-[#0d0d1a] border border-white/10 rounded-xl shadow-2xl p-3 pointer-events-auto"
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-80 bg-[#0d0d1a] border border-white/10 rounded-xl shadow-2xl p-3 pointer-events-auto"
             onMouseEnter={() => setShowInfo(true)}
             onMouseLeave={() => setShowInfo(false)}
           >
-            <p className="text-sm font-semibold text-white/90 mb-1 line-clamp-2">
-              {programme.title}
-            </p>
-            {programme.subtitle && (
-              <p className="text-[11px] text-white/50 mb-1.5 italic">{programme.subtitle}</p>
-            )}
-            <p className="text-xs text-white/60 leading-relaxed line-clamp-4">
-              {programme.desc}
-            </p>
-            {programme.category && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {programme.category.split(",").map((c, i) => (
-                  <span key={i} className="px-1.5 py-0.5 rounded bg-white/5 text-[10px] text-white/40">
-                    {c.trim()}
-                  </span>
-                ))}
+            <div className="flex gap-3">
+              {/* TMDB poster */}
+              {enrichLoading && (
+                <div className="shrink-0 w-[90px] h-[135px] rounded-lg bg-white/5 flex items-center justify-center">
+                  <Loader2 className="h-5 w-5 text-white/30 animate-spin" />
+                </div>
+              )}
+              {enrichResult?.poster && !enrichLoading && (
+                <img
+                  src={enrichResult.poster}
+                  alt={enrichResult.title}
+                  className="shrink-0 w-[90px] h-[135px] rounded-lg object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              )}
+              {!enrichResult?.poster && !enrichLoading && (
+                <div className="shrink-0 w-[90px] h-[135px] rounded-lg bg-white/5 flex items-center justify-center">
+                  <Film className="h-6 w-6 text-white/20" />
+                </div>
+              )}
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white/90 mb-0.5 line-clamp-2">
+                  {programme.title}
+                </p>
+                {enrichResult && (
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-0.5">
+                      <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+                      <span className="text-xs font-medium text-yellow-400">
+                        {enrichResult.rating.toFixed(1)}
+                      </span>
+                    </div>
+                    {enrichResult.year && (
+                      <span className="text-[10px] text-white/40">{enrichResult.year}</span>
+                    )}
+                    <span className="text-[9px] uppercase tracking-wider text-white/30 bg-white/5 px-1 rounded">
+                      {enrichResult.type === "movie" ? "Movie" : "TV"}
+                    </span>
+                  </div>
+                )}
+                {programme.subtitle && (
+                  <p className="text-[10px] text-white/50 mb-1 italic line-clamp-1">{programme.subtitle}</p>
+                )}
+                <p className="text-[11px] text-white/60 leading-relaxed line-clamp-3">
+                  {enrichResult?.overview || programme.desc || "No description available."}
+                </p>
+                {!enrichResult && programme.category && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {programme.category.split(",").map((c, i) => (
+                      <span key={i} className="px-1.5 py-0.5 rounded bg-white/5 text-[9px] text-white/40">
+                        {c.trim()}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </>
       )}

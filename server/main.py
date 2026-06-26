@@ -2452,6 +2452,80 @@ async def tmdb_tv_similar(series_id: int, page: int = Query(1, ge=1, le=10)):
     }
 
 
+# ── EPG Enrichment: TMDB lookups for programme popovers ────────────────────
+# Cache: keyed by sanitised programme title, 1-hour TTL
+_EPG_ENRICH_CACHE: dict[str, tuple[float, dict | None]] = {}
+_EPG_ENRICH_TTL = 3600
+
+TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w185"
+
+@app.get("/api/guide/enrich")
+async def guide_enrich(
+    q: str = Query(..., min_length=2, max_length=200),
+):
+    """Enrich an EPG programme title with TMDB metadata (poster, rating, description).
+
+    Searches both movie and TV endpoints and returns the best match.
+    Results are cached for 1 hour.
+    """
+    cache_key = q.strip().lower()
+    now = time.time()
+    if cache_key in _EPG_ENRICH_CACHE:
+        ts, data = _EPG_ENRICH_CACHE[cache_key]
+        if now - ts < _EPG_ENRICH_TTL:
+            return data if data else {"enabled": False, "result": None}
+
+    # Search both movie and TV
+    movie_data = await _tmdb_fetch(f"search/movie?query={q}&page=1")
+    tv_data = await _tmdb_fetch(f"search/tv?query={q}&page=1")
+
+    if movie_data is None and tv_data is None:
+        result = {"enabled": False, "result": None}
+        _EPG_ENRICH_CACHE[cache_key] = (now, None)
+        return result
+
+    def pick_best(results: list) -> dict | None:
+        if not results:
+            return None
+        # Pick the one with highest vote count (popularity signal) that matches
+        best = max(results, key=lambda r: r.get("vote_count", 0))
+        if best.get("vote_count", 0) == 0 and best.get("popularity", 0) < 1:
+            return None
+        return best
+
+    movie_best = pick_best(movie_data.get("results", [])) if movie_data else None
+    tv_best = pick_best(tv_data.get("results", [])) if tv_data else None
+
+    # Score both candidates
+    candidates = []
+    if movie_best:
+        candidates.append({
+            "type": "movie",
+            "title": movie_best.get("title", ""),
+            "overview": movie_best.get("overview", ""),
+            "poster": f"{TMDB_IMAGE_BASE}{movie_best['poster_path']}" if movie_best.get("poster_path") else None,
+            "rating": movie_best.get("vote_average", 0),
+            "year": (movie_best.get("release_date", "") or "")[:4],
+            "tmdb_id": movie_best.get("id"),
+            "score": movie_best.get("vote_count", 0),
+        })
+    if tv_best:
+        candidates.append({
+            "type": "tv",
+            "title": tv_best.get("name", ""),
+            "overview": tv_best.get("overview", ""),
+            "poster": f"{TMDB_IMAGE_BASE}{tv_best['poster_path']}" if tv_best.get("poster_path") else None,
+            "rating": tv_best.get("vote_average", 0),
+            "year": (tv_best.get("first_air_date", "") or "")[:4],
+            "tmdb_id": tv_best.get("id"),
+            "score": tv_best.get("vote_count", 0),
+        })
+
+    result = candidates[0] if candidates else None
+    _EPG_ENRICH_CACHE[cache_key] = (now, result)
+    return {"enabled": True, "result": result}
+
+
 @app.get("/api/image-proxy")
 async def image_proxy(request: Request, url: str = Query(...)):
     """Proxy images from blocked CDNs (cmc.exchange-cdn.com) through our server."""
