@@ -8,13 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P2.4 — Guide keyboard navigation improvements
-The TV Guide currently supports mouse/touch navigation but lacks
-keyboard arrow-key support for navigating between channels and
-programmes. Add keyboard focus management with arrow keys to move
-up/down between channels and left/right between time slots.
-**Filed**: 2026-06-26
-
 ### P3.25 — PWA service worker: API caching + offline indicator
 Current sw.js is bare-bones (cache-first for static, skip API entirely).
 Enhancements:
@@ -55,6 +48,18 @@ Moved here from Recently Completed upon reaching the 10-entry cap.
 ---
 
 ## Recently Completed
+
+### P2.4 — Guide keyboard navigation improvements
+Arrow-key navigation for the TV Guide:
+- Arrow Up/Down: move between channel rows
+- Arrow Left/Right: move between programme cards within a row
+- Enter/Space: navigate to watch the focused channel
+- Escape: clear focus state
+- Visual focus ring (ring-2 ring-primary) on focused elements
+- role="grid" ARIA accessibility, auto-scroll on focus change
+✅ Done: web/src/pages/Guide.tsx, web/src/components/ChannelRow.tsx — 31 backend
+tests pass, 40 frontend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-26
 
 ### P2.3 — Episode watched badges on season tabs in SeriesOverlay
 Added `seasonWatched` memo that counts episodes with ≥90% progress per
