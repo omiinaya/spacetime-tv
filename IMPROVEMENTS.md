@@ -14,12 +14,6 @@ enrich movie/series results with TMDB posters, genres, and ratings when
 TMDB IDs are available.
 **Filed**: 2026-06-26
 
-### P3.15 — TMDB "Recommended TV Shows" in SeriesOverlay
-Add a second "TMDB Recommendations" row in SeriesOverlay (when TMDB ID is
-available), similar to P3.12 for movies. Uses existing
-`/api/tmdb/tv/{id}/similar` endpoint.
-**Filed**: 2026-06-26
-
 ### P3.16 — Search page category filter tabs
 Search results currently show all types in one list. Add tab bar to filter
 between All/Movies/Series/Live categories above results for quicker scanning.
@@ -40,6 +34,14 @@ Research complete (2026-06-26):
 ---
 
 ## Recently Completed
+
+### P3.15 — TMDB "Recommended TV Shows" in SeriesOverlay
+Added a new `TmdbSimilarShows` component that loads TMDB similar TV series
+recommendations when a TMDB ID is available on the series. Renders below the
+existing provider-based "More Like This" row with TMDB poster artwork, ratings,
+and year labels. Clicking navigates to a series search by title.
+Uses existing `/api/tmdb/tv/{id}/similar` endpoint.
+✅ Done: web/src/components/TmdbSimilarShows.tsx, SeriesOverlay.tsx — TypeScript clean, 28 backend tests pass, committed and pushed.
 
 ### P3.13 — Live TV category filtering
 The LiveTV page previously locked users into a single category tab with no way
