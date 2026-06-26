@@ -79,7 +79,10 @@
 | Recently Completed row | Series page now shows a "Recently Completed" row with green checkmark overlay for episodes watched >=90%. Splits from "Continue Watching" which only shows in-progress (<90%) items. |
 | EPG programme TMDB enrichment (P3.7) | Browserless tmdb-enrich CLI (no API key) wired into `/api/guide/enrich` — hover popovers show poster + rating + overview. |
 | Persistent stream hit tracking | Popular content in admin dashboard survives restarts via `/tmp/stv_stream_hits.json`. |
-| Episode thumbnail fallback to season poster | Missing thumbnails fall back to TMDB season poster; season tab buttons get poster thumbnails. |
+|| Episode thumbnail fallback to season poster | Missing thumbnails fall back to TMDB season poster; season tab buttons get poster thumbnails. |
+|| **Actor/person browsing** | TMDB person search + detail via tmdb-enrich CLI (no API key). PersonPage with bio, photo, birthday, roles, filmography grid. Clickable cast chips in MovieOverlay and SeriesOverlay. |
+|| **HomePage loading skeleton fix** | Loading skeletons now always show for trending rows (not hidden when CW exists). "View all →" links on trending rows. |
+|| **Episode progress indicators** | SeriesOverlay episode grid shows green checkmark for completed (≥90%) episodes, thin progress bar for in-progress, nothing for unwatched. |
 
 ## Completed (previous sessions)
 
