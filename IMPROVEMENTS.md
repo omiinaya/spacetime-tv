@@ -8,11 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.13 — Live TV category filtering
-The LiveTV page shows all channels in a grid but doesn't let users filter by
-category. Add a category selector/bar above the grid to filter visible channels.
-**Filed**: 2026-06-26
-
 ### P3.14 — Search page TMDB enrichment
 Search results currently show basic provider data (name, icon, rating). Could
 enrich movie/series results with TMDB posters, genres, and ratings when
@@ -46,6 +41,14 @@ Research complete (2026-06-26):
 
 ## Recently Completed
 
+### P3.13 — Live TV category filtering
+The LiveTV page previously locked users into a single category tab with no way
+to see all channels at once. Added an "All" tab at the start of the category bar
+that shows every channel across all categories (uses the existing `/api/live/all`
+endpoint with infinite scroll). Now users can browse the full channel catalog or
+filter down to a specific category.
+✅ Done: web/src/pages/LiveTV.tsx — TypeScript clean, 28 backend tests pass.
+
 ### P3.12 — TMDB "Recommended Movies" in MovieOverlay
 Added a new `TmdbSimilarMovies` component that loads TMDB similar movie
 recommendations when a TMDB ID is available on the movie. Renders below the
@@ -78,21 +81,5 @@ TMDB person search + detail via tmdb-enrich CLI (no API key). PersonPage with
 bio, photo, birthday, roles, and filmography grid. Clickable cast chips in
 MovieOverlay and SeriesOverlay.
 ✅ Done: web/src/pages/PersonPage.tsx, web/src/App.tsx — TypeScript clean, 28 backend tests pass, committed and pushed.
-
-### P3.2 — Tailwind CSS v4 migration (shipped)
-Migrated from postcss+JS-config to @tailwindcss/vite + CSS @theme. Removed
-postcss, autoprefixer, tailwind.config.js. Upgraded tailwind-merge to v3.
-✅ Done: web/vite.config.ts, web/src/index.css — TypeScript clean, 28 backend tests pass, build succeeds, committed and pushed.
-
-### HomePage polish (loading skeletons + episode progress + continue-watching cleanup)
-Loading skeletons always show for trending rows (not hidden when CW exists).
-"View all →" links on trending rows navigate to Movies/Series. Episode progress
-indicators in series grid (checkmark for ≥90%, progress bar for in-progress).
-✅ Done: web/src/pages/HomePage.tsx, web/src/components/SeriesOverlay.tsx — TypeScript clean, committed and pushed.
-
-### Recently played live channels + batch stream info API
-Backend `/api/streams/batch-info` endpoint for bulk channel info. Recently
-played channels row on HomePage (last 8, persisted in localStorage).
-✅ Done: server/main.py, web/src/pages/HomePage.tsx, web/src/lib/recentChannels.ts — 28 tests pass, committed and pushed.
 
 *(Older completed entries purged per cleanup policy)*
