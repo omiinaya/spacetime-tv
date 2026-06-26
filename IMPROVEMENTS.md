@@ -21,6 +21,23 @@ Add a `POST /api/admin/epg/refresh` endpoint that calls
 it, showing last refresh time and status.
 **Filed**: 2026-06-26
 
+### P3.28 — Enable MSE-in-Workers for mpegts.js (performance)
+mpegts.js v1.8.0 supports MSE-in-Workers (`config.enableWorkerForMSE`)
+for offloading MSE processing to a Web Worker. Can reduce main-thread
+jank during playback, especially on low-end devices.
+**Action**: Set `enableWorkerForMSE: true` in both live and VOD
+player configurations. Test on real devices for compatibility.
+**Filed**: 2026-06-26
+
+### P3.29 — Enable liveSync for mpegts.js live playback
+mpegts.js v1.8.0 supports `config.liveSync` for smoother live latency
+chasing by adjusting playback rate. Currently live buffer uses
+`liveBufferLatencyChasing: false`. Enabling liveSync + tuning
+parameters could reduce live delay naturally without abrupt seeks.
+**Action**: Enable `liveSync: true` in live player config, test
+behaviour with real streams.
+**Filed**: 2026-06-26
+
 ---
 
 ## Monitoring
