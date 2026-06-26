@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { api, LiveStream, Movie, Series, imageUrl, TmdbEnrichData } from "@/lib/api";
 import { SearchHistory, addSearchHistory } from "@/components/SearchHistory";
+import { useNowPlaying } from "@/hooks/useNowPlaying";
 
 type FilterTab = "all" | "live" | "movies" | "series";
 type SortBy = "relevance" | "name" | "rating";
@@ -351,6 +352,12 @@ export default function SearchPage() {
       ? filteredResults.live.length + filteredResults.movies.length + filteredResults.series.length
       : 0;
 
+  // ── Now-playing EPG for live search results ──────────────────
+  const nowPlayingStreamIds = useMemo(() => {
+    return (results?.live ?? []).slice(0, 200).map((s) => s.stream_id);
+  }, [results?.live]);
+  const { getNowPlaying } = useNowPlaying(nowPlayingStreamIds);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -533,6 +540,11 @@ export default function SearchPage() {
                     <p className="text-xs font-medium leading-tight line-clamp-2">
                       {s.name}
                     </p>
+                    {getNowPlaying(s.stream_id) && (
+                      <p className="text-[9px] text-muted-foreground/50 mt-0.5 truncate leading-tight">
+                        {getNowPlaying(s.stream_id)}
+                      </p>
+                    )}
                   </button>
                 ))}
               </div>
