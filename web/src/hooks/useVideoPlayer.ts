@@ -9,6 +9,12 @@ export interface ProbeResult {
   profile?: string; container?: string; error?: string;
 }
 
+// WebKit-prefixed fullscreen API (not in standard TS DOM types)
+interface DocumentWithWebkit extends Document {
+  webkitFullscreenElement: Element | null;
+  webkitExitFullscreen: () => void;
+}
+
 export type PlayPhase = "probing" | "loading" | "playing" | "paused" | "error";
 
 export type ErrorType =
@@ -1080,7 +1086,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     return () => {
       try {
         if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-        const doc = document as any;
+        const doc = document as DocumentWithWebkit;
         if (doc.webkitFullscreenElement) doc.webkitExitFullscreen();
       } catch {}
 

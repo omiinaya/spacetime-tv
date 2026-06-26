@@ -408,9 +408,34 @@ export interface TmdbSearchResponse {
   enabled: boolean;
 }
 
+export interface TmdbInfoShape {
+  overview?: string;
+  backdrop_path?: string;
+  poster_path?: string;
+  vote_average?: number;
+  genres?: Array<{ id: number; name: string }>;
+  runtime?: number;
+  status?: string;
+  release_date?: string;
+  networks?: Array<{ id: number; name: string }>;
+  created_by?: Array<{ id: number; name: string }>;
+  number_of_seasons?: number;
+  number_of_episodes?: number;
+  episode_run_time?: number[];
+  homepage?: string;
+  first_air_date?: string;
+  seasons?: Array<{
+    season_number: number;
+    name: string;
+    episode_count: number;
+    overview: string;
+    poster_path?: string;
+  }>;
+}
+
 export interface TmdbDetailsResponse {
   enabled: boolean;
-  info: Record<string, unknown> | null;
+  info: TmdbInfoShape | null;
 }
 
 export interface TmdbSimilarResponse {
@@ -460,7 +485,7 @@ export interface TmdbTvSearchResponse {
 
 export interface TmdbTvDetailsResponse {
   enabled: boolean;
-  info: Record<string, unknown> | null;
+  info: TmdbInfoShape | null;
 }
 
 export interface TmdbTvSimilarResponse {

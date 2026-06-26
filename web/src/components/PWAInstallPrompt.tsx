@@ -6,6 +6,11 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+// MSStream is a non-standard IE/Edge property on window (falsy on real iOS Safari)
+interface WindowWithMSStream extends Window {
+  MSStream?: unknown;
+}
+
 /**
  * Handles the PWA install prompt (beforeinstallprompt event).
  * Shows a banner when the app is installable.
@@ -39,7 +44,7 @@ export default function PWAInstallPrompt() {
     // Also show for iOS (no beforeinstallprompt event)
     const isIOS =
       /iPad|iPhone|iPod/.test(navigator.userAgent) &&
-      !(window as any).MSStream;
+      !(window as WindowWithMSStream).MSStream;
     if (isIOS && !window.matchMedia("(display-mode: standalone)").matches) {
       // Show after a short delay to avoid competing with page load
       setTimeout(() => setShowPrompt(true), 5000);

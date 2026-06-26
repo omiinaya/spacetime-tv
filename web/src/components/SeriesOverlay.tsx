@@ -73,8 +73,8 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
         if (cancelled) return;
 
         // Process provider data
-        const info = (providerData as any).info;
-        const episodes = (providerData as any).episodes;
+        const info = providerData.info;
+        const episodes = providerData.episodes;
         if (info && episodes) {
           setDetails(providerData);
           const seasonKeys = Object.keys(episodes).map(Number).sort((a, b) => a - b);
@@ -84,8 +84,8 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
         }
 
         // Process TMDB enrichment
-        if (tmdbData && (tmdbData as any).enabled && (tmdbData as any).info) {
-          const raw = (tmdbData as any).info;
+        if (tmdbData && tmdbData.enabled && tmdbData.info) {
+          const raw = tmdbData.info;
           setTmdb({
             overview: raw.overview || undefined,
             backdrop_path: raw.backdrop_path || undefined,

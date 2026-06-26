@@ -16,6 +16,17 @@ import { api } from "@/lib/api";
 // ── Types ─────────────────────────────────────────────────────
 interface PlayerProps { type: "live" | "movie" | "series"; }
 
+// WebKit-prefixed fullscreen API (not in standard TS DOM types)
+interface DocumentWithWebkit extends Document {
+  webkitFullscreenElement: Element | null;
+  webkitExitFullscreen: () => void;
+}
+
+interface VideoElementWithWebkit extends HTMLVideoElement {
+  webkitRequestFullscreen?: () => Promise<void>;
+  webkitEnterFullscreen?: () => void;
+}
+
 // ── Component ─────────────────────────────────────────────────
 export default function Player({ type }: PlayerProps) {
   const { id, seriesId, epId } = useParams();
@@ -65,13 +76,14 @@ export default function Player({ type }: PlayerProps) {
   const toggleFullscreen = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
-    const isFS = !!(document.fullscreenElement || (document as any).webkitFullscreenElement);
+    const doc = document as DocumentWithWebkit;
+    const isFS = !!(document.fullscreenElement || doc.webkitFullscreenElement);
     if (isFS) {
       document.exitFullscreen?.().catch(() => {});
-      (document as any).webkitExitFullscreen?.();
+      doc.webkitExitFullscreen?.();
       setIsFullscreen(false);
     } else {
-      const el = video as any;
+      const el = video as VideoElementWithWebkit;
       el.requestFullscreen?.().then(() => setIsFullscreen(true)).catch(() => {});
       el.webkitRequestFullscreen?.();
       el.webkitEnterFullscreen?.();

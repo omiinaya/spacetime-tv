@@ -8,12 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.18 — Clean up remaining `any` type casts
-Found 12 `any` type casts across 6 files (MovieOverlay.tsx, SeriesOverlay.tsx,
-PWAInstallPrompt.tsx, Player.tsx, useFullscreen.ts, useVideoPlayer.ts).
-Replace with proper types or `unknown` + validation for better type safety.
-**Filed**: 2026-06-26
-
 ### P3.19 — Search result pagination / "Load more"
 Current search endpoint caps at 20 results per category with no way to
 load more. Add limit/offset params to the search endpoint and "Load more"
@@ -65,6 +59,20 @@ current setup before upgrading.
 ---
 
 ## Recently Completed
+
+### P3.18 — Clean up remaining `any` type casts
+Removed all 12 `as any` casts across 6 files (Player.tsx, MovieOverlay.tsx,
+SeriesOverlay.tsx, PWAInstallPrompt.tsx, useFullscreen.ts, useVideoPlayer.ts).
+Replaced with proper typed interfaces: `DocumentWithWebkit`,
+`VideoElementWithWebkit`, `WindowWithMSStream`, and `TmdbInfoShape` (shared API
+type). Also fixed `episode_run_time` (number → number[]) and `seasons.poster_path`
+(string | null → string | undefined) in the shared type to match the local
+`TmdbEnrichment` contracts.
+✅ Done: web/src/lib/api.ts, web/src/hooks/useFullscreen.ts,
+web/src/hooks/useVideoPlayer.ts, web/src/components/PWAInstallPrompt.tsx,
+web/src/components/Player.tsx, web/src/components/MovieOverlay.tsx,
+web/src/components/SeriesOverlay.tsx — TypeScript clean, 30 backend tests pass,
+build succeeds (7.85s).
 
 ### P3.17 — Search result sorting options
 Added a sort button bar below the category filter tabs with three options:

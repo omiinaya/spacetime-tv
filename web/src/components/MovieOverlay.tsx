@@ -90,8 +90,8 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
         if (providerData.info) setInfo(providerData.info);
         else setError("No details available");
 
-        if (tmdbData && (tmdbData as any).enabled && (tmdbData as any).info) {
-          const raw = (tmdbData as any).info;
+        if (tmdbData && tmdbData.enabled && tmdbData.info) {
+          const raw = tmdbData.info;
           setTmdb({
             overview: raw.overview || undefined,
             backdrop_path: raw.backdrop_path || undefined,
