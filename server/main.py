@@ -1274,6 +1274,56 @@ async def probe_audio(media_type: str, stream_id: int):
         return {"tracks": [], "error": str(e)}
 
 
+@app.get("/api/audio/stream/{media_type}/{stream_id}/{audio_index}")
+async def stream_audio_track(media_type: str, stream_id: int, audio_index: int):
+    """Stream a VOD with only the selected audio track via ffmpeg remux.
+    
+    Useful for streams with multiple audio tracks — allows the user to
+    select a specific language or audio track by index.
+    Returns MPEG-TS suitable for mpegts.js playback.
+    """
+    url = _get_stream_url(stream_id, media_type)
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ffmpeg", "-y",
+            "-i", url,
+            "-map", "0:v:0",
+            "-map", f"0:a:{audio_index}",
+            "-c", "copy",
+            "-f", "mpegts",
+            "pipe:1",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+
+        if not proc.stdout:
+            raise HTTPException(500, "Failed to open audio stream")
+
+        async def audio_stream():
+            try:
+                while True:
+                    chunk = await proc.stdout.read(65536)
+                    if not chunk:
+                        break
+                    yield chunk
+            finally:
+                if proc.returncode is None:
+                    try: proc.kill()
+                    except: pass
+
+        return StreamingResponse(
+            audio_stream(),
+            media_type="video/mp2t",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Audio-Track": str(audio_index),
+                "Connection": "keep-alive",
+            }
+        )
+    except Exception as e:
+        raise HTTPException(500, f"Audio stream failed: {e}")
+
+
 @app.get("/api/download/{media_type}/{stream_id}")
 async def download_stream(media_type: str, stream_id: int):
     """Download a VOD stream as MKV for offline playback."""

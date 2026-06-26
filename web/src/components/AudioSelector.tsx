@@ -12,9 +12,10 @@ interface AudioTrack {
 interface AudioSelectorProps {
   mediaType: "movie" | "series";
   streamId: number | string;
+  onSwitchTrack?: (audioIndex: number) => void;
 }
 
-export function AudioSelector({ mediaType, streamId }: AudioSelectorProps) {
+export function AudioSelector({ mediaType, streamId, onSwitchTrack }: AudioSelectorProps) {
   const [tracks, setTracks] = useState<AudioTrack[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,12 +82,16 @@ export function AudioSelector({ mediaType, streamId }: AudioSelectorProps) {
           )}
 
           {tracks.map((t) => (
-            <div
+            <button
               key={t.index}
-              className="px-4 py-2 text-sm text-white/70"
+              onClick={() => {
+                onSwitchTrack?.(t.index);
+                setOpen(false);
+              }}
+              className="w-full text-left px-4 py-2 text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors"
             >
               {label(t)}
-            </div>
+            </button>
           ))}
         </div>
       )}

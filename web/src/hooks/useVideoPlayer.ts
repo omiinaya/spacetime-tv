@@ -151,6 +151,7 @@ export interface UseVideoPlayerReturn {
   toggleMute: () => void;
   setSpeed: (rate: number) => void;
   setQuality: (idx: number) => void;
+  switchAudioTrack: (audioIndex: number) => void;
   resumePlayback: () => void;
   startFromBeginning: () => void;
   retryStream: () => void;
@@ -930,6 +931,32 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     setSecondsBehindLive(0);
   }, []);
 
+  // ── Audio track switching (VOD) ────────────────────────────
+  const switchAudioTrack = useCallback((audioIndex: number) => {
+    if (!isVod) return;
+    const v = videoRef.current;
+    if (!v) return;
+    const savePos = v.currentTime;
+
+    // Determine stream ID and media type
+    const streamId = epId || id || "";
+    if (!streamId) return;
+    const mediaType = type === "series" ? "series" : "movie";
+    const audioUrl = `/api/audio/stream/${mediaType}/${streamId}/${audioIndex}`;
+
+    // Destroy current player
+    clearLoadingTimeout();
+    v.pause();
+    if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
+    try { playerRef.current?.destroy(); } catch {}
+    playerRef.current = null;
+    try { hlsRef.current?.destroy(); } catch {}
+    hlsRef.current = null;
+
+    // Start new player with audio stream URL
+    playVodRemux(audioUrl, savePos > 3 ? savePos : null, false);
+  }, [isVod, type, id, epId, playVodRemux, clearLoadingTimeout]);
+
   // ── Controls ───────────────────────────────────────────────
   const togglePlay = useCallback(() => {
     const v = videoRef.current;
@@ -1087,6 +1114,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     liveSeekableStart,
     liveSeekableEnd,
     seekToLive,
+    switchAudioTrack,
     togglePlay,
     seekTo,
     seek,

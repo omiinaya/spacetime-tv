@@ -25,7 +25,7 @@ export default function Player({ type }: PlayerProps) {
     togglePlay, seekTo, seek, setVolume, toggleMute, setSpeed, setQuality,
     resumePlayback, startFromBeginning,
     retryStream, isBehindLive, secondsBehindLive, seekToLive,
-    liveSeekableStart, liveSeekableEnd,
+    liveSeekableStart, liveSeekableEnd, switchAudioTrack,
   } = useVideoPlayer({
     type, id, seriesId, epId,
     onAutoAdvance: useCallback((url: string) => {
@@ -542,6 +542,7 @@ export default function Player({ type }: PlayerProps) {
                     <AudioSelector
                       mediaType={type === "series" ? "series" : "movie"}
                       streamId={epId || id || ""}
+                      onSwitchTrack={switchAudioTrack}
                     />
                   </div>
                   {/* Subtitles */}
@@ -589,6 +590,7 @@ export default function Player({ type }: PlayerProps) {
               <AudioSelector
                 mediaType={type === "series" ? "series" : "movie"}
                 streamId={epId || id || ""}
+                onSwitchTrack={switchAudioTrack}
               />
               <SubtitleSelector
                 mediaType={type === "series" ? "series" : "movie"}
