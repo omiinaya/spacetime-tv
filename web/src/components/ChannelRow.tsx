@@ -9,12 +9,18 @@ import { programmeProgress, programmeTimeRange } from "@/lib/guideUtils";
 export function ChannelRow({
   group,
   now,
+  rowIndex,
+  focusedCol,
+  onFocusCol,
   onPlay,
   isFavorite,
   onToggleFavorite,
 }: {
   group: ChannelGroup;
   now: Date;
+  rowIndex: number;
+  focusedCol: number;
+  onFocusCol: (col: number) => void;
   onPlay: () => void;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
@@ -31,13 +37,23 @@ export function ChannelRow({
   ];
 
   return (
-    <div className="flex py-2 px-4 hover:bg-muted/30 transition-colors group">
+    <div
+      data-guide-row={rowIndex}
+      className={`flex py-2 px-4 hover:bg-muted/30 transition-colors group ${
+        focusedCol === -1 ? "bg-muted/20" : ""
+      }`}
+    >
       {/* Channel info */}
       <div className="flex items-center gap-1 shrink-0 w-[184px] pr-1">
         <button
           onClick={onPlay}
           disabled={!hasStream}
-          className={`flex items-center gap-2.5 text-left flex-1 min-w-0 ${
+          data-guide-target="channel"
+          tabIndex={focusedCol === -2 ? -1 : 0}
+          onFocus={() => onFocusCol(-1)}
+          className={`flex items-center gap-2.5 text-left flex-1 min-w-0 rounded-lg px-1 py-1 transition-all duration-150 ${
+            focusedCol === -1 ? "ring-2 ring-primary/40 bg-primary/5" : ""
+          } ${
             hasStream ? "cursor-pointer hover:opacity-80" : "cursor-default opacity-60"
           }`}
           aria-label={hasStream ? `Watch ${group.channel_name}` : `${group.channel_name} — no stream available`}
@@ -91,6 +107,10 @@ export function ChannelRow({
               key={`${p.start}-${i}`}
               programme={p}
               now={now}
+              rowIndex={rowIndex}
+              colIndex={i}
+              focusedCol={focusedCol}
+              onFocusCol={onFocusCol}
               onPlay={hasStream ? onPlay : undefined}
             />
           ))
@@ -105,10 +125,18 @@ export function ChannelRow({
 function ProgrammeCard({
   programme,
   now,
+  rowIndex,
+  colIndex,
+  focusedCol,
+  onFocusCol,
   onPlay,
 }: {
   programme: Programme;
   now: Date;
+  rowIndex: number;
+  colIndex: number;
+  focusedCol: number;
+  onFocusCol: (col: number) => void;
   onPlay?: () => void;
 }) {
   const isLive = programme.is_live;
@@ -158,6 +186,10 @@ function ProgrammeCard({
       <button
         onClick={onPlay}
         disabled={!onPlay}
+        data-guide-row={rowIndex}
+        data-guide-col={colIndex}
+        tabIndex={focusedCol === -2 ? -1 : 0}
+        onFocus={() => onFocusCol(colIndex)}
         onMouseEnter={() => setShowInfo(true)}
         onMouseLeave={() => setShowInfo(false)}
         aria-label={`${programme.title || "Programme"}, ${timeStr}`}
@@ -165,7 +197,9 @@ function ProgrammeCard({
           isLive
             ? "bg-primary/10 border border-primary/15 hover:bg-primary/15 hover:border-primary/30 cursor-pointer"
             : "bg-card border border-border hover:border-primary/20 cursor-pointer"
-        } ${!onPlay ? "opacity-50 cursor-default" : ""}`}
+        } ${!onPlay ? "opacity-50 cursor-default" : ""} ${
+          focusedCol === colIndex ? "ring-2 ring-primary/50 border-primary/40" : ""
+        }`}
       >
         <div className="flex items-start justify-between gap-1">
           <p className={`text-xs font-medium leading-tight line-clamp-2 ${isLive ? "text-primary" : ""}`}>

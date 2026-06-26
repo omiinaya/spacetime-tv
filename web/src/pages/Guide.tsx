@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tv, Loader2, AlertCircle, RotateCcw, Search, X } from "lucide-react";
 import { Skeleton } from "@/components/Skeleton";
@@ -47,8 +47,88 @@ export default function Guide() {
 
   const clearSearch = useCallback(() => setSearchQuery(""), []);
 
+  // ── Keyboard navigation ─────────────────────────────────────────
+  const guideRef = useRef<HTMLDivElement>(null);
+  const [focusedRow, setFocusedRow] = useState(-1);
+  const [focusedCol, setFocusedCol] = useState(-1);
+
+  // Focus the element at (focusedRow, focusedCol) on change
+  useEffect(() => {
+    if (focusedRow < 0 || focusedCol < -1) return;
+    const sel = focusedCol === -1
+      ? `[data-guide-row="${focusedRow}"][data-guide-target="channel"]`
+      : `[data-guide-row="${focusedRow}"][data-guide-col="${focusedCol}"]`;
+    const el = guideRef.current?.querySelector<HTMLElement>(sel);
+    if (el) {
+      el.focus();
+      el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [focusedRow, focusedCol]);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (focusedRow < 0) return;
+    // Don't hijack focus when user is typing in search
+    if ((e.target as HTMLElement)?.tagName === "INPUT") return;
+
+    const rowCount = searchedChannels.length;
+    if (rowCount === 0) return;
+
+    const maxCol = searchedChannels[focusedRow]?.programmes.length ?? 0;
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setFocusedRow((prev) => Math.min(prev + 1, rowCount - 1));
+        setFocusedCol(-1);
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setFocusedRow((prev) => Math.max(prev - 1, 0));
+        setFocusedCol(-1);
+        break;
+      case "ArrowRight":
+        e.preventDefault();
+        if (focusedCol < maxCol - 1) {
+          setFocusedCol((prev) => Math.min(prev + 1, maxCol - 1));
+        }
+        break;
+      case "ArrowLeft":
+        e.preventDefault();
+        if (focusedCol > -1) {
+          setFocusedCol((prev) => Math.max(prev - 1, -1));
+        }
+        break;
+      case "Enter":
+      case " ":
+        e.preventDefault();
+        if (focusedCol === -1) {
+          // Focused on channel name — play
+          const ch = searchedChannels[focusedRow];
+          if (ch.stream_id) navigate(`/watch/live/${ch.stream_id}`);
+        } else {
+          // Focused on a programme card — play channel
+          const ch = searchedChannels[focusedRow];
+          if (ch.stream_id) navigate(`/watch/live/${ch.stream_id}`);
+        }
+        break;
+      case "Escape":
+        e.preventDefault();
+        setFocusedRow(-1);
+        setFocusedCol(-1);
+        break;
+    }
+  }, [focusedRow, focusedCol, searchedChannels, navigate]);
+
+  // Global keydown listener when guide is focused
+  useEffect(() => {
+    const el = guideRef.current;
+    if (!el) return;
+    el.addEventListener("keydown", handleKeyDown);
+    return () => el.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
   return (
-    <div className="space-y-5">
+    <div ref={guideRef} className="space-y-5" tabIndex={0} role="grid" aria-label="TV Guide">
       {/* Header */}
       {loading ? (
         <div className="flex items-center gap-4">
@@ -176,11 +256,17 @@ export default function Guide() {
         </div>
       ) : (
         <div className="divide-y divide-border/30 -mx-0">
-          {searchedChannels.map((group) => (
+          {searchedChannels.map((group, rowIdx) => (
             <ChannelRow
               key={group.channel_id}
               group={group}
               now={now}
+              rowIndex={rowIdx}
+              focusedCol={focusedRow === rowIdx ? focusedCol : -2}
+              onFocusCol={(col) => {
+                setFocusedRow(rowIdx);
+                setFocusedCol(col);
+              }}
               onPlay={() => {
                 if (group.stream_id) {
                   navigate(`/watch/live/${group.stream_id}`);
