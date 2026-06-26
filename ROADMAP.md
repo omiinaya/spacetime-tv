@@ -63,7 +63,7 @@
 
 | Item | Description |
 |------|-------------|
-| **Home dashboard** | New landing page with continue-watching rows (series + movies), TMDB trending movies/series rows, quick-link grid to Live/Movies/Series/Watchlist. Empty state with browse buttons for first-time users. |
+| **Home dashboard** | New landing page with continue-watching rows (series + movies), TMDB trending movies/series rows, recently played live channels, quick-link grid to Live/Movies/Series/Watchlist. Empty state with browse buttons for first-time users. |
 | **Live TV "Now Playing" EPG** | `/api/guide/now` batch endpoint + `useNowPlaying` hook. Fetches current programme for the first 200 visible channels every 30s. Programme title shown as subtitle on channel grid cards. |
 | **Channel number badges** | Channel number badges (top-left) on all LiveTV grid cards. Shows when `num > 0`. |
 | **Channel favorites** | Star/toggle favorite Live TV channels. Persisted to localStorage. Dedicated "⭐ Favorites" section at top of LiveTV page. Star buttons on channel cards in both LiveTV grid and EPG Guide. |
