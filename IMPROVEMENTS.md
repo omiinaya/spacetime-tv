@@ -8,12 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.14 — Search page TMDB enrichment
-Search results currently show basic provider data (name, icon, rating). Could
-enrich movie/series results with TMDB posters, genres, and ratings when
-TMDB IDs are available.
-**Filed**: 2026-06-26
-
 ### P3.16 — Search page category filter tabs
 Search results currently show all types in one list. Add tab bar to filter
 between All/Movies/Series/Live categories above results for quicker scanning.
@@ -34,6 +28,14 @@ Research complete (2026-06-26):
 ---
 
 ## Recently Completed
+
+### P3.14 — Search page TMDB enrichment
+Added batch `/api/search/enrich` endpoint that fetches TMDB genres,
+ratings, and poster paths for movies/series items with TMDB IDs.
+Search page now shows TMDB poster artwork (with fallback), TMDB rating
+badge overlay on posters, and genre badges below titles.
+Uses TMDB_API_KEY path when available, falls back to tmdb-enrich CLI.
+✅ Done: server/main.py, web/src/lib/api.ts, web/src/pages/Search.tsx — 30 backend tests pass, TypeScript clean, committed and pushed.
 
 ### P3.15 — TMDB "Recommended TV Shows" in SeriesOverlay
 Added a new `TmdbSimilarShows` component that loads TMDB similar TV series
