@@ -33,6 +33,17 @@ function langLabel(code: string): string {
   return LANG_LABELS[code] || code;
 }
 
+interface TmdbMovieEnrichment {
+  overview?: string;
+  backdrop_path?: string;
+  poster_path?: string;
+  vote_average?: number;
+  genres?: { id: number; name: string }[];
+  runtime?: number;
+  status?: string;
+  release_date?: string;
+}
+
 export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   const navigate = useNavigate();
   const [selectedLang, setSelectedLang] = useState<MovieLanguage>(movie.languages[0]);
@@ -44,6 +55,10 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   const [info, setInfo] = useState<MovieInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // ── TMDB enrichment ──────────────────────────────────────────
+  const [tmdb, setTmdb] = useState<TmdbMovieEnrichment | null>(null);
+  const tmdbIdFromMovie = movie.tmdb ? parseInt(movie.tmdb, 10) : null;
 
   // Trailer — always from the EN version (or first language if no EN)
   const enLang = movie.languages.find((l) => l.code === "EN") || movie.languages[0];
@@ -62,13 +77,36 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true); setError(null);
-    api.movies.details(currentStreamId).then((d) => {
-      if (cancelled) return;
-      d.info ? setInfo(d.info) : setError("No details available");
-    }).catch((e) => setError(e.message))
+
+    const providerP = api.movies.details(currentStreamId);
+    const tmdbP = tmdbIdFromMovie
+      ? api.tmdb.details(tmdbIdFromMovie).catch(() => null)
+      : Promise.resolve(null);
+
+    Promise.all([providerP, tmdbP])
+      .then(([providerData, tmdbData]) => {
+        if (cancelled) return;
+        if (providerData.info) setInfo(providerData.info);
+        else setError("No details available");
+
+        if (tmdbData && (tmdbData as any).enabled && (tmdbData as any).info) {
+          const raw = (tmdbData as any).info;
+          setTmdb({
+            overview: raw.overview || undefined,
+            backdrop_path: raw.backdrop_path || undefined,
+            poster_path: raw.poster_path || undefined,
+            vote_average: raw.vote_average,
+            genres: raw.genres || undefined,
+            runtime: raw.runtime,
+            status: raw.status,
+            release_date: raw.release_date,
+          });
+        }
+      })
+      .catch((e) => setError(e.message))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [currentStreamId]);
+  }, [currentStreamId, tmdbIdFromMovie]);
 
   // Close language menu on outside click
   useEffect(() => {
@@ -83,19 +121,21 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   }, [showLangMenu]);
 
   // ── Derived ───────────────────────────────────────────────────
-  const bannerUrl = info?.backdrop_path?.[0] || info?.cover_big || movie.stream_icon || "";
-  const posterUrl = info?.movie_image || info?.cover_big || movie.stream_icon || "";
-  const rating = info?.rating || movie.rating || "";
-  const year = (info?.releasedate || "").slice(0, 4);
+  const bannerUrl = info?.backdrop_path?.[0] || info?.cover_big || (tmdb?.backdrop_path ? `https://image.tmdb.org/t/p/original${tmdb.backdrop_path}` : "") || movie.stream_icon || "";
+  const posterUrl = info?.movie_image || info?.cover_big || (tmdb?.poster_path ? `https://image.tmdb.org/t/p/w600${tmdb.poster_path}` : "") || movie.stream_icon || "";
+  const rating = info?.rating || movie.rating || (tmdb?.vote_average ? tmdb.vote_average.toFixed(1) : "") || "";
+  const year = (info?.releasedate || tmdb?.release_date || "").slice(0, 4);
   const genre = info?.genre || "";
-  const plot = info?.plot || info?.description || "";
+  const plot = tmdb?.overview || info?.plot || info?.description || "";
   const cast = info?.cast || info?.actors || "";
   const director = info?.director || "";
-  const duration = info?.duration || "";
+  const duration = info?.duration || (tmdb?.runtime ? `${tmdb.runtime}m` : "") || "";
   const trailer = enTrailer;
-  const tmdbId = info?.tmdb_id || movie.tmdb || "";
+  const tmdbId = info?.tmdb_id || movie.tmdb || (tmdbIdFromMovie?.toString()) || "";
   const extension = (selectedLang.container_extension || movie.container_extension || "").toUpperCase();
-  const genres = genre ? genre.split(",").map((g) => g.trim()).filter(Boolean) : [];
+  const providerGenres = genre ? genre.split(",").map((g) => g.trim()).filter(Boolean) : [];
+  const tmdbGenreNames = tmdb?.genres?.map((g) => g.name) || [];
+  const genres = tmdbGenreNames.length > 0 ? tmdbGenreNames : providerGenres;
   const displayName = movie.languages.length > 1 ? movie.base_name : movie.name;
 
   const play = () => {
@@ -213,6 +253,9 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
             )}
             {duration && (
               <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{duration}</span>
+            )}
+            {tmdb?.status && (
+              <span>{tmdb.status}</span>
             )}
             {tmdbId && (
               <a href={`https://www.themoviedb.org/movie/${tmdbId}`} target="_blank" rel="noopener noreferrer"
