@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { api, Series, SeriesDetails, Episode, imageUrl } from "@/lib/api";
 import MediaOverlay from "@/components/MediaOverlay";
+import SimilarSeries from "@/components/SimilarSeries";
 import { isSeriesInWatchlist, toggleSeriesWatchlist } from "@/lib/watchlist";
 import { getSeriesProgress } from "@/lib/continueWatching";
 
@@ -445,6 +446,9 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
               <p className="text-sm text-white/30">No episodes for Season {activeSeason}</p>
             </div>
           )}
+
+          {/* More Like This */}
+          <SimilarSeries categoryId={series.category_id} currentId={series.series_id} />
         </>
       )}
     </MediaOverlay>

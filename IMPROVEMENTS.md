@@ -8,7 +8,38 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-*(No pending items — backlog is empty. Next tick will research new opportunities.)*
+### P3.10 — "More Like This" (Similar TV Shows) for SeriesOverlay
+SeriesOverlay has no "More Like This" section, unlike MovieOverlay which shows SimilarMovies.
+Create SimilarSeries component (mirroring SimilarMovies pattern) that loads other series
+from the same category via `/api/series?category_id=...`. Wire into SeriesOverlay.
+**Filed**: 2026-06-26
+
+### P3.11 — Upgrade outdated npm packages (non-breaking)
+Several npm packages have newer versions:
+- `@vitejs/plugin-react`: 4.7.0 → 6.0.3
+- `lucide-react`: 0.441.0 → 1.21.0
+- `typescript`: 5.9.3 → 6.0.3
+- `vite`: 6.4.3 → 8.1.0
+- `react`/`react-dom`: 18.3.1 → 19.2.7 (needs careful testing)
+- `react-router-dom`: 6.30.4 → 7.18.0 (breaking — data router APIs)
+**Filed**: 2026-06-26 — tackle non-breaking upgrades first.
+
+### P3.12 — TMDB "Recommended Movies" in MovieOverlay
+SimilarMovies currently loads same-category movies from the IPTV provider. Could
+add a second "TMDB Recommendations" row when TMDB ID is available, using the
+existing `/api/tmdb/movie/{id}/similar` endpoint.
+**Filed**: 2026-06-26
+
+### P3.13 — Live TV category filtering
+The LiveTV page shows all channels in a grid but doesn't let users filter by
+category. Add a category selector/bar above the grid to filter visible channels.
+**Filed**: 2026-06-26
+
+### P3.14 — Search page TMDB enrichment
+Search results currently show basic provider data (name, icon, rating). Could
+enrich movie/series results with TMDB posters, genres, and ratings when
+TMDB IDs are available.
+**Filed**: 2026-06-26
 
 ---
 
