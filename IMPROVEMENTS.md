@@ -18,11 +18,7 @@ Tailwind CSS v4.3.1, tailwind-merge v3.6.0.
 - This is a significant refactor — best done in a dedicated session with UI
   verification. For now: stay on tailwind-merge ^2.6.x — no action needed.
 
-### P3.4 — Explore: Rich EPG with program metadata
-The guide endpoint currently returns raw XMLTV data. Could enrich with TMDB/IMDB
-lookups to show program descriptions, ratings, and posters in the TV Guide grid.
-
-### P3.5 — Explore: Multi-language audio track selector for VOD
+### P3.4 — Explore: Multi-language audio track selector for VOD
 Some VOD streams offer multiple audio tracks. The probe/selector UI (P4.2) could
 be extended to show and switch audio tracks alongside subtitle tracks.
 
@@ -41,7 +37,13 @@ usage in hls.js or add as an optimization for direct MPEG-TS playback.
 - hls.js v1.6+ already has partial ManagedMediaSource support
 - Worth testing when we upgrade to Tailwind v4 / refresh the player
 
----
+### Stream hit tracking persistence
+Admin dashboard popular content now persists across server restarts via
+`/tmp/stv_stream_hits.json`. Loaded on startup, saved on every stream play.
+Prevents the "No stream data yet" message from appearing after every restart.
+✅ Done: server/main.py — 28 tests pass, committed and pushed.
+
+---|---
 
 ## Recently Completed
 

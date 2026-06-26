@@ -33,6 +33,7 @@ SERVER_START_TIME = time.time()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    _load_stream_hits()
     start_cleanup_task()
     start_cache_warmer()
     _epg_broadcast_task = asyncio.create_task(_epg_broadcast_loop())
@@ -243,12 +244,38 @@ async def cached_fetch(key: str, action: str, **params) -> list | dict:
 
 # ── Health ────────────────────────────────────────────────────────────────────
 
+STREAM_HITS_FILE = "/tmp/stv_stream_hits.json"
+
 _stream_hits: dict[str, int] = {}  # "type:id" → count
 _error_log: list[dict] = []  # [{ts, message, path}] — last 100
+
+
+def _load_stream_hits():
+    """Load stream hits from disk, merging with current in-memory data."""
+    global _stream_hits
+    try:
+        with open(STREAM_HITS_FILE) as f:
+            disk = json.load(f)
+            # Take highest value from either source (handles racing writes)
+            for k, v in disk.items():
+                _stream_hits[k] = max(_stream_hits.get(k, 0), v)
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+
+
+def _save_stream_hits():
+    """Persist stream hits to disk."""
+    try:
+        with open(STREAM_HITS_FILE, "w") as f:
+            json.dump(_stream_hits, f)
+    except Exception:
+        pass
+
 
 def track_hit(stream_type: str, stream_id: int | str):
     key = f"{stream_type}:{stream_id}"
     _stream_hits[key] = _stream_hits.get(key, 0) + 1
+    _save_stream_hits()
 
 def log_error(msg: str, path: str = ""):
     _error_log.append({"ts": time.time(), "message": msg, "path": path})
