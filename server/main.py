@@ -1597,6 +1597,112 @@ def start_cache_warmer():
     if _warm_task is None or _warm_task.done():
         _warm_task = asyncio.create_task(warm_cache())
 
+# ── SEARCH ENRICHMENT CACHE ──────────────────────────────────────────────────
+_SEARCH_ENRICH_CACHE: dict[str, tuple[float, dict | None]] = {}  # "tmdb_{type}_{id}" → (ts, data)
+_SEARCH_ENRICH_TTL = 600  # 10 minutes
+
+
+async def _enrich_tmdb_item(item_type: str, tmdb_id: str) -> dict | None:
+    """Fetch TMDB details for a single item, with caching."""
+    cache_key = f"tmdb_enrich_{item_type}_{tmdb_id}"
+    now = time.time()
+    if cache_key in _SEARCH_ENRICH_CACHE:
+        ts, data = _SEARCH_ENRICH_CACHE[cache_key]
+        if now - ts < _SEARCH_ENRICH_TTL:
+            return data
+
+    # Try API-key path first (richer data)
+    if item_type == "movie" and os.getenv("TMDB_API_KEY"):
+        data = await _tmdb_fetch(f"movie/{tmdb_id}")
+    elif item_type == "tv" and os.getenv("TMDB_API_KEY"):
+        data = await _tmdb_fetch(f"tv/{tmdb_id}")
+    else:
+        # Fallback: try tmdb-enrich CLI (browserless extraction)
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                _TMDB_ENRICH, "--json", "enrich",
+                f"{'movie' if item_type == 'movie' else 'tv'}/{tmdb_id}",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=20)
+            if proc.returncode == 0:
+                try:
+                    data = json.loads(stdout.decode())
+                except json.JSONDecodeError:
+                    data = None
+            else:
+                data = None
+        except Exception:
+            data = None
+
+    if not data:
+        _SEARCH_ENRICH_CACHE[cache_key] = (now, None)
+        return None
+
+    # Extract relevant fields
+    enriched = {
+        "genres": [g["name"] for g in (data.get("genres") or [])],
+        "rating": data.get("vote_average"),
+        "poster": data.get("poster_path"),
+        "overview": data.get("overview"),
+    }
+    _SEARCH_ENRICH_CACHE[cache_key] = (now, enriched)
+    return enriched
+
+
+@app.post("/api/search/enrich")
+async def search_enrich(body: dict):
+    """Batch enrich search results with TMDB metadata (genres, rating, poster).
+
+    Accepts:
+      { "movies": [{"stream_id": 1, "tmdb_id": "550"}],
+        "series": [{"series_id": 1, "tmdb_id": "1399"}] }
+
+    Returns:
+      { "movies": { "1": {"genres": [...], "rating": 8.2, "poster": "/xyz.jpg", "overview": "..."} },
+        "series": { "1": {...} } }
+    """
+    result: dict = {"movies": {}, "series": {}}
+    tasks = []
+
+    for m in (body.get("movies") or []):
+        sid = m.get("stream_id")
+        tid = m.get("tmdb_id")
+        if sid and tid:
+            tasks.append(_enrich_tmdb_item("movie", str(tid)))
+
+    for s in (body.get("series") or []):
+        sid = s.get("series_id")
+        tid = s.get("tmdb_id")
+        if sid and tid:
+            tasks.append(_enrich_tmdb_item("tv", str(tid)))
+
+    if not tasks:
+        return result
+
+    enriched_list = await asyncio.gather(*tasks, return_exceptions=True)
+
+    idx = 0
+    for m in (body.get("movies") or []):
+        sid = m.get("stream_id")
+        if sid and m.get("tmdb_id"):
+            val = enriched_list[idx]
+            if val and not isinstance(val, Exception):
+                result["movies"][str(sid)] = val
+            idx += 1
+
+    for s in (body.get("series") or []):
+        sid = s.get("series_id")
+        if sid and s.get("tmdb_id"):
+            val = enriched_list[idx]
+            if val and not isinstance(val, Exception):
+                result["series"][str(sid)] = val
+            idx += 1
+
+    return result
+
+
 # ── SEARCH ───────────────────────────────────────────────────────────────────
 
 @app.get("/api/search")

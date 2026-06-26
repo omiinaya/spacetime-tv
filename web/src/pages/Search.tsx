@@ -8,8 +8,9 @@ import {
   Tv2,
   Star,
   AlertCircle,
+  Tags,
 } from "lucide-react";
-import { api, LiveStream, Movie, Series, imageUrl } from "@/lib/api";
+import { api, LiveStream, Movie, Series, imageUrl, TmdbEnrichData } from "@/lib/api";
 import { SearchHistory, addSearchHistory } from "@/components/SearchHistory";
 
 interface SearchResults {
@@ -17,6 +18,8 @@ interface SearchResults {
   movies: Movie[];
   series: Series[];
 }
+
+const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w342";
 
 export default function SearchPage() {
   const navigate = useNavigate();
@@ -27,6 +30,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<SearchResults | null>(null);
+  const [enrichData, setEnrichData] = useState<Record<string, TmdbEnrichData> | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
   // ── Request cancellation ──────────────────────────────────────
@@ -134,6 +138,31 @@ export default function SearchPage() {
       runSearch(trimmed);
     }
   }, [urlQuery, runSearch]);
+
+  // ── TMDB enrichment of search results ──────────────────────────
+  // After results arrive, call the batch enrich endpoint to get
+  // TMDB genres, ratings, and poster paths for movies/series.
+  useEffect(() => {
+    if (!results) {
+      setEnrichData(null);
+      return;
+    }
+    const movies = results.movies
+      .filter((m) => m.tmdb)
+      .map((m) => ({ stream_id: m.stream_id, tmdb_id: m.tmdb! }));
+    const series = results.series
+      .filter((s) => s.tmdb)
+      .map((s) => ({ series_id: s.series_id, tmdb_id: s.tmdb }));
+    if (movies.length === 0 && series.length === 0) {
+      setEnrichData({});
+      return;
+    }
+    api.searchEnrich(movies, series).then((data) => {
+      setEnrichData({ ...data.movies, ...data.series });
+    }).catch(() => {
+      // Enrichment is non-critical — silently ignore failures
+    });
+  }, [results]);
 
   // ── Debounced auto-search as user types ───────────────────────
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -310,45 +339,65 @@ export default function SearchPage() {
                 </h2>
               </div>
               <div className="poster-grid">
-                {results.movies.map((m) => (
-                  <button
-                    key={m.stream_id}
-                    onClick={() => navigate(`/watch/movie/${m.stream_id}`)}
-                    data-watch-link
-                    className="group bg-card rounded-lg border border-border overflow-hidden hover:border-primary/30 transition-all"
-                  >
-                    <div className="aspect-[2/3] bg-muted relative overflow-hidden">
-                      {m.stream_icon ? (
-                        <img
-                          src={imageUrl(m.stream_icon)}
-                          alt={m.name ? `${m.name} poster` : ""}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Film className="h-8 w-8 text-muted-foreground/30" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-2.5">
-                      <p className="text-xs font-medium line-clamp-2 leading-tight">
-                        {m.name}
-                      </p>
-                      {m.rating && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                          <span className="text-[11px] text-muted-foreground">
-                            {m.rating}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                ))}
+                {results.movies.map((m) => {
+                  const enr = enrichData?.[String(m.stream_id)];
+                  const posterSrc = enr?.poster
+                    ? TMDB_IMAGE_BASE + enr.poster
+                    : m.stream_icon
+                      ? imageUrl(m.stream_icon)
+                      : null;
+                  const tmdbRating = enr?.rating ? (enr.rating / 2).toFixed(1) : null;
+                  return (
+                    <button
+                      key={m.stream_id}
+                      onClick={() => navigate(`/watch/movie/${m.stream_id}`)}
+                      data-watch-link
+                      className="group bg-card rounded-lg border border-border overflow-hidden hover:border-primary/30 transition-all"
+                    >
+                      <div className="aspect-[2/3] bg-muted relative overflow-hidden">
+                        {posterSrc ? (
+                          <img
+                            src={posterSrc}
+                            alt={m.name ? `${m.name} poster` : ""}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Film className="h-8 w-8 text-muted-foreground/30" />
+                          </div>
+                        )}
+                        {/* TMDB rating badge */}
+                        {tmdbRating && (
+                          <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-black/60 text-[10px] font-medium text-yellow-400">
+                            <Star className="h-2.5 w-2.5 fill-yellow-400" />
+                            {tmdbRating}
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-2.5 space-y-1">
+                        <p className="text-xs font-medium line-clamp-2 leading-tight">
+                          {m.name}
+                        </p>
+                        {enr?.genres && enr.genres.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {enr.genres.slice(0, 2).map((g) => (
+                              <span
+                                key={g}
+                                className="px-1.5 py-0.5 rounded bg-primary/10 text-[10px] text-primary/80 leading-tight"
+                              >
+                                {g}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </section>
           )}
@@ -363,44 +412,62 @@ export default function SearchPage() {
                 </h2>
               </div>
               <div className="poster-grid">
-                {results.series.map((s) => (
-                  <button
-                    key={s.series_id}
-                    onClick={() => navigate('/series', { state: { openSeries: s } })}
-                    className="group bg-card rounded-lg border border-border overflow-hidden hover:border-primary/30 transition-all text-left"
-                  >
-                    <div className="aspect-[2/3] bg-muted">
-                      {s.cover ? (
-                        <img
-                          src={s.cover}
-                          alt={s.name ? `${s.name} poster` : ""}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Tv2 className="h-8 w-8 text-muted-foreground/30" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-2.5">
-                      <p className="text-xs font-medium line-clamp-2 leading-tight">
-                        {s.name}
-                      </p>
-                      {s.rating && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                          <span className="text-[11px] text-muted-foreground">
-                            {s.rating}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                ))}
+                {results.series.map((s) => {
+                  const enr = enrichData?.[String(s.series_id)];
+                  const posterSrc = enr?.poster
+                    ? TMDB_IMAGE_BASE + enr.poster
+                    : s.cover || null;
+                  const tmdbRating = enr?.rating ? (enr.rating / 2).toFixed(1) : null;
+                  return (
+                    <button
+                      key={s.series_id}
+                      onClick={() => navigate('/series', { state: { openSeries: s } })}
+                      className="group bg-card rounded-lg border border-border overflow-hidden hover:border-primary/30 transition-all text-left"
+                    >
+                      <div className="aspect-[2/3] bg-muted relative">
+                        {posterSrc ? (
+                          <img
+                            src={posterSrc}
+                            alt={s.name ? `${s.name} poster` : ""}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Tv2 className="h-8 w-8 text-muted-foreground/30" />
+                          </div>
+                        )}
+                        {/* TMDB rating badge */}
+                        {tmdbRating && (
+                          <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-black/60 text-[10px] font-medium text-yellow-400">
+                            <Star className="h-2.5 w-2.5 fill-yellow-400" />
+                            {tmdbRating}
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-2.5 space-y-1">
+                        <p className="text-xs font-medium line-clamp-2 leading-tight">
+                          {s.name}
+                        </p>
+                        {enr?.genres && enr.genres.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {enr.genres.slice(0, 2).map((g) => (
+                              <span
+                                key={g}
+                                className="px-1.5 py-0.5 rounded bg-primary/10 text-[10px] text-primary/80 leading-tight"
+                              >
+                                {g}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </section>
           )}

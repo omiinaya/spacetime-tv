@@ -128,6 +128,17 @@ export const api = {
     get<{ live: LiveStream[]; movies: Movie[]; series: Series[] }>(
       `/search?q=${encodeURIComponent(q)}`, signal
     ),
+  searchEnrich: (
+    movies: { stream_id: number; tmdb_id: string }[],
+    series: { series_id: number; tmdb_id: string }[],
+    signal?: AbortSignal,
+  ) =>
+    fetch(`${API}/search/enrich`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ movies, series }),
+      signal,
+    }).then((r) => r.json()) as Promise<SearchEnrichResponse>,
   tmdb: {
     trending: (timeWindow: "day" | "week" = "week", page = 1, signal?: AbortSignal) =>
       get<TmdbTrendingResponse>(
@@ -485,3 +496,17 @@ export interface TmdbPersonSearchResponse {
 }
 
 export type TmdbPersonDetailsResponse = TmdbPersonSearchResponse;
+
+// ── Search Enrichment types ────────────────────────────────────────────
+
+export interface TmdbEnrichData {
+  genres: string[];
+  rating: number | null;
+  poster: string | null;
+  overview: string | null;
+}
+
+export interface SearchEnrichResponse {
+  movies: Record<string, TmdbEnrichData>;
+  series: Record<string, TmdbEnrichData>;
+}

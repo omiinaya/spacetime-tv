@@ -61,3 +61,25 @@ def test_search_empty_query_returns_empty(client):
     assert data["live"] == []
     assert data["movies"] == []
     assert data["series"] == []
+
+
+def test_search_enrich_empty_body(client):
+    """POST /api/search/enrich with empty body returns empty dicts."""
+    resp = client.post("/api/search/enrich", json={})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data == {"movies": {}, "series": {}}
+
+
+def test_search_enrich_no_tmdb_key(client):
+    """POST /api/search/enrich should skip items when no TMDB data available."""
+    resp = client.post("/api/search/enrich", json={
+        "movies": [{"stream_id": 1, "tmdb_id": "550"}],
+        "series": [{"series_id": 2, "tmdb_id": "1399"}],
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    # Without TMDB_API_KEY or tmdb-enrich, items that fail enrichment
+    # are simply omitted from the result (not None)
+    assert data["movies"] == {}
+    assert data["series"] == {}
