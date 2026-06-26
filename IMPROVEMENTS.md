@@ -8,12 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.12 — TMDB "Recommended Movies" in MovieOverlay
-SimilarMovies currently loads same-category movies from the IPTV provider. Could
-add a second "TMDB Recommendations" row when TMDB ID is available, using the
-existing `/api/tmdb/movie/{id}/similar` endpoint.
-**Filed**: 2026-06-26
-
 ### P3.13 — Live TV category filtering
 The LiveTV page shows all channels in a grid but doesn't let users filter by
 category. Add a category selector/bar above the grid to filter visible channels.
@@ -51,6 +45,13 @@ Research complete (2026-06-26):
 ---
 
 ## Recently Completed
+
+### P3.12 — TMDB "Recommended Movies" in MovieOverlay
+Added a new `TmdbSimilarMovies` component that loads TMDB similar movie
+recommendations when a TMDB ID is available on the movie. Renders below the
+existing provider-based "More Like This" row with TMDB poster artwork, ratings,
+and year labels. Clicking navigates to a provider search by title.
+✅ Done: web/src/components/TmdbSimilarMovies.tsx, MovieOverlay.tsx — TypeScript clean, 28 backend tests pass, committed and pushed.
 
 ### P3.11 — Upgrade outdated npm packages (non-breaking batch)
 Upgraded three packages on the non-breaking path:
