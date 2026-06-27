@@ -230,7 +230,10 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     const decoded = decodedFramesRef.current || 1;
     const dropRatio = dropped / decoded;
     let quality: ConnectionQuality;
-    if (speed > 2000 && recentStallCount < 2 && dropRatio < 0.02) quality = "excellent";
+    // Don't report quality until we have actual download speed data
+    if (speed <= 0) {
+      quality = "excellent";
+    } else if (speed > 2000 && recentStallCount < 2 && dropRatio < 0.02) quality = "excellent";
     else if (speed > 500 && recentStallCount < 4 && dropRatio < 0.05) quality = "good";
     else if (speed > 100 && recentStallCount < 8) quality = "fair";
     else quality = "poor";
