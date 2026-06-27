@@ -723,7 +723,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
 
     if (Hls.isSupported()) {
       const hls = new Hls({
-        enableWorker: false,
+        enableWorker: true,
         lowLatencyMode: false,
         maxBufferLength: 30,
         maxMaxBufferLength: 60,

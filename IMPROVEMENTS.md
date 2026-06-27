@@ -8,29 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.30 — EPG search/filter bar for TV Guide
-The Guide page shows all channels/programmes but has no way to filter
-by programme title or channel name. Add a search bar at the top of the
-Guide that filters displayed programmes in real-time (client-side
-filtering on the already-loaded EPG data). Could reuse the existing
-`searchUtils` pattern if available.
-**Action**: Add a search input above the guide grid, filter programmes
-by title match as user types, show "no results" state when empty.
-**Filed**: 2026-06-26
-
-### P3.31 — Keyboard shortcut registry (global shortcuts hub)
-Currently keyboard shortcuts are scattered across components (player,
-guide, global `/` search). Add a central `useKeyboardShortcuts` hook
-that registers shortcuts in one place:
-- `g` → navigate to TV Guide
-- `h` → navigate to Home
-- `m` → navigate to Movies
-- `s` → navigate to Series
-- `?` or `Shift+/` → show shortcut overlay
-- Ensure shortcuts don't fire when typing in input fields
-**Action**: Create hook, integrate in App.tsx, handle input focus gating.
-**Filed**: 2026-06-26
-
 ### P3.32 — Enable hls.js Web Worker for off-thread parsing (performance)
 hls.js v1.7.0-beta.1 (already installed) supports `config.enableWorker:
 true` (the default) for offloading TS/MP4 segment parsing to a Web
@@ -63,13 +40,27 @@ Research update (2026-06-26):
 - **Action**: upgrade hls.js from beta once v1.7.0 stable ships. Monitor
   hls.js releases for "sourceended" event recovery for ManagedMediaSource.
 
-### P3.22 — Monitor Vite 8 + @vitejs/plugin-react v6
-✅ COMPLETED — Vite 8.1.0 and @vitejs/plugin-react 6.0.3 successfully deployed.
-Moved here from Recently Completed upon reaching the 10-entry cap.
-
 ---
 
 ## Recently Completed
+
+### P3.31 — Keyboard shortcut registry (global shortcuts hub)
+Already implemented before this tick — central `useKeyboardShortcuts` hook
+registers `g`→Guide, `h`→Home, `m`→Movies, `s`→Series, `?`→shortcuts overlay.
+Input focus gating prevents interference while typing.
+✅ Done: web/src/hooks/useKeyboardShortcuts.ts, web/src/components/KeyboardShortcuts.tsx
+**Filed**: 2026-06-26
+
+### P3.22 — Monitor Vite 8 + @vitejs/plugin-react v6
+✅ COMPLETED — Vite 8.1.0 and @vitejs/plugin-react 6.0.3 successfully deployed.
+Moved here from Monitoring upon completion.
+
+### P3.30 — EPG search/filter bar for TV Guide
+Guide search already implemented in commit 0789fc2 — search bar filters
+programmes by title/subtitle/category/desc across all channels, shows
+match count badge, clear button, and "no results" state.
+✅ Already done: web/src/pages/Guide.tsx
+**Filed**: 2026-06-26
 
 ### P3.29 — Enable liveSync for mpegts.js live playback
 Enabled `liveSync: true` with tuned parameters in live mpegts.js config:
@@ -125,24 +116,4 @@ Enhanced the service worker with three caching strategies:
 ✅ Done: web/public/sw.js, web/src/components/OfflineBanner.tsx, web/src/App.tsx
 — 31 backend tests pass, 40 frontend tests pass, TypeScript clean,
 committed and pushed.
-**Filed**: 2026-06-26
-
-### P2.4 — Guide keyboard navigation improvements
-Arrow-key navigation for the TV Guide:
-- Arrow Up/Down: move between channel rows
-- Arrow Left/Right: move between programme cards within a row
-- Enter/Space: navigate to watch the focused channel
-- Escape: clear focus state
-- Visual focus ring (ring-2 ring-primary) on focused elements
-- role="grid" ARIA accessibility, auto-scroll on focus change
-✅ Done: web/src/pages/Guide.tsx, web/src/components/ChannelRow.tsx — 31 backend
-tests pass, 40 frontend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-26
-
-### P2.3 — Episode watched badges on season tabs in SeriesOverlay
-Added `seasonWatched` memo that counts episodes with ≥90% progress per
-season from localStorage. Each season tab now shows a green ✓N alongside
-the total episode count when episodes in that season have been watched.
-✅ Done: web/src/components/SeriesOverlay.tsx — 31 backend tests pass,
-40 frontend tests pass, TypeScript clean, committed and pushed.
 **Filed**: 2026-06-26

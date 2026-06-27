@@ -9,6 +9,10 @@ interface Shortcut {
 
 const SHORTCUTS: Shortcut[] = [
   // Global
+  { key: "g", label: "Go to TV Guide", category: "Global" },
+  { key: "h", label: "Go to Home", category: "Global" },
+  { key: "m", label: "Go to Movies", category: "Global" },
+  { key: "s", label: "Go to Series", category: "Global" },
   { key: "/", label: "Search", category: "Global" },
   { key: "?", label: "Show keyboard shortcuts", category: "Global" },
   // Player
@@ -27,28 +31,24 @@ export default function KeyboardShortcuts() {
   const toggle = useCallback(() => setOpen((v) => !v), []);
   const close = useCallback(() => setOpen(false), []);
 
-  // Global ? key listener + custom event from player
+  // Listen for custom event from the global shortcut hook
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-      if (e.key === "?" && !e.shiftKey) return;
-      if (e.key === "?" || (e.key === "/" && e.shiftKey)) {
-        e.preventDefault();
-        toggle();
-      }
-      if (e.key === "Escape" && open) {
-        close();
-      }
-    };
     const onCustomToggle = () => toggle();
-    window.addEventListener("keydown", handler);
     window.addEventListener("stv:toggle-shortcuts", onCustomToggle);
     return () => {
-      window.removeEventListener("keydown", handler);
       window.removeEventListener("stv:toggle-shortcuts", onCustomToggle);
     };
-  }, [open, toggle, close]);
+  }, [toggle]);
+
+  // Close on Escape when overlay is open
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open, close]);
 
   if (!open) return null;
 
