@@ -18,15 +18,6 @@ ships.
 - [ ] Run playback tests with stable v1.7.0-beta.1 (blocked — no stable release)
 - [ ] Update web/package.json if compatible
 
-### P2.8 — Add component tests for ContinueWatching section on HomePage
-The HomePage renders "Continue Watching" rows for series and movies inline.
-The data layer (`continueWatching.ts`) has 20 utility tests, but the
-component rendering within HomePage is untested. Add tests covering empty state,
-item rendering, and resume interaction.
-- [ ] Create HomePage component tests that cover continue-watching section
-- [ ] Mock continue-watching data hooks and API calls
-- [ ] Test empty state (no progress), series items, movie items, resume click
-
 ### P2.9 — Add component tests for LiveTV page
 The LiveTV page renders channel cards, category filters, search bar, and
 now-playing indicators. No component tests exist for this page.
@@ -56,6 +47,23 @@ React error boundary with "Something went wrong" UI and recovery button.
 ---
 
 ## Recently Completed
+
+### P2.8 — Add component tests for ContinueWatching section on HomePage
+Added 21 component tests for the HomePage covering the Continue Watching
+series and movie sections:
+- Empty state: welcome message, quick links, "Welcome to Spacetime-TV", Browse
+  buttons navigate to /live and /movies, no CW sections rendered
+- Series CW: poster with lazy loading, cover fallback (Tv2 icon), progress bar
+  calculation (1200/3600 = 33.3%), no progress bar when duration=0, resume
+  navigation to /watch/series/:id/:episodeId
+- Movie CW: poster with lazy loading, poster fallback (Film icon), progress bar
+  calculation (2400/5400 = 44.4%), resume navigation to /watch/movie/:id
+- Both CW sections rendered simultaneously
+- Server progress merge: async loadServerProgress updates series/movie rows
+- Edge cases: single series item only, single movie item only
+✅ Done: web/src/pages/__tests__/HomePage.test.tsx
+— 203 frontend tests pass, TypeScript clean (0 errors), committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.10 — Add backend tests for rate limiting middleware
 Added 10 endpoint-based tests for the RateLimitMiddleware in main.py:
