@@ -8,14 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.46 — Eliminate remaining `as any` type casts (3 remaining)
-3 `as any` type casts remain across the codebase:
-- `web/src/hooks/usePlayerUtils.ts:267` — SW registration sync
-- `web/src/hooks/useShakaPlayer.ts:84` — shaka error event detail
-- `web/src/pages/Search.tsx:198` — cached search totals
-Should be replaced with proper type narrowing or interface declarations.
-**Filed**: 2026-06-27
-
 ### P3.47 — Add DASH streaming support via shaka-player
 Now that shaka-player v5.1.11 is integrated as an HLS fallback (P3.45),
 we can extend it to support DASH/MPD streams natively. Many IPTV providers
@@ -46,7 +38,19 @@ Research update (2026-06-27):
 
 ---
 
-## Monitoring
+## Recently Completed
+
+### P3.46 — Eliminate remaining `as any` type casts (done)
+Replaced 3 `as any` casts with proper TypeScript types:
+- `usePlayerUtils.ts`: Declared `SyncManager` + `ServiceWorkerRegistrationWithSync`
+  interfaces for the Background Sync API sync.register() call.
+- `useShakaPlayer.ts`: Used `CustomEvent<shaka.util.Error>` for error event detail.
+- `Search.tsx`: Created `SearchResultsWithTotals` interface extending SearchResults
+  with optional `totals`. Simplified cache-hit totals access.
+✅ Done: web/src/hooks/usePlayerUtils.ts, web/src/hooks/useShakaPlayer.ts,
+       web/src/pages/Search.tsx
+— Zero `as any` casts remaining. TypeScript clean, 38 backend tests pass, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.45 — shaka-player integration as hls.js fallback
 ✅ Done: installed shaka-player@5.1.11, created useShakaPlayer sub-hook
@@ -56,12 +60,7 @@ and if it fails with a non-recoverable error (e.g. manifest parse failure,
 codec not supported), `useShakaPlayer` takes over with the same playlist URL.
 shaka-player offers native ManagedMediaSource for iOS, robust DRM support
 (Widevine, PlayReady, FairPlay), and DASH/CMAF capability.
-- **Next**: Add tests for useShakaPlayer, extend with DASH support (P3.47)
 **Filed**: 2026-06-27
-
----
-
-## Recently Completed
 
 ### P3.44 — Add .gitignore for pytest worker temp directories
 Added `web/[0-9]*/` and `server/[0-9]*/` patterns to `.gitignore`
@@ -120,35 +119,3 @@ helpers. Mobile browsers now download only the image size needed.
 — 38 backend + 79 frontend tests pass, TypeScript clean, committed and pushed.
 **Filed**: 2026-06-27
 
-### P3.38 — Series page pagination controls (numbered pages)
-Added "Show All" button on each ContentRow with >20 items.
-Show All mode renders a paginated grid view (50 per page) with
-numbered page controls, jump-to-page input, and back-to-categories
-button. Reuses the existing Pagination component from Movies page.
-✅ Done: web/src/pages/Series.tsx
-— 66 frontend + 38 backend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-26
-
-### P3.37 — Frontend integration of server-side watch progress
-Added `loadServerProgress()` merge helper that fetches progress
-from the server (synced via PWA background sync from other devices)
-and merges with local continue-watching, keeping the most recent
-entry per series-episode or movieId. Wired into HomePage and Movies
-page with a two-phase load: instant first paint from local, then
-progressive enhancement from server.
-✅ Done: web/src/lib/continueWatching.ts, web/src/lib/api.ts,
-       web/src/pages/HomePage.tsx, web/src/pages/Movies.tsx
-— 38 backend + 66 frontend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.36 — Refactor useVideoPlayer.ts into smaller composables (Phase 1)
-Extracted types, constants, and utility functions into usePlayerTypes.ts
-and usePlayerUtils.ts (~500 lines removed from main hook). Created
-scaffold files for sub-hooks (useMpegtsPlayer, useRemuxPlayer, useHlsPlayer)
-for future extraction of playback setup functions. The main hook now imports
-from the extracted modules while keeping the same public API.
-✅ Done: web/src/hooks/usePlayerTypes.ts, web/src/hooks/usePlayerUtils.ts,
-       web/src/hooks/useMpegtsPlayer.ts, web/src/hooks/useRemuxPlayer.ts,
-       web/src/hooks/useHlsPlayer.ts, web/src/hooks/useVideoPlayer.ts
-— 38 backend tests + 66 frontend tests pass, TypeScript clean.
-**Filed**: 2026-06-27
