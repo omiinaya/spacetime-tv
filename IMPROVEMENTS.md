@@ -8,7 +8,32 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-No pending items — all caught up.
+### P1.1 — Fix `tsc --noEmit` errors in test files (vitest globals not typed)
+`tsc --noEmit` reports 31 errors in `src/lib/api.test.ts` because vitest globals
+(`vi`, `beforeEach`) aren't recognized by TypeScript's tsconfig. The vite.config.ts
+already has `globals: true` under the test section, but tsconfig needs to either
+exclude test files or include vitest types. Excluding test files is standard practice.
+- [ ] Exclude `src/**/*.test.ts`, `src/**/*.test.tsx`, `src/**/*.spec.ts` from tsconfig.json
+- [ ] Verify `npx tsc --noEmit` exits cleanly (0 errors)
+- [ ] Verify `npx vitest run` still passes all 102 tests
+- [ ] Run backend tests too; commit and push
+
+### P2.3 — Add `test` script to package.json
+The web app has vitest configured (vite.config.ts has `globals: true`,
+`environment: "jsdom"`, `setupFiles`) but no `npm test` script. Devs must
+remember `npx vitest run` instead of `npm test`. Add `"test": "vitest run"`
+and `"test:watch": "vitest"` scripts.
+- [ ] Add `"test": "vitest run"` and `"test:watch": "vitest"` to package.json scripts
+- [ ] Verify `npm test` runs all 102 frontend tests
+
+### P2.4 — HistoryPage: show "last watched" timestamps
+The new HistoryPage (moved from home page sidebar) lists recently-watched channels
+but doesn't show when each was last watched. The `RecentChannel` type in
+`src/lib/recentChannels.ts` stores a `timestamp` field already. Display relative
+time (e.g., "2h ago", "Yesterday") under each channel name.
+- [ ] Add a small timestamp text below each channel name in HistoryPage
+- [ ] Use a `timeAgo` helper function (or import from existing util)
+- [ ] Gracefully handle missing/old timestamps
 
 ---
 
@@ -99,21 +124,4 @@ Replaced 3 `as any` casts with proper TypeScript types:
 ✅ Done: web/src/hooks/usePlayerUtils.ts, web/src/hooks/useShakaPlayer.ts,
        web/src/pages/Search.tsx
 — Zero `as any` casts remaining. TypeScript clean, 38 backend tests pass, committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.45 — shaka-player integration as hls.js fallback
-✅ Done: installed shaka-player@5.1.11, created useShakaPlayer sub-hook
-(wireframe), integrated as automatic fallback when hls.js encounters an
-unrecoverable fatal error. The fallback is transparent — hls.js tries first,
-and if it fails with a non-recoverable error (e.g. manifest parse failure,
-codec not supported), `useShakaPlayer` takes over with the same playlist URL.
-shaka-player offers native ManagedMediaSource for iOS, robust DRM support
-(Widevine, PlayReady, FairPlay), and DASH/CMAF capability.
-**Filed**: 2026-06-27
-
-### P3.44 — Add .gitignore for pytest worker temp directories
-Added `web/[0-9]*/` and `server/[0-9]*/` patterns to `.gitignore`
-to prevent pytest worker temp directories from appearing in `git status`.
-✅ Done: .gitignore
-— All existing tests pass, committed and pushed.
 **Filed**: 2026-06-27
