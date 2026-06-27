@@ -8,19 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.35 — Frontend component test coverage for Player
-Currently only 4 test files exist for the frontend (guideUtils,
-continueWatching, storage, api). The Player component and
-useVideoPlayer hook have no tests despite being the most complex
-code in the app (~1270 lines, 3 playback paths).
-**Action**: Write vitest tests for:
-- useVideoPlayer hook core logic (playback phase transitions,
-  error handling, quality computation)
-- Player component rendering (controls visibility, keyboard
-  shortcuts, progress bar interaction)
-- mpegts.js and HLS config construction
-**Filed**: 2026-06-26
-
 ### P3.36 — Refactor useVideoPlayer.ts into smaller composables
 The hook has grown to ~1270 lines handling all three playback paths
 (live mpegts, VOD remux, HLS) inline. Extracting path-specific setup
@@ -56,15 +43,38 @@ fetch in `Series.tsx`, and add page controls matching the
 Movies page pattern.
 **Filed**: 2026-06-26
 
+### P3.39 — TMDB responsive images with srcset for posters
+Currently all posters/backdrops use a single TMDB image size (usually
+w500 or original). TMDB serves multiple sizes (w92, w154, w185, w342,
+w500, w780, original). Adding `srcset` + `sizes` attributes on movie
+and series poster/backdrop images would reduce mobile data usage by
+downloading only the size needed for the viewport.
+**Action**: Update `imageUrl()` in `api.ts` to accept a `size` param;
+add a `srcset` helper that generates TMDB srcset string; apply to
+poster images in MovieCard, SeriesCard, and detail views.
+**Filed**: 2026-06-26
+
+### P3.40 — Episode number badges in SeriesOverlay episode grid
+The episode selection grid in SeriesOverlay currently shows thumbnails
+and titles but no episode number badge. Adding the episode number
+(e.g., "E03") as a small overlay badge on each episode thumbnail
+improves scannability, especially for series with many episodes
+per season.
+**Action**: Add episode number overlay badge on episode thumbnails
+in `SeriesOverlay.tsx`.
+**Filed**: 2026-06-26
+
 ---
 
 ## Monitoring
 
 ### P3.8 — ManagedMediaSource API for MSE optimization
 Research update (2026-06-26):
-- hls.js latest stable still v1.6.16. Beta v1.7.0-beta.1 still current.
-  Canary build `1.7.0-beta.1.0.canary.11864` available but no stable
-  v1.7.0 shipped yet. npm shows canary as a newer version.
+- hls.js latest stable still v1.6.16 (April 2026). Beta v1.7.0-beta.1 (June 2, 2026)
+  adds I-frame playlist support, improved protected content playback, CMCD v2,
+  smoother audio switching, and parallel init-segment loading. No stable v1.7.0
+  shipped yet. Latest canary `1.7.0-beta.1.0.canary.11864` available but not
+  recommended for production.
 - mpegts.js v1.8.0 ✅ — supports ManagedMediaSource API for iOS Safari
   (iOS 17.1+). Already installed (^1.8.0). MMS is automatically used
   when available; no config changes needed.
@@ -74,6 +84,24 @@ Research update (2026-06-26):
 ---
 
 ## Recently Completed
+
+### P3.35 — Frontend component test coverage for Player
+Added vitest tests covering:
+- `fmtTime()` utility (5 edge cases: zero, seconds, minutes, hours, Infinity/NaN)
+- `QUALITIES` constants verification
+- `useVideoPlayer` hook: type derivation (live/movie/series), initial state,
+  volume/speed/quality controls, retry stream, resume prompt behavior
+- Player component: renders video element for all 3 types, back button,
+  PiP button, loading indicator, seekable progress bar
+- Added `@testing-library/react` + `@testing-library/jest-dom` dev deps
+- Added test setup file for jest-dom matchers
+✅ Done: web/src/hooks/__tests__/useVideoPlayer.test.ts,
+       web/src/components/__tests__/Player.test.tsx,
+       web/src/test-setup.ts, web/vite.config.ts,
+       web/package.json
+— 66 frontend tests + 38 backend tests pass, TypeScript clean,
+  committed and pushed.
+**Filed**: 2026-06-26
 
 ### P3.34 — Server-side progress persistence for background sync
 Added a file-based progress store (`/tmp/stv_watch_progress.json`) that
