@@ -442,21 +442,89 @@ async def admin_epg_refresh():
 
 # ── WATCHLIST / PROGRESS SYNC ───────────────────────────────────────────
 
+PROGRESS_FILE = Path("/tmp/stv_watch_progress.json")
+_progress_store: dict[str, list[dict]] = {}  # watchKey -> list of progress entries
+
+
+def _load_progress_store():
+    """Load watch progress from disk, merging with current in-memory data."""
+    global _progress_store
+    try:
+        disk = json.loads(PROGRESS_FILE.read_text())
+        # Merge: for each watchKey, take the latest entries (up to 5 per key)
+        for k, entries in disk.items():
+            if k not in _progress_store:
+                _progress_store[k] = entries[:5]
+            else:
+                # Merge and deduplicate by timestamp
+                existing_ts = {e["timestamp"] for e in _progress_store[k]}
+                for e in entries:
+                    if e["timestamp"] not in existing_ts:
+                        _progress_store[k].append(e)
+                        existing_ts.add(e["timestamp"])
+                _progress_store[k] = sorted(
+                    _progress_store[k], key=lambda x: x["timestamp"], reverse=True
+                )[:5]
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        pass
+
+
+def _save_progress_store():
+    """Persist watch progress to disk."""
+    try:
+        PROGRESS_FILE.write_text(json.dumps(_progress_store))
+    except Exception:
+        pass
+
+
 @app.post("/api/watchlist/sync-progress")
 async def sync_progress(entry: dict):
     """Accept a queued progress update from the PWA background sync.
 
-    This endpoint receives progress entries queued by the service worker
-    during offline periods and flushed when connectivity returns.
-    Currently acknowledges and discards — progress is stored client-side
-    in localStorage/IndexedDB. Future: persist to a user profile store.
+    Persists the progress entry keyed by watchKey so clients can
+    retrieve it on reconnect via GET /api/watchlist/progress.
     """
     watch_key = entry.get("watchKey")
     pos = entry.get("position")
     if not watch_key or pos is None:
         raise HTTPException(status_code=400, detail="Missing watchKey or position")
     log.info("sync-progress: key=%s pos=%.1f", watch_key, pos)
+
+    # Build a clean entry with all known fields
+    progress_entry = {
+        "watchKey": watch_key,
+        "position": pos,
+        "timestamp": entry.get("timestamp", time.time()),
+        "seriesData": entry.get("seriesData"),
+        "movieData": entry.get("movieData"),
+    }
+    # Remove None-valued optional fields to keep storage compact
+    if progress_entry.get("seriesData") is None:
+        del progress_entry["seriesData"]
+    if progress_entry.get("movieData") is None:
+        del progress_entry["movieData"]
+
+    # Store in-memory (keep last 5 per key)
+    if watch_key not in _progress_store:
+        _progress_store[watch_key] = []
+    _progress_store[watch_key].append(progress_entry)
+    _progress_store[watch_key] = sorted(
+        _progress_store[watch_key], key=lambda x: x["timestamp"], reverse=True
+    )[:5]
+    _save_progress_store()
+
     return {"status": "ok", "synced": True}
+
+
+@app.get("/api/watchlist/progress")
+async def get_progress():
+    """Retrieve all stored watch progress entries.
+
+    Returns progress synced from clients via background sync,
+    grouped by watchKey with the most recent entries first.
+    Useful for restoring watch state on page load after reconnection.
+    """
+    return {"progress": _progress_store}
 
 
 # ── LIVE TV ─────────────────────────────────────────────────────────────────

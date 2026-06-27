@@ -54,6 +54,8 @@ def clear_cache():
     m._probe_cache.clear()
     m.epg_cache["data"] = None
     m.epg_cache["fetched"] = 0
+    # Clear progress store
+    m._progress_store.clear()
     yield
 
 
