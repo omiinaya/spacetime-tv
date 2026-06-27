@@ -85,105 +85,58 @@ Research update (2026-06-26):
 
 ## Recently Completed
 
+### P3.36 — Refactor useVideoPlayer.ts into smaller composables (Phase 1)
+Extracted types, constants, and utility functions into usePlayerTypes.ts
+and usePlayerUtils.ts (~500 lines removed from main hook). Created
+scaffold files for sub-hooks (useMpegtsPlayer, useRemuxPlayer, useHlsPlayer)
+for future extraction of playback setup functions. The main hook now imports
+from the extracted modules while keeping the same public API.
+✅ Done: web/src/hooks/usePlayerTypes.ts, web/src/hooks/usePlayerUtils.ts,
+       web/src/hooks/useMpegtsPlayer.ts, web/src/hooks/useRemuxPlayer.ts,
+       web/src/hooks/useHlsPlayer.ts, web/src/hooks/useVideoPlayer.ts
+— 38 backend tests + 66 frontend tests pass, TypeScript clean.
+**Filed**: 2026-06-27
+
 ### P3.35 — Frontend component test coverage for Player
-Added vitest tests covering:
-- `fmtTime()` utility (5 edge cases: zero, seconds, minutes, hours, Infinity/NaN)
-- `QUALITIES` constants verification
-- `useVideoPlayer` hook: type derivation (live/movie/series), initial state,
-  volume/speed/quality controls, retry stream, resume prompt behavior
-- Player component: renders video element for all 3 types, back button,
-  PiP button, loading indicator, seekable progress bar
-- Added `@testing-library/react` + `@testing-library/jest-dom` dev deps
-- Added test setup file for jest-dom matchers
+Added vitest tests covering fmtTime, QUALITIES, useVideoPlayer hook
+(type derivation, initial state, controls, retry stream, resume prompt),
+and Player component rendering. Added @testing-library/react + jest-dom dev deps.
 ✅ Done: web/src/hooks/__tests__/useVideoPlayer.test.ts,
        web/src/components/__tests__/Player.test.tsx,
-       web/src/test-setup.ts, web/vite.config.ts,
-       web/package.json
-— 66 frontend tests + 38 backend tests pass, TypeScript clean,
-  committed and pushed.
+       web/src/test-setup.ts, web/vite.config.ts, web/package.json
+— 66 frontend tests + 38 backend tests pass, TypeScript clean, committed and pushed.
 **Filed**: 2026-06-26
 
 ### P3.34 — Server-side progress persistence for background sync
-Added a file-based progress store (`/tmp/stv_watch_progress.json`) that
-persists watch progress entries keyed by watchKey. The
-`POST /api/watchlist/sync-progress` endpoint now stores entries with
-metadata (series/movie data), keeping the last 5 per key. New
-`GET /api/watchlist/progress` returns all stored progress for
-reconnection recovery. Added 7 backend tests — all 38 pass, TypeScript
-clean, committed and pushed.
+Added file-based progress store, POST/GET endpoints for sync-progress.
 ✅ Done: server/main.py, server/tests/test_progress.py, server/tests/conftest.py
 **Filed**: 2026-06-26
 
 ### P3.33 — PWA background sync for watchlist/watch progress
-Added IndexedDB queue (`watchProgressSync.ts`) for pending progress updates,
-`POST /api/watchlist/sync-progress` endpoint, `sync` event handler in service
-worker, and periodic `sync.register()` in playback save intervals. Progress
-is queued offline and flushed when connectivity returns.
+Added IndexedDB queue, sync event handler in service worker, periodic register.
 ✅ Done: web/public/sw.js, web/src/lib/watchProgressSync.ts,
        web/src/hooks/useVideoPlayer.ts, server/main.py
-— 31 backend tests pass, TypeScript clean, committed and pushed.
 **Filed**: 2026-06-26
 
-### P3.32 — Enable hls.js Web Worker for off-thread parsing (performance)
-Changed `enableWorker: false` → `enableWorker: true` in the HLS config
-block of `useVideoPlayer.ts`. hls.js v1.7.0-beta.1 now offloads TS/MP4
-segment parsing to a Web Worker, reducing main-thread CPU usage.
+### P3.32 — Enable hls.js Web Worker for off-thread parsing
+Changed enableWorker: false → true for reduced main-thread CPU.
 ✅ Done: web/src/hooks/useVideoPlayer.ts
-— 31 backend tests pass, TypeScript clean, committed and pushed.
 **Filed**: 2026-06-26
 
 ### P3.31 — Keyboard shortcut registry (global shortcuts hub)
-Already implemented before this tick — central `useKeyboardShortcuts` hook
-registers `g`→Guide, `h`→Home, `m`→Movies, `s`→Series, `?`→shortcuts overlay.
-Input focus gating prevents interference while typing.
+Central useKeyboardShortcuts hook with g→Guide, h→Home, m→Movies, s→Series, ?→shortcuts overlay.
 ✅ Done: web/src/hooks/useKeyboardShortcuts.ts, web/src/components/KeyboardShortcuts.tsx
 **Filed**: 2026-06-26
 
 ### P3.22 — Monitor Vite 8 + @vitejs/plugin-react v6
-✅ COMPLETED — Vite 8.1.0 and @vitejs/plugin-react 6.0.3 successfully deployed.
-Moved here from Monitoring upon completion.
+✅ COMPLETED — Vite 8.1.0 and @vitejs/plugin-react 6.0.3 deployed.
 
 ### P3.30 — EPG search/filter bar for TV Guide
-Guide search already implemented in commit 0789fc2 — search bar filters
-programmes by title/subtitle/category/desc across all channels, shows
-match count badge, clear button, and "no results" state.
-✅ Already done: web/src/pages/Guide.tsx
+Search bar filters programmes by title/subtitle/category/desc across all channels.
+✅ Done: web/src/pages/Guide.tsx
 **Filed**: 2026-06-26
 
 ### P3.29 — Enable liveSync for mpegts.js live playback
-Enabled `liveSync: true` with tuned parameters in live mpegts.js config:
-`liveSyncMaxLatency=2`, `liveSyncTargetLatency=1`, `liveSyncPlaybackRate=1.1`.
-Smoother latency chasing via playback rate adjustment instead of abrupt seeks.
+Enabled liveSync with tuned parameters for smoother latency chasing.
 ✅ Done: web/src/hooks/useVideoPlayer.ts
-— 31 backend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-26
-
-### P3.28 — Enable MSE-in-Workers for mpegts.js (performance)
-mpegts.js v1.8.0 supports MSE-in-Workers (`config.enableWorkerForMSE`)
-for offloading MSE processing to a Web Worker. Can reduce main-thread
-jank during playback, especially on low-end devices.
-✅ Done: web/src/hooks/useVideoPlayer.ts — 31 backend tests pass,
-TypeScript clean, committed and pushed.
-**Filed**: 2026-06-26
-
-### P3.27 — Admin dashboard: EPG refresh trigger
-Added `POST /api/admin/epg/refresh` endpoint that calls
-`_refresh_epg_background()` and a "Refresh EPG Now" button in the
-admin UI showing last refresh time and status.
-✅ Done: server/main.py, web/src/pages/AdminDashboard.tsx
-— 31 backend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-26
-
-### P3.26 — Connection quality indicator for video player
-Added real-time connection quality monitoring for both live and VOD playback:
-- Tracks download speed (KB/s) from mpegts.js STATISTICS_INFO events
-- Tracks playback stalls via video element `waiting` events (30s rolling window)
-- Tracks dropped/decoded frame ratio for quality degradation detection
-- Computes quality tier (excellent/good/fair/poor) every 3 seconds
-- New 4-bar signal strength indicator in Player bottom controls
-- "Lower quality" suggestion chip appears when connection is poor and a
-  lower quality tier is available
-- All three playback paths instrumented: live MPEG-TS, VOD remux, HLS
-✅ Done: web/src/hooks/useVideoPlayer.ts, web/src/components/Player.tsx
-— 31 backend tests pass, TypeScript clean, committed and pushed.
 **Filed**: 2026-06-26

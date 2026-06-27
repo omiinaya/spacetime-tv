@@ -1,180 +1,30 @@
+/**
+ * useVideoPlayer — Main video player hook
+ *
+ * Coordinates three playback paths (live MPEG-TS, VOD remux, HLS).
+ * Types, constants, and utility functions are extracted into
+ * usePlayerTypes.ts and usePlayerUtils.ts.
+ *
+ * Public exports: useVideoPlayer, fmtTime, QUALITIES, SPEEDS
+ */
+
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import mpegts from "mpegts.js";
 import Hls from "hls.js";
 import { saveSeriesProgress, saveMovieProgress } from "@/lib/continueWatching";
 import { queueProgress } from "@/lib/watchProgressSync";
+import type { ConnectionQuality, DocumentWithWebkit, PlayPhase, ErrorType, UseVideoPlayerParams, UseVideoPlayerReturn } from "./usePlayerTypes";
+export type { ConnectionQuality, ProbeResult, PlayPhase, ErrorType, UseVideoPlayerParams, UseVideoPlayerReturn } from "./usePlayerTypes";
+export { QUALITIES, SPEEDS } from "./usePlayerTypes";
+export { fmtTime } from "./usePlayerUtils";
+import { getWatchPos, getVolume, getMuted, saveVolume, saveMuted, probeStream, tryAutoplay, transcodeCache, saveWatchPos } from "./usePlayerUtils";
+import { QUALITIES } from "./usePlayerTypes";
 
-// ── Types ──────────────────────────────────────────────────────
-export type ConnectionQuality = "excellent" | "good" | "fair" | "poor";
+// ── Constants for LIVE quality levels ─────────────────────────
+const QUALITY_HEIGHTS = QUALITIES.map(q => q.height);
 
-export interface ProbeResult {
-  codec: string; codec_long?: string; width?: number; height?: number;
-  profile?: string; container?: string; error?: string;
-}
-
-// WebKit-prefixed fullscreen API (not in standard TS DOM types)
-interface DocumentWithWebkit extends Document {
-  webkitFullscreenElement: Element | null;
-  webkitExitFullscreen: () => void;
-}
-
-export type PlayPhase = "probing" | "loading" | "playing" | "paused" | "error";
-
-export type ErrorType =
-  | "timeout"           // Generic loading timeout
-  | "transcode_timeout" // ffmpeg transcode took too long
-  | "retry_exhausted"   // Live TV gave up after 5 retries
-  | "stream_error"      // mpegts/HLS internal error
-  | "not_supported"     // Browser can't play this format
-  | "empty_stream"      // CDN returned 0 bytes / 405
-  ;
-
-export const QUALITIES = [
-  { label: "Original", height: null },
-  { label: "1080p", height: 1080 },
-  { label: "720p", height: 720 },
-  { label: "360p", height: 360 },
-];
-export const SPEEDS = [0.5, 1, 1.5, 2];
-
-// ── Module-level helpers ──────────────────────────────────────
-const transcodeCache = new Map<string, string>();
-
-function getWatchPos(key: string): number | null {
-  try {
-    const d = JSON.parse(localStorage.getItem("stv_watch") || "{}");
-    return d[key]?.pos ?? null;
-  } catch { return null; }
-}
-function saveWatchPos(key: string, pos: number) {
-  try {
-    const d = JSON.parse(localStorage.getItem("stv_watch") || "{}");
-    d[key] = { pos, ts: Date.now() };
-    localStorage.setItem("stv_watch", JSON.stringify(d));
-  } catch {}
-  // Also queue for PWA background sync (non-blocking)
-  queueProgress(key, pos);
-}
-function getVolume(): number {
-  try { return parseFloat(localStorage.getItem("stv_volume") || "0.8"); }
-  catch { return 0.8; }
-}
-function saveVolume(v: number) {
-  try { localStorage.setItem("stv_volume", String(v)); } catch {}
-}
-function getMuted(): boolean {
-  try { return localStorage.getItem("stv_muted") === "true"; }
-  catch { return false; }
-}
-function saveMuted(m: boolean) {
-  try { localStorage.setItem("stv_muted", String(m)); } catch {}
-}
-
-/**
- * Try to autoplay a video element. Browsers block autoplay with sound.
- * Strategy: try unmuted first, if rejected → mute and retry.
- * Returns true if playback started (possibly muted), false if fully blocked.
- * When muted fallback is used, onMutedFallback() is called so the caller
- * can sync React state without persisting to localStorage.
- */
-async function tryAutoplay(video: HTMLVideoElement, onMutedFallback?: () => void): Promise<boolean> {
-  try {
-    await video.play();
-    return true; // unmuted autoplay succeeded
-  } catch {
-    // Autoplay with sound was blocked — retry muted
-    try {
-      video.muted = true;
-      await video.play();
-      onMutedFallback?.();
-      return true; // muted autoplay succeeded
-    } catch {
-      return false; // fully blocked (no user gesture at all)
-    }
-  }
-}
-
-async function probeStream(url: string, signal?: AbortSignal): Promise<ProbeResult> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10_000);
-  // If an external signal fires first, forward it to our controller
-  const onExternalAbort = () => controller.abort();
-  signal?.addEventListener("abort", onExternalAbort, { once: true });
-
-  try {
-    const r = await fetch(url, { signal: controller.signal });
-    clearTimeout(timer);
-    signal?.removeEventListener("abort", onExternalAbort);
-    return await r.json();
-  } catch {
-    clearTimeout(timer);
-    signal?.removeEventListener("abort", onExternalAbort);
-    return { codec: "unknown" };
-  }
-}
-
-// ── Time formatter ────────────────────────────────────────────
-export function fmtTime(s: number): string {
-  if (!isFinite(s) || s < 0) return "0:00";
-  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60),
-        sec = Math.floor(s % 60);
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-  return `${m}:${String(sec).padStart(2, "0")}`;
-}
 
 // ── Hook ──────────────────────────────────────────────────────
-interface UseVideoPlayerParams {
-  type: "live" | "movie" | "series";
-  id: string | undefined;
-  seriesId: string | undefined;
-  epId: string | undefined;
-  onAutoAdvance?: (nextUrl: string) => void;
-}
-
-export interface UseVideoPlayerReturn {
-  videoRef: React.RefObject<HTMLVideoElement>;
-  containerRef: React.RefObject<HTMLDivElement>;
-  phase: PlayPhase;
-  errorMsg: string | null;
-  errorType: ErrorType | null;
-  loadingStep: string;
-  transcoding: boolean;
-  volume: number;
-  muted: boolean;
-  playbackRate: number;
-  qualityIdx: number;
-  currentTime: number;
-  duration: number;
-  buffered: number;
-  resumePos: number | null;
-  showResumePrompt: boolean;
-  isLive: boolean;
-  isVod: boolean;
-  isBehindLive: boolean;
-  secondsBehindLive: number;
-  liveSeekableStart: number;
-  liveSeekableEnd: number;
-  // Connection quality
-  connectionQuality: ConnectionQuality;
-  stallCount: number;
-  suggestLowerQuality: boolean;
-  downloadSpeed: number;
-  // Actions
-  seekToLive: () => void;
-  togglePlay: () => void;
-  seekTo: (time: number) => void;
-  seek: (delta: number) => void;
-  setVolume: (val: number) => void;
-  toggleMute: () => void;
-  setSpeed: (rate: number) => void;
-  setQuality: (idx: number) => void;
-  switchAudioTrack: (audioIndex: number) => void;
-  resumePlayback: () => void;
-  startFromBeginning: () => void;
-  retryStream: () => void;
-  onAutoAdvance?: (nextUrl: string) => void;
-}
-
 export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseVideoPlayerParams): UseVideoPlayerReturn {
   const videoRef = useRef<HTMLVideoElement>(null!);
   const containerRef = useRef<HTMLDivElement>(null!);
@@ -187,25 +37,18 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   const vodTranscodeRef = useRef<boolean>(false);
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCount = useRef(0);
-  const autoRetryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [retryKey, setRetryKey] = useState(0);
-  // Stable callback — syncs React mute state when browser mutes video for autoplay fallback.
-  // Does NOT persist to localStorage (user didn't intentionally mute).
+
   const onAutoplayMuted = useCallback(() => { setMuted(true); }, []);
 
   const clearLoadingTimeout = useCallback(() => {
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
-      loadingTimeoutRef.current = null;
-    }
+    if (loadingTimeoutRef.current) { clearTimeout(loadingTimeoutRef.current); loadingTimeoutRef.current = null; }
   }, []);
 
   const startLoadingTimeout = useCallback(() => {
     clearLoadingTimeout();
     loadingTimeoutRef.current = setTimeout(() => {
       if (phaseRef.current === "loading") {
-        // For live, auto-retry instead of showing a dead error.
-        // The mpegts player may need more time or a fresh connection.
         if (type === "live" && retryCount.current < 5) {
           retryCount.current++;
           const v = videoRef.current;
@@ -218,7 +61,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
           setRetryKey(k => k + 1);
           return;
         }
-        _setPhase("error");
+        setPhase("error");
         if (type === "live") {
           setErrorType("retry_exhausted");
           setErrorMsg("Unable to connect after several attempts. This channel may be temporarily offline.");
@@ -232,10 +75,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
 
   // ── State ──────────────────────────────────────────────────
   const [phase, _setPhase] = useState<PlayPhase>("loading");
-  const setPhase = useCallback((p: PlayPhase) => {
-    phaseRef.current = p;
-    _setPhase(p);
-  }, []);
+  const setPhase = useCallback((p: PlayPhase) => { phaseRef.current = p; _setPhase(p); }, []);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<ErrorType | null>(null);
   const [transcoding, setTranscoding] = useState(false);
@@ -258,39 +98,26 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   const droppedFramesRef = useRef(0);
   const decodedFramesRef = useRef(0);
   const stallTimestampsRef = useRef<number[]>([]);
-  const lastQualityComputeRef = useRef(0);
 
   const computeConnectionQuality = useCallback(() => {
     const now = Date.now();
-    // Prune stalls older than 30 seconds (rolling window)
     const recentStalls = stallTimestampsRef.current.filter(t => now - t < 30000);
     stallTimestampsRef.current = recentStalls;
     const recentStallCount = recentStalls.length;
-
     const speed = downloadSpeed;
     const dropped = droppedFramesRef.current;
     const decoded = decodedFramesRef.current || 1;
     const dropRatio = dropped / decoded;
-
     let quality: ConnectionQuality;
-    if (speed > 2000 && recentStallCount < 2 && dropRatio < 0.02) {
-      quality = "excellent";
-    } else if (speed > 500 && recentStallCount < 4 && dropRatio < 0.05) {
-      quality = "good";
-    } else if (speed > 100 && recentStallCount < 8) {
-      quality = "fair";
-    } else {
-      quality = "poor";
-    }
-
+    if (speed > 2000 && recentStallCount < 2 && dropRatio < 0.02) quality = "excellent";
+    else if (speed > 500 && recentStallCount < 4 && dropRatio < 0.05) quality = "good";
+    else if (speed > 100 && recentStallCount < 8) quality = "fair";
+    else quality = "poor";
     setConnectionQuality(quality);
     setStallCount(recentStallCount);
-    // Suggest lowering quality if poor AND not already at lowest quality
     setSuggestLowerQuality(quality === "poor" && qualityIdx < QUALITIES.length - 1);
-    lastQualityComputeRef.current = now;
   }, [downloadSpeed, qualityIdx]);
 
-  // Recompute quality on a periodic interval (every 3 seconds)
   useEffect(() => {
     const interval = setInterval(computeConnectionQuality, 3000);
     return () => clearInterval(interval);
@@ -358,19 +185,12 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     const MAX_RECONNECTS = 100;
 
     const createPlayer = () => {
-      const player = mpegts.createPlayer({
-        type: "mpegts",
-        isLive: liveFlag,
-        url: streamUrl,
-      }, {
-        // Use a Web Worker for MSE operations to reduce main-thread jank
+      const player = mpegts.createPlayer({ type: "mpegts", isLive: liveFlag, url: streamUrl }, {
         enableWorkerForMSE: true,
-        // DVR buffer: keep ~5 minutes of backward data for seek/pause support
         liveBufferLatencyChasing: false,
         autoCleanupSourceBuffer: true,
         autoCleanupMaxBackwardDuration: 360,
         autoCleanupMinBackwardDuration: 240,
-        // Live latency chasing via playback rate adjustment (smoother than abrupt seeks)
         liveSync: true,
         liveSyncMaxLatency: 2,
         liveSyncTargetLatency: 1,
@@ -386,14 +206,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
         if (loadStarted) return;
         loadStarted = true;
         tryAutoplay(video, onAutoplayMuted).then((started) => {
-          if (!started) {
-            // Fully blocked (no user gesture at all) — show paused state
-            clearLoadingTimeout();
-            const p = phaseRef.current;
-            if (p === "loading" || p === "probing") {
-              setPhase("paused");
-            }
-          }
+          if (!started) { clearLoadingTimeout(); if (phaseRef.current === "loading" || phaseRef.current === "probing") setPhase("paused"); }
         });
       });
 
@@ -401,13 +214,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
         if (!loadStarted) {
           loadStarted = true;
           tryAutoplay(video, onAutoplayMuted).then((started) => {
-            if (!started) {
-              clearLoadingTimeout();
-              const p = phaseRef.current;
-              if (p === "loading" || p === "probing") {
-                setPhase("paused");
-              }
-            }
+            if (!started) { clearLoadingTimeout(); if (phaseRef.current === "loading" || phaseRef.current === "probing") setPhase("paused"); }
           });
         }
         reconnectAttempts = 0;
@@ -415,54 +222,33 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
 
       let playingFired = false;
       const onPlaying = () => {
-        if (!playingFired) {
-          playingFired = true;
-          clearLoadingTimeout();
-          const p = phaseRef.current;
-          if (p === "loading" || p === "probing") setPhase("playing");
-        }
+        if (!playingFired) { playingFired = true; clearLoadingTimeout(); if (phaseRef.current === "loading" || phaseRef.current === "probing") setPhase("playing"); }
       };
       video.addEventListener("playing", onPlaying);
 
       let lastStatsTime = Date.now();
       player.on(mpegts.Events.STATISTICS_INFO, (stats: any) => {
         lastStatsTime = Date.now();
-        // Extract download speed (KB/s) and frame stats from mpegts.js
-        if (typeof stats?.speed === "number") {
-          setDownloadSpeed(stats.speed);
-        }
-        if (typeof stats?.droppedFrames === "number") {
-          droppedFramesRef.current = stats.droppedFrames;
-        }
-        if (typeof stats?.decodedFrames === "number") {
-          decodedFramesRef.current = stats.decodedFrames;
-        }
+        if (typeof stats?.speed === "number") setDownloadSpeed(stats.speed);
+        if (typeof stats?.droppedFrames === "number") droppedFramesRef.current = stats.droppedFrames;
+        if (typeof stats?.decodedFrames === "number") decodedFramesRef.current = stats.decodedFrames;
       });
 
-      // Track buffering stalls via video element waiting event
-      const onWaiting = () => {
-        stallTimestampsRef.current.push(Date.now());
-      };
+      const onWaiting = () => { stallTimestampsRef.current.push(Date.now()); };
       video.addEventListener("waiting", onWaiting);
 
       player.on(mpegts.Events.ERROR, (_t: string, detail: { response?: { code?: number } }) => {
         if (detail?.response?.code === 0) return;
         if (!liveFlag) return;
-
         if (reconnectAttempts < MAX_RECONNECTS) {
           reconnectAttempts++;
           try { player.destroy(); } catch {}
           playerRef.current = null;
           video.removeEventListener("playing", onPlaying);
-          setTimeout(() => {
-            if (playerRef.current === null) {
-              createPlayer();
-            }
-          }, Math.min(reconnectAttempts * 1000, 5000));
+          setTimeout(() => { if (playerRef.current === null) createPlayer(); }, Math.min(reconnectAttempts * 1000, 5000));
         }
       });
 
-      // DVR time tracking: update currentTime + detect if user is behind live
       const onTimeUpdate = () => {
         if (!video || !liveFlag) return;
         const ct = video.currentTime;
@@ -488,11 +274,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
             try { player.destroy(); } catch {}
             playerRef.current = null;
             video.removeEventListener("playing", onPlaying);
-            setTimeout(() => {
-              if (playerRef.current === null) {
-                createPlayer();
-              }
-            }, Math.min(reconnectAttempts * 1000, 5000));
+            setTimeout(() => { if (playerRef.current === null) createPlayer(); }, Math.min(reconnectAttempts * 1000, 5000));
           }
         }
       }, 5000);
@@ -519,7 +301,6 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
 
     const url = startPos && startPos > 5 ? `${streamUrl}?start=${startPos}` : streamUrl;
-
     vodUrlRef.current = streamUrl;
     vodTranscodeRef.current = isTranscode;
 
@@ -534,9 +315,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     player.attachMediaElement(video);
     player.load();
 
-    player.on(mpegts.Events.LOADING_COMPLETE, () => {
-      tryAutoplay(video, onAutoplayMuted).then(() => {});
-    });
+    player.on(mpegts.Events.LOADING_COMPLETE, () => { tryAutoplay(video, onAutoplayMuted).then(() => {}); });
 
     let playStarted = false;
     const tryPlay = () => {
@@ -547,59 +326,35 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     };
     player.on(mpegts.Events.MEDIA_INFO, () => tryPlay());
 
-    // Track time and buffered natively from the video element
     const onTimeUpdate = () => {
       setCurrentTime(video.currentTime);
-      if (video.buffered.length > 0) {
-        setBuffered(video.buffered.end(video.buffered.length - 1));
-      }
-      // Transition from loading→playing once time starts advancing
-      const p = phaseRef.current;
-      if ((p === "loading" || p === "probing") && video.currentTime > 0.1) {
+      if (video.buffered.length > 0) setBuffered(video.buffered.end(video.buffered.length - 1));
+      if ((phaseRef.current === "loading" || phaseRef.current === "probing") && video.currentTime > 0.1) {
         clearLoadingTimeout();
         setPhase("playing");
       }
     };
-    const onDurationChange = () => {
-      const d = video.duration;
-      if (d && isFinite(d)) setDuration(d);
-    };
+    const onDurationChange = () => { const d = video.duration; if (d && isFinite(d)) setDuration(d); };
     video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("durationchange", onDurationChange);
 
     player.on(mpegts.Events.MEDIA_INFO, (info: { duration?: number }) => {
-      if (info.duration && isFinite(info.duration)) {
-        setDuration(info.duration);
-      }
+      if (info.duration && isFinite(info.duration)) setDuration(info.duration);
     });
 
-    // Track mpegts.js statistics for VOD connection quality
     player.on(mpegts.Events.STATISTICS_INFO, (stats: any) => {
-      if (typeof stats?.speed === "number") {
-        setDownloadSpeed(stats.speed);
-      }
-      if (typeof stats?.droppedFrames === "number") {
-        droppedFramesRef.current = stats.droppedFrames;
-      }
-      if (typeof stats?.decodedFrames === "number") {
-        decodedFramesRef.current = stats.decodedFrames;
-      }
+      if (typeof stats?.speed === "number") setDownloadSpeed(stats.speed);
+      if (typeof stats?.droppedFrames === "number") droppedFramesRef.current = stats.droppedFrames;
+      if (typeof stats?.decodedFrames === "number") decodedFramesRef.current = stats.decodedFrames;
     });
 
-    // Track buffering stalls for VOD playback
-    const onWaiting = () => {
-      stallTimestampsRef.current.push(Date.now());
-    };
+    const onWaiting = () => { stallTimestampsRef.current.push(Date.now()); };
     video.addEventListener("waiting", onWaiting);
 
     player.on(mpegts.Events.ERROR, (_t: string, detail: { response?: { code?: number } }) => {
       errorCount++;
       if (detail?.response?.code === 0 || errorCount < 3) return;
-      if (!timedOut) {
-        setPhase("error");
-        setErrorType("stream_error");
-        setErrorMsg("Stream interrupted. The connection may have been lost.");
-      }
+      if (!timedOut) { setPhase("error"); setErrorType("stream_error"); setErrorMsg("Stream interrupted. The connection may have been lost."); }
     });
 
     let saveInterval: ReturnType<typeof setInterval> | null = null;
@@ -609,105 +364,77 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
         if (video && !video.paused) {
           const t = video.currentTime;
           if (t > 5) {
-          saveWatchPos(watchKey, t);
-          if (type === "series" && seriesId) {
-            // Read rich metadata from sessionStorage (set by SeriesOverlay)
-            let metaName = "", metaCover = "", metaSeason = 0, metaEpNum = 0, metaEpTitle = "";
-            let metaDuration = video?.duration || 0;
-            try {
-              const raw = sessionStorage.getItem(`stv_series_meta_${seriesId}`);
-              if (raw) {
-                const m = JSON.parse(raw);
-                metaName = m.name || "";
-                metaCover = m.cover || m.episodeImage || "";
-                metaSeason = m.seasonNumber || 0;
-                metaEpNum = m.episodeNum || 0;
-                metaEpTitle = m.episodeTitle || "";
-                if (m.durationSeconds) metaDuration = m.durationSeconds;
-              }
-            } catch {}
-            saveSeriesProgress({
-              seriesId: parseInt(seriesId),
-              seriesName: metaName,
-              cover: metaCover,
-              seasonNumber: metaSeason,
-              episodeNum: metaEpNum,
-              episodeId: epId || "",
-              episodeTitle: metaEpTitle,
-              progressSeconds: t,
-              durationSeconds: metaDuration,
-              updatedAt: Date.now(),
-            });
-            // Auto-advance: at >= 95% progress, check for next episode
-            if (onAutoAdvance && metaDuration > 0 && (t / metaDuration) >= 0.95) {
-              const autoAdvanced = sessionStorage.getItem(`stv_auto_advanced_${seriesId}`);
-              if (!autoAdvanced && seriesId) {
-                sessionStorage.setItem(`stv_auto_advanced_${seriesId}`, "1");
-                const currentIdx = parseInt(sessionStorage.getItem(`stv_series_current_idx_${seriesId}`) || "0", 10);
-                const activeSeason = parseInt(sessionStorage.getItem(`stv_series_active_season_${seriesId}`) || "1", 10);
-                const episodesRaw = sessionStorage.getItem(`stv_series_episodes_${seriesId}_${activeSeason}`);
-                if (episodesRaw) {
-                  try {
-                    const episodes = JSON.parse(episodesRaw) as { id: string; episode_num: number; title: string }[];
-                    const nextEp = episodes[currentIdx + 1];
-                    if (nextEp) {
-                      // Update stored index for the next episode
-                      sessionStorage.setItem(`stv_series_current_idx_${seriesId}`, String(currentIdx + 1));
-                      // Remove the advance flag after a short delay so it resets for next time
-                      setTimeout(() => sessionStorage.removeItem(`stv_auto_advanced_${seriesId}`), 1000);
-                      onAutoAdvance(`/watch/series/${seriesId}/${nextEp.id}`);
-                    }
-                  } catch {}
+            saveWatchPos(watchKey, t);
+            if (type === "series" && seriesId) {
+              let metaName = "", metaCover = "", metaSeason = 0, metaEpNum = 0, metaEpTitle = "";
+              let metaDuration = video?.duration || 0;
+              try {
+                const raw = sessionStorage.getItem(`stv_series_meta_${seriesId}`);
+                if (raw) {
+                  const m = JSON.parse(raw);
+                  metaName = m.name || "";
+                  metaCover = m.cover || m.episodeImage || "";
+                  metaSeason = m.seasonNumber || 0;
+                  metaEpNum = m.episodeNum || 0;
+                  metaEpTitle = m.episodeTitle || "";
+                  if (m.durationSeconds) metaDuration = m.durationSeconds;
+                }
+              } catch {}
+              saveSeriesProgress({
+                seriesId: parseInt(seriesId), seriesName: metaName, cover: metaCover,
+                seasonNumber: metaSeason, episodeNum: metaEpNum, episodeId: epId || "",
+                episodeTitle: metaEpTitle, progressSeconds: t, durationSeconds: metaDuration, updatedAt: Date.now(),
+              });
+              if (onAutoAdvance && metaDuration > 0 && (t / metaDuration) >= 0.95) {
+                const autoAdvanced = sessionStorage.getItem(`stv_auto_advanced_${seriesId}`);
+                if (!autoAdvanced && seriesId) {
+                  sessionStorage.setItem(`stv_auto_advanced_${seriesId}`, "1");
+                  const currentIdx = parseInt(sessionStorage.getItem(`stv_series_current_idx_${seriesId}`) || "0", 10);
+                  const activeSeason = parseInt(sessionStorage.getItem(`stv_series_active_season_${seriesId}`) || "1", 10);
+                  const episodesRaw = sessionStorage.getItem(`stv_series_episodes_${seriesId}_${activeSeason}`);
+                  if (episodesRaw) {
+                    try {
+                      const episodes = JSON.parse(episodesRaw) as { id: string; episode_num: number; title: string }[];
+                      const nextEp = episodes[currentIdx + 1];
+                      if (nextEp) {
+                        sessionStorage.setItem(`stv_series_current_idx_${seriesId}`, String(currentIdx + 1));
+                        setTimeout(() => sessionStorage.removeItem(`stv_auto_advanced_${seriesId}`), 1000);
+                        onAutoAdvance(`/watch/series/${seriesId}/${nextEp.id}`);
+                      }
+                    } catch {}
+                  }
                 }
               }
+            } else if (type === "movie" && id) {
+              let movieName = "", moviePoster = "";
+              try {
+                const raw = sessionStorage.getItem("stv_movie_meta");
+                if (raw) {
+                  const m = JSON.parse(raw);
+                  if (String(m.id) === id) { movieName = m.name || ""; moviePoster = m.poster || ""; }
+                }
+              } catch {}
+              saveMovieProgress({
+                movieId: parseInt(id), movieName, poster: moviePoster,
+                progressSeconds: t, durationSeconds: video?.duration || 0, updatedAt: Date.now(),
+              });
             }
-          } else if (type === "movie" && id) {
-            // Read movie metadata from sessionStorage
-            let movieName = "", moviePoster = "";
-            try {
-              const raw = sessionStorage.getItem("stv_movie_meta");
-              if (raw) {
-                const m = JSON.parse(raw);
-                if (String(m.id) === id) {
-                  movieName = m.name || "";
-                  moviePoster = m.poster || "";
-                }
-              }
-            } catch {}
-            saveMovieProgress({
-              movieId: parseInt(id),
-              movieName: movieName,
-              poster: moviePoster,
-              progressSeconds: t,
-              durationSeconds: video?.duration || 0,
-              updatedAt: Date.now(),
-            });
-          }
           }
         }
-        // Register background sync every ~30s (every 6th tick at 5s interval)
         syncCounter++;
         if (syncCounter % 6 === 0) {
-          navigator.serviceWorker?.ready
-            .then((reg) => (reg as any).sync.register("sync-watch-progress"))
-            .catch(() => {});
+          navigator.serviceWorker?.ready.then((reg) => (reg as any).sync.register("sync-watch-progress")).catch(() => {});
         }
       }, 5000);
     }
 
     const timeoutMs = isTranscode ? 45000 : 12000;
     const timeout = setTimeout(() => {
-      const p = phaseRef.current;
-      if (p === "loading" || p === "probing") {
+      if (phaseRef.current === "loading" || phaseRef.current === "probing") {
         timedOut = true;
         setPhase("error");
-        if (isTranscode) {
-          setErrorType("transcode_timeout");
-          setErrorMsg("Video conversion is taking longer than expected. Try again.");
-        } else {
-          setErrorType("timeout");
-          setErrorMsg("Stream is taking too long to load. The server may be slow.");
-        }
+        if (isTranscode) { setErrorType("transcode_timeout"); setErrorMsg("Video conversion is taking longer than expected. Try again."); }
+        else { setErrorType("timeout"); setErrorMsg("Stream is taking too long to load. The server may be slow."); }
       }
     }, timeoutMs);
 
@@ -733,49 +460,29 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     let saveInterval: ReturnType<typeof setInterval> | null = null;
 
     if (Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: false,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-      });
+      const hls = new Hls({ enableWorker: true, lowLatencyMode: false, maxBufferLength: 30, maxMaxBufferLength: 60 });
       hlsRef.current = hls;
-
       hls.loadSource(playlistUrl);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         setPhase("playing");
         setDuration(hls.levels[0]?.details?.totalduration || video.duration || 0);
-        tryAutoplay(video, onAutoplayMuted).then((started) => {
-          if (!started) setPhase("paused");
-        });
+        tryAutoplay(video, onAutoplayMuted).then((started) => { if (!started) setPhase("paused"); });
       });
 
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
           switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              hls.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              hls.recoverMediaError();
-              break;
-            default:
-              setPhase("error");
-              setErrorType("stream_error");
-              setErrorMsg("Playback error. Try again.");
-              hls.destroy();
-              break;
+            case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+            case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+            default: setPhase("error"); setErrorType("stream_error"); setErrorMsg("Playback error. Try again."); hls.destroy(); break;
           }
         }
       });
 
       if (startPos && startPos > 5) {
-        const resumeHandler = () => {
-          video.currentTime = startPos;
-          hls.off(Hls.Events.MANIFEST_PARSED, resumeHandler);
-        };
+        const resumeHandler = () => { video.currentTime = startPos; hls.off(Hls.Events.MANIFEST_PARSED, resumeHandler); };
         hls.on(Hls.Events.MANIFEST_PARSED, resumeHandler);
       }
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
@@ -784,31 +491,20 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
         setDuration(video.duration || 0);
         if (startPos && startPos > 5) video.currentTime = startPos;
         setPhase("playing");
-        tryAutoplay(video, onAutoplayMuted).then((started) => {
-          if (!started) setPhase("paused");
-        });
+        tryAutoplay(video, onAutoplayMuted).then((started) => { if (!started) setPhase("paused"); });
       }, { once: true });
     } else {
-      setPhase("error");
-      setErrorType("not_supported");
-      setErrorMsg("This video format is not supported by your browser.");
+      setPhase("error"); setErrorType("not_supported"); setErrorMsg("This video format is not supported by your browser.");
       return;
     }
 
     const onTimeUpdate = () => {
       setCurrentTime(video!.currentTime);
-      if (video!.buffered.length > 0) {
-        setBuffered(video!.buffered.end(video!.buffered.length - 1));
-      }
+      if (video!.buffered.length > 0) setBuffered(video!.buffered.end(video!.buffered.length - 1));
     };
-    const onDurationChange = () => {
-      const d = video!.duration;
-      if (d && isFinite(d)) setDuration(d);
-    };
+    const onDurationChange = () => { const d = video!.duration; if (d && isFinite(d)) setDuration(d); };
     const onEnded = () => { setPhase("paused"); };
-    const onWaiting = () => {
-      stallTimestampsRef.current.push(Date.now());
-    };
+    const onWaiting = () => { stallTimestampsRef.current.push(Date.now()); };
 
     video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("durationchange", onDurationChange);
@@ -821,31 +517,23 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
         if (!video!.paused && video!.currentTime > 5) {
           saveWatchPos(watchKey, video!.currentTime);
         }
-        // Register background sync every ~30s
         syncCounter++;
         if (syncCounter % 6 === 0) {
-          navigator.serviceWorker?.ready
-            .then((reg) => (reg as any).sync.register("sync-watch-progress"))
-            .catch(() => {});
+          navigator.serviceWorker?.ready.then((reg) => (reg as any).sync.register("sync-watch-progress")).catch(() => {});
         }
       }, 5000);
     }
 
     const timeout = setTimeout(() => {
-      const p = phaseRef.current;
-      if (p === "loading" || p === "probing") {
-        setPhase("error");
-        setErrorType("timeout");
-        setErrorMsg("Video is taking too long to start. Try again.");
+      if (phaseRef.current === "loading" || phaseRef.current === "probing") {
+        setPhase("error"); setErrorType("timeout"); setErrorMsg("Video is taking too long to start. Try again.");
       }
     }, 15000);
 
     const emptyCheck = setInterval(() => {
       if (video.readyState === 0 && phaseRef.current === "loading") {
         clearInterval(emptyCheck);
-        setPhase("error");
-        setErrorType("empty_stream");
-        setErrorMsg("Stream returned empty data. The content may not be available on this server.");
+        setPhase("error"); setErrorType("empty_stream"); setErrorMsg("Stream returned empty data. The content may not be available on this server.");
       } else if (video.readyState > 0 || phaseRef.current !== "loading") {
         clearInterval(emptyCheck);
       }
@@ -870,16 +558,9 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     setErrorMsg(null);
     startLoadingTimeout();
     setLoadingStep(needsTranscode ? "Preparing H.264 conversion…" : "Starting stream…");
-
     if (needsTranscode) setTranscoding(true);
-
     playVodRemux(streamUrl, seekPos ?? null, needsTranscode);
-
-    if (hlsInitUrl) {
-      try {
-        fetch(hlsInitUrl).catch(() => {});
-      } catch {}
-    }
+    if (hlsInitUrl) { try { fetch(hlsInitUrl).catch(() => {}); } catch {} }
   }, [remuxUrl, vodTranscodeUrl, hlsInitUrl, playVodRemux]);
 
   const startVodHLS = useCallback(async (isCancelled: () => boolean, seekPos?: number) => {
@@ -887,22 +568,32 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     setPhase("loading");
     setErrorMsg(null);
     setLoadingStep("Checking for cached video…");
-
     try {
       const res = await fetch(`${hlsInitUrl}`);
       const data = await res.json();
-
-      if (data.status === "ready") {
-        playHLS(data.playlist, seekPos ?? null);
-        return;
-      }
-
-      setPhase("error");
-      setErrorMsg("Video not cached yet. Using streaming mode.");
-    } catch {
-      setPhase("error"); setErrorMsg("Failed to load cached video.");
-    }
+      if (data.status === "ready") { playHLS(data.playlist, seekPos ?? null); return; }
+      setPhase("error"); setErrorMsg("Video not cached yet. Using streaming mode.");
+    } catch { setPhase("error"); setErrorMsg("Failed to load cached video."); }
   }, [hlsInitUrl, playHLS]);
+
+  // ── DVR (Live TV buffer) ───────────────────────────────────
+  const [isBehindLive, setIsBehindLive] = useState(false);
+  const [secondsBehindLive, setSecondsBehindLive] = useState(0);
+  const [liveSeekableStart, setLiveSeekableStart] = useState(0);
+  const [liveSeekableEnd, setLiveSeekableEnd] = useState(0);
+
+  const seekToLive = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const buf = v.buffered;
+    if (buf.length === 0) return;
+    const liveEdge = Math.max(buf.end(0) - 2, 0);
+    v.currentTime = liveEdge;
+    setCurrentTime(liveEdge);
+    if (v.paused) v.play().catch(() => {});
+    setIsBehindLive(false);
+    setSecondsBehindLive(0);
+  }, []);
 
   // ── Main effect ────────────────────────────────────────────
   useEffect(() => {
@@ -912,23 +603,17 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     const video = videoRef.current;
     if (video) { video.volume = volume; video.playbackRate = playbackRate; }
 
-    // Safety timeout — if probe hangs >18s, skip it and start loading.
-    // startLoadingTimeout (20s) handles the loading phase separately.
     const safetyTimer = setTimeout(() => {
       if (cancelled) return;
-      const p = phaseRef.current;
-      if (p === "probing") {
+      if (phaseRef.current === "probing") {
         phaseTimedOut = true;
         transcodeCache.set(streamId, "native");
         setPhase("loading");
         setLoadingStep("Starting stream…");
         setErrorMsg(null);
         startLoadingTimeout();
-        if (isLive) {
-          playMPEGTS(streamPath, true, false);
-        } else {
-          startVod(() => cancelled, undefined, false);
-        }
+        if (isLive) { playMPEGTS(streamPath, true, false); }
+        else { startVod(() => cancelled, undefined, false); }
       }
     }, 18_000);
 
@@ -943,12 +628,9 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
         const probeTimer = setTimeout(() => {
           if (!cancelled && !phaseTimedOut) setLoadingStep("Analyzing video format…");
         }, 5_000);
-        let result: ProbeResult;
-        try {
-          result = await probeStream(probeUrl, abortController.signal);
-        } catch {
-          result = { codec: "unknown" };
-        }
+        let result: any;
+        try { result = await probeStream(probeUrl, abortController.signal); }
+        catch { result = { codec: "unknown" }; }
         clearTimeout(probeTimer);
         if (phaseTimedOut || cancelled) return;
 
@@ -957,26 +639,13 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
           probeHeight = result.height || 0;
           transcodeCache.set(streamId, "hevc");
         } else if (result.codec === "unavailable") {
-          // For live, probe "unavailable" is typically a transient CDN edge issue.
-          // Don't block playback — skip transcode and try native playback.
-          if (isLive) {
-            needsTranscode = false;
-            transcodeCache.set(streamId, "native");
-          } else {
-            setPhase("error");
-            setErrorType("empty_stream");
-            setErrorMsg("This video is not available on the current CDN edge server.");
-            return;
-          }
-        } else {
-          transcodeCache.set(streamId, "native");
-        }
+          if (isLive) { needsTranscode = false; transcodeCache.set(streamId, "native"); }
+          else { setPhase("error"); setErrorType("empty_stream"); setErrorMsg("This video is not available on the current CDN edge server."); return; }
+        } else { transcodeCache.set(streamId, "native"); }
       }
       if (cancelled || phaseTimedOut) return;
 
-      if (needsTranscode && isLive && probeHeight >= 2160 && qualityIdx === 0) {
-        setQualityIdx(1);
-      }
+      if (needsTranscode && isLive && probeHeight >= 2160 && qualityIdx === 0) { setQualityIdx(1); }
 
       if (isLive) {
         const url = needsTranscode ? (transcodePath || streamPath) : streamPath;
@@ -1004,14 +673,8 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       clearTimeout(safetyTimer);
       clearLoadingTimeout();
       abortController.abort();
-
       const v = videoRef.current;
-      if (v) {
-        v.pause();
-        v.removeAttribute("src");
-        v.load();
-      }
-
+      if (v) { v.pause(); v.removeAttribute("src"); v.load(); }
       if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
       try { playerRef.current?.destroy(); } catch {}
       playerRef.current = null;
@@ -1023,14 +686,9 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
 
   // ── Retry ──────────────────────────────────────────────────
   const retryStream = useCallback(() => {
-    // Kill everything
     clearLoadingTimeout();
     const video = videoRef.current;
-    if (video) {
-      video.pause();
-      video.removeAttribute("src");
-      video.load();
-    }
+    if (video) { video.pause(); video.removeAttribute("src"); video.load(); }
     if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
     try { playerRef.current?.destroy(); } catch {}
     playerRef.current = null;
@@ -1042,41 +700,16 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     setRetryKey(k => k + 1);
   }, [clearLoadingTimeout]);
 
-  // ── DVR (Live TV buffer) ───────────────────────────────────
-  const [isBehindLive, setIsBehindLive] = useState(false);
-  const [secondsBehindLive, setSecondsBehindLive] = useState(0);
-  const [liveSeekableStart, setLiveSeekableStart] = useState(0);
-  const [liveSeekableEnd, setLiveSeekableEnd] = useState(0);
-  const dvrLiveEdgeRef = useRef(0);
-
-  const seekToLive = useCallback(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    const buf = v.buffered;
-    if (buf.length === 0) return;
-    // Jump to 2 seconds behind live edge for smooth playback
-    const liveEdge = Math.max(buf.end(0) - 2, 0);
-    v.currentTime = liveEdge;
-    setCurrentTime(liveEdge);
-    if (v.paused) v.play().catch(() => {});
-    setIsBehindLive(false);
-    setSecondsBehindLive(0);
-  }, []);
-
   // ── Audio track switching (VOD) ────────────────────────────
   const switchAudioTrack = useCallback((audioIndex: number) => {
     if (!isVod) return;
     const v = videoRef.current;
     if (!v) return;
     const savePos = v.currentTime;
-
-    // Determine stream ID and media type
-    const streamId = epId || id || "";
-    if (!streamId) return;
+    const sid = epId || id || "";
+    if (!sid) return;
     const mediaType = type === "series" ? "series" : "movie";
-    const audioUrl = `/api/audio/stream/${mediaType}/${streamId}/${audioIndex}`;
-
-    // Destroy current player
+    const audioUrl = `/api/audio/stream/${mediaType}/${sid}/${audioIndex}`;
     clearLoadingTimeout();
     v.pause();
     if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
@@ -1084,8 +717,6 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     playerRef.current = null;
     try { hlsRef.current?.destroy(); } catch {}
     hlsRef.current = null;
-
-    // Start new player with audio stream URL
     playVodRemux(audioUrl, savePos > 3 ? savePos : null, false);
   }, [isVod, type, id, epId, playVodRemux, clearLoadingTimeout]);
 
@@ -1100,8 +731,6 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   const seekTo = useCallback((time: number) => {
     const v = videoRef.current;
     if (!v) return;
-
-    // Live TV DVR — seek within the buffered range
     if (isLive) {
       const buf = v.buffered;
       if (buf.length === 0) return;
@@ -1110,21 +739,16 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       setCurrentTime(clampedTime);
       return;
     }
-
-    // HLS (cached) — native seeking, no player recreation needed
     if (hlsRef.current) {
       v.currentTime = Math.max(0, time);
       setCurrentTime(v.currentTime);
       return;
     }
-
-    // mpegts VOD — try native seeking first (works with isLive: false)
     if (!vodUrlRef.current) return;
     try {
       v.currentTime = Math.max(0, time);
       setCurrentTime(v.currentTime);
     } catch {
-      // Fall back: recreate player with start offset
       const url = vodUrlRef.current;
       const isTC = vodTranscodeRef.current;
       if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
@@ -1136,8 +760,6 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   const seek = useCallback((delta: number) => {
     const v = videoRef.current;
     if (!v) return;
-
-    // Live TV DVR — seek within buffered range
     if (isLive) {
       const buf = v.buffered;
       if (buf.length === 0) return;
@@ -1147,14 +769,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       return;
     }
     const target = Math.max(0, (v.currentTime || 0) + delta);
-
-    // HLS — native seeking is instant
-    if (hlsRef.current) {
-      v.currentTime = target;
-      setCurrentTime(target);
-      return;
-    }
-
+    if (hlsRef.current) { v.currentTime = target; setCurrentTime(target); return; }
     seekTo(target);
   }, [isLive, seekTo]);
 
@@ -1162,12 +777,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     const v = videoRef.current;
     if (v) {
       v.volume = val;
-      if (val > 0 && muted) {
-        v.muted = false;
-        userTouchedMuteRef.current = true;
-        setMuted(false);
-        saveMuted(false);
-      }
+      if (val > 0 && muted) { v.muted = false; userTouchedMuteRef.current = true; setMuted(false); saveMuted(false); }
     }
     setVolumeState(val);
     setMuted(val === 0);
@@ -1188,9 +798,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     setPlaybackRate(rate);
   }, []);
 
-  const setQuality = useCallback((idx: number) => {
-    setQualityIdx(idx);
-  }, []);
+  const setQuality = useCallback((idx: number) => { setQualityIdx(idx); }, []);
 
   const resumePlayback = useCallback(() => {
     setShowResumePrompt(false);
@@ -1212,14 +820,8 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
         const doc = document as DocumentWithWebkit;
         if (doc.webkitFullscreenElement) doc.webkitExitFullscreen();
       } catch {}
-
-      // Aggressive kill — same pattern as main effect cleanup
       const video = videoRef.current;
-      if (video) {
-        video.pause();
-        video.removeAttribute("src");
-        video.load();
-      }
+      if (video) { video.pause(); video.removeAttribute("src"); video.load(); }
       if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
       try { playerRef.current?.destroy(); } catch {}
       playerRef.current = null;
@@ -1231,44 +833,14 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   return {
     videoRef: videoRef as React.RefObject<HTMLVideoElement>,
     containerRef: containerRef as React.RefObject<HTMLDivElement>,
-    phase,
-    errorMsg,
-    errorType,
-    loadingStep,
-    transcoding,
-    volume,
-    muted,
-    playbackRate,
-    qualityIdx,
-    currentTime,
-    duration,
-    buffered,
-    resumePos,
-    showResumePrompt,
-    isLive,
-    isVod,
-    isBehindLive,
-    secondsBehindLive,
-    liveSeekableStart,
-    liveSeekableEnd,
-    // Connection quality
-    connectionQuality,
-    stallCount,
-    suggestLowerQuality,
-    downloadSpeed,
-    // Actions
-    seekToLive,
-    switchAudioTrack,
-    togglePlay,
-    seekTo,
-    seek,
-    setVolume,
-    toggleMute,
-    setSpeed,
-    setQuality,
-    resumePlayback,
-    startFromBeginning,
-    retryStream,
-    onAutoAdvance,
+    phase, errorMsg, errorType, loadingStep, transcoding,
+    volume, muted, playbackRate, qualityIdx,
+    currentTime, duration, buffered,
+    resumePos, showResumePrompt, isLive, isVod,
+    isBehindLive, secondsBehindLive, liveSeekableStart, liveSeekableEnd,
+    connectionQuality, stallCount, suggestLowerQuality, downloadSpeed,
+    seekToLive, switchAudioTrack, togglePlay, seekTo, seek,
+    setVolume, toggleMute, setSpeed, setQuality,
+    resumePlayback, startFromBeginning, retryStream, onAutoAdvance,
   };
 }
