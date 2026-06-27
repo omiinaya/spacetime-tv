@@ -8,16 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P2.1 — Add frontend tests for api.ts fetch utilities
-`fetchWithTimeout`, `fetchWithRetry`, and the `api` object methods
-in `web/src/lib/api.ts` have no unit tests. These are core networking
-primitives used by every API call. Add tests covering:
-- Timeout behavior (AbortSignal integration)
-- Retry logic (network errors retry, HTTP errors don't)
-- `imageUrl` edge cases (already covered but more could be added)
-- All `api.*` method signatures return expected shapes
-**Filed**: 2026-06-27
-
 ### P2.2 — Fix act() warnings in Player.test.tsx
 The vitest output shows:
 "An update to Player inside a test was not wrapped in act(...)."
@@ -44,6 +34,20 @@ Research update (2026-06-27):
 ---
 
 ## Recently Completed
+
+### P2.1 — Add frontend tests for api.ts fetch utilities
+Added 17 new tests covering the core networking primitives:
+- `fetchWithTimeout` (4 tests): normal resolution, abort on timeout,
+  custom timeout, parent signal integration
+- `fetchWithRetry` (6 tests): first-attempt success, retry on TypeError,
+  retry on AbortError, no retry on HTTP 4xx, exhaust retries, non-retryable
+  error propagation
+- `api` object integration (7 tests): `live.categories()`, `live.streams()`,
+  `movies.list()`, 404 error, `search()` with query encoding, `searchEnrich()`
+  POST method, `watchlist.progress()`
+- Exported `fetchWithTimeout` and `fetchWithRetry` from api.ts for testing
+-- 102 frontend + 59 backend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.42 — Refactor useVideoPlayer Phase 2: extract useStreamUrls hook
 Extracted 6 `useMemo` URL builders and 4 inline derivations (`isLive`,

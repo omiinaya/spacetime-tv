@@ -62,7 +62,7 @@ export function tmdbImgProps(path: string, defaultSize: string = "w342", sizes: 
 const FETCH_TIMEOUT = 15000; // 15s
 const MAX_RETRIES = 1;
 
-async function fetchWithTimeout(
+export async function fetchWithTimeout(
   url: string,
   options: RequestInit & { timeout?: number } = {}
 ): Promise<Response> {
@@ -85,7 +85,7 @@ async function fetchWithTimeout(
   }
 }
 
-async function fetchWithRetry(
+export async function fetchWithRetry(
   url: string,
   options: RequestInit & { timeout?: number; retries?: number } = {}
 ): Promise<Response> {
