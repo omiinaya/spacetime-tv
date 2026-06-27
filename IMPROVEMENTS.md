@@ -8,6 +8,27 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
+### P3.43 — Stale server integration test file cleanup
+The `server/test_server.py` file (284 lines) contains integration tests
+that require a running server on port 8720  — these are not run by the
+standard `pytest server/tests/` suite. Consider either removing it,
+moving it to `server/tests/` with a conftest fixture that starts
+the server, or adding a pytest marker.
+**Filed**: 2026-06-27
+
+### P3.44 — Add .gitignore for pytest worker temp directories
+Pytest leaves worker temp directories (e.g., `web/1503119589608001616/`)
+in the working tree. Add a `.gitignore` pattern for these.
+**Filed**: 2026-06-27
+
+### P3.45 — Evaluate shaka-player for alternative HLS playback
+shaka-player v5.1.11 (released June 24, 2026) offers robust
+DRM support, Offline playback, and native ManagedMediaSource support.
+Could be used as a fallback for hls.js or for enhanced DASH/CMAF
+support with live streams. Worth evaluating as a potential
+replacement or complement to hls.js.
+**Filed**: 2026-06-27
+
 ### P3.42 — useVideoPlayer refactor Phase 2: extract playback paths
 P3.36 Phase 1 extracted types, constants, and utilities into separate
 files. Phase 2 should extract the actual playback setup/teardown logic
@@ -129,9 +150,4 @@ Added IndexedDB queue, sync event handler in service worker, periodic register.
 ### P3.32 — Enable hls.js Web Worker for off-thread parsing
 Changed enableWorker: false → true for reduced main-thread CPU.
 ✅ Done: web/src/hooks/useVideoPlayer.ts
-**Filed**: 2026-06-26
-
-### P3.31 — Keyboard shortcut registry (global shortcuts hub)
-Central useKeyboardShortcuts hook with g→Guide, h→Home, m→Movies, s→Series, ?→shortcuts overlay.
-✅ Done: web/src/hooks/useKeyboardShortcuts.ts, web/src/components/KeyboardShortcuts.tsx
 **Filed**: 2026-06-26

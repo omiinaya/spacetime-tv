@@ -19,6 +19,7 @@ export { QUALITIES, SPEEDS } from "./usePlayerTypes";
 export { fmtTime } from "./usePlayerUtils";
 import { getWatchPos, getVolume, getMuted, saveVolume, saveMuted, probeStream, tryAutoplay, transcodeCache, saveWatchPos } from "./usePlayerUtils";
 import { QUALITIES } from "./usePlayerTypes";
+import { useMpegtsPlayer, type MpegtsPlayerCallbacks } from "./useMpegtsPlayer";
 
 // ── Constants for LIVE quality levels ─────────────────────────
 const QUALITY_HEIGHTS = QUALITIES.map(q => q.height);
@@ -99,6 +100,42 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   const decodedFramesRef = useRef(0);
   const stallTimestampsRef = useRef<number[]>([]);
 
+  // ── Live TV DVR state ──────────────────────────────────────────
+  const [isBehindLive, setIsBehindLive] = useState(false);
+  const [secondsBehindLive, setSecondsBehindLive] = useState(0);
+  const [liveSeekableStart, setLiveSeekableStart] = useState(0);
+  const [liveSeekableEnd, setLiveSeekableEnd] = useState(0);
+
+  // ── Sub-hooks: mpegts.js player (live TV) ─────────────────────
+  const mpegtsCallbacks = useMemo<MpegtsPlayerCallbacks>(() => ({
+    onPhaseChange: (phase) => { setPhase(phase); },
+    onError: (type, msg) => { setErrorType(type); setErrorMsg(msg); },
+    onAutoplayMuted: () => { setMuted(true); },
+    onStats: (speed, dropped, decoded) => {
+      setDownloadSpeed(speed);
+      droppedFramesRef.current = dropped;
+      decodedFramesRef.current = decoded;
+    },
+    onStall: () => { stallTimestampsRef.current.push(Date.now()); },
+    onPlaying: () => { clearLoadingTimeout(); setPhase("playing"); },
+    onLiveTimeUpdate: (ct, start, end, behind, isBehind) => {
+      setCurrentTime(ct);
+      setLiveSeekableStart(start);
+      setLiveSeekableEnd(end);
+      setSecondsBehindLive(behind);
+      setIsBehindLive(isBehind);
+    },
+    clearLoadingTimeout,
+    startLoadingTimeout,
+  }), [setPhase, setErrorType, setErrorMsg, setMuted, setDownloadSpeed, clearLoadingTimeout, startLoadingTimeout, setCurrentTime, setLiveSeekableStart, setLiveSeekableEnd, setSecondsBehindLive, setIsBehindLive]);
+
+  const {
+    playerRef: mpegtsPlayerRef,
+    mpegtsCleanupRef,
+    playMPEGTS: subHookPlayMPEGTS,
+    destroy: destroyMpegts,
+  } = useMpegtsPlayer(videoRef, mpegtsCallbacks);
+
   const computeConnectionQuality = useCallback(() => {
     const now = Date.now();
     const recentStalls = stallTimestampsRef.current.filter(t => now - t < 30000);
@@ -168,127 +205,12 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
 
   // ── Playback: MPEG-TS via mpegts.js (live TV only) ──────────
   const playMPEGTS = useCallback((url: string, liveFlag: boolean, isTranscode: boolean) => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
+    // Clean up HLS if present before delegating to sub-hook
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
-    video.removeAttribute("src");
-    if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
-
     setPhase("loading"); setErrorMsg(null);
     if (isTranscode) setTranscoding(true);
-    startLoadingTimeout();
-
-    const streamUrl = url;
-    let reconnectAttempts = 0;
-    const MAX_RECONNECTS = 100;
-
-    const createPlayer = () => {
-      const player = mpegts.createPlayer({ type: "mpegts", isLive: liveFlag, url: streamUrl }, {
-        enableWorkerForMSE: true,
-        liveBufferLatencyChasing: false,
-        autoCleanupSourceBuffer: true,
-        autoCleanupMaxBackwardDuration: 360,
-        autoCleanupMinBackwardDuration: 240,
-        liveSync: true,
-        liveSyncMaxLatency: 2,
-        liveSyncTargetLatency: 1,
-        liveSyncPlaybackRate: 1.1,
-      });
-      playerRef.current = player;
-
-      player.attachMediaElement(video);
-      player.load();
-
-      let loadStarted = false;
-      player.on(mpegts.Events.MEDIA_INFO, () => {
-        if (loadStarted) return;
-        loadStarted = true;
-        tryAutoplay(video, onAutoplayMuted).then((started) => {
-          if (!started) { clearLoadingTimeout(); if (phaseRef.current === "loading" || phaseRef.current === "probing") setPhase("paused"); }
-        });
-      });
-
-      player.on(mpegts.Events.LOADING_COMPLETE, () => {
-        if (!loadStarted) {
-          loadStarted = true;
-          tryAutoplay(video, onAutoplayMuted).then((started) => {
-            if (!started) { clearLoadingTimeout(); if (phaseRef.current === "loading" || phaseRef.current === "probing") setPhase("paused"); }
-          });
-        }
-        reconnectAttempts = 0;
-      });
-
-      let playingFired = false;
-      const onPlaying = () => {
-        if (!playingFired) { playingFired = true; clearLoadingTimeout(); if (phaseRef.current === "loading" || phaseRef.current === "probing") setPhase("playing"); }
-      };
-      video.addEventListener("playing", onPlaying);
-
-      let lastStatsTime = Date.now();
-      player.on(mpegts.Events.STATISTICS_INFO, (stats: any) => {
-        lastStatsTime = Date.now();
-        if (typeof stats?.speed === "number") setDownloadSpeed(stats.speed);
-        if (typeof stats?.droppedFrames === "number") droppedFramesRef.current = stats.droppedFrames;
-        if (typeof stats?.decodedFrames === "number") decodedFramesRef.current = stats.decodedFrames;
-      });
-
-      const onWaiting = () => { stallTimestampsRef.current.push(Date.now()); };
-      video.addEventListener("waiting", onWaiting);
-
-      player.on(mpegts.Events.ERROR, (_t: string, detail: { response?: { code?: number } }) => {
-        if (detail?.response?.code === 0) return;
-        if (!liveFlag) return;
-        if (reconnectAttempts < MAX_RECONNECTS) {
-          reconnectAttempts++;
-          try { player.destroy(); } catch {}
-          playerRef.current = null;
-          video.removeEventListener("playing", onPlaying);
-          setTimeout(() => { if (playerRef.current === null) createPlayer(); }, Math.min(reconnectAttempts * 1000, 5000));
-        }
-      });
-
-      const onTimeUpdate = () => {
-        if (!video || !liveFlag) return;
-        const ct = video.currentTime;
-        setCurrentTime(ct);
-        const buf = video.buffered;
-        if (buf.length > 0) {
-          const s = buf.start(0);
-          const e = buf.end(buf.length - 1);
-          setLiveSeekableStart(s);
-          setLiveSeekableEnd(e);
-          const behind = Math.max(0, e - ct);
-          setSecondsBehindLive(behind);
-          setIsBehindLive(behind > 3);
-        }
-      };
-      video.addEventListener("timeupdate", onTimeUpdate);
-
-      const healthCheck = setInterval(() => {
-        if (Date.now() - lastStatsTime > 15000 && liveFlag) {
-          clearInterval(healthCheck);
-          if (reconnectAttempts < MAX_RECONNECTS) {
-            reconnectAttempts++;
-            try { player.destroy(); } catch {}
-            playerRef.current = null;
-            video.removeEventListener("playing", onPlaying);
-            setTimeout(() => { if (playerRef.current === null) createPlayer(); }, Math.min(reconnectAttempts * 1000, 5000));
-          }
-        }
-      }, 5000);
-
-      mpegtsCleanup.current = () => {
-        clearInterval(healthCheck);
-        video.removeEventListener("playing", onPlaying);
-        video.removeEventListener("waiting", onWaiting);
-        video.removeEventListener("timeupdate", onTimeUpdate);
-      };
-    };
-
-    createPlayer();
-  }, [onAutoplayMuted]);
+    subHookPlayMPEGTS(url, liveFlag, isTranscode);
+  }, [setPhase, setErrorMsg, setTranscoding, subHookPlayMPEGTS]);
 
   // ── Playback: VOD via mpegts remux ──────────────────────────
   const playVodRemux = useCallback((streamUrl: string, startPos: number | null = null, isTranscode: boolean = false) => {
@@ -575,12 +497,6 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       setPhase("error"); setErrorMsg("Video not cached yet. Using streaming mode.");
     } catch { setPhase("error"); setErrorMsg("Failed to load cached video."); }
   }, [hlsInitUrl, playHLS]);
-
-  // ── DVR (Live TV buffer) ───────────────────────────────────
-  const [isBehindLive, setIsBehindLive] = useState(false);
-  const [secondsBehindLive, setSecondsBehindLive] = useState(0);
-  const [liveSeekableStart, setLiveSeekableStart] = useState(0);
-  const [liveSeekableEnd, setLiveSeekableEnd] = useState(0);
 
   const seekToLive = useCallback(() => {
     const v = videoRef.current;
