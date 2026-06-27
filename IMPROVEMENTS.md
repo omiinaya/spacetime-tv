@@ -8,22 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P1.1 — Fix `tsc --noEmit` errors in test files (vitest globals not typed)
-`tsc --noEmit` reported 31 errors in `src/lib/api.test.ts` because vitest globals
-(`vi`, `beforeEach`) weren't recognized by TypeScript's tsconfig. Fixed by excluding
-test files from the main tsconfig (standard practice — vitest handles its own type
-checking). Also added `npm test` / `npm run test:watch` scripts to package.json.
-✅ Done: web/tsconfig.json, web/package.json, IMPROVEMENTS.md
-— 102 frontend + 59 backend tests pass, `tsc --noEmit` clean (0 errors), committed and pushed.
-
-### P2.3 — Add `test` script to package.json
-The web app has vitest configured (vite.config.ts has `globals: true`,
-`environment: "jsdom"`, `setupFiles`) but no `npm test` script. Devs must
-remember `npx vitest run` instead of `npm test`. Added `"test": "vitest run"`
-and `"test:watch": "vitest"` scripts.
-✅ Done: web/package.json
-— `npm test` now runs all 102 frontend tests.
-
 ### P2.4 — HistoryPage: show "last watched" timestamps
 The new HistoryPage (moved from home page sidebar) lists recently-watched channels
 but doesn't show when each was last watched. The `RecentChannel` type in
@@ -36,6 +20,24 @@ time (e.g., "2h ago", "Yesterday") under each channel name.
 ---
 
 ## Recently Completed
+
+### P1.1 — Fix `tsc --noEmit` errors in test files (vitest globals not typed)
+`tsc --noEmit` reported 31 errors in `src/lib/api.test.ts` because vitest globals
+(`vi`, `beforeEach`) weren't recognized by TypeScript's tsconfig. Fixed by excluding
+test files from the main tsconfig (standard practice — vitest handles its own type
+checking). Also added `npm test` / `npm run test:watch` scripts to package.json.
+✅ Done: web/tsconfig.json, web/package.json, IMPROVEMENTS.md
+— 102 frontend + 59 backend tests pass, `tsc --noEmit` clean (0 errors), committed and pushed.
+**Filed**: 2026-06-27
+
+### P2.3 — Add `test` script to package.json
+The web app has vitest configured (vite.config.ts has `globals: true`,
+`environment: "jsdom"`, `setupFiles`) but no `npm test` script. Devs must
+remember `npx vitest run` instead of `npm test`. Added `"test": "vitest run"`
+and `"test:watch": "vitest"` scripts.
+✅ Done: web/package.json
+— `npm test` now runs all 102 frontend tests.
+**Filed**: 2026-06-27
 
 ### P3.8 — ManagedMediaSource API for MSE optimization
 Upgraded hls.js to latest canary (`1.7.0-beta.1` → `1.7.0-beta.1.0.canary.11864`)
@@ -103,23 +105,4 @@ before falling back to HLS. 11 new server-side tests for MPD validation.
 ✅ Done: server/main.py, web/src/hooks/useVideoPlayer.ts,
        server/tests/test_dash.py
 — 49 backend + 85 frontend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.48 — Resolve StarletteDeprecationWarning in test suite
-Added `httpx2>=2.0.0` to `server/requirements.txt`. Starlette's TestClient
-auto-detects httpx2 and prefers it over httpx, eliminating the warning.
-✅ Done: server/requirements.txt
-— 38 tests pass with zero warnings, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.46 — Eliminate remaining `as any` type casts (done)
-Replaced 3 `as any` casts with proper TypeScript types:
-- `usePlayerUtils.ts`: Declared `SyncManager` + `ServiceWorkerRegistrationWithSync`
-  interfaces for the Background Sync API sync.register() call.
-- `useShakaPlayer.ts`: Used `CustomEvent<shaka.util.Error>` for error event detail.
-- `Search.tsx`: Created `SearchResultsWithTotals` interface extending SearchResults
-  with optional `totals`. Simplified cache-hit totals access.
-✅ Done: web/src/hooks/usePlayerUtils.ts, web/src/hooks/useShakaPlayer.ts,
-       web/src/pages/Search.tsx
-— Zero `as any` casts remaining. TypeScript clean, 38 backend tests pass, committed and pushed.
 **Filed**: 2026-06-27
