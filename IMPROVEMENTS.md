@@ -8,25 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.28 — Enable MSE-in-Workers for mpegts.js (performance) ✅
-mpegts.js v1.8.0 supports MSE-in-Workers (`config.enableWorkerForMSE`)
-for offloading MSE processing to a Web Worker. Can reduce main-thread
-jank during playback, especially on low-end devices.
-**Action**: Set `enableWorkerForMSE: true` in both live and VOD
-player configurations. Test on real devices for compatibility.
-**Filed**: 2026-06-26
-✅ Done: web/src/hooks/useVideoPlayer.ts — 31 backend tests pass,
-TypeScript clean, committed and pushed.
-
-### P3.29 — Enable liveSync for mpegts.js live playback
-mpegts.js v1.8.0 supports `config.liveSync` for smoother live latency
-chasing by adjusting playback rate. Currently live buffer uses
-`liveBufferLatencyChasing: false`. Enabling liveSync + tuning
-parameters could reduce live delay naturally without abrupt seeks.
-**Action**: Enable `liveSync: true` in live player config, test
-behaviour with real streams.
-**Filed**: 2026-06-26
-
 ### P3.30 — EPG search/filter bar for TV Guide
 The Guide page shows all channels/programmes but has no way to filter
 by programme title or channel name. Add a search bar at the top of the
@@ -89,6 +70,22 @@ Moved here from Recently Completed upon reaching the 10-entry cap.
 ---
 
 ## Recently Completed
+
+### P3.29 — Enable liveSync for mpegts.js live playback
+Enabled `liveSync: true` with tuned parameters in live mpegts.js config:
+`liveSyncMaxLatency=2`, `liveSyncTargetLatency=1`, `liveSyncPlaybackRate=1.1`.
+Smoother latency chasing via playback rate adjustment instead of abrupt seeks.
+✅ Done: web/src/hooks/useVideoPlayer.ts
+— 31 backend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-26
+
+### P3.28 — Enable MSE-in-Workers for mpegts.js (performance)
+mpegts.js v1.8.0 supports MSE-in-Workers (`config.enableWorkerForMSE`)
+for offloading MSE processing to a Web Worker. Can reduce main-thread
+jank during playback, especially on low-end devices.
+✅ Done: web/src/hooks/useVideoPlayer.ts — 31 backend tests pass,
+TypeScript clean, committed and pushed.
+**Filed**: 2026-06-26
 
 ### P3.27 — Admin dashboard: EPG refresh trigger
 Added `POST /api/admin/epg/refresh` endpoint that calls

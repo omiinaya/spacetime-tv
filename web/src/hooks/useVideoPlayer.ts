@@ -367,6 +367,11 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
         autoCleanupSourceBuffer: true,
         autoCleanupMaxBackwardDuration: 360,
         autoCleanupMinBackwardDuration: 240,
+        // Live latency chasing via playback rate adjustment (smoother than abrupt seeks)
+        liveSync: true,
+        liveSyncMaxLatency: 2,
+        liveSyncTargetLatency: 1,
+        liveSyncPlaybackRate: 1.1,
       });
       playerRef.current = player;
 
