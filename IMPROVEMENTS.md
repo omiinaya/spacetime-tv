@@ -8,17 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.39 — TMDB responsive images with srcset for posters
-Currently all posters/backdrops use a single TMDB image size (usually
-w500 or original). TMDB serves multiple sizes (w92, w154, w185, w342,
-w500, w780, original). Adding `srcset` + `sizes` attributes on movie
-and series poster/backdrop images would reduce mobile data usage by
-downloading only the size needed for the viewport.
-**Action**: Update `imageUrl()` in `api.ts` to accept a `size` param;
-add a `srcset` helper that generates TMDB srcset string; apply to
-poster images in MovieCard, SeriesCard, and detail views.
-**Filed**: 2026-06-26
-
 ### P3.40 — Episode number badges in SeriesOverlay episode grid
 The episode selection grid in SeriesOverlay currently shows thumbnails
 and titles but no episode number badge. Adding the episode number
@@ -74,6 +63,19 @@ Research update (2026-06-26):
 ---
 
 ## Recently Completed
+
+### P3.39 — TMDB responsive images with srcset for posters
+Added `tmdbImageUrl`, `tmdbSrcset`, `tmdbImgProps` helpers to api.ts.
+Updated all components (HomePage, Movies, Series, MovieOverlay,
+SeriesOverlay, TmdbSimilarMovies, Search) to use responsive srcset
+for TMDB poster/backdrop images. Added 14 new unit tests for the
+helpers. Mobile browsers now download only the image size needed.
+✅ Done: web/src/lib/api.ts, web/src/lib/api.test.ts,
+       web/src/pages/{Movies,Series,HomePage,Search}.tsx,
+       web/src/components/{MovieOverlay,SeriesOverlay,
+         MediaOverlay,TmdbSimilarMovies}.tsx
+— 38 backend + 79 frontend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.38 — Series page pagination controls (numbered pages)
 Added "Show All" button on each ContentRow with >20 items.
