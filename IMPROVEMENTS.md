@@ -10,21 +10,13 @@ and works the top pending item each tick.
 
 ### P3.9 — Evaluate hls.js v1.7.0-beta.1 stable vs current canary build
 The project uses `hls.js@1.7.0-beta.1.0.canary.11864` for MSE/ManagedMediaSource
-fixes ahead of stable v1.7.0. The stable v1.7.0 has not yet been released (latest
-stable remains 1.6.16). The canary build carries incremental MSE/ManagedMediaSource
-fixes not present in any stable release. No evaluation possible until v1.7.0 stable
-ships.
+fixes ahead of stable v1.7.0. As of 2026-06-27, stable v1.7.0 has not yet been
+released (latest stable remains 1.6.16, released April 2026). The canary build
+carries incremental MSE/ManagedMediaSource fixes not present in any stable
+release. No evaluation possible until v1.7.0 stable ships. Monitor: still blocked.
 - [x] Compare canary vs stable changelogs for MSE/ManagedMediaSource fixes
 - [ ] Run playback tests with stable v1.7.0-beta.1 (blocked — no stable release)
 - [ ] Update web/package.json if compatible
-
-### P2.9 — Add component tests for LiveTV page
-The LiveTV page renders channel cards, category filters, search bar, and
-now-playing indicators. No component tests exist for this page.
-- [ ] Create LiveTV page component tests covering channel card rendering
-- [ ] Test category filter tab selection and filtering
-- [ ] Test search within category filter interaction
-- [ ] Test empty state and error state
 
 ### P3.11 — Add component tests for MovieOverlay and SeriesOverlay
 The MovieOverlay and SeriesOverlay are rich overlays with TMDB enrichment,
@@ -44,9 +36,49 @@ React error boundary with "Something went wrong" UI and recovery button.
 - [ ] Add "Reload" and "Go Home" recovery actions
 - [ ] Test that boundary catches rendering errors gracefully
 
+### P2.10 — Add component tests for Movies page
+The Movies page renders category tabs, movie card grid with lazy loading,
+pagination controls, and search. No component tests exist.
+- [ ] Create Movies page tests for category tabs and filtering
+- [ ] Test movie card rendering (poster, lazy loading, fallback, year badge)
+- [ ] Test pagination controls and page navigation
+- [ ] Test search within selected category
+- [ ] Test empty and error states
+
+### P2.11 — Add component tests for Series page
+The Series page renders category tabs, series card grid with season/episode
+progress, Recently Completed section, and search. No component tests exist.
+- [ ] Create Series page tests for category tabs and filtering
+- [ ] Test series card rendering (cover, progress bar, episode count badge)
+- [ ] Test Recently Completed section interaction
+- [ ] Test search and empty states
+
 ---
 
 ## Recently Completed
+
+### P2.9 — Add component tests for LiveTV page
+Added 28 component tests for the LiveTV page covering all render states:
+- Loading: skeleton shimmer placeholders for header and tabs
+- Error: error message display with Retry button for category fetch failures
+- Empty: "No channels available", "No categories match your filters" (adult
+  content filtered), "No channels matching" search with Clear search flow
+- Normal: Live TV heading, channel count in subtitle, category filter tabs
+  ("All" + per-category), channel card rendering with names
+- Channel cards: icon images with lazy loading, fallback Tv icon for
+  channels without icons, channel number badges for num>0, now-playing
+  EPG text when available, navigation to /watch/live/:stream_id
+- Category filtering: "All" tab shows all channels, clicking a category
+  tab calls api.live.streams with correct category_id
+- Search: search input with placeholder, text filtering channel names,
+  result count display in subtitle, clear via X button or "Clear search"
+- Favorites: favorites section heading (with count badge), favorites-only
+  filter toggle button, favorites channels rendered in dedicated section
+- Edge cases: single channel, empty EPG now-playing (no text rendered),
+  search clear restores full channel list
+✅ Done: web/src/pages/__tests__/LiveTV.test.tsx
+— 231 frontend tests pass, TypeScript clean (0 errors), committed and pushed.
+**Filed**: 2026-06-27
 
 ### P2.8 — Add component tests for ContinueWatching section on HomePage
 Added 21 component tests for the HomePage covering the Continue Watching
