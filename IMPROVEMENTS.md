@@ -8,22 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.21 — Add component tests for OfflineBanner and utility components
-OfflineBanner, ChannelRow, PWAInstallPrompt, and other utility components have
-no test coverage. These are small but widely used across the app.
-- [ ] Create OfflineBanner.test.tsx
-- [ ] Create ChannelRow.test.tsx
-- [ ] Create PWAInstallPrompt.test.tsx
-
-### P3.22 — Add component tests for Pagination, Skeleton, and ContentRow
-Pagination, Skeleton, and ContentRow are utility components used across multiple
-pages but have no dedicated test coverage. Pagination handles page controls,
-Skeleton provides loading placeholders, and ContentRow renders horizontal
-scrolling content sections.
-- [ ] Create Pagination.test.tsx with 8+ tests
-- [ ] Create Skeleton.test.tsx with 5+ tests
-- [ ] Create ContentRow.test.tsx with 8+ tests
-
 ### P3.23 — Add lib tests for uncovered modules (watchlist, searchHistory, settings)
 The watchlist, searchHistory, and settings lib modules handle core app state
 (localStorage-backed) but have no direct test coverage.
@@ -46,6 +30,17 @@ across the codebase, 8 test file mocks, and package.json. 575 tests pass
 published on npm — latest tag is 1.6.16, latest overall is 1.7.0-beta.1
 (already in use). No action needed. Canary builds (`1.7.0-beta.1.0.canary.*`)
 are dev builds with no stable milestone in sight.
+
+### P3.21 — Add component tests for OfflineBanner, ChannelRow, PWAInstallPrompt
+✅ Done: test files already created by CI agent — OfflineBanner.test.tsx (11
+tests), ChannelRow.test.tsx (26 tests), PWAInstallPrompt.test.tsx (12 tests).
+Committed as part of P3.14 commit. 575 total frontend tests.
+
+### P3.22 — Add component tests for Pagination, Skeleton, and ContentRow
+✅ Done: Pagination.test.tsx (26 tests), Skeleton.test.tsx (23 tests),
+ContentRow.test.tsx (18 tests) — 67 total. Covers page buttons, ellipsis,
+jump-to-page, shimmer animation, skeleton variants, header/scroll/keyboard nav.
+642 frontend tests pass (29 files), 69 backend tests pass, TS clean.
 
 ### P3.20 — Add component tests for PersonPage
 | ✅ Done: web/src/pages/__tests__/PersonPage.test.tsx — 25 component tests
