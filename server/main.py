@@ -2613,6 +2613,151 @@ async def serve_hls_file(stream_type: str, stream_id: str, filename: str):
     })
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# ── DASH Streaming (MPD manifest generation) ─────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# Generate DASH MPD manifests that wrap existing stream endpoints for
+# shaka-player playback with mimeType="application/dash+xml".
+
+
+def _mime_from_url(url: str) -> str:
+    """Guess the content mime type from a stream URL extension."""
+    ext = url.rsplit(".", 1)[-1].lower() if "." in url else ""
+    mime_map = {
+        "ts": "video/mp2t",
+        "mkv": "video/x-matroska",
+        "mp4": "video/mp4",
+        "m4v": "video/mp4",
+        "webm": "video/webm",
+        "avi": "video/x-msvideo",
+        "mov": "video/quicktime",
+    }
+    return mime_map.get(ext, "video/mp2t")
+
+
+def generate_live_mpd(stream_id: int, stream_url: str) -> str:
+    """Generate a dynamic MPD manifest for a live MPEG-TS stream.
+
+    The MPD wraps the existing stream proxy endpoint so shaka-player
+    can load it with mimeType='application/dash+xml'.
+    Uses the 'dynamic' profile for live content.
+    """
+    mime = _mime_from_url(stream_url)
+    # Escape XML special characters in the URL
+    safe_url = stream_url.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    # Timestamp in ISO 8601 for availabilityStartTime
+    from datetime import datetime, timezone
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    return f'''<?xml version="1.0" encoding="utf-8"?>
+<MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xmlns="urn:mpeg:dash:schema:mpd:2011"
+     profiles="urn:mpeg:dash:profile:isoff-live:2011"
+     type="dynamic"
+     availabilityStartTime="{now_iso}"
+     publishTime="{now_iso}"
+     minimumUpdatePeriod="PT10S"
+     minBufferTime="PT15S"
+     timeShiftBufferDepth="PT120S">
+  <Period id="1">
+    <AdaptationSet mimeType="{mime}" contentType="video" startWithSAP="1">
+      <Representation bandwidth="5000000">
+        <BaseURL>{safe_url}</BaseURL>
+        <SegmentBase indexRangeExact="true">
+          <Initialization range="0-0" />
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>'''
+
+
+def generate_vod_mpd(stream_id: int, stream_type: str, stream_url: str) -> str:
+    """Generate a static onDemand MPD manifest for a VOD MKV/fMP4 stream.
+
+    Uses the 'static' onDemand profile which works with single-file
+    content. shaka-player will use byte-range requests (via our
+    existing Range-supporting stream endpoints) to seek within the file.
+    """
+    mime = _mime_from_url(stream_url)
+    safe_url = stream_url.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+    return f'''<?xml version="1.0" encoding="utf-8"?>
+<MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xmlns="urn:mpeg:dash:schema:mpd:2011"
+     profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"
+     type="static">
+  <Period>
+    <AdaptationSet mimeType="{mime}" contentType="video" startWithSAP="1">
+      <Representation bandwidth="5000000">
+        <BaseURL>{safe_url}</BaseURL>
+        <SegmentBase indexRangeExact="true">
+          <Initialization range="0-0" />
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>'''
+
+
+@app.get("/api/stream/live/{stream_id}/manifest.mpd")
+async def live_dash_manifest(stream_id: int):
+    """DASH MPD manifest for live TV stream playback via shaka-player.
+
+    Returns a dynamic MPD that wraps our existing live TS stream proxy
+    endpoint. The frontend passes mimeType='application/dash+xml' to
+    the useShakaPlayer hook.
+    """
+    url = build_stream_url(stream_id, "live")
+    xml = generate_live_mpd(stream_id, url)
+    return Response(
+        content=xml,
+        media_type="application/dash+xml",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-cache",
+        },
+    )
+
+
+@app.get("/api/stream/movie/{stream_id}/manifest.mpd")
+async def movie_dash_manifest(stream_id: int):
+    """DASH MPD manifest for movie playback via shaka-player.
+
+    Returns a static onDemand MPD wrapping our existing movie stream
+    proxy endpoint. shaka-player uses byte-range requests for seeking.
+    """
+    url = build_stream_url(stream_id, "movie")
+    xml = generate_vod_mpd(stream_id, "movie", url)
+    return Response(
+        content=xml,
+        media_type="application/dash+xml",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-cache",
+        },
+    )
+
+
+@app.get("/api/stream/series/{series_id}/{episode_id}/manifest.mpd")
+async def series_dash_manifest(series_id: int, episode_id: int):
+    """DASH MPD manifest for series episode playback via shaka-player.
+
+    Returns a static onDemand MPD wrapping our existing series stream
+    proxy endpoint.
+    """
+    url = build_stream_url(episode_id, "series")
+    xml = generate_vod_mpd(episode_id, "series", url)
+    return Response(
+        content=xml,
+        media_type="application/dash+xml",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-cache",
+        },
+    )
+
+
 # ── Serve Frontend (must be last) ───────────────────────────────────────────
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")

@@ -98,6 +98,13 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   const [liveSeekableStart, setLiveSeekableStart] = useState(0);
   const [liveSeekableEnd, setLiveSeekableEnd] = useState(0);
 
+  // ── DASH MPD URL for shaka-player (depends only on params) ──
+  const dashUrl: string | null =
+    type === "live" ? `/api/stream/live/${id}/manifest.mpd`
+    : type === "movie" ? `/api/stream/movie/${id}/manifest.mpd`
+    : type === "series" && seriesId && epId ? `/api/stream/series/${seriesId}/${epId}/manifest.mpd`
+    : null;
+
   // ── Sub-hooks: mpegts.js player (live TV) ─────────────────────
   const mpegtsCallbacks = useMemo<MpegtsPlayerCallbacks>(() => ({
     onPhaseChange: (phase) => { setPhase(phase); },
@@ -159,15 +166,21 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     onAutoplayMuted: () => { setMuted(true); },
     clearLoadingTimeout,
     onHlsFatalError: (url) => {
-      // Fall back to shaka-player when hls.js fails unrecoverably
+      // Fall back to shaka-player when hls.js fails unrecoverably.
+      // Try DASH MPD first (better adaptive bitrate), then HLS as fallback.
       shakaFallbackUrlRef.current = url;
       setPhase("loading");
       setErrorMsg(null);
       // Compute watchKey inline since it's defined later in the hook
       const wk = type === "movie" ? `vod_${id}` : type === "series" ? `ep_${seriesId}_${epId}` : "";
-      subPlayShaka(url, "application/x-mpegURL", null, type, seriesId, epId, id, wk, onAutoAdvance);
+      // Use DASH MPD if available (better adaptive streaming)
+      if (dashUrl) {
+        subPlayShaka(dashUrl, "application/dash+xml", null, type, seriesId, epId, id, wk, onAutoAdvance);
+      } else {
+        subPlayShaka(url, "application/x-mpegURL", null, type, seriesId, epId, id, wk, onAutoAdvance);
+      }
     },
-  }), [setPhase, setErrorType, setErrorMsg, setMuted, setCurrentTime, setBuffered, setDuration, clearLoadingTimeout, subPlayShaka, type, seriesId, epId, id, onAutoAdvance]);
+  }), [setPhase, setErrorType, setErrorMsg, setMuted, setCurrentTime, setBuffered, setDuration, clearLoadingTimeout, subPlayShaka, type, seriesId, epId, id, onAutoAdvance, dashUrl]);
 
   const {
     hlsRef: subHlsRef,
