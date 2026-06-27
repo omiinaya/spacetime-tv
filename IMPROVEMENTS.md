@@ -9,22 +9,20 @@ and works the top pending item each tick.
 ## Status: PENDING
 
 ### P1.1 — Fix `tsc --noEmit` errors in test files (vitest globals not typed)
-`tsc --noEmit` reports 31 errors in `src/lib/api.test.ts` because vitest globals
-(`vi`, `beforeEach`) aren't recognized by TypeScript's tsconfig. The vite.config.ts
-already has `globals: true` under the test section, but tsconfig needs to either
-exclude test files or include vitest types. Excluding test files is standard practice.
-- [ ] Exclude `src/**/*.test.ts`, `src/**/*.test.tsx`, `src/**/*.spec.ts` from tsconfig.json
-- [ ] Verify `npx tsc --noEmit` exits cleanly (0 errors)
-- [ ] Verify `npx vitest run` still passes all 102 tests
-- [ ] Run backend tests too; commit and push
+`tsc --noEmit` reported 31 errors in `src/lib/api.test.ts` because vitest globals
+(`vi`, `beforeEach`) weren't recognized by TypeScript's tsconfig. Fixed by excluding
+test files from the main tsconfig (standard practice — vitest handles its own type
+checking). Also added `npm test` / `npm run test:watch` scripts to package.json.
+✅ Done: web/tsconfig.json, web/package.json, IMPROVEMENTS.md
+— 102 frontend + 59 backend tests pass, `tsc --noEmit` clean (0 errors), committed and pushed.
 
 ### P2.3 — Add `test` script to package.json
 The web app has vitest configured (vite.config.ts has `globals: true`,
 `environment: "jsdom"`, `setupFiles`) but no `npm test` script. Devs must
-remember `npx vitest run` instead of `npm test`. Add `"test": "vitest run"`
+remember `npx vitest run` instead of `npm test`. Added `"test": "vitest run"`
 and `"test:watch": "vitest"` scripts.
-- [ ] Add `"test": "vitest run"` and `"test:watch": "vitest"` to package.json scripts
-- [ ] Verify `npm test` runs all 102 frontend tests
+✅ Done: web/package.json
+— `npm test` now runs all 102 frontend tests.
 
 ### P2.4 — HistoryPage: show "last watched" timestamps
 The new HistoryPage (moved from home page sidebar) lists recently-watched channels
