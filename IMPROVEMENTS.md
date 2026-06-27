@@ -8,20 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.41 — Add tests for loadServerProgress() merge helper
-P3.37 added the `loadServerProgress()` function that merges server-side
-watch progress with local continue-watching state. This function has
-non-trivial merge logic (dedup by key, timestamp comparison, fallback
-on network error) that should be covered by unit tests.
-**Action**: Add vitest tests for `loadServerProgress()` in
-`web/src/lib/__tests__/continueWatching.test.ts` covering:
-- Happy path: server returns entries that merge correctly
-- Conflict resolution: server entry newer vs local entry newer
-- Server unreachable: falls back to local data
-- No server data: returns local data unchanged
-- Mixed series + movie entries
-**Filed**: 2026-06-27
-
 ### P3.42 — useVideoPlayer refactor Phase 2: extract playback paths
 P3.36 Phase 1 extracted types, constants, and utilities into separate
 files. Phase 2 should extract the actual playback setup/teardown logic
@@ -53,6 +39,15 @@ Research update (2026-06-26):
 ---
 
 ## Recently Completed
+
+### P3.41 — Add tests for loadServerProgress() merge helper
+Added 6 vitest tests covering merge logic: happy path, conflict
+resolution (newer wins for both series and movies), server fallback,
+empty server response, and MAX_ITEMS cap. Also fixed a bug where an
+early return on empty server response skipped merging with local data.
+✅ Done: web/src/lib/continueWatching.test.ts, web/src/lib/continueWatching.ts
+— 38 backend + 85 frontend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.40 — Episode number badges in SeriesOverlay episode grid
 Added "E{num}" overlay badge (padded to 2 digits) at the top-right
