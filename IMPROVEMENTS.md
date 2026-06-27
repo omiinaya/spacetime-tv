@@ -8,14 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P2.2 — Fix act() warnings in Player.test.tsx
-The vitest output shows:
-"An update to Player inside a test was not wrapped in act(...)."
-Wrap state-updating events in `act()` or use `waitFor()` for
-async state updates to eliminate warnings and follow React testing
-best practices.
-**Filed**: 2026-06-27
-
 ### P3.8 — ManagedMediaSource API for MSE optimization
 Research update (2026-06-27):
 - hls.js still at v1.7.0-beta.1 (June 2, 2026). Latest canary `1.7.0-beta.1.0.canary.11864`
@@ -34,6 +26,16 @@ Research update (2026-06-27):
 ---
 
 ## Recently Completed
+
+### P2.2 — Fix act() warnings in Player.test.tsx
+All 8 Player tests were producing "An update to Player inside a test
+was not wrapped in act(...)" warnings because useVideoPlayer's initial
+useEffect fires setPhase("probing") outside an act() boundary. Added
+`await act(async () => {})` flush after render in all synchronous tests
+to settle pending React state updates before assertions. Zero act()
+warnings remaining across all 6 test files.
+✅ Done: web/src/components/__tests__/Player.test.tsx
+— 102 frontend + 59 backend tests pass, TypeScript clean.
 
 ### P2.1 — Add frontend tests for api.ts fetch utilities
 Added 17 new tests covering the core networking primitives:
@@ -117,4 +119,3 @@ to prevent pytest worker temp directories from appearing in `git status`.
 ✅ Done: .gitignore
 — All existing tests pass, committed and pushed.
 **Filed**: 2026-06-27
-

@@ -6,7 +6,7 @@
  * sub-components. We test the rendering logic in different phases.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Player from "@/components/Player";
 
@@ -130,34 +130,39 @@ describe("Player — rendering by type", () => {
     vi.clearAllMocks();
   });
 
-  it("renders a video element for live type", () => {
-    renderPlayer("live", { id: "123" });
-    const video = document.querySelector("video");
+  it('renders a video element for live type', async () => {
+    renderPlayer('live', { id: '123' });
+    await act(async () => {});
+    const video = document.querySelector('video');
     expect(video).not.toBeNull();
-    expect(video?.getAttribute("playsinline")).toBe("");
+    expect(video?.getAttribute('playsinline')).toBe('');
   });
 
-  it("renders a video element for movie type", () => {
-    renderPlayer("movie", { id: "456" });
-    const video = document.querySelector("video");
-    expect(video).not.toBeNull();
-  });
-
-  it("renders a video element for series type", () => {
-    renderPlayer("series", { seriesId: "42", epId: "101" });
-    const video = document.querySelector("video");
+  it('renders a video element for movie type', async () => {
+    renderPlayer('movie', { id: '456' });
+    await act(async () => {});
+    const video = document.querySelector('video');
     expect(video).not.toBeNull();
   });
 
-  it("has back button in top bar", () => {
-    renderPlayer("movie", { id: "789" });
-    const backButton = screen.getByLabelText("Back to browsing");
+  it('renders a video element for series type', async () => {
+    renderPlayer('series', { seriesId: '42', epId: '101' });
+    await act(async () => {});
+    const video = document.querySelector('video');
+    expect(video).not.toBeNull();
+  });
+
+  it('has back button in top bar', async () => {
+    renderPlayer('movie', { id: '789' });
+    await act(async () => {});
+    const backButton = screen.getByLabelText('Back to browsing');
     expect(backButton).not.toBeNull();
   });
 
-  it("has PiP button in top bar", () => {
-    renderPlayer("movie", { id: "101112" });
-    const pipButton = screen.getByLabelText("Picture in Picture");
+  it('has PiP button in top bar', async () => {
+    renderPlayer('movie', { id: '101112' });
+    await act(async () => {});
+    const pipButton = screen.getByLabelText('Picture in Picture');
     expect(pipButton).not.toBeNull();
   });
 });
