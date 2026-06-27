@@ -417,6 +417,10 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
                       ) : (
                         <div className="w-full h-full flex items-center justify-center"><Play className="h-6 w-6 text-white/10" /></div>
                       )}
+                      {/* Episode number badge */}
+                      <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-black/70 text-[10px] font-bold text-white/90 rounded">
+                        E{String(ep.episode_num).padStart(2, '0')}
+                      </span>
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                         <Play className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
                       </div>
