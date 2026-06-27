@@ -360,6 +360,8 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
         isLive: liveFlag,
         url: streamUrl,
       }, {
+        // Use a Web Worker for MSE operations to reduce main-thread jank
+        enableWorkerForMSE: true,
         // DVR buffer: keep ~5 minutes of backward data for seek/pause support
         liveBufferLatencyChasing: false,
         autoCleanupSourceBuffer: true,
@@ -514,6 +516,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     vodTranscodeRef.current = isTranscode;
 
     const player = mpegts.createPlayer({ type: "mpegts", isLive: false, url }, {
+      enableWorkerForMSE: true,
       autoCleanupSourceBuffer: false,
     });
     playerRef.current = player;
