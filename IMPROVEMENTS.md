@@ -8,21 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P2.5 — Add unit tests for `timeAgo` helper and `recentChannels` module
-The `utils.ts` (timeAgo) and `recentChannels.ts` modules have zero test coverage.
-The `timeAgo` function handles various time boundaries (seconds, minutes, hours,
-days, months, years). The `recentChannels` module persists to localStorage with
-14-day expiry and max-12-item limit.
-- [ ] Add test file `src/lib/utils.test.ts` covering:
-  - timeAgo: "Just now", "Xs ago", "Xm ago", "Xh ago", "Yesterday", "X days ago",
-    "Xmo ago", "Xy ago"
-  - timeAgo edge cases: null/undefined/0/future timestamps
-- [ ] Add test file `src/lib/recentChannels.test.ts` covering:
-  - getRecentChannels with empty/valid/expired localStorage
-  - saveRecentChannel deduplication and max limit
-  - clearRecentChannels
-  - 14-day expiry filtering
-
 ### P2.6 — Add component tests for HistoryPage
 HistoryPage was recently extracted from the home page sidebar but has no tests.
 Key behaviors to cover: renders channel cards, shows timestamps via timeAgo,
@@ -47,9 +32,45 @@ empty states, favorites toggle) is not.
 - [ ] Test channel count in header
 - [ ] Test favorites filter toggle interaction
 
+### P3.9 — Evaluate hls.js v1.7.0-beta.1 stable vs current canary build
+The project uses `hls.js@1.7.0-beta.1.0.canary.11864` for MSE/ManagedMediaSource
+fixes ahead of stable v1.7.0. The stable v1.7.0-beta.1 is now available, adding
+I-frame playlist support, CMCD v2 analytics, and smoother audio-track switching.
+Evaluate if switching from canary to stable provides benefits or breaks existing
+playback behavior.
+- [ ] Compare canary vs stable changelogs for MSE/ManagedMediaSource fixes
+- [ ] Run playback tests with stable v1.7.0-beta.1
+- [ ] Update web/package.json if compatible
+
+### P3.10 — Add backend tests for rate limiting middleware
+The RateLimitMiddleware in main.py (~25 lines) has no tests. Key behaviors:
+rate limit applied to search/image-proxy paths, rate limit resets after window,
+different limits for search vs default paths, correct Retry-After header.
+- [ ] Add `server/tests/test_rate_limit.py` with endpoint-based rate limit tests
+- [ ] Test per-IP isolation, window expiry, Retry-After header
+
+### P2.8 — Add component tests for ContinueWatching page
+The ContinueWatching page (or section) has 20 utility tests in
+`continueWatching.test.ts` but no component-level tests. Add tests covering
+empty state, item rendering, and interaction.
+- [ ] Create component test file for ContinueWatching
+- [ ] Mock continue-watching data hooks
+- [ ] Test empty state, item rendering, and resume interaction
+
 ---
 
 ## Recently Completed
+
+### P2.5 — Add unit tests for `timeAgo` helper and `recentChannels` module
+Added 25 new tests covering the `timeAgo` utility and `recentChannels` module:
+- `utils.test.ts` (13 tests): all time boundaries (Just now, Xs/m/h, Yesterday,
+  X days/mo/y), edge cases (null/undefined/0/negative/future timestamps)
+- `recentChannels.test.ts` (12 tests): empty/valid/expired localStorage,
+  corrupted JSON, dedup by stream_id, max-12-item limit, 14-day expiry,
+  clearRecentChannels
+✅ Done: web/src/lib/utils.test.ts, web/src/lib/recentChannels.test.ts
+— 127 frontend + 59 backend tests pass, TypeScript clean (0 errors), committed and pushed.
+**Filed**: 2026-06-27
 
 ### P2.4 — HistoryPage: show "last watched" timestamps
 HistoryPage lists recently-watched channels but didn't show when each was last
