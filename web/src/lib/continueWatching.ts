@@ -175,7 +175,6 @@ export async function loadServerProgress(): Promise<{
   try {
     const res = await api.watchlist.progress();
     const allEntries = Object.values(res.progress).flat();
-    if (allEntries.length === 0) return { series: [], movies: [] };
 
     // Convert server entries to local format
     const serverSeries: SeriesProgress[] = [];

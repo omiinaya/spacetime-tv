@@ -1,13 +1,15 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   getContinueWatching,
   saveSeriesProgress,
   removeSeriesProgress,
   getMovieContinueWatching,
   saveMovieProgress,
+  loadServerProgress,
   type SeriesProgress,
   type MovieProgress,
 } from "./continueWatching";
+import { api, type ServerProgressEntry, type ServerSeriesProgressData, type ServerMovieProgressData } from "@/lib/api";
 
 // These functions read/write localStorage — vitest/jsdom mocks it
 
@@ -151,5 +153,164 @@ describe("MovieProgress CRUD", () => {
 
   it("returns empty array when no data", () => {
     expect(getMovieContinueWatching()).toEqual([]);
+  });
+});
+
+// ── Helper: build a server series entry ──────────────────────────
+function serverSeriesEntry(
+  overrides: Partial<ServerSeriesProgressData> & { position?: number; timestamp?: number } = {}
+): ServerProgressEntry {
+  const entry: ServerSeriesProgressData = {
+    seriesId: 1,
+    seriesName: "Server Series",
+    cover: "https://example.com/series.jpg",
+    seasonNumber: 1,
+    episodeNum: 1,
+    episodeId: "100",
+    episodeTitle: "Server Episode",
+    durationSeconds: 1800,
+    ...overrides,
+  };
+  return {
+    watchKey: `series:${entry.seriesId}:${entry.seasonNumber}:${entry.episodeNum}`,
+    position: overrides.position ?? 500,
+    timestamp: overrides.timestamp ?? Math.floor(Date.now() / 1000),
+    seriesData: entry,
+  };
+}
+
+// ── Helper: build a server movie entry ───────────────────────────
+function serverMovieEntry(
+  overrides: Partial<ServerMovieProgressData> & { position?: number; timestamp?: number } = {}
+): ServerProgressEntry {
+  const entry: ServerMovieProgressData = {
+    movieId: 10,
+    movieName: "Server Movie",
+    poster: "https://example.com/movie.jpg",
+    durationSeconds: 7200,
+    ...overrides,
+  };
+  return {
+    watchKey: `movie:${entry.movieId}`,
+    position: overrides.position ?? 300,
+    timestamp: overrides.timestamp ?? Math.floor(Date.now() / 1000),
+    movieData: entry,
+  };
+}
+
+describe("loadServerProgress", () => {
+  const NOW = Date.now(); // fixed reference timestamp for deterministic tests
+
+  beforeEach(() => {
+    localStorage.clear();
+    // Default mock: server returns nothing
+    api.watchlist.progress = async () => ({ progress: {} });
+  });
+
+  it("returns series and movie arrays when server has data", async () => {
+    // Seed local data with a fresh timestamp
+    localStorage.setItem("stv_continue_watching", JSON.stringify([{
+      seriesId: 1, seriesName: "Local Series", cover: "", seasonNumber: 1,
+      episodeNum: 1, episodeId: "100", episodeTitle: "Local Episode",
+      progressSeconds: 100, durationSeconds: 1800, updatedAt: NOW - 1000, // slightly older
+    }]));
+    // Mock server: newer series entry and a movie entry
+    api.watchlist.progress = async () => ({
+      progress: {
+        "key1": [serverSeriesEntry({ timestamp: (NOW - 100) / 1000, position: 800 })],
+        "key2": [serverMovieEntry({ movieId: 99, movieName: "New Movie", timestamp: (NOW - 50) / 1000 })],
+      },
+    });
+    const result = await loadServerProgress();
+    // Series should use server entry (newer)
+    expect(result.series).toHaveLength(1);
+    expect(result.series[0].progressSeconds).toBe(800);
+    // Movies should include the server movie
+    expect(result.movies).toHaveLength(1);
+    expect(result.movies[0].movieId).toBe(99);
+  });
+
+  it("prefers server entry when it is more recent", async () => {
+    localStorage.setItem("stv_continue_watching", JSON.stringify([{
+      seriesId: 1, seriesName: "Local", cover: "", seasonNumber: 1,
+      episodeNum: 1, episodeId: "100", episodeTitle: "Local",
+      progressSeconds: 100, durationSeconds: 1800, updatedAt: NOW - 5000,
+    }]));
+    api.watchlist.progress = async () => ({
+      progress: {
+        "k": [serverSeriesEntry({ timestamp: (NOW - 1000) / 1000, position: 900 })],
+      },
+    });
+    const result = await loadServerProgress();
+    expect(result.series[0].progressSeconds).toBe(900);
+    expect(result.series[0].updatedAt).toBe(NOW - 1000);
+  });
+
+  it("prefers local entry when it is more recent", async () => {
+    localStorage.setItem("stv_continue_watching", JSON.stringify([{
+      seriesId: 1, seriesName: "Local", cover: "", seasonNumber: 1,
+      episodeNum: 1, episodeId: "100", episodeTitle: "Local",
+      progressSeconds: 900, durationSeconds: 1800, updatedAt: NOW - 1000,
+    }]));
+    const serverEntry = serverSeriesEntry({ timestamp: (NOW - 5000) / 1000, position: 100 });
+    api.watchlist.progress = async () => ({
+      progress: { "k": [serverEntry] },
+    });
+    const result = await loadServerProgress();
+    expect(result.series[0].progressSeconds).toBe(900); // local wins
+    expect(result.series[0].updatedAt).toBe(NOW - 1000);
+  });
+
+  it("falls back to local data when server is unreachable", async () => {
+    saveSeriesProgress({
+      seriesId: 1, seriesName: "Offline", cover: "", seasonNumber: 1,
+      episodeNum: 1, episodeId: "100", episodeTitle: "Offline",
+      progressSeconds: 500, durationSeconds: 1800, updatedAt: 1000,
+    });
+    saveMovieProgress({
+      movieId: 7, movieName: "Offline Movie", poster: "",
+      progressSeconds: 200, durationSeconds: 3600, updatedAt: 1000,
+    });
+    api.watchlist.progress = async () => { throw new Error("Network error"); };
+    const result = await loadServerProgress();
+    expect(result.series).toHaveLength(1);
+    expect(result.series[0].seriesName).toBe("Offline");
+    expect(result.movies).toHaveLength(1);
+    expect(result.movies[0].movieName).toBe("Offline Movie");
+  });
+
+  it("returns local data unchanged when server returns empty", async () => {
+    localStorage.setItem("stv_continue_watching", JSON.stringify([{
+      seriesId: 2, seriesName: "Local Only", cover: "", seasonNumber: 1,
+      episodeNum: 1, episodeId: "101", episodeTitle: "Only",
+      progressSeconds: 300, durationSeconds: 1800, updatedAt: NOW - 1000,
+    }]));
+    api.watchlist.progress = async () => ({ progress: {} });
+    const result = await loadServerProgress();
+    expect(result.series).toHaveLength(1);
+    expect(result.series[0].seriesName).toBe("Local Only");
+  });
+
+  it("caps merged result at MAX_ITEMS", async () => {
+    // Fill local with 15 entries
+    for (let i = 0; i < 15; i++) {
+      saveSeriesProgress({
+        seriesId: i, seriesName: `S${i}`, cover: "", seasonNumber: 1,
+        episodeNum: 1, episodeId: String(i), episodeTitle: `E${i}`,
+        progressSeconds: 100, durationSeconds: 1800, updatedAt: 1000 + i,
+      });
+    }
+    // Server adds 10 more (newer)
+    const serverEntries = Array.from({ length: 10 }, (_, i) =>
+      serverSeriesEntry({
+        seriesId: 100 + i, timestamp: 2000 + i, position: 500,
+        seriesName: `Server S${i}`,
+      })
+    );
+    const serverMap: Record<string, ServerProgressEntry[]> = {};
+    serverEntries.forEach((e, i) => { serverMap[`k${i}`] = [e]; });
+    api.watchlist.progress = async () => ({ progress: serverMap });
+    const result = await loadServerProgress();
+    expect(result.series.length).toBeLessThanOrEqual(20);
   });
 });
