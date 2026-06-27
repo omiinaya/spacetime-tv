@@ -99,6 +99,12 @@ export function removeMovieProgress(movieId: number) {
   } catch {}
 }
 
+/** Clear all continue-watching progress (series + movies) */
+export function clearAllProgress() {
+  try { localStorage.removeItem(KEY); } catch {}
+  try { localStorage.removeItem(MOVIE_KEY); } catch {}
+}
+
 /**
  * Get progress for all episodes of a specific series.
  * Returns a map keyed by "season:episodeNum" → progress info.

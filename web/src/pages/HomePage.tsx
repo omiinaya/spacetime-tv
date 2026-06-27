@@ -4,20 +4,9 @@ import { Tv, Film, Tv2, Heart, Star, TrendingUp, Play, AlertCircle } from "lucid
 import ContentRow from "@/components/ContentRow";
 import { Skeleton } from "@/components/Skeleton";
 import { api, TmdbMovieResult, TmdbTvResult, tmdbImgProps } from "@/lib/api";
-import {
-  getContinueWatching,
-  getMovieContinueWatching,
-  loadServerProgress,
-  type SeriesProgress,
-  type MovieProgress,
-} from "@/lib/continueWatching";
 
 export default function HomePage() {
   const navigate = useNavigate();
-
-  // ── Continue Watching ──────────────────────────────────────
-  const [seriesCW, setSeriesCW] = useState<SeriesProgress[]>([]);
-  const [movieCW, setMovieCW] = useState<MovieProgress[]>([]);
 
   // ── TMDB Trending ──────────────────────────────────────────
   const [trendingMovies, setTrendingMovies] = useState<TmdbMovieResult[]>([]);
@@ -25,16 +14,6 @@ export default function HomePage() {
   const [trendingLoading, setTrendingLoading] = useState(true);
 
   useEffect(() => {
-    // Start with local progress immediately for fast first paint
-    setSeriesCW(getContinueWatching());
-    setMovieCW(getMovieContinueWatching());
-
-    // Then load server progress (synced from other devices) and merge
-    loadServerProgress().then((merged) => {
-      setSeriesCW(merged.series);
-      setMovieCW(merged.movies);
-    });
-
     Promise.allSettled([
       api.tmdb.trending("week", 1),
       api.tmdb.tv.trending("week", 1),
@@ -49,7 +28,6 @@ export default function HomePage() {
     });
   }, []);
 
-  const hasCW = seriesCW.length > 0 || movieCW.length > 0;
   const hasTrending = trendingMovies.length > 0 || trendingSeries.length > 0;
 
   return (
@@ -97,90 +75,6 @@ export default function HomePage() {
             </div>
           ))}
         </div>
-      )}
-
-      {/* ── Continue Watching (series) ───────────────────────── */}
-      {seriesCW.length > 0 && (
-        <section>
-          <ContentRow title="Continue Watching" itemCount={seriesCW.length}>
-            {seriesCW.map((s) => (
-              <button
-                key={`cw-s-${s.seriesId}-${s.episodeId}`}
-                className="shrink-0 w-[160px] group text-left focus:outline-none"
-                onClick={() => navigate(`/watch/series/${s.seriesId}/${s.episodeId}`)}
-              >
-                <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-0 group-focus:ring-2 group-focus:ring-primary/60 transition-all">
-                  {s.cover ? (
-                    <img
-                      src={s.cover}
-                      alt={`${s.seriesName} poster`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
-                      loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-[#141420]">
-                      <Tv2 className="h-6 w-6 text-muted-foreground/30" />
-                    </div>
-                  )}
-                  {/* Progress bar */}
-                  {s.durationSeconds > 0 && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
-                      <div
-                        className="h-full bg-primary"
-                        style={{ width: `${Math.min(100, (s.progressSeconds / s.durationSeconds) * 100)}%` }}
-                      />
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs font-medium leading-tight line-clamp-2">{s.seriesName}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  S{s.seasonNumber} · E{s.episodeNum}
-                </p>
-              </button>
-            ))}
-          </ContentRow>
-        </section>
-      )}
-
-      {/* ── Continue Watching (movies) ────────────────────────── */}
-      {movieCW.length > 0 && (
-        <section>
-          <ContentRow title="Continue Watching — Movies" itemCount={movieCW.length}>
-            {movieCW.map((m) => (
-              <button
-                key={`cw-m-${m.movieId}`}
-                className="shrink-0 w-[160px] group text-left focus:outline-none"
-                onClick={() => navigate(`/watch/movie/${m.movieId}`)}
-              >
-                <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-0 group-focus:ring-2 group-focus:ring-primary/60 transition-all">
-                  {m.poster ? (
-                    <img
-                      src={m.poster}
-                      alt={`${m.movieName} poster`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
-                      loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-[#141420]">
-                      <Film className="h-6 w-6 text-muted-foreground/30" />
-                    </div>
-                  )}
-                  {m.durationSeconds > 0 && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
-                      <div
-                        className="h-full bg-primary"
-                        style={{ width: `${Math.min(100, (m.progressSeconds / m.durationSeconds) * 100)}%` }}
-                      />
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs font-medium leading-tight line-clamp-2">{m.movieName}</p>
-              </button>
-            ))}
-          </ContentRow>
-        </section>
       )}
 
       {/* ── Trending Movies ──────────────────────────────────── */}
@@ -279,7 +173,7 @@ export default function HomePage() {
       )}
 
       {/* ── Empty state (no data at all) ─────────────────────── */}
-      {!trendingLoading && !hasTrending && !hasCW && (
+      {!trendingLoading && !hasTrending && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Tv className="h-12 w-12 text-muted-foreground/15 mb-4" />
           <p className="text-sm text-muted-foreground">Welcome to Spacetime-TV</p>

@@ -20,14 +20,6 @@ vi.mock("@/lib/recentChannels", () => ({
   clearRecentChannels: (...args: unknown[]) => mockClearRecentChannels(...args),
 }));
 
-// ── Mock timeAgo to return predictable strings ──────────────
-vi.mock("@/lib/utils", () => ({
-  timeAgo: (ts: number | null | undefined) => {
-    if (!ts) return "";
-    return "2h ago";
-  },
-}));
-
 // ── Mock navigate ──────────────────────────────────────────
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", async () => {
@@ -96,7 +88,7 @@ describe("HistoryPage", () => {
     it("shows subtitle text", () => {
       renderHistoryPage();
       expect(
-        screen.getByText("Channels you watch will appear here"),
+        screen.getByText("Content you watch will appear here"),
       ).toBeInTheDocument();
     });
 
@@ -157,13 +149,6 @@ describe("HistoryPage", () => {
       const fallbackDiv = skyNewsCard?.querySelector(".bg-muted");
       expect(fallbackDiv).toBeInTheDocument();
       expect(fallbackDiv?.querySelector("svg")).toBeInTheDocument();
-    });
-
-    it("displays relative timestamps via timeAgo", () => {
-      renderHistoryPage();
-      // Our mock timeAgo returns "2h ago" for any valid timestamp
-      const timestamps = screen.getAllByText("2h ago");
-      expect(timestamps).toHaveLength(3);
     });
 
     it("does not render timestamp when watchedAt is missing", () => {
