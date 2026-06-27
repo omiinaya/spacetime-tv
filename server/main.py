@@ -28,7 +28,7 @@ from config import (
     ROOT, STATIC_DIR, TMDB_API_KEY, TMDB_BASE, UA_STR,
     RATE_WINDOW, RATE_SEARCH_LIMIT, RATE_DEFAULT_LIMIT,
 )
-SERVER_START_TIME = time.time()
+from state import SERVER_START_TIME, _load_stream_hits
 
 
 @asynccontextmanager
@@ -42,6 +42,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Spacetime-TV", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# ── Route modules ─────────────────────────────────────────────────────────
+from routes.health import router as health_router
+from routes.admin import router as admin_router
+app.include_router(health_router)
+app.include_router(admin_router)
 
 # ── Rate Limiting (in-memory fixed window) ──────────────────────────────────
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -104,8 +110,8 @@ async def fetch_iptv(action: str, **params) -> dict | list:
         raise HTTPException(502, f"IPTV provider error: {e}")
 
 
-# ── EPG Cache ───────────────────────────────────────────────────────────────
-epg_cache: dict = {"data": None, "fetched": 0}
+# ── EPG Cache ──��────────────────────────────────────────────────────────────
+from state import epg_cache, _epg_refresh_task
 
 
 async def load_epg() -> dict:
@@ -142,9 +148,6 @@ async def load_epg() -> dict:
         if epg_cache["data"]:
             return epg_cache["data"]
         return {"channels": [], "programmes": []}
-
-
-_epg_refresh_task: Optional[asyncio.Task] = None
 
 
 async def load_epg_background() -> dict:
@@ -211,10 +214,7 @@ def parse_xmltv(xml_text: str) -> dict:
 
 
 # ── Cache helpers ───────────────────────────────────────────────────────────
-_cache: dict[str, tuple[float, list | dict]] = {}
-_cache_hits: int = 0
-_cache_misses: int = 0
-CACHE_TTL = 300  # 5 min for API data
+from state import _cache, _cache_hits, _cache_misses, CACHE_TTL
 
 
 async def cached_fetch(key: str, action: str, **params) -> list | dict:
@@ -247,234 +247,13 @@ async def cached_fetch(key: str, action: str, **params) -> list | dict:
     return data
 
 
-# ── Health ────────────────────────────────────────────────────────────────────
+from state import track_hit, log_error, record_search, _stream_hits, _error_log, _search_queries
 
-STREAM_HITS_FILE = "/tmp/stv_stream_hits.json"
+# ── ADMIN (routes in routes/admin.py) ────────────────────────────────────────
 
-_stream_hits: dict[str, int] = {}  # "type:id" → count
-_error_log: list[dict] = []  # [{ts, message, path}] — last 100
-_search_queries: list[dict] = []  # [{ts, query}] — ring buffer, last 1000
-
-
-def _load_stream_hits():
-    """Load stream hits from disk, merging with current in-memory data."""
-    global _stream_hits
-    try:
-        with open(STREAM_HITS_FILE) as f:
-            disk = json.load(f)
-            # Take highest value from either source (handles racing writes)
-            for k, v in disk.items():
-                _stream_hits[k] = max(_stream_hits.get(k, 0), v)
-    except (FileNotFoundError, json.JSONDecodeError):
-        pass
-
-
-def _save_stream_hits():
-    """Persist stream hits to disk."""
-    try:
-        with open(STREAM_HITS_FILE, "w") as f:
-            json.dump(_stream_hits, f)
-    except Exception:
-        pass
-
-
-def track_hit(stream_type: str, stream_id: int | str):
-    key = f"{stream_type}:{stream_id}"
-    _stream_hits[key] = _stream_hits.get(key, 0) + 1
-    _save_stream_hits()
-
-def log_error(msg: str, path: str = ""):
-    _error_log.append({"ts": time.time(), "message": msg, "path": path})
-    if len(_error_log) > 100:
-        _error_log.pop(0)
-
-def record_search(query: str):
-    """Record an anonymized search query in the ring buffer (last 1000)."""
-    _search_queries.append({"ts": time.time(), "query": query[:80]})
-    if len(_search_queries) > 1000:
-        _search_queries.pop(0)
-
-@app.get("/api/health")
-async def health_check():
-    """Server health: status, uptime, cache stats."""
-    uptime = time.time() - SERVER_START_TIME
-    cache_stats = {}
-    for key, (ts, val) in _cache.items():
-        if isinstance(val, list):
-            cache_stats[key] = len(val)
-        elif isinstance(val, dict):
-            cache_stats[key] = list(val.keys())[:5] if val else []
-    return {
-        "status": "healthy",
-        "uptime": round(uptime, 1),
-        "epg_age": round(time.time() - epg_cache["fetched"], 0) if epg_cache["fetched"] else None,
-        "cached_categories": list(cache_stats.keys()),
-    }
-
-
-@app.post("/api/error")
-async def report_error(request: Request):
-    """Frontend error beacon: log client-side errors server-side."""
-    try:
-        body = await request.json()
-        msg = body.get("message", "unknown")
-        stack = body.get("stack", "")
-        component_stack = body.get("componentStack", "")
-        url = body.get("url", "")
-        user_agent = request.headers.get("user-agent", "")
-        log.error(
-            f"[CLIENT ERROR] {msg} | URL: {url} | UA: {user_agent[:80]}\n"
-            f"  stack: {(stack or 'none')[:300]}\n"
-            f"  component: {(component_stack or 'none')[:200]}"
-        )
-    except Exception as e:
-        log.warning(f"[CLIENT ERROR] Failed to parse error body: {e}")
-    return {"ok": True}
-
-
-@app.get("/api/admin/stats")
-async def admin_stats():
-    """Admin dashboard: cache stats, popular content, error trends."""
-    global _cache_hits, _cache_misses
-    uptime = time.time() - SERVER_START_TIME
-
-    # Popular content — top 20 by hit count
-    popular = sorted(_stream_hits.items(), key=lambda x: -x[1])[:20]
-    popular_list = [{"stream": k, "hits": v} for k, v in popular]
-
-    # Cache overview
-    cache_entries = len(_cache)
-    vod_cached = sum(1 for k in _cache if k.startswith("vod_"))
-    series_cached = sum(1 for k in _cache if k.startswith("series_"))
-
-    # Recent errors (last 20)
-    recent_errors = list(reversed(_error_log[-20:]))
-
-    return {
-        "uptime": round(uptime, 1),
-        "cache": {
-            "total_entries": cache_entries,
-            "hits": _cache_hits,
-            "misses": _cache_misses,
-            "hit_rate": round(_cache_hits / max(_cache_hits + _cache_misses, 1) * 100, 1),
-            "vod_categories": vod_cached,
-            "series_categories": series_cached,
-            "epg_age": round(time.time() - epg_cache["fetched"], 0) if epg_cache["fetched"] else None,
-        },
-        "streams": {
-            "total_hits": sum(_stream_hits.values()),
-            "unique_streams": len(_stream_hits),
-            "popular": popular_list,
-        },
-        "errors": {
-            "total": len(_error_log),
-            "recent": recent_errors,
-        },
-        "searches": {
-            "total": len(_search_queries),
-            "recent": list(reversed(_search_queries[-20:])),
-        },
-        "sse_clients": len(_epg_clients),
-    }
-
-
-
-# ── Admin cache controls ─────────────────────────────────────────────────────
-
-@app.post("/api/admin/cache/clear")
-async def admin_clear_cache():
-    """Clear all in-memory cache entries. Triggers a fresh warm."""
-    global _cache
-    count = len(_cache)
-    _cache.clear()
-    epg_cache["data"] = None
-    epg_cache["fetched"] = 0
-    start_cache_warmer()
-    return {"cleared": count, "message": f"Cleared {count} cache entries. Warming started."}
-
-
-@app.post("/api/admin/cache/warm")
-async def admin_warm_cache():
-    """Force a cache warm cycle (no-op if already warming)."""
-    global _warm_task
-    if _warm_task is not None and not _warm_task.done():
-        return {"message": "Cache warming already in progress."}
-    start_cache_warmer()
-    return {"message": "Cache warming started."}
-
-
-@app.post("/api/admin/cache/warm-full")
-async def admin_warm_full_cache():
-    """Clear THEN warm the full cache."""
-    global _cache
-    count = len(_cache)
-    _cache.clear()
-    epg_cache["data"] = None
-    epg_cache["fetched"] = 0
-    start_cache_warmer()
-    return {"message": f"Full re-warm started. Cleared {count} stale entries."}
-
-
-# ── Admin EPG controls ───────────────────────────────────────────────────────
-
-
-@app.post("/api/admin/epg/refresh")
-async def admin_epg_refresh():
-    """Trigger an immediate EPG refresh in the background.
-
-    Returns the EPG status: last fetch time and whether a refresh was started.
-    """
-    global _epg_refresh_task
-    already_running = _epg_refresh_task is not None and not _epg_refresh_task.done()
-    if not already_running:
-        _epg_refresh_task = asyncio.create_task(_refresh_epg_background())
-
-    last_fetch = epg_cache["fetched"]
-    age = round(time.time() - last_fetch, 0) if last_fetch else None
-
-    return {
-        "refresh_started": not already_running,
-        "already_running": already_running,
-        "last_fetch_ts": last_fetch,
-        "epg_age_s": age,
-        "message": "EPG refresh triggered." if not already_running else "EPG refresh already in progress.",
-    }
 
 # ── WATCHLIST / PROGRESS SYNC ───────────────────────────────────────────
-
-PROGRESS_FILE = Path("/tmp/stv_watch_progress.json")
-_progress_store: dict[str, list[dict]] = {}  # watchKey -> list of progress entries
-
-
-def _load_progress_store():
-    """Load watch progress from disk, merging with current in-memory data."""
-    global _progress_store
-    try:
-        disk = json.loads(PROGRESS_FILE.read_text())
-        # Merge: for each watchKey, take the latest entries (up to 5 per key)
-        for k, entries in disk.items():
-            if k not in _progress_store:
-                _progress_store[k] = entries[:5]
-            else:
-                # Merge and deduplicate by timestamp
-                existing_ts = {e["timestamp"] for e in _progress_store[k]}
-                for e in entries:
-                    if e["timestamp"] not in existing_ts:
-                        _progress_store[k].append(e)
-                        existing_ts.add(e["timestamp"])
-                _progress_store[k] = sorted(
-                    _progress_store[k], key=lambda x: x["timestamp"], reverse=True
-                )[:5]
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
-        pass
-
-
-def _save_progress_store():
-    """Persist watch progress to disk."""
-    try:
-        PROGRESS_FILE.write_text(json.dumps(_progress_store))
-    except Exception:
-        pass
+from state import _progress_store, PROGRESS_FILE, _load_progress_store, _save_progress_store
 
 
 @app.post("/api/watchlist/sync-progress")
@@ -1587,7 +1366,7 @@ async def tv_guide(
 # Background EPG broadcast: every 30 minutes, force-refresh the EPG cache
 # and notify all connected SSE clients to reload.
 
-_epg_clients: list[asyncio.Queue] = []
+from state import _epg_clients
 
 async def _epg_broadcast_loop():
     """Background task: refresh EPG every 30 min and notify clients."""

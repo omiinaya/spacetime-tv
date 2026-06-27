@@ -2,6 +2,8 @@ node_modules/
 dist/
 __pycache__/
 *.pyc
+.coverage
+.pytest_cache/
 .env
 epg_cache.json
 *.egg-info/
