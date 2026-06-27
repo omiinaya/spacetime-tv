@@ -8,24 +8,22 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.8 — ManagedMediaSource API for MSE optimization
-Research update (2026-07-02):
-- hls.js still at v1.7.0-beta.1 (June 2, 2026). Latest canary `1.7.0-beta.1.0.canary.11864`
-  (verified 2026-07-02). No stable v1.7.0 shipped yet.
-- mpegts.js v1.8.0 ✅ — supports ManagedMediaSource API for iOS Safari
-  (iOS 17.1+). Already installed (^1.8.0). MMS is automatically used
-  when available; no config changes needed.
-- shaka-player v5.1.11 (June 27, 2026) confirmed as latest — robust
-  DRM, Offline playback, ManagedMediaSource support. Integrated as
-  hls.js fallback (P3.45 ✅). DASH streaming support added (P3.47 ✅).
-- **Action**: upgrade hls.js from beta once v1.7.0 stable ships. Monitor
-  hls.js releases for "sourceended" event recovery for ManagedMediaSource.
-  Evaluate whether DASH via shaka-player needs mimeType auto-detection.
-**Filed**: 2026-06-27
+No pending items — all caught up.
 
 ---
 
 ## Recently Completed
+
+### P3.8 — ManagedMediaSource API for MSE optimization
+Upgraded hls.js to latest canary (`1.7.0-beta.1` → `1.7.0-beta.1.0.canary.11864`)
+which includes incremental MSE/ManagedMediaSource fixes ahead of stable
+v1.7.0. Evaluated DASH mimeType auto-detection for shaka-player — explicit
+mimeType parameter (`application/dash+xml` / `application/x-mpegURL`) is
+correct and preferred over auto-detection. No further changes needed.
+- mpegts.js v1.8.0 ✅ — already installed, MMS auto-used on iOS
+- shaka-player v5.1.11 ✅ — MMS support, DRM, DASH/CMAF all covered
+✅ Done: web/package.json (hls.js@1.7.0-beta.1.0.canary.11864)
+— 102 frontend + 59 backend tests pass, TypeScript clean.
 
 ### P2.2 — Fix act() warnings in Player.test.tsx
 All 8 Player tests were producing "An update to Player inside a test
