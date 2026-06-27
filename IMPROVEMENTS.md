@@ -8,13 +8,40 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.33 — PWA background sync for watchlist/watch progress
-Service Worker API `SyncManager` allows deferring data sync until the
-device is online. Currently progress saving is real-time (every 5s via
-`setInterval`). Network failures during saves cause data loss.
-**Action**: Register a `sync` event in the service worker for
-`sync-watch-progress`. Queue unsaved progress in IndexedDB, flush when
-online. Use `navigator.serviceWorker.ready.then(reg => reg.sync.register('sync-watch-progress'))`.
+### P3.34 — Server-side progress persistence for background sync
+The `POST /api/watchlist/sync-progress` endpoint currently acknowledges
+and discards progress entries — it logs the data but doesn't persist it.
+To make background sync useful, the server needs a storage backend
+(JSON file or SQLite) to persist progress and serve it back to clients
+on reconnect.
+**Action**: Add a simple file-based store for watch progress on the
+server. Store entries keyed by watchKey. Add `GET /api/watchlist/progress`
+endpoint to retrieve stored progress on page load after reconnection.
+**Filed**: 2026-06-26
+
+### P3.35 — Frontend component test coverage for Player
+Currently only 4 test files exist for the frontend (guideUtils,
+continueWatching, storage, api). The Player component and
+useVideoPlayer hook have no tests despite being the most complex
+code in the app (~1270 lines, 3 playback paths).
+**Action**: Write vitest tests for:
+- useVideoPlayer hook core logic (playback phase transitions,
+  error handling, quality computation)
+- Player component rendering (controls visibility, keyboard
+  shortcuts, progress bar interaction)
+- mpegts.js and HLS config construction
+**Filed**: 2026-06-26
+
+### P3.36 — Refactor useVideoPlayer.ts into smaller composables
+The hook has grown to ~1270 lines handling all three playback paths
+(live mpegts, VOD remux, HLS) inline. Extracting path-specific setup
+into separate composable functions would improve maintainability and
+testability.
+**Action**: Split into:
+- `useMpegtsPlayer` — live MPEG-TS setup (probe, mpegts config, events)
+- `useHlsPlayer` — HLS VOD setup (Hls config, events)
+- `useRemuxPlayer` — remux VOD setup
+Keep common state/progress/sync logic in the parent hook.
 **Filed**: 2026-06-26
 
 ---
@@ -34,6 +61,16 @@ Research update (2026-06-26):
 ---
 
 ## Recently Completed
+
+### P3.33 — PWA background sync for watchlist/watch progress
+Added IndexedDB queue (`watchProgressSync.ts`) for pending progress updates,
+`POST /api/watchlist/sync-progress` endpoint, `sync` event handler in service
+worker, and periodic `sync.register()` in playback save intervals. Progress
+is queued offline and flushed when connectivity returns.
+✅ Done: web/public/sw.js, web/src/lib/watchProgressSync.ts,
+       web/src/hooks/useVideoPlayer.ts, server/main.py
+— 31 backend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-26
 
 ### P3.32 — Enable hls.js Web Worker for off-thread parsing (performance)
 Changed `enableWorker: false` → `enableWorker: true` in the HLS config
@@ -97,22 +134,4 @@ Added real-time connection quality monitoring for both live and VOD playback:
 - All three playback paths instrumented: live MPEG-TS, VOD remux, HLS
 ✅ Done: web/src/hooks/useVideoPlayer.ts, web/src/components/Player.tsx
 — 31 backend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-26
-
-### P3.25 — PWA service worker: API caching + offline indicator
-Enhanced the service worker with three caching strategies:
-- **Network-first** for `/api/` GET endpoints — caches responses on success,
-  falls back to cached data when offline or network fails
-- **Stale-while-revalidate** for TMDB image requests — serves cached
-  images immediately while freshening cache in background
-- **Cache-first** for static assets (unchanged)
-- Added cache eviction (API: 100 entries max, images: 200 max) with
-  timestamp-based trimming
-- New `OfflineBanner.tsx` component — listens to `navigator.onLine` and
-  `online`/`offline` events, shows amber banner when disconnected with
-  `WifiOff` icon and descriptive message, auto-hides on reconnect
-- Integrated OfflineBanner into `App.tsx` layout
-✅ Done: web/public/sw.js, web/src/components/OfflineBanner.tsx, web/src/App.tsx
-— 31 backend tests pass, 40 frontend tests pass, TypeScript clean,
-committed and pushed.
 **Filed**: 2026-06-26
