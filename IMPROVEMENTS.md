@@ -16,11 +16,6 @@ moving it to `server/tests/` with a conftest fixture that starts
 the server, or adding a pytest marker.
 **Filed**: 2026-06-27
 
-### P3.44 — Add .gitignore for pytest worker temp directories
-Pytest leaves worker temp directories (e.g., `web/1503119589608001616/`)
-in the working tree. Add a `.gitignore` pattern for these.
-**Filed**: 2026-06-27
-
 ### P3.45 — Evaluate shaka-player for alternative HLS playback
 shaka-player v5.1.11 (released June 24, 2026) offers robust
 DRM support, Offline playback, and native ManagedMediaSource support.
@@ -34,21 +29,28 @@ replacement or complement to hls.js.
 ## Monitoring
 
 ### P3.8 — ManagedMediaSource API for MSE optimization
-Research update (2026-06-26):
-- hls.js latest stable still v1.6.16 (April 2026). Beta v1.7.0-beta.1 (June 2, 2026)
-  adds I-frame playlist support, improved protected content playback, CMCD v2,
-  smoother audio switching, and parallel init-segment loading. No stable v1.7.0
-  shipped yet. Latest canary `1.7.0-beta.1.0.canary.11864` available but not
-  recommended for production.
+Research update (2026-06-27):
+- hls.js still at v1.7.0-beta.1 (June 2, 2026). Latest canary `1.7.0-beta.1.0.canary.11864`
+  (verified 2026-06-27). No stable v1.7.0 shipped yet.
 - mpegts.js v1.8.0 ✅ — supports ManagedMediaSource API for iOS Safari
   (iOS 17.1+). Already installed (^1.8.0). MMS is automatically used
   when available; no config changes needed.
+- shaka-player v5.1.11 (June 24, 2026) confirmed as latest — robust
+  DRM, Offline playback, ManagedMediaSource support.
 - **Action**: upgrade hls.js from beta once v1.7.0 stable ships. Monitor
   hls.js releases for "sourceended" event recovery for ManagedMediaSource.
+  Evaluate shaka-player v5.1.11 as potential hls.js complement (P3.45).
 
 ---
 
 ## Recently Completed
+
+### P3.44 — Add .gitignore for pytest worker temp directories
+Added `web/[0-9]*/` and `server/[0-9]*/` patterns to `.gitignore`
+to prevent pytest worker temp directories from appearing in `git status`.
+✅ Done: .gitignore
+— All existing tests pass, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.42 — useVideoPlayer refactor Phase 2: extract playback paths (DONE)
 Phase 2 extracted the actual playback setup/teardown logic for each path
@@ -137,15 +139,4 @@ and Player component rendering. Added @testing-library/react + jest-dom dev deps
 ### P3.34 — Server-side progress persistence for background sync
 Added file-based progress store, POST/GET endpoints for sync-progress.
 ✅ Done: server/main.py, server/tests/test_progress.py, server/tests/conftest.py
-**Filed**: 2026-06-26
-
-### P3.33 — PWA background sync for watchlist/watch progress
-Added IndexedDB queue, sync event handler in service worker, periodic register.
-✅ Done: web/public/sw.js, web/src/lib/watchProgressSync.ts,
-       web/src/hooks/useVideoPlayer.ts, server/main.py
-**Filed**: 2026-06-26
-
-### P3.32 — Enable hls.js Web Worker for off-thread parsing
-Changed enableWorker: false → true for reduced main-thread CPU.
-✅ Done: web/src/hooks/useVideoPlayer.ts
 **Filed**: 2026-06-26
