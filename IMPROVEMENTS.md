@@ -8,14 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P2.11 — Add component tests for Series page
-The Series page renders category tabs, series card grid with season/episode
-progress, Recently Completed section, and search. No component tests exist.
-- [ ] Create Series page tests for category tabs and filtering
-- [ ] Test series card rendering (cover, progress bar, episode count badge)
-- [ ] Test Recently Completed section interaction
-- [ ] Test search and empty states
-
 ### P3.13 — Add MSW (Mock Service Worker) for API-level integration tests
 The project uses `vi.mock()` for mocking imports in tests, but there are no
 API-level integration tests that exercise the full fetch/error handling layer.
@@ -34,6 +26,33 @@ potential migration benefits vs breaking changes.
 - [ ] Create migration plan or decide to defer
 
 ---
+
+## Recently Completed
+
+### P2.11 — Add component tests for Series page
+Added 37 component tests for the Series page covering all render states:
+- Loading: skeleton placeholders with PosterCardSkeleton, no heading
+- Error: error banner with Retry button
+- Normal: "Series" heading, category count, search input with placeholder
+- Content rows: category names render, series cards with names
+- Series cards: rating badge, year badge, watchlist heart (not in/added/removed),
+  cover fallback icon when no cover
+- Search: filter categories by name, X clear button, clear on click,
+  "No series matching" with Clear search link
+- Continue Watching: heading with CW items, progress bar, dismiss button,
+  CW hidden when empty
+- Recently Completed: heading with completed items, dismiss button,
+  hidden when no completed items
+- Trending This Week: section rendered when enabled+data, hidden when
+  disabled/empty, rating and year badges on trending cards
+- Show All: no Show All button when total ≤20, Back to categories when active
+- Edge cases: missing cover (Tv2 fallback), missing rating (no badge),
+  missing releaseDate (no year badge), single category
+- Overlay: open on card click, close via close button
+- Filtered: "No categories match your filters" when hiddenCategories hides all
+✅ Done: web/src/pages/__tests__/Series.test.tsx
+— 346 frontend tests pass (17 files), TypeScript clean (0 errors), committed and pushed.
+**Filed**: 2026-06-27
 
 ## Recently Completed
 
@@ -176,15 +195,4 @@ Added 19 component tests for the recently-extracted HistoryPage:
 - Edge cases: single channel, max 12 channels, data-watch-link attribute
 ✅ Done: web/src/pages/__tests__/HistoryPage.test.tsx
 — 146 frontend + 59 backend tests pass, TypeScript clean (0 errors), committed and pushed.
-**Filed**: 2026-06-27
-
-### P2.5 — Add unit tests for `timeAgo` helper and `recentChannels` module
-Added 25 new tests covering the `timeAgo` utility and `recentChannels` module:
-- `utils.test.ts` (13 tests): all time boundaries (Just now, Xs/m/h, Yesterday,
-  X days/mo/y), edge cases (null/undefined/0/negative/future timestamps)
-- `recentChannels.test.ts` (12 tests): empty/valid/expired localStorage,
-  corrupted JSON, dedup by stream_id, max-12-item limit, 14-day expiry,
-  clearRecentChannels
-✅ Done: web/src/lib/utils.test.ts, web/src/lib/recentChannels.test.ts
-— 127 frontend + 59 backend tests pass, TypeScript clean (0 errors), committed and pushed.
 **Filed**: 2026-06-27
