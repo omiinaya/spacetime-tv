@@ -25,11 +25,6 @@ The project uses 1.7.0-beta.1 successfully. No stable release available.
 - [ ] If available, create migration plan → BLOCKED: no stable 1.7.0
 - **Re-checked**: 2026-06-27 — still at 1.6.16 (beta at 1.7.0-beta.1)
 
-### P3.19 — Add component tests for AdminDashboard
-Admin dashboard has no component test coverage. Tests should cover: user stats,
-system health metrics, streaming status, and any admin-specific UI elements.
-- [ ] Create AdminDashboard.test.tsx with 10+ component tests
-
 ### P3.20 — Add component tests for PersonPage
 Person page has no component test coverage. Tests should cover: person details,
 known-for credits carousel, biography rendering, and error/loading states.
@@ -42,9 +37,34 @@ no test coverage. These are small but widely used across the app.
 - [ ] Create ChannelRow.test.tsx
 - [ ] Create PWAInstallPrompt.test.tsx
 
+### P3.22 — Add component tests for Pagination, Skeleton, and ContentRow
+Pagination, Skeleton, and ContentRow are utility components used across multiple
+pages but have no dedicated test coverage. Pagination handles page controls,
+Skeleton provides loading placeholders, and ContentRow renders horizontal
+scrolling content sections.
+- [ ] Create Pagination.test.tsx with 8+ tests
+- [ ] Create Skeleton.test.tsx with 5+ tests
+- [ ] Create ContentRow.test.tsx with 8+ tests
+
+### P3.23 — Add lib tests for uncovered modules (watchlist, searchHistory, settings)
+The watchlist, searchHistory, and settings lib modules handle core app state
+(localStorage-backed) but have no direct test coverage.
+- [ ] Create watchlist.test.ts with 10+ tests
+- [ ] Create searchHistory.test.ts with 8+ tests
+- [ ] Create settings.test.ts with 8+ tests
+
 ---
 
 ## Recently Completed
+
+### P3.19 — Add component tests for AdminDashboard
+| ✅ Done: web/src/pages/__tests__/AdminDashboard.test.tsx — 18 component tests
+| covering loading spinner, error/retry states, stats card rendering,
+| cache control buttons (Clear/Warm/Full Rewarm), EPG refresh trigger,
+| popular content table (populated + empty), error log (populated + empty),
+| search queries (populated + empty), and negative hit rate display.
+| — 502 frontend tests pass (22 files), TypeScript clean, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.18 — Fix SettingsPage component tests (12 failures → 484 pass)
 ✅ Done: 12 test failures in SettingsPage.test.tsx — all fixed. Root causes:
@@ -58,37 +78,22 @@ committed and pushed.
 
 ### P3.16 — Add component tests for WatchlistPage
 | ✅ Done: web/src/pages/__tests__/WatchlistPage.test.tsx — 37 component tests
-covering loading/error/empty states, movies tab (card rendering, ratings,
-remove from watchlist, MovieOverlay), series tab (detail fetching, badges,
-SeriesOverlay), tab switching, header, and CTA navigation.
+| covering loading/error/empty states, movies tab (card rendering, ratings,
+| remove from watchlist, MovieOverlay), series tab (detail fetching, badges,
+| SeriesOverlay), tab switching, header, and CTA navigation.
 — 444 frontend tests pass (20 files), TypeScript clean, committed and pushed.
 **Filed**: 2026-06-27
 
 ### P3.15 — Add component tests for Search page
 | ✅ Done: web/src/pages/__tests__/Search.test.tsx — 40 component tests
-covering initial state, loading/error/empty states, results rendering (live/
-movies/series), filter tabs, sort controls, TMDB enrichment, load-more
-pagination, now-playing EPG, search history, Enter key, URL param sync,
-and short query handling. 407 frontend tests pass (19 files), TS clean.
+| covering initial state, loading/error/empty states, results rendering (live/
+| movies/series), filter tabs, sort controls, TMDB enrichment, load-more
+| pagination, now-playing EPG, search history, Enter key, URL param sync,
+| and short query handling. 407 frontend tests pass (19 files), TS clean.
 **Filed**: 2026-06-27
 
 ### P3.13 — Add MSW (Mock Service Worker) for API-level integration tests
 | ✅ Done: MSW v2.14.6 installed, 21 integration tests, Series test migrated
-to MSW (37 tests), documentation at web/src/mocks/README.md.
+| to MSW (37 tests), documentation at web/src/mocks/README.md.
 — 367 frontend tests pass (18 files), TypeScript clean, committed and pushed.
-**Filed**: 2026-06-27
-
-### P2.11 — Add component tests for Series page
-| ✅ Done: web/src/pages/__tests__/Series.test.tsx
-— 346 frontend tests pass (17 files), TypeScript clean, committed and pushed.
-**Filed**: 2026-06-27
-
-### P2.10 — Add component tests for Movies page
-| ✅ Done: web/src/pages/__tests__/Movies.test.tsx
-— Committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.12 — Frontend error boundary with user-facing recovery UI
-| ✅ Done: web/src/components/ErrorBoundary.tsx + tests
-— Committed and pushed.
 **Filed**: 2026-06-27
