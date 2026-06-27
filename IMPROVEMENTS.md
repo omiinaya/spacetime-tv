@@ -57,6 +57,20 @@ progress, Recently Completed section, and search. No component tests exist.
 
 ## Recently Completed
 
+### P3.11 — Add component tests for MovieOverlay and SeriesOverlay
+Added 40 component tests covering MovieOverlay (16 tests) and SeriesOverlay (24 tests):
+- MovieOverlay: loading/error states, base info (title, plot, genres, rating, year,
+  duration, cast, director), TMDB enrichment and fallback, language selector,
+  play/watchlist/trailer interactions, cast navigation, recommendation sections
+- SeriesOverlay: loading/error states, empty episodes, title/plot/genres/cast,
+  season tabs with episode switching, episode grid (thumbnails, badges, duration),
+  play/watchlist interactions, TMDB enrichment (genres, meta items, link),
+  provider fallback, episode progress checkmarks, season watched badges,
+  empty episode states, recommendation sections, cast navigation
+✅ Done: web/src/components/__tests__/MovieOverlay.test.tsx, web/src/components/__tests__/SeriesOverlay.test.tsx
+— 271 frontend tests pass, TypeScript clean (0 errors), committed and pushed.
+**Filed**: 2026-06-27
+
 ### P2.9 — Add component tests for LiveTV page
 Added 28 component tests for the LiveTV page covering all render states:
 - Loading: skeleton shimmer placeholders for header and tabs
