@@ -139,6 +139,10 @@ export const api = {
       body: JSON.stringify({ movies, series }),
       signal,
     }).then((r) => r.json()) as Promise<SearchEnrichResponse>,
+  watchlist: {
+    progress: (signal?: AbortSignal) =>
+      get<{ progress: Record<string, ServerProgressEntry[]> }>("/watchlist/progress", signal),
+  },
   tmdb: {
     trending: (timeWindow: "day" | "week" = "week", page = 1, signal?: AbortSignal) =>
       get<TmdbTrendingResponse>(
@@ -534,4 +538,32 @@ export interface TmdbEnrichData {
 export interface SearchEnrichResponse {
   movies: Record<string, TmdbEnrichData>;
   series: Record<string, TmdbEnrichData>;
+}
+
+// ── Server-side watch progress types ─────────────────────────────────
+
+export interface ServerSeriesProgressData {
+  seriesId: number;
+  seriesName: string;
+  cover: string;
+  seasonNumber: number;
+  episodeNum: number;
+  episodeId: string;
+  episodeTitle: string;
+  durationSeconds: number;
+}
+
+export interface ServerMovieProgressData {
+  movieId: number;
+  movieName: string;
+  poster: string;
+  durationSeconds: number;
+}
+
+export interface ServerProgressEntry {
+  watchKey: string;
+  position: number;
+  timestamp: number;
+  seriesData?: ServerSeriesProgressData;
+  movieData?: ServerMovieProgressData;
 }

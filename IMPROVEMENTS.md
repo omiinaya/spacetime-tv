@@ -8,18 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.36 — Refactor useVideoPlayer.ts into smaller composables
-The hook has grown to ~1270 lines handling all three playback paths
-(live mpegts, VOD remux, HLS) inline. Extracting path-specific setup
-into separate composable functions would improve maintainability and
-testability.
-**Action**: Split into:
-- `useMpegtsPlayer` — live MPEG-TS setup (probe, mpegts config, events)
-- `useHlsPlayer` — HLS VOD setup (Hls config, events)
-- `useRemuxPlayer` — remux VOD setup
-Keep common state/progress/sync logic in the parent hook.
-**Filed**: 2026-06-26
-
 ### P3.37 — Frontend integration of server-side watch progress
 P3.34 added server-side persistence for watch progress (POST/GET
 /api/watchlist/sync-progress and /api/watchlist/progress). The

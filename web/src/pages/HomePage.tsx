@@ -7,6 +7,7 @@ import { api, TmdbMovieResult, TmdbTvResult } from "@/lib/api";
 import {
   getContinueWatching,
   getMovieContinueWatching,
+  loadServerProgress,
   type SeriesProgress,
   type MovieProgress,
 } from "@/lib/continueWatching";
@@ -28,9 +29,16 @@ export default function HomePage() {
   const [trendingLoading, setTrendingLoading] = useState(true);
 
   useEffect(() => {
+    // Start with local progress immediately for fast first paint
     setSeriesCW(getContinueWatching());
     setMovieCW(getMovieContinueWatching());
     setRecentChannels(getRecentChannels());
+
+    // Then load server progress (synced from other devices) and merge
+    loadServerProgress().then((merged) => {
+      setSeriesCW(merged.series);
+      setMovieCW(merged.movies);
+    });
 
     Promise.allSettled([
       api.tmdb.trending("week", 1),

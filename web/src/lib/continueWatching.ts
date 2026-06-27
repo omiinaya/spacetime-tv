@@ -117,3 +117,121 @@ export function getSeriesProgress(
   }
   return map;
 }
+
+// ── Server-side progress merge ────────────────────────────────────────────
+
+import { api, type ServerProgressEntry } from "@/lib/api";
+
+/**
+ * Convert server progress entries into local SeriesProgress[] format.
+ */
+function seriesFromServerEntry(
+  entry: ServerProgressEntry
+): SeriesProgress | null {
+  if (!entry.seriesData) return null;
+  return {
+    seriesId: entry.seriesData.seriesId,
+    seriesName: entry.seriesData.seriesName,
+    cover: entry.seriesData.cover,
+    seasonNumber: entry.seriesData.seasonNumber,
+    episodeNum: entry.seriesData.episodeNum,
+    episodeId: entry.seriesData.episodeId,
+    episodeTitle: entry.seriesData.episodeTitle,
+    progressSeconds: entry.position,
+    durationSeconds: entry.seriesData.durationSeconds,
+    updatedAt: entry.timestamp * 1000, // server stores seconds, local uses ms
+  };
+}
+
+/**
+ * Convert server progress entries into local MovieProgress[] format.
+ */
+function movieFromServerEntry(
+  entry: ServerProgressEntry
+): MovieProgress | null {
+  if (!entry.movieData) return null;
+  return {
+    movieId: entry.movieData.movieId,
+    movieName: entry.movieData.movieName,
+    poster: entry.movieData.poster,
+    progressSeconds: entry.position,
+    durationSeconds: entry.movieData.durationSeconds,
+    updatedAt: entry.timestamp * 1000,
+  };
+}
+
+/**
+ * Fetch progress from the server (synced via PWA background sync)
+ * and merge into the local continue-watching state.
+ *
+ * For each entry, if the local state has a matching entry, keep whichever
+ * was updated more recently. If the local state has no matching entry,
+ * add the server entry. Returns an object with merged series and movie arrays.
+ */
+export async function loadServerProgress(): Promise<{
+  series: SeriesProgress[];
+  movies: MovieProgress[];
+}> {
+  try {
+    const res = await api.watchlist.progress();
+    const allEntries = Object.values(res.progress).flat();
+    if (allEntries.length === 0) return { series: [], movies: [] };
+
+    // Convert server entries to local format
+    const serverSeries: SeriesProgress[] = [];
+    const serverMovies: MovieProgress[] = [];
+
+    for (const entry of allEntries) {
+      const seriesItem = seriesFromServerEntry(entry);
+      if (seriesItem) serverSeries.push(seriesItem);
+      const movieItem = movieFromServerEntry(entry);
+      if (movieItem) serverMovies.push(movieItem);
+    }
+
+    // Merge series: take most recent per (seriesId, seasonNumber, episodeNum)
+    const seriesMap = new Map<string, SeriesProgress>();
+    for (const item of getContinueWatching()) {
+      const key = `${item.seriesId}:${item.seasonNumber}:${item.episodeNum}`;
+      const existing = seriesMap.get(key);
+      if (!existing || item.updatedAt > existing.updatedAt) {
+        seriesMap.set(key, item);
+      }
+    }
+    for (const item of serverSeries) {
+      const key = `${item.seriesId}:${item.seasonNumber}:${item.episodeNum}`;
+      const existing = seriesMap.get(key);
+      if (!existing || item.updatedAt > existing.updatedAt) {
+        seriesMap.set(key, item);
+      }
+    }
+    const mergedSeries = [...seriesMap.values()]
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, MAX_ITEMS);
+
+    // Merge movies: take most recent per movieId
+    const movieMap = new Map<number, MovieProgress>();
+    for (const item of getMovieContinueWatching()) {
+      const existing = movieMap.get(item.movieId);
+      if (!existing || item.updatedAt > existing.updatedAt) {
+        movieMap.set(item.movieId, item);
+      }
+    }
+    for (const item of serverMovies) {
+      const existing = movieMap.get(item.movieId);
+      if (!existing || item.updatedAt > existing.updatedAt) {
+        movieMap.set(item.movieId, item);
+      }
+    }
+    const mergedMovies = [...movieMap.values()]
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, MAX_ITEMS);
+
+    return { series: mergedSeries, movies: mergedMovies };
+  } catch {
+    // Server may be unreachable — silently fall back to local
+    return {
+      series: getContinueWatching(),
+      movies: getMovieContinueWatching(),
+    };
+  }
+}

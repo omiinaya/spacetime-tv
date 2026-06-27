@@ -15,7 +15,7 @@ import { api, UnifiedMovie, TmdbMovieResult, imageUrl } from "@/lib/api";
 import MovieOverlay from "@/components/MovieOverlay";
 import ContentRow from "@/components/ContentRow";
 import { PosterCardSkeleton } from "@/components/Skeleton";
-import { getMovieContinueWatching, removeMovieProgress, type MovieProgress } from "@/lib/continueWatching";
+import { getMovieContinueWatching, loadServerProgress, removeMovieProgress, type MovieProgress } from "@/lib/continueWatching";
 import { isInWatchlist, toggleWatchlist as toggleWl } from "@/lib/watchlist";
 import { useGridKeyboardNav } from "@/hooks/useGridKeyboardNav";
 import { SearchHistory, addSearchHistory } from "@/components/SearchHistory";
@@ -82,6 +82,9 @@ export default function Movies() {
   const [continueWatching, setContinueWatching] = useState<MovieProgress[]>([]);
   useEffect(() => {
     setContinueWatching(getMovieContinueWatching());
+    loadServerProgress().then((merged) => {
+      setContinueWatching(merged.movies);
+    });
   }, []);
 
   // ── Trending (TMDB) ───────────────────────────────────────────
