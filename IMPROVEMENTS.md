@@ -17,12 +17,6 @@ react-router-dom v8 is published. Re-evaluate when available.
 - [x] Evaluate if the project's routing patterns benefit from v8 features
 - [ ] ~~Create migration plan or decide to defer~~ → BLOCKED: no react-router-dom v8
 
-### P3.16 — Add component tests for WatchlistPage  
-The Watchlist page allows users to view saved movies and series. Needs tests for:
-empty state (no watchlist items), movie/series tabs, remove from watchlist,
-navigation to watch pages, and edge cases.
-- [ ] Create WatchlistPage.test.tsx with 15+ component tests
-
 ### P3.17 — Investigate hls.js v1.7.0 stable release status
 Last checked: **hls.js v1.7.0 stable still not published** (latest npm tag: 1.6.16).
 The project uses 1.7.0-beta.1 successfully after reverting canary. No stable
@@ -49,6 +43,14 @@ known-for credits carousel, biography rendering, and error/loading states.
 ---
 
 ## Recently Completed
+
+### P3.16 — Add component tests for WatchlistPage
+|✅ Done: web/src/pages/__tests__/WatchlistPage.test.tsx — 37 component tests
+covering loading/error/empty states, movies tab (card rendering, ratings,
+remove from watchlist, MovieOverlay), series tab (detail fetching, badges,
+SeriesOverlay), tab switching, header, and CTA navigation.
+— 444 frontend tests pass (20 files), TypeScript clean, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.15 — Add component tests for Search page
 |✅ Done: web/src/pages/__tests__/Search.test.tsx — 40 component tests
