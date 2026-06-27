@@ -7,6 +7,7 @@ import {
   Tv2,
   Search,
   Heart,
+  History,
   Menu,
   X,
   Settings,
@@ -30,6 +31,7 @@ const Series = lazy(() => import("@/pages/Series"));
 const SearchPage = lazy(() => import("@/pages/Search"));
 const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const WatchlistPage = lazy(() => import("@/pages/WatchlistPage"));
+const HistoryPage = lazy(() => import("@/pages/HistoryPage"));
 const PersonPage = lazy(() => import("@/pages/PersonPage"));
 const Player = lazy(() => import("@/components/Player"));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
@@ -81,6 +83,7 @@ const NAV_ITEMS = [
   { id: "/movies", label: "Movies", icon: Film },
   { id: "/series", label: "Series", icon: Tv2 },
   { id: "/watchlist", label: "Watchlist", icon: Heart },
+  { id: "/history", label: "History", icon: History },
   { id: "/search", label: "Search", icon: Search },
 ];
 
@@ -268,6 +271,7 @@ function AppLayout() {
             <Route path="/series" element={<Series />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/watchlist" element={<WatchlistPage />} />
+            <Route path="/history" element={<HistoryPage />} />
             <Route path="/person/:encodedName" element={<PersonPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/admin" element={<AdminDashboard />} />

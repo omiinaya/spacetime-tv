@@ -33,3 +33,7 @@ export function saveRecentChannel(channel: { stream_id: number; name: string; ic
     localStorage.setItem(KEY, JSON.stringify(trimmed));
   } catch {}
 }
+
+export function clearRecentChannels() {
+  try { localStorage.removeItem(KEY); } catch {}
+}
