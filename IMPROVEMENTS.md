@@ -8,16 +8,30 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.23 — Add lib tests for uncovered modules (watchlist, searchHistory, settings)
-The watchlist, searchHistory, and settings lib modules handle core app state
-(localStorage-backed) but have no direct test coverage.
-- [ ] Create watchlist.test.ts with 10+ tests
-- [ ] Create searchHistory.test.ts with 8+ tests
-- [ ] Create settings.test.ts with 8+ tests
+*No pending items — backlog is empty!* 🎉
 
 ---
 
 ## Recently Completed
+
+### P3.22 — Add component tests for Pagination, Skeleton, and ContentRow
+✅ Done: Pagination.test.tsx (26 tests), Skeleton.test.tsx (23 tests),
+ContentRow.test.tsx (18 tests). All utility components now have coverage
+covering rendering, props, loading states, keyboard nav, scroll behavior,
+and edge cases. — 642 frontend tests pass (29 files), TS clean.
+
+### P3.23 — Add lib tests for watchlist, searchHistory, settings
+✅ Done: watchlist.test.ts (25 tests — movies + series CRUD, MAX_ITEMS,
+independence), searchHistory.test.ts (18 tests — add/dedup/cap/clear/trim/
+length guard), settings.test.ts (44 tests — load/save, prefix extraction,
+service detection, adult detection, filterCategories with language/service/
+adult/hidden combos, collectAllPrefixes, collectAllServices).
+729 frontend tests pass (32 files), 69 backend tests pass, TS clean.
+
+### P3.21 — Add component tests for OfflineBanner, ChannelRow, PWAInstallPrompt
+✅ Done: OfflineBanner.test.tsx (11 tests), ChannelRow.test.tsx (25 tests),
+PWAInstallPrompt.test.tsx (12 tests). — 575 frontend tests pass (26 files),
+TS clean.
 
 ### P3.14 — Migrate to React Router v8
 ✅ Done: switched from `react-router-dom` v7.18.0 to `react-router` v8.0.1.
@@ -30,17 +44,6 @@ across the codebase, 8 test file mocks, and package.json. 575 tests pass
 published on npm — latest tag is 1.6.16, latest overall is 1.7.0-beta.1
 (already in use). No action needed. Canary builds (`1.7.0-beta.1.0.canary.*`)
 are dev builds with no stable milestone in sight.
-
-### P3.21 — Add component tests for OfflineBanner, ChannelRow, PWAInstallPrompt
-✅ Done: test files already created by CI agent — OfflineBanner.test.tsx (11
-tests), ChannelRow.test.tsx (26 tests), PWAInstallPrompt.test.tsx (12 tests).
-Committed as part of P3.14 commit. 575 total frontend tests.
-
-### P3.22 — Add component tests for Pagination, Skeleton, and ContentRow
-✅ Done: Pagination.test.tsx (26 tests), Skeleton.test.tsx (23 tests),
-ContentRow.test.tsx (18 tests) — 67 total. Covers page buttons, ellipsis,
-jump-to-page, shimmer animation, skeleton variants, header/scroll/keyboard nav.
-642 frontend tests pass (29 files), 69 backend tests pass, TS clean.
 
 ### P3.20 — Add component tests for PersonPage
 | ✅ Done: web/src/pages/__tests__/PersonPage.test.tsx — 25 component tests
@@ -77,12 +80,4 @@ committed and pushed.
 | remove from watchlist, MovieOverlay), series tab (detail fetching, badges,
 | SeriesOverlay), tab switching, header, and CTA navigation.
 |— 444 frontend tests pass (20 files), TypeScript clean, committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.15 — Add component tests for Search page
-| ✅ Done: web/src/pages/__tests__/Search.test.tsx — 40 component tests
-| covering initial state, loading/error/empty states, results rendering (live/
-| movies/series), filter tabs, sort controls, TMDB enrichment, load-more
-| pagination, now-playing EPG, search history, Enter key, URL param sync,
-| and short query handling. 407 frontend tests pass (19 files), TS clean.
 **Filed**: 2026-06-27
