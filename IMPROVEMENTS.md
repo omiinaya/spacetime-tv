@@ -8,14 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.43 — Stale server integration test file cleanup
-The `server/test_server.py` file (284 lines) contains integration tests
-that require a running server on port 8720  — these are not run by the
-standard `pytest server/tests/` suite. Consider either removing it,
-moving it to `server/tests/` with a conftest fixture that starts
-the server, or adding a pytest marker.
-**Filed**: 2026-06-27
-
 ### P3.45 — Evaluate shaka-player for alternative HLS playback
 shaka-player v5.1.11 (released June 24, 2026) offers robust
 DRM support, Offline playback, and native ManagedMediaSource support.
@@ -44,6 +36,15 @@ Research update (2026-06-27):
 ---
 
 ## Recently Completed
+
+### P3.43 — Stale server integration test file cleanup
+Added `pytest.mark.integration` marker to all 284-line integration
+test file. Created `pytest.ini` to register the marker and set
+default `testpaths`. Integration tests are now excluded from
+`pytest server/tests/` and can be run with `pytest -m integration`.
+✅ Done: server/test_server.py, pytest.ini
+— 38 backend + 85 frontend tests pass, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.44 — Add .gitignore for pytest worker temp directories
 Added `web/[0-9]*/` and `server/[0-9]*/` patterns to `.gitignore`
@@ -134,9 +135,4 @@ and Player component rendering. Added @testing-library/react + jest-dom dev deps
        web/src/components/__tests__/Player.test.tsx,
        web/src/test-setup.ts, web/vite.config.ts, web/package.json
 — 66 frontend tests + 38 backend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-26
-
-### P3.34 — Server-side progress persistence for background sync
-Added file-based progress store, POST/GET endpoints for sync-progress.
-✅ Done: server/main.py, server/tests/test_progress.py, server/tests/conftest.py
 **Filed**: 2026-06-26
