@@ -18,13 +18,6 @@ ships.
 - [ ] Run playback tests with stable v1.7.0-beta.1 (blocked — no stable release)
 - [ ] Update web/package.json if compatible
 
-### P3.10 — Add backend tests for rate limiting middleware
-The RateLimitMiddleware in main.py (~25 lines) has no tests. Key behaviors:
-rate limit applied to search/image-proxy paths, rate limit resets after window,
-different limits for search vs default paths, correct Retry-After header.
-- [ ] Add `server/tests/test_rate_limit.py` with endpoint-based rate limit tests
-- [ ] Test per-IP isolation, window expiry, Retry-After header
-
 ### P2.8 — Add component tests for ContinueWatching section on HomePage
 The HomePage renders "Continue Watching" rows for series and movies inline.
 The data layer (`continueWatching.ts`) has 20 utility tests, but the
@@ -34,9 +27,48 @@ item rendering, and resume interaction.
 - [ ] Mock continue-watching data hooks and API calls
 - [ ] Test empty state (no progress), series items, movie items, resume click
 
+### P2.9 — Add component tests for LiveTV page
+The LiveTV page renders channel cards, category filters, search bar, and
+now-playing indicators. No component tests exist for this page.
+- [ ] Create LiveTV page component tests covering channel card rendering
+- [ ] Test category filter tab selection and filtering
+- [ ] Test search within category filter interaction
+- [ ] Test empty state and error state
+
+### P3.11 — Add component tests for MovieOverlay and SeriesOverlay
+The MovieOverlay and SeriesOverlay are rich overlays with TMDB enrichment,
+episode lists, season tabs, recommendations, and TMDB images. No component
+tests exist for either overlay.
+- [ ] Create MovieOverlay tests for base info, cast, recommendations, trailer
+- [ ] Create SeriesOverlay tests for season tabs, episode list, recommendations
+- [ ] Test TMDB enrichment fallback when TMDB data unavailable
+- [ ] Test backdrop/thumbnail loading states
+
+### P3.12 — Frontend error boundary with user-facing recovery UI
+The app has an `/api/error` beacon endpoint for client error reporting but no
+React error boundary. A rendering crash shows a blank white page. Add a
+React error boundary with "Something went wrong" UI and recovery button.
+- [ ] Add ErrorBoundary component with fallback UI
+- [ ] Wire error beacon to boundary's componentDidCatch
+- [ ] Add "Reload" and "Go Home" recovery actions
+- [ ] Test that boundary catches rendering errors gracefully
+
 ---
 
 ## Recently Completed
+
+### P3.10 — Add backend tests for rate limiting middleware
+Added 10 endpoint-based tests for the RateLimitMiddleware in main.py:
+- Rate limit applied to search/image-proxy paths (RATE_SEARCH_LIMIT=3 patched)
+- Different higher limit for default paths (RATE_DEFAULT_LIMIT=5 patched)
+- 429 response with Retry-After header when limit exceeded
+- Rate window expiry (1s window) resets the counter
+- Shared counter between search and image-proxy paths
+- Internal _rate_limits dict structure validation
+- Default path independent of search path counter
+✅ Done: server/tests/test_rate_limit.py
+— 69 backend + 182 frontend tests pass, TypeScript clean (0 errors), committed and pushed.
+**Filed**: 2026-06-27
 
 ### P2.7 — Add component tests for Guide page
 Added 36 component tests for the EPG Guide page covering all render states:
@@ -84,22 +116,4 @@ Added a `timeAgo` helper to `utils.ts` and displayed relative time (e.g. "2h ago
 "Yesterday") under each channel name. Handles missing/old timestamps gracefully.
 ✅ Done: web/src/lib/utils.ts (timeAgo), web/src/pages/HistoryPage.tsx
 — 102 frontend + 59 backend tests pass, TypeScript clean (0 errors), committed and pushed.
-**Filed**: 2026-06-27
-
-### P1.1 — Fix `tsc --noEmit` errors in test files (vitest globals not typed)
-`tsc --noEmit` reported 31 errors in `src/lib/api.test.ts` because vitest globals
-(`vi`, `beforeEach`) weren't recognized by TypeScript's tsconfig. Fixed by excluding
-test files from the main tsconfig (standard practice — vitest handles its own type
-checking). Also added `npm test` / `npm run test:watch` scripts to package.json.
-✅ Done: web/tsconfig.json, web/package.json, IMPROVEMENTS.md
-— 102 frontend + 59 backend tests pass, `tsc --noEmit` clean (0 errors), committed and pushed.
-**Filed**: 2026-06-27
-
-### P2.3 — Add `test` script to package.json
-The web app has vitest configured (vite.config.ts has `globals: true`,
-`environment: "jsdom"`, `setupFiles`) but no `npm test` script. Devs must
-remember `npx vitest run` instead of `npm test`. Added `"test": "vitest run"`
-and `"test:watch": "vitest"` scripts.
-✅ Done: web/package.json
-— `npm test` now runs all 102 frontend tests.
 **Filed**: 2026-06-27
