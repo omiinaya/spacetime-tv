@@ -34,6 +34,11 @@ interface SearchTotals {
   series: number;
 }
 
+/** API search response includes totals alongside results. */
+interface SearchResultsWithTotals extends SearchResults {
+  totals?: SearchTotals;
+}
+
 type LoadingSection = "live" | "movies" | "series" | null;
 
 export default function SearchPage() {
@@ -79,7 +84,7 @@ export default function SearchPage() {
   const SEARCH_CACHE_PREFIX = "stv_search_";
   const SEARCH_CACHE_TTL = 120000; // 2 minutes
 
-  const getCached = (q: string): SearchResults | null => {
+  const getCached = (q: string): SearchResultsWithTotals | null => {
     try {
       const raw = sessionStorage.getItem(SEARCH_CACHE_PREFIX + q);
       if (!raw) return null;
@@ -89,7 +94,7 @@ export default function SearchPage() {
     } catch {}
     return null;
   };
-  const setCached = (q: string, r: SearchResults) => {
+  const setCached = (q: string, r: SearchResultsWithTotals) => {
     try {
       sessionStorage.setItem(SEARCH_CACHE_PREFIX + q, JSON.stringify({ results: r, ts: Date.now() }));
     } catch {}
@@ -195,7 +200,7 @@ export default function SearchPage() {
     if (cached) {
       // Instant: show cached results (no spinner)
       setResults(cached);
-      setTotals("totals" in cached ? (cached as any).totals : null);
+      setTotals(cached.totals ?? null);
       setLoading(false);
       setError(null);
       // Background: refresh from API if not already refreshing

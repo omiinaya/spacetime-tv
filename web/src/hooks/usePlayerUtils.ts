@@ -259,11 +259,25 @@ export function saveProgress(params: SaveProgressParams): void {
 }
 
 /**
+ * The Background Sync API (ServiceWorkerRegistration.sync) is not yet
+ * declared in TypeScript's standard DOM lib. This local interface fills
+ * the gap without requiring @types/background-sync.
+ */
+interface SyncManager {
+  register(tag: string): Promise<void>;
+  getTags(): Promise<string[]>;
+}
+
+interface ServiceWorkerRegistrationWithSync extends ServiceWorkerRegistration {
+  readonly sync: SyncManager;
+}
+
+/**
  * Register a PWA background sync for watch progress.
  * Should be called periodically (e.g., every ~30s).
  */
 export function registerProgressSync(): void {
   navigator.serviceWorker?.ready
-    .then((reg) => (reg as any).sync.register("sync-watch-progress"))
+    .then((reg) => (reg as ServiceWorkerRegistrationWithSync).sync.register("sync-watch-progress"))
     .catch(() => {});
 }

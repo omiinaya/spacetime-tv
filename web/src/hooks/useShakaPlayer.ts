@@ -81,7 +81,7 @@ export function useShakaPlayer(
         });
 
         player.addEventListener("error", (event) => {
-          const data = (event as any).detail;
+          const data = (event as CustomEvent<shaka.util.Error>).detail;
           if (data && data.severity === shaka.util.Error.Severity.CRITICAL) {
             callbacks.onError("stream_error", "Playback error. Try again.");
           }
