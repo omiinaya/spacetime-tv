@@ -45,6 +45,15 @@ Research update (2026-06-27):
 
 ## Recently Completed
 
+### P3.42 — Refactor useVideoPlayer Phase 2: extract useStreamUrls hook
+Extracted 6 `useMemo` URL builders and 4 inline derivations (`isLive`,
+`isVod`, `watchKey`, `streamId`) into a dedicated `useStreamUrls` hook
+(122 lines). The main hook drops from 619→577 lines (-7%), and URL
+derivation is now testable in isolation without mounting the full
+player hook. No behavioural changes — all existing tests pass.
+✅ Done: web/src/hooks/useStreamUrls.ts, web/src/hooks/useVideoPlayer.ts
+— 85 frontend + 38 backend tests pass, TypeScript clean.
+
 ### P3.49 — Add backend tests for Admin dashboard endpoints
 Added 10 new tests for admin endpoints: stats structure, empty/fresh
 cache state, populated cache reflection, cache clear count/empty/EPG

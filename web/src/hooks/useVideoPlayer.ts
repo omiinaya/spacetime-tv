@@ -15,6 +15,7 @@ export { QUALITIES, SPEEDS } from "./usePlayerTypes";
 export { fmtTime } from "./usePlayerUtils";
 import { getWatchPos, getVolume, getMuted, saveVolume, saveMuted, probeStream, transcodeCache } from "./usePlayerUtils";
 import { QUALITIES } from "./usePlayerTypes";
+import { useStreamUrls } from "./useStreamUrls";
 import { useMpegtsPlayer, type MpegtsPlayerCallbacks } from "./useMpegtsPlayer";
 import { useHlsPlayer, type HlsPlayerCallbacks } from "./useHlsPlayer";
 import { useRemuxPlayer, type RemuxPlayerCallbacks } from "./useRemuxPlayer";
@@ -98,12 +99,12 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   const [liveSeekableStart, setLiveSeekableStart] = useState(0);
   const [liveSeekableEnd, setLiveSeekableEnd] = useState(0);
 
-  // ── DASH MPD URL for shaka-player (depends only on params) ──
-  const dashUrl: string | null =
-    type === "live" ? `/api/stream/live/${id}/manifest.mpd`
-    : type === "movie" ? `/api/stream/movie/${id}/manifest.mpd`
-    : type === "series" && seriesId && epId ? `/api/stream/series/${seriesId}/${epId}/manifest.mpd`
-    : null;
+  // ── Derived values and URL builders ──────────────────────────
+  const {
+    isLive, isVod, watchKey, streamId,
+    dashUrl, streamPath, transcodePath, remuxUrl,
+    vodTranscodeUrl, hlsInitUrl, probeUrl,
+  } = useStreamUrls({ type, id, seriesId, epId, qualityIdx });
 
   // ── Sub-hooks: mpegts.js player (live TV) ─────────────────────
   const mpegtsCallbacks = useMemo<MpegtsPlayerCallbacks>(() => ({
@@ -242,49 +243,6 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     const interval = setInterval(computeConnectionQuality, 3000);
     return () => clearInterval(interval);
   }, [computeConnectionQuality]);
-
-  // ── Derived ────────────────────────────────────────────────
-  const isLive = type === "live";
-  const isVod = type === "movie" || type === "series";
-  const watchKey = type === "movie" ? `vod_${id}` : type === "series" ? `ep_${seriesId}_${epId}` : "";
-  const streamId = epId || id || "";
-
-  const streamPath = useMemo(() => {
-    if (type === "live") return `/api/stream/live/${id}`;
-    if (type === "movie") return `/api/stream/movie/${id}`;
-    return `/api/stream/series/${seriesId}/${epId}`;
-  }, [type, id, seriesId, epId]);
-
-  const transcodePath = useMemo(() => {
-    const qh = QUALITIES[qualityIdx].height;
-    if (!isLive) return null;
-    if (qh) return `/api/stream/live/${id}/quality/${qh}`;
-    return `/api/stream/live/${id}/transcode`;
-  }, [isLive, id, qualityIdx]);
-
-  const remuxUrl = useMemo(() => {
-    if (!isVod) return null;
-    if (type === "movie") return `/api/stream/movie/${id}/remux`;
-    return `/api/stream/series/${seriesId}/${epId}/remux`;
-  }, [isVod, type, id, seriesId, epId]);
-
-  const vodTranscodeUrl = useMemo(() => {
-    if (!isVod) return null;
-    if (type === "movie") return `/api/stream/movie/${id}/transcode`;
-    return `/api/stream/series/${seriesId}/${epId}/transcode`;
-  }, [isVod, type, id, seriesId, epId]);
-
-  const hlsInitUrl = useMemo(() => {
-    if (!isVod) return null;
-    if (type === "movie") return `/api/movie/hls/${id}`;
-    return `/api/series/hls/${seriesId}/${epId}`;
-  }, [isVod, type, id, seriesId, epId]);
-
-  const probeUrl = useMemo(() => {
-    if (type === "live") return `/api/live/probe/${id}`;
-    if (type === "movie") return `/api/movie/probe/${id}`;
-    return `/api/series/probe/${streamId}`;
-  }, [type, id, streamId]);
 
   // ── Playback: MPEG-TS via mpegts.js (live TV only) ──────────
   const playMPEGTS = useCallback((url: string, liveFlag: boolean, isTranscode: boolean) => {
