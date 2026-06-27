@@ -38,6 +38,15 @@ for each path into the sub-hooks:
 - `useRemuxPlayer`: direct video element assignment with remux URLs
 The main hook should delegate to these sub-hooks, keeping only
 shared state management (phase, error, retry, progress save).
+
+**Progress (tick 2026-06-27 01:52)**:
+- ✅ Wired `useMpegtsPlayer` sub-hook into main hook (lines removed: ~120)
+- ✅ Moved DVR and connection-quality state to hook top for callback access
+- 🔲 Wire `useHlsPlayer` sub-hook and remove inline playHLS (~100 lines)
+- 🔲 Wire `useRemuxPlayer` sub-hook and remove inline playVodRemux (~150 lines)
+- 🔲 Clean up duplicate refs (playerRef, mpegtsCleanup → sub-hook-owned)
+- 🔲 Clean up unused mpegts import from main hook
+- 85 frontend + 38 backend tests pass, TypeScript clean, committed and pushed.
 **Filed**: 2026-06-27
 
 ---
