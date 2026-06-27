@@ -10,7 +10,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import SeriesPage from "@/pages/Series";
 import type { Series, Category } from "@/lib/api";
 import type { SeriesProgress } from "@/lib/continueWatching";

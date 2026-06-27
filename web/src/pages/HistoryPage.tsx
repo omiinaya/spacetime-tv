@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { Tv, Film, Tv2, Clock, Trash2, History } from "lucide-react";
 import { getRecentChannels, clearRecentChannels, type RecentChannel } from "@/lib/recentChannels";
 import {

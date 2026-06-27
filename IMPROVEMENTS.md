@@ -8,23 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.14 — Investigate React Router v8 upgrade (BLOCKED)
-✅ RESEARCH COMPLETE: `react-router` core has v8.0.1, but `react-router-dom`
-(which the project uses) latest on npm is v7.18.0 — **no react-router-dom v8
-exists yet**. npm dist-tags: `latest: 7.18.0`. Migration not possible until
-react-router-dom v8 is published.
-- [x] Review React Router v8 changelog for breaking changes from v7
-- [x] Evaluate if the project's routing patterns benefit from v8 features
-- [ ] ~~Create migration plan or decide to defer~~ → BLOCKED: no react-router-dom v8
-- **Re-checked**: 2026-06-27 — still at v7.18.0, no v8
-
-### P3.17 — Investigate hls.js v1.7.0 stable release status (BLOCKED)
-hls.js v1.7.0 stable still not published (latest npm tag: 1.6.16).
-The project uses 1.7.0-beta.1 successfully. No stable release available.
-- [x] Check npm for hls.js v1.7.0 stable → still 1.6.16, no 1.7.0 stable
-- [ ] If available, create migration plan → BLOCKED: no stable 1.7.0
-- **Re-checked**: 2026-06-27 — still at 1.6.16 (beta at 1.7.0-beta.1)
-
 ### P3.21 — Add component tests for OfflineBanner and utility components
 OfflineBanner, ChannelRow, PWAInstallPrompt, and other utility components have
 no test coverage. These are small but widely used across the app.
@@ -51,6 +34,18 @@ The watchlist, searchHistory, and settings lib modules handle core app state
 ---
 
 ## Recently Completed
+
+### P3.14 — Migrate to React Router v8
+✅ Done: switched from `react-router-dom` v7.18.0 to `react-router` v8.0.1.
+react-router-dom was merged into react-router in v8. Updated 30 import lines
+across the codebase, 8 test file mocks, and package.json. 575 tests pass
+(was 554), TypeScript clean. Committed and pushed.
+
+### P3.17 — hls.js dependency status
+✅ Already on latest available hls.js (`^1.7.0-beta.1`). No stable v1.7.0
+published on npm — latest tag is 1.6.16, latest overall is 1.7.0-beta.1
+(already in use). No action needed. Canary builds (`1.7.0-beta.1.0.canary.*`)
+are dev builds with no stable milestone in sight.
 
 ### P3.20 — Add component tests for PersonPage
 | ✅ Done: web/src/pages/__tests__/PersonPage.test.tsx — 25 component tests

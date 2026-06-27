@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { Tv, Film, Tv2, Heart, Star, TrendingUp, Play, AlertCircle } from "lucide-react";
 import ContentRow from "@/components/ContentRow";
 import { Skeleton } from "@/components/Skeleton";

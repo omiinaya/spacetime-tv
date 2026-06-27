@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router";
 import { Tv, Loader2, AlertCircle, RotateCcw, Search, X, Star } from "lucide-react";
 import { api, Category, LiveStream } from "@/lib/api";
 import { Skeleton, ChannelCardSkeleton, TabSkeleton } from "@/components/Skeleton";

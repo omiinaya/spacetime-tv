@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router";
 import {
   Loader2, AlertCircle, ArrowLeft, Play, Pause, Maximize, Minimize,
   Volume2, VolumeX, SkipBack, SkipForward, Settings, PictureInPicture2, Download, Tv, RadioTower,

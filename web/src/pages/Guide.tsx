@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { Tv, Loader2, AlertCircle, RotateCcw, Search, X } from "lucide-react";
 import { Skeleton } from "@/components/Skeleton";
 import { ChannelRow } from "@/components/ChannelRow";
