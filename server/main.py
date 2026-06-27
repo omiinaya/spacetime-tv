@@ -703,7 +703,7 @@ async def stream_bytes_transcode(url: str, target_height: Optional[int] = None):
     log.info(f"Transcoding {cdn_url[:100]}...")
 
     cmd = [
-        "ffmpeg",
+        "/usr/bin/ffmpeg",
         "-loglevel", "warning",
         "-probesize", "2M",
         "-analyzeduration", "2M",
@@ -821,7 +821,7 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
 
     try:
         proc = await asyncio.create_subprocess_exec(
-            "timeout", "8", "ffprobe",
+            "/usr/bin/timeout", "8", "/usr/bin/ffprobe",
             "-v", "error",
             "-print_format", "json",
             "-show_streams",
@@ -953,7 +953,7 @@ async def stream_vod_transcode(url: str):
 
     log.info(f"VOD transcode {cdn_url[:100]}...")
     cmd = [
-        "ffmpeg",
+        "/usr/bin/ffmpeg",
         "-loglevel", "warning",
         "-probesize", "2M",
         "-analyzeduration", "2M",
@@ -1023,7 +1023,7 @@ async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
 
     log.info(f"VOD remux {cdn_url[:100]}... start={start_time}")
     cmd = [
-        "ffmpeg",
+        "/usr/bin/ffmpeg",
         "-loglevel", "warning",
         "-probesize", "2M",
         "-analyzeduration", "2M",
@@ -1322,7 +1322,7 @@ async def probe_subtitles(media_type: str, stream_id: int):
     url = _get_stream_url(stream_id, media_type)
     try:
         proc = await asyncio.create_subprocess_exec(
-            "ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", url,
+            "/usr/bin/ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", url,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -1363,7 +1363,7 @@ async def get_subtitles(media_type: str, stream_id: int, track_index: int):
     url = _get_stream_url(stream_id, media_type)
     try:
         proc = await asyncio.create_subprocess_exec(
-            "ffmpeg", "-y",
+            "/usr/bin/ffmpeg", "-y",
             "-i", url,
             "-map", f"0:s:{track_index}",
             "-f", "webvtt",
@@ -1400,7 +1400,7 @@ async def probe_audio(media_type: str, stream_id: int):
     url = _get_stream_url(stream_id, media_type)
     try:
         proc = await asyncio.create_subprocess_exec(
-            "ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", url,
+            "/usr/bin/ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", url,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -1439,7 +1439,7 @@ async def stream_audio_track(media_type: str, stream_id: int, audio_index: int):
     url = _get_stream_url(stream_id, media_type)
     try:
         proc = await asyncio.create_subprocess_exec(
-            "ffmpeg", "-y",
+            "/usr/bin/ffmpeg", "-y",
             "-i", url,
             "-map", "0:v:0",
             "-map", f"0:a:{audio_index}",
@@ -2255,7 +2255,7 @@ async def convert_to_mp4(stream_id: str, stream_type: str):
     # Phase 2: Convert local MKV → fMP4 (no network, can't drop)
     log.info(f"Converting {cache_key} MKV→fMP4")
     cmd = [
-        "ffmpeg", "-loglevel", "warning",
+        "/usr/bin/ffmpeg", "-loglevel", "warning",
         "-i", str(mkv_path),
         "-c", "copy",
         "-movflags", "frag_keyframe+empty_moov+default_base_moof",
@@ -2490,7 +2490,7 @@ async def run_hls_segmenter(cache_key: str, input_path: Path):
         pl_path.unlink()
 
     ffmpeg_args = [
-        "ffmpeg", "-loglevel", "warning", "-y",
+        "/usr/bin/ffmpeg", "-loglevel", "warning", "-y",
         "-i", str(input_path),
         "-c", "copy",
         "-f", "hls",
