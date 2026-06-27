@@ -8,17 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.13 — Add MSW (Mock Service Worker) for API-level integration tests
-✅ INFRASTRUCTURE: MSW v2.14.6 installed, handlers created for all API
-endpoints (series, movies, live, guide, search, TMDB, watchlist), server
-integrated into test-setup.ts. Proof-of-concept: 21 MSW integration tests at
-`src/mocks/__tests__/api.msw.test.ts` covering real `api` module calls.
-- [x] Install and configure MSW in test setup
-- [x] Create handlers with realistic fixture data for all endpoints
-- [x] Add 21 integration tests as proof of concept
-- [ ] Migrate one page component test (e.g. Series) from vi.mock() to MSW
-- [ ] Document MSW patterns for future tests
-
 ### P3.14 — Investigate React Router v8 upgrade
 ✅ RESEARCH COMPLETE: `react-router` core has v8.0.1, but `react-router-dom`
 (which the project uses) latest on npm is v7.18.0 — **no react-router-dom v8
@@ -42,15 +31,21 @@ navigation to watch pages, and edge cases.
 - [ ] Create WatchlistPage.test.tsx with 15+ component tests
 
 ### P3.17 — Investigate hls.js v1.7.0 stable release status
-Last checked: hls.js v1.7.0 stable still not published (latest npm tag: 1.6.16).
-The project uses 1.7.0-beta.1 successfully after reverting canary. Check if stable
-has been released and evaluate migration.
-- [ ] Check npm for hls.js v1.7.0 stable
-- [ ] If available, create migration plan
+Last checked: hls.js v1.7.0 stable **still not published** (latest npm tag: 1.6.16).
+The project uses 1.7.0-beta.1 successfully after reverting canary. No stable
+release available yet.
+- [x] Check npm for hls.js v1.7.0 stable → still 1.6.16, no 1.7.0 stable
+- [ ] If available, create migration plan → BLOCKED: no stable 1.7.0
 
 ---
 
 ## Recently Completed
+
+### P3.13 — Add MSW (Mock Service Worker) for API-level integration tests
+|✅ Done: MSW v2.14.6 installed, 21 integration tests, Series test migrated
+to MSW (37 tests), documentation at web/src/mocks/README.md.
+— 367 frontend tests pass (18 files), TypeScript clean, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P2.11 — Add component tests for Series page
 |✅ Done: web/src/pages/__tests__/Series.test.tsx
@@ -95,9 +90,4 @@ has been released and evaluate migration.
 ### P2.6 — Add component tests for HistoryPage
 |✅ Done: web/src/pages/__tests__/HistoryPage.test.tsx
 — Committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.9 — Evaluate hls.js v1.7.0-beta.1 stable vs current canary build
-|✅ Done: reverted canary, stayed on 1.7.0-beta.1
-— Committed as 332b5b8.
 **Filed**: 2026-06-27

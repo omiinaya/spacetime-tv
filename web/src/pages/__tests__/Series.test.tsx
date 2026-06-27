@@ -1,18 +1,12 @@
 /**
- * Tests for the Series page component.
+ * Tests for the Series page component — migrated to use MSW for API mocking.
  *
- * Series renders category-based horizontal rows of series cards with:
- * - Loading skeleton state
- * - Error banner with retry
- * - Empty states (no categories, no search results)
- * - Continue Watching row (progress < 90%)
- * - Recently Completed row (progress >= 90%)
- * - TMDB Trending This Week section
- * - Section search with clear
- * - Category content rows with lazy loading
- * - "Show All" grid view with pagination
- * - Series cards (poster, rating, year, watchlist heart)
- * - SeriesOverlay
+ * Instead of vi.mock("@/lib/api"), this test file uses MSW (Mock Service Worker)
+ * to intercept fetch() calls at the network layer. The real api module is used,
+ * which validates URL construction, parameter handling, and JSON parsing.
+ *
+ * Non-API mocks (watchlist, continueWatching, SettingsContext, child components)
+ * remain as vi.mock() since they don't need network-level interception.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
@@ -21,30 +15,9 @@ import SeriesPage from "@/pages/Series";
 import type { Series, Category } from "@/lib/api";
 import type { SeriesProgress } from "@/lib/continueWatching";
 
-// ── Mock api ─────────────────────────────────────────────
-const mockSeriesCategories = vi.fn();
-const mockSeriesList = vi.fn();
-const mockTmdbTvTrending = vi.fn();
-
-vi.mock("@/lib/api", () => ({
-  api: {
-    series: {
-      categories: (...args: unknown[]) =>
-        (mockSeriesCategories as unknown as (...a: unknown[]) => Promise<{ categories: Category[] }>)(...args),
-      list: (...args: unknown[]) =>
-        (mockSeriesList as unknown as (...a: unknown[]) => Promise<{ series: Series[]; total: number; offset: number; limit: number }>)(...args),
-    },
-    tmdb: {
-      tv: {
-        trending: (...args: unknown[]) =>
-          (mockTmdbTvTrending as unknown as (...a: unknown[]) => Promise<{ trending: unknown[]; enabled: boolean }>)(...args),
-      },
-    },
-    watchlist: { progress: vi.fn() },
-  },
-  imageUrl: (url: string) => url,
-  tmdbImgProps: vi.fn((path: string) => ({ src: `https://image.tmdb.org/t/p/w342${path}` })),
-}));
+// ── MSW for API interception ──────────────────────────────
+import { server } from "@/mocks/server";
+import { http, HttpResponse } from "msw";
 
 // ── Mock watchlist (series) ──────────────────────────────
 const mockIsSeriesInWatchlist = vi.fn(() => false);
@@ -128,66 +101,8 @@ vi.stubGlobal("ResizeObserver", vi.fn(function MockResizeObserver() {
   return this;
 }));
 
-// ── Sample data ──────────────────────────────────────────
-const sampleCategories: Category[] = [
-  { category_id: "1", category_name: "Action", parent_id: 0 },
-  { category_id: "2", category_name: "Drama", parent_id: 0 },
-];
-
-const sampleSeries: Series[] = [
-  {
-    num: 1,
-    name: "Breaking Bad",
-    series_id: 101,
-    cover: "https://example.com/bb.jpg",
-    plot: "A high school teacher turns to meth production.",
-    cast: "Bryan Cranston, Aaron Paul",
-    director: "Vince Gilligan",
-    genre: "Crime, Drama, Thriller",
-    releaseDate: "2008-01-20",
-    rating: "9.5",
-    rating_5based: "4.7",
-    tmdb: "1396",
-    youtube_trailer: "",
-    category_id: "2",
-  },
-  {
-    num: 2,
-    name: "Stranger Things",
-    series_id: 102,
-    cover: "",
-    plot: "Kids discover supernatural secrets.",
-    cast: "Winona Ryder, David Harbour",
-    director: "Duffer Brothers",
-    genre: "Sci-Fi, Horror",
-    releaseDate: "2016-07-15",
-    rating: "8.7",
-    rating_5based: "4.3",
-    tmdb: "66732",
-    youtube_trailer: "",
-    category_id: "1",
-  },
-  {
-    num: 3,
-    name: "The Office",
-    series_id: 103,
-    cover: "https://example.com/office.jpg",
-    plot: "A mockumentary about office workers.",
-    cast: "Steve Carell, Rainn Wilson",
-    director: "Greg Daniels",
-    genre: "Comedy",
-    releaseDate: "",
-    rating: "",
-    rating_5based: "",
-    tmdb: "2316",
-    youtube_trailer: "",
-    category_id: "1",
-  },
-];
-
-const sampleTrending = [
-  { id: 1396, name: "Breaking Bad", poster_path: "/bb.jpg", vote_average: 9.5, first_air_date: "2008-01-20" },
-];
+// ── Sample data from shared MSW fixtures ─────────────────
+import { sampleCategories, sampleSeries, sampleTrending } from "@/mocks/handlers";
 
 // ── Helper ───────────────────────────────────────────────
 function renderSeries() {
@@ -199,20 +114,19 @@ function renderSeries() {
 }
 
 function setupDefaultMocks() {
-  mockSeriesCategories.mockResolvedValue({ categories: sampleCategories });
-  mockSeriesList.mockImplementation((catId: string) => {
-    const filtered = sampleSeries.filter((s) => s.category_id === catId);
-    return Promise.resolve({ series: filtered, total: filtered.length, offset: 0, limit: 20 });
-  });
-  mockTmdbTvTrending.mockResolvedValue({ trending: [], enabled: false });
   mockLoadServerProgress.mockResolvedValue({ series: [], movies: [] });
   mockGetContinueWatching.mockReturnValue([]);
   localStorage.clear();
   sessionStorage.clear();
+  // MSW default handlers in handlers.ts already return the right data:
+  //   GET /api/series/categories       → sampleCategories (2 cats)
+  //   GET /api/series?category_id=…     → filtered sampleSeries
+  //   GET /api/tmdb/tv/trending        → { trending: sampleTrending, enabled: false }
+  //   GET /api/watchlist/progress      → { progress: { series: [], movies: [] } }
 }
 
 // ── Tests ──────────────────────────────────────────────────
-describe("SeriesPage", () => {
+describe("SeriesPage (MSW)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupDefaultMocks();
@@ -221,8 +135,10 @@ describe("SeriesPage", () => {
   // ── Loading state ──────────────────────────────────────
   describe("loading state", () => {
     beforeEach(() => {
-      mockSeriesCategories.mockReturnValue(new Promise(() => {}));
-      mockTmdbTvTrending.mockReturnValue(new Promise(() => {}));
+      server.use(
+        http.get("/api/series/categories", () => new Promise(() => {})),
+        http.get("/api/tmdb/tv/trending", () => new Promise(() => {})),
+      );
     });
 
     it("shows skeleton placeholders while loading", async () => {
@@ -246,14 +162,18 @@ describe("SeriesPage", () => {
   // ── Error state ─────────────────────────────────────────
   describe("error state", () => {
     beforeEach(() => {
-      mockSeriesCategories.mockRejectedValue(new Error("Failed to load categories"));
+      server.use(
+        http.get("/api/series/categories", () =>
+          new HttpResponse(null, { status: 500 }),
+        ),
+      );
     });
 
     it("shows error banner with retry button", async () => {
       renderSeries();
 
       await waitFor(() => {
-        expect(screen.getByText("Failed to load categories")).toBeInTheDocument();
+        expect(screen.getByText(/API error/)).toBeInTheDocument();
       });
 
       const retryButton = screen.getByText("Retry");
@@ -539,7 +459,11 @@ describe("SeriesPage", () => {
   // ── Trending This Week ───────────────────────────────────
   describe("Trending This Week section", () => {
     it("renders trending section when enabled and has data", async () => {
-      mockTmdbTvTrending.mockResolvedValue({ trending: sampleTrending, enabled: true });
+      server.use(
+        http.get("/api/tmdb/tv/trending", () =>
+          HttpResponse.json({ trending: sampleTrending, total_pages: 1, total_results: sampleTrending.length, enabled: true }),
+        ),
+      );
       renderSeries();
 
       await waitFor(() => {
@@ -549,7 +473,11 @@ describe("SeriesPage", () => {
     });
 
     it("does not render trending when disabled", async () => {
-      mockTmdbTvTrending.mockResolvedValue({ trending: sampleTrending, enabled: false });
+      server.use(
+        http.get("/api/tmdb/tv/trending", () =>
+          HttpResponse.json({ trending: sampleTrending, total_pages: 1, total_results: sampleTrending.length, enabled: false }),
+        ),
+      );
       renderSeries();
 
       await waitFor(() => {
@@ -558,7 +486,11 @@ describe("SeriesPage", () => {
     });
 
     it("does not render trending when empty", async () => {
-      mockTmdbTvTrending.mockResolvedValue({ trending: [], enabled: true });
+      server.use(
+        http.get("/api/tmdb/tv/trending", () =>
+          HttpResponse.json({ trending: [], total_pages: 0, total_results: 0, enabled: true }),
+        ),
+      );
       renderSeries();
 
       await waitFor(() => {
@@ -567,7 +499,11 @@ describe("SeriesPage", () => {
     });
 
     it("shows rating and year badges on trending cards", async () => {
-      mockTmdbTvTrending.mockResolvedValue({ trending: sampleTrending, enabled: true });
+      server.use(
+        http.get("/api/tmdb/tv/trending", () =>
+          HttpResponse.json({ trending: sampleTrending, total_pages: 1, total_results: sampleTrending.length, enabled: true }),
+        ),
+      );
       renderSeries();
 
       await waitFor(() => {
@@ -599,13 +535,20 @@ describe("SeriesPage", () => {
     });
 
     it("shows back button when in Show All mode", async () => {
-      // Override mock: return many series to trigger Show All
+      // Override handler: return many series to trigger Show All
       const manySeries = Array.from({ length: 25 }, (_, i) => ({
         ...sampleSeries[0],
         series_id: 200 + i,
         name: `Series ${i + 1}`,
       }));
-      mockSeriesList.mockResolvedValue({ series: manySeries, total: 25, offset: 0, limit: 20 });
+      server.use(
+        http.get("/api/series", ({ request }) => {
+          const url = new URL(request.url);
+          const catId = url.searchParams.get("category_id") || "";
+          const filtered = manySeries.filter((s) => s.category_id === catId);
+          return HttpResponse.json({ series: filtered, total: filtered.length, offset: 0, limit: 20 });
+        }),
+      );
       renderSeries();
 
       await waitFor(() => {
@@ -658,7 +601,11 @@ describe("SeriesPage", () => {
     });
 
     it("handles single category gracefully", async () => {
-      mockSeriesCategories.mockResolvedValue({ categories: [sampleCategories[0]] });
+      server.use(
+        http.get("/api/series/categories", () =>
+          HttpResponse.json({ categories: [sampleCategories[0]] }),
+        ),
+      );
       renderSeries();
 
       await waitFor(() => {
