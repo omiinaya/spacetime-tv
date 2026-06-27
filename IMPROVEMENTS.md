@@ -8,18 +8,57 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P2.4 — HistoryPage: show "last watched" timestamps
-The new HistoryPage (moved from home page sidebar) lists recently-watched channels
-but doesn't show when each was last watched. The `RecentChannel` type in
-`src/lib/recentChannels.ts` stores a `timestamp` field already. Display relative
-time (e.g., "2h ago", "Yesterday") under each channel name.
-- [ ] Add a small timestamp text below each channel name in HistoryPage
-- [ ] Use a `timeAgo` helper function (or import from existing util)
-- [ ] Gracefully handle missing/old timestamps
+### P2.5 — Add unit tests for `timeAgo` helper and `recentChannels` module
+The `utils.ts` (timeAgo) and `recentChannels.ts` modules have zero test coverage.
+The `timeAgo` function handles various time boundaries (seconds, minutes, hours,
+days, months, years). The `recentChannels` module persists to localStorage with
+14-day expiry and max-12-item limit.
+- [ ] Add test file `src/lib/utils.test.ts` covering:
+  - timeAgo: "Just now", "Xs ago", "Xm ago", "Xh ago", "Yesterday", "X days ago",
+    "Xmo ago", "Xy ago"
+  - timeAgo edge cases: null/undefined/0/future timestamps
+- [ ] Add test file `src/lib/recentChannels.test.ts` covering:
+  - getRecentChannels with empty/valid/expired localStorage
+  - saveRecentChannel deduplication and max limit
+  - clearRecentChannels
+  - 14-day expiry filtering
+
+### P2.6 — Add component tests for HistoryPage
+HistoryPage was recently extracted from the home page sidebar but has no tests.
+Key behaviors to cover: renders channel cards, shows timestamps via timeAgo,
+empty state with "No watch history yet" message, Clear all button functionality.
+- [ ] Create `src/pages/__tests__/HistoryPage.test.tsx`
+- [ ] Mock `getRecentChannels` with sample data including timestamps
+- [ ] Test empty state rendering
+- [ ] Test channel list with icons and fallbacks
+- [ ] Test Clear all button clears list
+- [ ] Test relative timestamps render correctly
+
+### P2.7 — Add component tests for Guide page
+The EPG Guide page (301 lines) is a core page with channel rows, search, and
+favorites — but has no component-level tests. The data layer (`useGuideData`) is
+tested via `guideUtils.test.ts`, but component interaction (loading, errors,
+empty states, favorites toggle) is not.
+- [ ] Create `src/pages/__tests__/Guide.test.tsx`
+- [ ] Mock useGuideData and useChannelFavorites hooks
+- [ ] Test loading skeleton rendering
+- [ ] Test error state with retry button
+- [ ] Test empty state ("No channels match")
+- [ ] Test channel count in header
+- [ ] Test favorites filter toggle interaction
 
 ---
 
 ## Recently Completed
+
+### P2.4 — HistoryPage: show "last watched" timestamps
+HistoryPage lists recently-watched channels but didn't show when each was last
+watched. The `RecentChannel` type stores `watchedAt` but it was unused in the UI.
+Added a `timeAgo` helper to `utils.ts` and displayed relative time (e.g. "2h ago",
+"Yesterday") under each channel name. Handles missing/old timestamps gracefully.
+✅ Done: web/src/lib/utils.ts (timeAgo), web/src/pages/HistoryPage.tsx
+— 102 frontend + 59 backend tests pass, TypeScript clean (0 errors), committed and pushed.
+**Filed**: 2026-06-27
 
 ### P1.1 — Fix `tsc --noEmit` errors in test files (vitest globals not typed)
 `tsc --noEmit` reported 31 errors in `src/lib/api.test.ts` because vitest globals
@@ -72,37 +111,4 @@ Added 17 new tests covering the core networking primitives:
   POST method, `watchlist.progress()`
 - Exported `fetchWithTimeout` and `fetchWithRetry` from api.ts for testing
 -- 102 frontend + 59 backend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.42 — Refactor useVideoPlayer Phase 2: extract useStreamUrls hook
-Extracted 6 `useMemo` URL builders and 4 inline derivations (`isLive`,
-`isVod`, `watchKey`, `streamId`) into a dedicated `useStreamUrls` hook
-(122 lines). The main hook drops from 619→577 lines (-7%), and URL
-derivation is now testable in isolation without mounting the full
-player hook. No behavioural changes — all existing tests pass.
-✅ Done: web/src/hooks/useStreamUrls.ts, web/src/hooks/useVideoPlayer.ts
-— 85 frontend + 38 backend tests pass, TypeScript clean.
-
-### P3.49 — Add backend tests for Admin dashboard endpoints
-Added 10 new tests for admin endpoints: stats structure, empty/fresh
-cache state, populated cache reflection, cache clear count/empty/EPG
-reset, warm cache, warm-full, EPG refresh status and already-running
-detection. All use existing test fixtures (mocked upstream, cleared
-cache per test).
-✅ Done: server/tests/test_admin.py
-— 59 backend + 85 frontend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.47 — Add DASH streaming support via shaka-player
-Added MPD manifest generation on the server (`generate_live_mpd`,
-`generate_vod_mpd`) and three new endpoints:
-- `/api/stream/live/{stream_id}/manifest.mpd` (dynamic DASH profile)
-- `/api/stream/movie/{stream_id}/manifest.mpd` (static onDemand profile)
-- `/api/stream/series/{series_id}/{episode_id}/manifest.mpd`
-Frontend `useVideoPlayer` hook now computes `dashUrl` and the HLS fatal
-error fallback tries DASH MPD (`application/dash+xml`) via shaka-player
-before falling back to HLS. 11 new server-side tests for MPD validation.
-✅ Done: server/main.py, web/src/hooks/useVideoPlayer.ts,
-       server/tests/test_dash.py
-— 49 backend + 85 frontend tests pass, TypeScript clean, committed and pushed.
 **Filed**: 2026-06-27

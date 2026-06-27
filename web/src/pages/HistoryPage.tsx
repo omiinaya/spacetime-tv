@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Tv, Clock, Trash2, History } from "lucide-react";
 import { getRecentChannels, clearRecentChannels, type RecentChannel } from "@/lib/recentChannels";
+import { timeAgo } from "@/lib/utils";
 
 export default function HistoryPage() {
   const navigate = useNavigate();
@@ -76,7 +77,10 @@ export default function HistoryPage() {
                 </div>
               )}
               <p className="text-xs font-medium leading-tight line-clamp-1">{ch.name}</p>
-            </button>
+              {ch.watchedAt && (
+                <p className="text-[10px] text-muted-foreground/60 mt-1">{timeAgo(ch.watchedAt)}</p>
+              )}
+              </button>
           ))}
         </div>
       )}
