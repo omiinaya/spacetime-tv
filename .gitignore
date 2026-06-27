@@ -6,3 +6,5 @@ __pycache__/
 epg_cache.json
 *.egg-info/
 *.tsbuildinfo
+web/[0-9]*/
+server/[0-9]*/
