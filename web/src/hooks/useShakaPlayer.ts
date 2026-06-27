@@ -1,17 +1,17 @@
 /**
- * useHlsPlayer — HLS VOD playback via hls.js
+ * useShakaPlayer — shaka-player fallback for HLS/DASH playback
  *
- * Extracted from useVideoPlayer.ts to improve maintainability.
- * Handles HLS stream setup, native HLS fallback for Safari,
- * progress saving, and error recovery.
+ * Evaluated as part of P3.45: provides robust DRM support, ManagedMediaSource
+ * for iOS Safari, and DASH/CMAF capability as a complement to hls.js.
+ *
+ * Used as a fallback when hls.js encounters an unrecoverable error.
  */
-
 import { useEffect, useRef, useCallback } from "react";
-import Hls from "hls.js";
+import shaka from "shaka-player";
 import { tryAutoplay, saveProgress, registerProgressSync } from "./usePlayerUtils";
 import type { PlayPhase, ErrorType, VideoSourceType } from "./usePlayerTypes";
 
-export interface HlsPlayerCallbacks {
+export interface ShakaPlayerCallbacks {
   onPhaseChange: (phase: PlayPhase) => void;
   onError: (type: ErrorType, msg: string) => void;
   onStall: () => void;
@@ -19,21 +19,19 @@ export interface HlsPlayerCallbacks {
   onDuration: (dur: number) => void;
   onAutoplayMuted: () => void;
   clearLoadingTimeout: () => void;
-  /** Called when hls.js encounters an unrecoverable fatal error.
-   *  The consumer can fall back to shaka-player with the given URL. */
-  onHlsFatalError?: (url: string) => void;
 }
 
-export function useHlsPlayer(
+export function useShakaPlayer(
   videoRef: React.RefObject<HTMLVideoElement>,
-  callbacks: HlsPlayerCallbacks,
+  callbacks: ShakaPlayerCallbacks,
 ) {
-  const hlsRef = useRef<Hls | null>(null);
-  const hlsCleanupRef = useRef<(() => void) | null>(null);
+  const playerRef = useRef<shaka.Player | null>(null);
+  const shakaCleanupRef = useRef<(() => void) | null>(null);
 
-  const playHLS = useCallback(
+  const playShaka = useCallback(
     (
       playlistUrl: string,
+      mimeType: string = "application/x-mpegURL",
       startPos: number | null = null,
       type?: VideoSourceType,
       seriesId?: string,
@@ -45,57 +43,55 @@ export function useHlsPlayer(
       const video = videoRef.current;
       if (!video) return;
 
-      if (hlsCleanupRef.current) {
-        hlsCleanupRef.current();
-        hlsCleanupRef.current = null;
+      if (shakaCleanupRef.current) {
+        shakaCleanupRef.current();
+        shakaCleanupRef.current = null;
       }
-      if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+      if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
       video.removeAttribute("src");
 
-      let saveInterval: ReturnType<typeof setInterval> | null = null;
-
-      if (Hls.isSupported()) {
-        const hls = new Hls({
-          enableWorker: true,
-          lowLatencyMode: false,
-          maxBufferLength: 30,
-          maxMaxBufferLength: 60,
-        });
-        hlsRef.current = hls;
-        hls.loadSource(playlistUrl);
-        hls.attachMedia(video);
-
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          callbacks.onPhaseChange("playing");
-          callbacks.onDuration(hls.levels[0]?.details?.totalduration || video.duration || 0);
-          tryAutoplay(video, callbacks.onAutoplayMuted).then((started) => {
-            if (!started) callbacks.onPhaseChange("paused");
+      // shaka-player may not be compiled with HLS support; polyfill if needed
+      if (shaka.Player.isBrowserSupported()) {
+        const player = new shaka.Player();
+        playerRef.current = player;
+        player.attach(video, /* preferNativeHls= */ false).then(() => {
+          // Configure: prefer HLS, enable live sync
+          player.configure({
+            streaming: {
+              alwaysStreamText: false,
+              liveSync: { enabled: true, latencyTarget: 15 },
+              bufferingGoal: 30,
+              rebufferingGoal: 10,
+            },
+            preferNativeHls: false,
           });
+
+          player.load(playlistUrl, startPos ?? undefined, mimeType).then(() => {
+            callbacks.onPhaseChange("playing");
+            callbacks.onDuration(video.duration || 0);
+            tryAutoplay(video, callbacks.onAutoplayMuted).then((started) => {
+              if (!started) callbacks.onPhaseChange("paused");
+            });
+          }).catch((err) => {
+            callbacks.onError("stream_error", `shaka-player load failed: ${err?.message || "unknown"}`);
+          });
+        }).catch(() => {
+          callbacks.onError("not_supported", "shaka-player failed to attach to video element.");
+          return;
         });
 
-        hls.on(Hls.Events.ERROR, (_event, data) => {
-          if (data.fatal) {
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
-              case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
-              default:
-                callbacks.onError("stream_error", "Playback error. Try again.");
-                hls.destroy();
-                // Try fallback to shaka-player for unrecoverable errors
-                callbacks.onHlsFatalError?.(playlistUrl);
-                break;
-            }
+        player.addEventListener("error", (event) => {
+          const data = (event as any).detail;
+          if (data && data.severity === shaka.util.Error.Severity.CRITICAL) {
+            callbacks.onError("stream_error", "Playback error. Try again.");
           }
         });
 
         if (startPos && startPos > 5) {
-          const resumeHandler = () => {
-            video.currentTime = startPos;
-            hls.off(Hls.Events.MANIFEST_PARSED, resumeHandler);
-          };
-          hls.on(Hls.Events.MANIFEST_PARSED, resumeHandler);
+          // shaka-player handles startPos via load()
         }
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        // Native HLS fallback (Safari)
         video.src = playlistUrl;
         video.addEventListener("loadedmetadata", () => {
           callbacks.onDuration(video.duration || 0);
@@ -126,6 +122,7 @@ export function useHlsPlayer(
       video.addEventListener("ended", onEnded);
       video.addEventListener("waiting", onWaiting);
 
+      let saveInterval: ReturnType<typeof setInterval> | null = null;
       if (watchKey) {
         let syncCounter = 0;
         saveInterval = setInterval(() => {
@@ -148,7 +145,7 @@ export function useHlsPlayer(
         }
       }, 2000);
 
-      hlsCleanupRef.current = () => {
+      shakaCleanupRef.current = () => {
         clearTimeout(timeout);
         clearInterval(emptyCheck);
         if (saveInterval) clearInterval(saveInterval);
@@ -162,12 +159,12 @@ export function useHlsPlayer(
   );
 
   const destroy = useCallback(() => {
-    if (hlsCleanupRef.current) { hlsCleanupRef.current(); hlsCleanupRef.current = null; }
-    try { hlsRef.current?.destroy(); } catch {}
-    hlsRef.current = null;
+    if (shakaCleanupRef.current) { shakaCleanupRef.current(); shakaCleanupRef.current = null; }
+    try { playerRef.current?.destroy(); } catch {}
+    playerRef.current = null;
   }, []);
 
   useEffect(() => () => destroy(), [destroy]);
 
-  return { hlsRef, hlsCleanupRef, playHLS, destroy };
+  return { playerRef, shakaCleanupRef, playShaka, destroy };
 }

@@ -8,17 +8,27 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.45 — Evaluate shaka-player for alternative HLS playback
-shaka-player v5.1.11 (released June 24, 2026) offers robust
-DRM support, Offline playback, and native ManagedMediaSource support.
-Could be used as a fallback for hls.js or for enhanced DASH/CMAF
-support with live streams. Worth evaluating as a potential
-replacement or complement to hls.js.
+### P3.46 — Eliminate remaining `as any` type casts (3 remaining)
+3 `as any` type casts remain across the codebase:
+- `web/src/hooks/usePlayerUtils.ts:267` — SW registration sync
+- `web/src/hooks/useShakaPlayer.ts:84` — shaka error event detail
+- `web/src/pages/Search.tsx:198` — cached search totals
+Should be replaced with proper type narrowing or interface declarations.
 **Filed**: 2026-06-27
 
----
+### P3.47 — Add DASH streaming support via shaka-player
+Now that shaka-player v5.1.11 is integrated as an HLS fallback (P3.45),
+we can extend it to support DASH/MPD streams natively. Many IPTV providers
+offer DASH as an alternative to HLS with better adaptive bitrate handling
+and lower latency. The `useShakaPlayer` hook already accepts a mimeType
+parameter; the server just needs DASH endpoint support.
+**Filed**: 2026-06-27
 
-## Monitoring
+### P3.48 — Resolve StarletteDeprecationWarning in test suite
+Backend test output shows:
+"Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead."
+Add `httpx2` to requirements.txt and update test imports.
+**Filed**: 2026-06-27
 
 ### P3.8 — ManagedMediaSource API for MSE optimization
 Research update (2026-06-27):
@@ -28,14 +38,37 @@ Research update (2026-06-27):
   (iOS 17.1+). Already installed (^1.8.0). MMS is automatically used
   when available; no config changes needed.
 - shaka-player v5.1.11 (June 24, 2026) confirmed as latest — robust
-  DRM, Offline playback, ManagedMediaSource support.
+  DRM, Offline playback, ManagedMediaSource support. Integrated as
+  hls.js fallback (P3.45 ✅).
 - **Action**: upgrade hls.js from beta once v1.7.0 stable ships. Monitor
   hls.js releases for "sourceended" event recovery for ManagedMediaSource.
-  Evaluate shaka-player v5.1.11 as potential hls.js complement (P3.45).
+  Evaluate DASH support via shaka-player (P3.47).
+
+---
+
+## Monitoring
+
+### P3.45 — shaka-player integration as hls.js fallback
+✅ Done: installed shaka-player@5.1.11, created useShakaPlayer sub-hook
+(wireframe), integrated as automatic fallback when hls.js encounters an
+unrecoverable fatal error. The fallback is transparent — hls.js tries first,
+and if it fails with a non-recoverable error (e.g. manifest parse failure,
+codec not supported), `useShakaPlayer` takes over with the same playlist URL.
+shaka-player offers native ManagedMediaSource for iOS, robust DRM support
+(Widevine, PlayReady, FairPlay), and DASH/CMAF capability.
+- **Next**: Add tests for useShakaPlayer, extend with DASH support (P3.47)
+**Filed**: 2026-06-27
 
 ---
 
 ## Recently Completed
+
+### P3.44 — Add .gitignore for pytest worker temp directories
+Added `web/[0-9]*/` and `server/[0-9]*/` patterns to `.gitignore`
+to prevent pytest worker temp directories from appearing in `git status`.
+✅ Done: .gitignore
+— All existing tests pass, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.43 — Stale server integration test file cleanup
 Added `pytest.mark.integration` marker to all 284-line integration
@@ -44,13 +77,6 @@ default `testpaths`. Integration tests are now excluded from
 `pytest server/tests/` and can be run with `pytest -m integration`.
 ✅ Done: server/test_server.py, pytest.ini
 — 38 backend + 85 frontend tests pass, committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.44 — Add .gitignore for pytest worker temp directories
-Added `web/[0-9]*/` and `server/[0-9]*/` patterns to `.gitignore`
-to prevent pytest worker temp directories from appearing in `git status`.
-✅ Done: .gitignore
-— All existing tests pass, committed and pushed.
 **Filed**: 2026-06-27
 
 ### P3.42 — useVideoPlayer refactor Phase 2: extract playback paths (DONE)
@@ -126,13 +152,3 @@ from the extracted modules while keeping the same public API.
        web/src/hooks/useHlsPlayer.ts, web/src/hooks/useVideoPlayer.ts
 — 38 backend tests + 66 frontend tests pass, TypeScript clean.
 **Filed**: 2026-06-27
-
-### P3.35 — Frontend component test coverage for Player
-Added vitest tests covering fmtTime, QUALITIES, useVideoPlayer hook
-(type derivation, initial state, controls, retry stream, resume prompt),
-and Player component rendering. Added @testing-library/react + jest-dom dev deps.
-✅ Done: web/src/hooks/__tests__/useVideoPlayer.test.ts,
-       web/src/components/__tests__/Player.test.tsx,
-       web/src/test-setup.ts, web/vite.config.ts, web/package.json
-— 66 frontend tests + 38 backend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-26

@@ -19,6 +19,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.0",
+    "shaka-player": "^5.1.11",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0"
   },
