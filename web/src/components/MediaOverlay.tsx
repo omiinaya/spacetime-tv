@@ -1,12 +1,16 @@
 import { useState, type ReactNode } from "react";
 import { X, Star, Play, Loader2, AlertCircle, Clock, Calendar } from "lucide-react";
-import { imageUrl } from "@/lib/api";
+import { imageUrl, tmdbSrcset } from "@/lib/api";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
 interface MediaOverlayProps {
   onClose: () => void;
   bannerUrl?: string;
   posterUrl?: string;
+  /** Responsive srcset for banner image (TMDB path) */
+  bannerSrcset?: string;
+  /** Responsive srcset for poster image (TMDB path) */
+  posterSrcset?: string;
   title: string;
   genres: string[];
   rating?: number;
@@ -30,6 +34,8 @@ export default function MediaOverlay({
   onClose,
   bannerUrl,
   posterUrl,
+  bannerSrcset,
+  posterSrcset,
   title,
   genres,
   rating,
@@ -75,6 +81,8 @@ export default function MediaOverlay({
             <>
               <img
                 src={imageUrl(bannerUrl)}
+                srcSet={bannerSrcset || undefined}
+                sizes={bannerSrcset ? "(max-width: 768px) 100vw, 1200px" : undefined}
                 alt={`${title} banner`}
                 className="absolute inset-0 w-full h-full object-cover opacity-60"
                 onError={(e) => {
@@ -94,6 +102,8 @@ export default function MediaOverlay({
               <div className="w-[80px] sm:w-[160px] shrink-0 rounded-lg overflow-hidden ring-1 ring-white/10 shadow-2xl -mb-2">
                 <img
                   src={imageUrl(posterUrl)}
+                  srcSet={posterSrcset || undefined}
+                  sizes={posterSrcset ? "(max-width: 640px) 160px, 160px" : undefined}
                   alt={`${title} poster`}
                   className="w-full aspect-[2/3] object-cover"
                   onError={(e) => {

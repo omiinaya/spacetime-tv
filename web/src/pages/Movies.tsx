@@ -11,7 +11,7 @@ import {
   Heart,
   TrendingUp,
 } from "lucide-react";
-import { api, UnifiedMovie, TmdbMovieResult, imageUrl } from "@/lib/api";
+import { api, UnifiedMovie, TmdbMovieResult, imageUrl, tmdbImgProps } from "@/lib/api";
 import MovieOverlay from "@/components/MovieOverlay";
 import ContentRow from "@/components/ContentRow";
 import { PosterCardSkeleton } from "@/components/Skeleton";
@@ -377,6 +377,7 @@ export default function Movies() {
               const posterUrl = t.poster_path
                 ? `https://image.tmdb.org/t/p/w342${t.poster_path}`
                 : "";
+              const posterProps = t.poster_path ? tmdbImgProps(t.poster_path) : null;
               const year = t.release_date ? t.release_date.slice(0, 4) : "";
               return (
                 <button
@@ -393,12 +394,11 @@ export default function Movies() {
                   }}
                 >
                   <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-0 group-focus:ring-2 group-focus:ring-primary/60 group-focus:ring-offset-2 group-focus:ring-offset-background transition-all">
-                    {posterUrl ? (
+                    {posterProps ? (
                       <img
-                        src={posterUrl}
+                        {...posterProps}
                         alt={`${t.title} poster`}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
-                        loading="lazy"
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = "none";
                         }}

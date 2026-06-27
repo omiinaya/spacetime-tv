@@ -15,7 +15,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { isSeriesInWatchlist, toggleSeriesWatchlist as toggleSeriesWl } from "@/lib/watchlist";
-import { api, Category, Series, TmdbTvResult } from "@/lib/api";
+import { api, Category, Series, TmdbTvResult, imageUrl, tmdbImgProps } from "@/lib/api";
 import ContentRow from "@/components/ContentRow";
 import SeriesOverlay from "@/components/SeriesOverlay";
 import { Pagination } from "@/components/Pagination";
@@ -28,7 +28,6 @@ import {
   removeSeriesProgress,
   type SeriesProgress,
 } from "@/lib/continueWatching";
-import { imageUrl } from "@/lib/api";
 
 const ROWS_PER_PAGE = 10;
 const SERIES_PER_ROW = 20;
@@ -377,6 +376,7 @@ export default function SeriesPage() {
               const posterUrl = t.poster_path
                 ? `https://image.tmdb.org/t/p/w342${t.poster_path}`
                 : "";
+              const posterProps = t.poster_path ? tmdbImgProps(t.poster_path) : null;
               const year = t.first_air_date ? t.first_air_date.slice(0, 4) : "";
               return (
                 <button
@@ -397,12 +397,11 @@ export default function SeriesPage() {
                   }}
                 >
                   <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-0 group-focus:ring-2 group-focus:ring-primary/60 group-focus:ring-offset-2 group-focus:ring-offset-background transition-all">
-                    {posterUrl ? (
+                    {posterProps ? (
                       <img
-                        src={posterUrl}
+                        {...posterProps}
                         alt={`${t.name} poster`}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
-                        loading="lazy"
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = "none";
                         }}

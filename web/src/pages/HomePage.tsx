@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Tv, Film, Tv2, Heart, Star, Clock, TrendingUp, Play, AlertCircle } from "lucide-react";
 import ContentRow from "@/components/ContentRow";
 import { Skeleton } from "@/components/Skeleton";
-import { api, TmdbMovieResult, TmdbTvResult } from "@/lib/api";
+import { api, TmdbMovieResult, TmdbTvResult, tmdbImgProps } from "@/lib/api";
 import {
   getContinueWatching,
   getMovieContinueWatching,
@@ -232,9 +232,7 @@ export default function HomePage() {
             action={{ label: "View all →", onClick: () => navigate("/movies") }}
           >
             {trendingMovies.map((t, idx) => {
-              const posterUrl = t.poster_path
-                ? `https://image.tmdb.org/t/p/w342${t.poster_path}`
-                : "";
+              const posterProps = t.poster_path ? tmdbImgProps(t.poster_path) : null;
               const year = t.release_date ? t.release_date.slice(0, 4) : "";
               return (
                 <button
@@ -244,12 +242,11 @@ export default function HomePage() {
                   onClick={() => navigate(`/movies?q=${encodeURIComponent(t.title)}`)}
                 >
                   <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-0 group-focus:ring-2 group-focus:ring-primary/60 transition-all">
-                    {posterUrl ? (
+                    {posterProps ? (
                       <img
-                        src={posterUrl}
+                        {...posterProps}
                         alt={`${t.title} poster`}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
-                        loading="lazy"
                         onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                       />
                     ) : (
@@ -283,9 +280,7 @@ export default function HomePage() {
             action={{ label: "View all →", onClick: () => navigate("/series") }}
           >
             {trendingSeries.map((t, idx) => {
-              const posterUrl = t.poster_path
-                ? `https://image.tmdb.org/t/p/w342${t.poster_path}`
-                : "";
+              const posterProps = t.poster_path ? tmdbImgProps(t.poster_path) : null;
               const year = t.first_air_date ? t.first_air_date.slice(0, 4) : "";
               return (
                 <button
@@ -295,12 +290,11 @@ export default function HomePage() {
                   onClick={() => navigate(`/series?q=${encodeURIComponent(t.name)}`)}
                 >
                   <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-0 group-focus:ring-2 group-focus:ring-primary/60 transition-all">
-                    {posterUrl ? (
+                    {posterProps ? (
                       <img
-                        src={posterUrl}
+                        {...posterProps}
                         alt={`${t.name} poster`}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
-                        loading="lazy"
                         onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                       />
                     ) : (

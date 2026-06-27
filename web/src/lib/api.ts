@@ -20,6 +20,45 @@ export function imageUrl(raw: string): string {
   return raw;
 }
 
+// ── TMDB image helpers for responsive images ────────────────────
+const TMDB_IMG_BASE = "https://image.tmdb.org/t/p";
+
+// Poster sizes that map well to common viewport widths
+const POSTER_SIZES = ["w92", "w154", "w185", "w342", "w500", "w780"];
+
+/**
+ * Return a full TMDB image URL for a given poster/backdrop path and size.
+ * Falls back to a TMDB base URL check; if path is already a full URL, returns it as-is.
+ */
+export function tmdbImageUrl(path: string, size: string = "w342"): string {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  if (path.startsWith("/")) return `${TMDB_IMG_BASE}/${size}${path}`;
+  return `${TMDB_IMG_BASE}/${size}/${path}`;
+}
+
+/**
+ * Generate a `srcset` attribute value for a TMDB poster/backdrop path.
+ * Returns multiple resolutions so the browser picks the right one for the viewport.
+ */
+export function tmdbSrcset(path: string): string {
+  if (!path) return "";
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return POSTER_SIZES
+    .map((s) => `${TMDB_IMG_BASE}/${s}${cleanPath} ${s === "w92" ? "92w" : s === "w154" ? "154w" : s === "w185" ? "185w" : s === "w342" ? "342w" : s === "w500" ? "500w" : "780w"}`)
+    .join(", ");
+}
+
+/**
+ * Get src + srcset + sizes props for a responsive TMDB image.
+ * Spread directly onto an `<img>` element.
+ */
+export function tmdbImgProps(path: string, defaultSize: string = "w342", sizes: string = "(max-width: 640px) 185px, (max-width: 1024px) 342px, 500px") {
+  const src = tmdbImageUrl(path, defaultSize);
+  const srcset = tmdbSrcset(path);
+  return { src, srcset, sizes, loading: "lazy" as const };
+}
+
 const FETCH_TIMEOUT = 15000; // 15s
 const MAX_RETRIES = 1;
 

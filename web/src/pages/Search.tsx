@@ -15,7 +15,7 @@ import {
   TrendingUp,
   ChevronDown,
 } from "lucide-react";
-import { api, LiveStream, Movie, Series, imageUrl, TmdbEnrichData } from "@/lib/api";
+import { api, LiveStream, Movie, Series, imageUrl, TmdbEnrichData, tmdbSrcset, tmdbImageUrl } from "@/lib/api";
 import { SearchHistory, addSearchHistory } from "@/components/SearchHistory";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 
@@ -35,8 +35,6 @@ interface SearchTotals {
 }
 
 type LoadingSection = "live" | "movies" | "series" | null;
-
-const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w342";
 
 export default function SearchPage() {
   const navigate = useNavigate();
@@ -581,10 +579,11 @@ export default function SearchPage() {
                 {filteredResults.movies.map((m) => {
                   const enr = enrichData?.[String(m.stream_id)];
                   const posterSrc = enr?.poster
-                    ? TMDB_IMAGE_BASE + enr.poster
+                    ? tmdbImageUrl(enr.poster)
                     : m.stream_icon
                       ? imageUrl(m.stream_icon)
                       : null;
+                  const posterSrcset = enr?.poster ? tmdbSrcset(enr.poster) : undefined;
                   const tmdbRating = enr?.rating ? (enr.rating / 2).toFixed(1) : null;
                   return (
                     <button
@@ -597,6 +596,8 @@ export default function SearchPage() {
                         {posterSrc ? (
                           <img
                             src={posterSrc}
+                            srcSet={posterSrcset}
+                            sizes={posterSrcset ? "(max-width: 640px) 342px, 500px" : undefined}
                             alt={m.name ? `${m.name} poster` : ""}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             loading="lazy"
@@ -671,8 +672,9 @@ export default function SearchPage() {
                 {filteredResults.series.map((s) => {
                   const enr = enrichData?.[String(s.series_id)];
                   const posterSrc = enr?.poster
-                    ? TMDB_IMAGE_BASE + enr.poster
+                    ? tmdbImageUrl(enr.poster)
                     : s.cover || null;
+                  const posterSrcset = enr?.poster ? tmdbSrcset(enr.poster) : undefined;
                   const tmdbRating = enr?.rating ? (enr.rating / 2).toFixed(1) : null;
                   return (
                     <button
@@ -684,6 +686,8 @@ export default function SearchPage() {
                         {posterSrc ? (
                           <img
                             src={posterSrc}
+                            srcSet={posterSrcset}
+                            sizes={posterSrcset ? "(max-width: 640px) 342px, 500px" : undefined}
                             alt={s.name ? `${s.name} poster` : ""}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             loading="lazy"

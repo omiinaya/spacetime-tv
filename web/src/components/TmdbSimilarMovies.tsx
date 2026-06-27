@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, TmdbMovieResult, imageUrl } from "@/lib/api";
+import { api, TmdbMovieResult, imageUrl, tmdbImgProps } from "@/lib/api";
 import { Film, Star } from "lucide-react";
 
 interface TmdbSimilarMoviesProps {
@@ -50,9 +50,7 @@ export default function TmdbSimilarMovies({ tmdbId }: TmdbSimilarMoviesProps) {
           ))
         ) : (
           movies.map((m) => {
-            const posterUrl = m.poster_path
-              ? `https://image.tmdb.org/t/p/w342${m.poster_path}`
-              : "";
+            const posterProps = m.poster_path ? tmdbImgProps(m.poster_path, "w185", "(max-width: 640px) 185px, 342px") : null;
             const year = m.release_date ? m.release_date.slice(0, 4) : "";
             return (
               <button
@@ -61,12 +59,11 @@ export default function TmdbSimilarMovies({ tmdbId }: TmdbSimilarMoviesProps) {
                 className="shrink-0 w-[110px] group text-left focus:outline-none"
               >
                 <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-0 group-focus:ring-2 group-focus:ring-primary/60 transition-all">
-                  {posterUrl ? (
+                  {posterProps ? (
                     <img
-                      src={posterUrl}
+                      {...posterProps}
                       alt={`${m.title} poster`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
-                      loading="lazy"
                       onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                     />
                   ) : (

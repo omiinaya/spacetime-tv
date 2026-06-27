@@ -7,7 +7,7 @@ import {
   ExternalLink,
   Heart,
 } from "lucide-react";
-import { api, Series, SeriesDetails, Episode, imageUrl } from "@/lib/api";
+import { api, Series, SeriesDetails, Episode, imageUrl, tmdbSrcset } from "@/lib/api";
 import MediaOverlay from "@/components/MediaOverlay";
 import SimilarSeries from "@/components/SimilarSeries";
 import TmdbSimilarShows from "@/components/TmdbSimilarShows";
@@ -135,6 +135,11 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
     seasons.find((s) => s.season_number === activeSeason)?.cover_big ||
     "";
   const posterUrl = series.cover || info?.cover || (tmdb?.poster_path ? `https://image.tmdb.org/t/p/w600${tmdb.poster_path}` : "") || "";
+  // Only generate srcset when TMDB path wins the priority chain
+  const useTmdbBanner = !info?.backdrop_path?.[0] && !series.cover && !seasons.find((s) => s.season_number === activeSeason)?.cover_big && !!tmdb?.backdrop_path;
+  const useTmdbPoster = !series.cover && !info?.cover && !!tmdb?.poster_path;
+  const bannerSrcset = useTmdbBanner && tmdb?.backdrop_path ? tmdbSrcset(tmdb.backdrop_path) : undefined;
+  const posterSrcset = useTmdbPoster && tmdb?.poster_path ? tmdbSrcset(tmdb.poster_path) : undefined;
   const rating = series.rating || info?.rating || (tmdb?.vote_average ? tmdb.vote_average.toFixed(1) : "") || "";
   const year = (tmdb?.first_air_date || info?.releaseDate || series.releaseDate || "").slice(0, 4);
 
@@ -241,6 +246,8 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
       onClose={onClose}
       bannerUrl={bannerUrl || undefined}
       posterUrl={posterUrl || undefined}
+      bannerSrcset={bannerSrcset}
+      posterSrcset={posterSrcset}
       title={tmdb?.overview ? (info?.name || series.name) : (info?.name || series.name)}
       genres={genres}
       rating={rating ? Number(rating) : undefined}

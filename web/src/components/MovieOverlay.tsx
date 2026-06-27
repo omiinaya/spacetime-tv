@@ -10,7 +10,7 @@ import {
   ChevronDown,
   Heart,
 } from "lucide-react";
-import { api, MovieInfo, UnifiedMovie, MovieLanguage, imageUrl } from "@/lib/api";
+import { api, MovieInfo, UnifiedMovie, MovieLanguage, imageUrl, tmdbSrcset } from "@/lib/api";
 import MediaOverlay from "@/components/MediaOverlay";
 import SimilarMovies from "@/components/SimilarMovies";
 import TmdbSimilarMovies from "@/components/TmdbSimilarMovies";
@@ -124,6 +124,11 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   // ── Derived ───────────────────────────────────────────────────
   const bannerUrl = info?.backdrop_path?.[0] || info?.cover_big || (tmdb?.backdrop_path ? `https://image.tmdb.org/t/p/original${tmdb.backdrop_path}` : "") || movie.stream_icon || "";
   const posterUrl = info?.movie_image || info?.cover_big || (tmdb?.poster_path ? `https://image.tmdb.org/t/p/w600${tmdb.poster_path}` : "") || movie.stream_icon || "";
+  // Only generate srcset when the TMDB path actually wins the priority chain
+  const useTmdbBanner = !info?.backdrop_path?.[0] && !info?.cover_big && !!tmdb?.backdrop_path;
+  const useTmdbPoster = !info?.movie_image && !info?.cover_big && !!tmdb?.poster_path;
+  const bannerSrcset = useTmdbBanner && tmdb?.backdrop_path ? tmdbSrcset(tmdb.backdrop_path) : undefined;
+  const posterSrcset = useTmdbPoster && tmdb?.poster_path ? tmdbSrcset(tmdb.poster_path) : undefined;
   const rating = info?.rating || movie.rating || (tmdb?.vote_average ? tmdb.vote_average.toFixed(1) : "") || "";
   const year = (info?.releasedate || tmdb?.release_date || "").slice(0, 4);
   const genre = info?.genre || "";
@@ -162,6 +167,8 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
       onClose={onClose}
       bannerUrl={bannerUrl || undefined}
       posterUrl={posterUrl || undefined}
+      bannerSrcset={bannerSrcset}
+      posterSrcset={posterSrcset}
       title={displayName}
       genres={genres}
       rating={rating ? Number(rating) : undefined}
