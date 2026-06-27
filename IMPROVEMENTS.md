@@ -8,25 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.9 — Evaluate hls.js v1.7.0-beta.1 stable vs current canary build
-The project uses `hls.js@1.7.0-beta.1.0.canary.11864` for MSE/ManagedMediaSource
-fixes ahead of stable v1.7.0. As of 2026-06-27, stable v1.7.0 has not yet been
-released (latest stable remains 1.6.16, released April 2026). The canary build
-carries incremental MSE/ManagedMediaSource fixes not present in any stable
-release. No evaluation possible until v1.7.0 stable ships. Monitor: still blocked.
-- [x] Compare canary vs stable changelogs for MSE/ManagedMediaSource fixes
-- [ ] Run playback tests with stable v1.7.0-beta.1 (blocked — no stable release)
-- [ ] Update web/package.json if compatible
-
-### P2.10 — Add component tests for Movies page
-The Movies page renders category tabs, movie card grid with lazy loading,
-pagination controls, and search. No component tests exist.
-- [ ] Create Movies page tests for category tabs and filtering
-- [ ] Test movie card rendering (poster, lazy loading, fallback, year badge)
-- [ ] Test pagination controls and page navigation
-- [ ] Test search within selected category
-- [ ] Test empty and error states
-
 ### P2.11 — Add component tests for Series page
 The Series page renders category tabs, series card grid with season/episode
 progress, Recently Completed section, and search. No component tests exist.
@@ -55,6 +36,36 @@ potential migration benefits vs breaking changes.
 ---
 
 ## Recently Completed
+
+### P2.10 — Add component tests for Movies page
+Added 40 component tests for the Movies page covering all render states:
+- Loading: skeleton grid with PosterCardSkeleton, "Loading..." subtitle
+- Empty: "No movies available", "No movies matching" with search + Clear search
+- Normal: "Movies" heading, movie count, search input with placeholder
+- Movie grid: card rendering (poster, fallback, rating, year, language count, watchlist heart)
+- MovieOverlay: card click opens overlay, close button hides overlay
+- Continue Watching: heading, progress bar, dismiss button, CW hidden when no data
+- Recently Completed: heading, green check indicator
+- Recently Added: heading with movies sorted by added date
+- Trending: "Trending This Week" section when enabled, hidden when disabled/empty
+- Search: input placeholder, X clear button, clear on click
+- Pagination: controls when totalPages > 1, hidden when totalPages <= 1
+- Edge cases: single movie, no year in name, no rating, no tmdb, overlay close
+- Search history: shown on input focus
+✅ Done: web/src/pages/__tests__/Movies.test.tsx
+— 309 frontend tests pass (16 files), TypeScript clean (0 errors), committed and pushed.
+**Filed**: 2026-06-27
+
+### P3.9 — Evaluate hls.js v1.7.0-beta.1 stable vs current canary build
+Evaluation concluded: canary `1.7.0-beta.1.0.canary.11864` had probe/compat issues
+causing videos to hang on 'detecting format'. Reverted to stable `1.7.0-beta.1`.
+Connection quality indicator also fixed to not show 'poor' on initial load.
+- [x] Compare canary vs stable changelogs for MSE/ManagedMediaSource fixes
+- [x] Run playback tests with stable v1.7.0-beta.1 — canary reverted (caused hangs)
+- [x] Update web/package.json — reverted to 1.7.0-beta.1
+✅ Done: web/package.json, web/src/hooks/useVideoPlayer.ts
+— Committed as 332b5b8.
+**Filed**: 2026-06-27
 
 ### P3.12 — Frontend error boundary with user-facing recovery UI
 The ErrorBoundary component already existed with fallback UI and error beacon
@@ -176,13 +187,4 @@ Added 25 new tests covering the `timeAgo` utility and `recentChannels` module:
   clearRecentChannels
 ✅ Done: web/src/lib/utils.test.ts, web/src/lib/recentChannels.test.ts
 — 127 frontend + 59 backend tests pass, TypeScript clean (0 errors), committed and pushed.
-**Filed**: 2026-06-27
-
-### P2.4 — HistoryPage: show "last watched" timestamps
-HistoryPage lists recently-watched channels but didn't show when each was last
-watched. The `RecentChannel` type stores `watchedAt` but it was unused in the UI.
-Added a `timeAgo` helper to `utils.ts` and displayed relative time (e.g. "2h ago",
-"Yesterday") under each channel name. Handles missing/old timestamps gracefully.
-✅ Done: web/src/lib/utils.ts (timeAgo), web/src/pages/HistoryPage.tsx
-— 102 frontend + 59 backend tests pass, TypeScript clean (0 errors), committed and pushed.
 **Filed**: 2026-06-27
