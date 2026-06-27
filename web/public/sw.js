@@ -35,6 +35,52 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// ── Background sync for watch progress ────────────────────────────
+self.addEventListener("sync", (event) => {
+  if (event.tag === "sync-watch-progress") {
+    event.waitUntil(flushPendingProgress());
+  }
+});
+
+/**
+ * Flush pending watch progress from IndexedDB to the server.
+ * Used by the 'sync-watch-progress' background sync event and
+ * also callable directly from client pages when connectivity returns.
+ */
+async function flushPendingProgress() {
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    // Read pending queue from a dedicated cache entry
+    const queueRequest = new Request("/__sw/pending-progress");
+    const cached = await cache.match(queueRequest);
+    if (!cached) return;
+
+    const pending = await cached.json();
+    if (!Array.isArray(pending) || pending.length === 0) return;
+
+    const results = await Promise.allSettled(
+      pending.map((entry) =>
+        fetch("/api/watchlist/sync-progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(entry),
+        })
+      )
+    );
+
+    // Remove successfully synced entries
+    const remaining = pending.filter((_, i) => results[i].status === "rejected");
+
+    if (remaining.length > 0) {
+      await cache.put(queueRequest, new Response(JSON.stringify(remaining)));
+    } else {
+      await cache.delete(queueRequest);
+    }
+  } catch {
+    // Silently degrade — entries remain in cache for next sync attempt
+  }
+}
+
 /**
  * Evict oldest entries from a cache when it exceeds the limit.
  */

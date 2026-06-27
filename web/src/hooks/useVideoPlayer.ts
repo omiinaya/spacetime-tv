@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import mpegts from "mpegts.js";
 import Hls from "hls.js";
 import { saveSeriesProgress, saveMovieProgress } from "@/lib/continueWatching";
+import { queueProgress } from "@/lib/watchProgressSync";
 
 // ── Types ──────────────────────────────────────────────────────
 export type ConnectionQuality = "excellent" | "good" | "fair" | "poor";
@@ -51,6 +52,8 @@ function saveWatchPos(key: string, pos: number) {
     d[key] = { pos, ts: Date.now() };
     localStorage.setItem("stv_watch", JSON.stringify(d));
   } catch {}
+  // Also queue for PWA background sync (non-blocking)
+  queueProgress(key, pos);
 }
 function getVolume(): number {
   try { return parseFloat(localStorage.getItem("stv_volume") || "0.8"); }
@@ -601,6 +604,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
 
     let saveInterval: ReturnType<typeof setInterval> | null = null;
     if (watchKey) {
+      let syncCounter = 0;
       saveInterval = setInterval(() => {
         if (video && !video.paused) {
           const t = video.currentTime;
@@ -680,6 +684,13 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
             });
           }
           }
+        }
+        // Register background sync every ~30s (every 6th tick at 5s interval)
+        syncCounter++;
+        if (syncCounter % 6 === 0) {
+          navigator.serviceWorker?.ready
+            .then((reg) => (reg as any).sync.register("sync-watch-progress"))
+            .catch(() => {});
         }
       }, 5000);
     }
@@ -805,9 +816,17 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     video.addEventListener("waiting", onWaiting);
 
     if (watchKey) {
+      let syncCounter = 0;
       saveInterval = setInterval(() => {
         if (!video!.paused && video!.currentTime > 5) {
           saveWatchPos(watchKey, video!.currentTime);
+        }
+        // Register background sync every ~30s
+        syncCounter++;
+        if (syncCounter % 6 === 0) {
+          navigator.serviceWorker?.ready
+            .then((reg) => (reg as any).sync.register("sync-watch-progress"))
+            .catch(() => {});
         }
       }, 5000);
     }

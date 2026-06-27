@@ -440,6 +440,24 @@ async def admin_epg_refresh():
         "message": "EPG refresh triggered." if not already_running else "EPG refresh already in progress.",
     }
 
+# ── WATCHLIST / PROGRESS SYNC ───────────────────────────────────────────
+
+@app.post("/api/watchlist/sync-progress")
+async def sync_progress(entry: dict):
+    """Accept a queued progress update from the PWA background sync.
+
+    This endpoint receives progress entries queued by the service worker
+    during offline periods and flushed when connectivity returns.
+    Currently acknowledges and discards — progress is stored client-side
+    in localStorage/IndexedDB. Future: persist to a user profile store.
+    """
+    watch_key = entry.get("watchKey")
+    pos = entry.get("position")
+    if not watch_key or pos is None:
+        raise HTTPException(status_code=400, detail="Missing watchKey or position")
+    log.info("sync-progress: key=%s pos=%.1f", watch_key, pos)
+    return {"status": "ok", "synced": True}
+
 
 # ── LIVE TV ─────────────────────────────────────────────────────────────────
 
