@@ -8,16 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.40 — Episode number badges in SeriesOverlay episode grid
-The episode selection grid in SeriesOverlay currently shows thumbnails
-and titles but no episode number badge. Adding the episode number
-(e.g., "E03") as a small overlay badge on each episode thumbnail
-improves scannability, especially for series with many episodes
-per season.
-**Action**: Add episode number overlay badge on episode thumbnails
-in `SeriesOverlay.tsx`.
-**Filed**: 2026-06-26
-
 ### P3.41 — Add tests for loadServerProgress() merge helper
 P3.37 added the `loadServerProgress()` function that merges server-side
 watch progress with local continue-watching state. This function has
@@ -63,6 +53,16 @@ Research update (2026-06-26):
 ---
 
 ## Recently Completed
+
+### P3.40 — Episode number badges in SeriesOverlay episode grid
+Added "E{num}" overlay badge (padded to 2 digits) at the top-right
+of each episode thumbnail in SeriesOverlay's episode selection grid.
+The badge uses black/70 background matching the existing duration
+badge style, and appears alongside the watched indicator (top-left)
+and duration (bottom-right).
+✅ Done: web/src/components/SeriesOverlay.tsx
+— 38 backend + 79 frontend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.39 — TMDB responsive images with srcset for posters
 Added `tmdbImageUrl`, `tmdbSrcset`, `tmdbImgProps` helpers to api.ts.
