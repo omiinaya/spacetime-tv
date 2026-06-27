@@ -8,27 +8,14 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P2.7 — Add component tests for Guide page
-The EPG Guide page (301 lines) is a core page with channel rows, search, and
-favorites — but has no component-level tests. The data layer (`useGuideData`) is
-tested via `guideUtils.test.ts`, but component interaction (loading, errors,
-empty states, favorites toggle) is not.
-- [ ] Create `src/pages/__tests__/Guide.test.tsx`
-- [ ] Mock useGuideData and useChannelFavorites hooks
-- [ ] Test loading skeleton rendering
-- [ ] Test error state with retry button
-- [ ] Test empty state ("No channels match")
-- [ ] Test channel count in header
-- [ ] Test favorites filter toggle interaction
-
 ### P3.9 — Evaluate hls.js v1.7.0-beta.1 stable vs current canary build
 The project uses `hls.js@1.7.0-beta.1.0.canary.11864` for MSE/ManagedMediaSource
-fixes ahead of stable v1.7.0. The stable v1.7.0-beta.1 is now available, adding
-I-frame playlist support, CMCD v2 analytics, and smoother audio-track switching.
-Evaluate if switching from canary to stable provides benefits or breaks existing
-playback behavior.
-- [ ] Compare canary vs stable changelogs for MSE/ManagedMediaSource fixes
-- [ ] Run playback tests with stable v1.7.0-beta.1
+fixes ahead of stable v1.7.0. The stable v1.7.0 has not yet been released (latest
+stable remains 1.6.16). The canary build carries incremental MSE/ManagedMediaSource
+fixes not present in any stable release. No evaluation possible until v1.7.0 stable
+ships.
+- [x] Compare canary vs stable changelogs for MSE/ManagedMediaSource fixes
+- [ ] Run playback tests with stable v1.7.0-beta.1 (blocked — no stable release)
 - [ ] Update web/package.json if compatible
 
 ### P3.10 — Add backend tests for rate limiting middleware
@@ -38,17 +25,32 @@ different limits for search vs default paths, correct Retry-After header.
 - [ ] Add `server/tests/test_rate_limit.py` with endpoint-based rate limit tests
 - [ ] Test per-IP isolation, window expiry, Retry-After header
 
-### P2.8 — Add component tests for ContinueWatching page
-The ContinueWatching page (or section) has 20 utility tests in
-`continueWatching.test.ts` but no component-level tests. Add tests covering
-empty state, item rendering, and interaction.
-- [ ] Create component test file for ContinueWatching
-- [ ] Mock continue-watching data hooks
-- [ ] Test empty state, item rendering, and resume interaction
+### P2.8 — Add component tests for ContinueWatching section on HomePage
+The HomePage renders "Continue Watching" rows for series and movies inline.
+The data layer (`continueWatching.ts`) has 20 utility tests, but the
+component rendering within HomePage is untested. Add tests covering empty state,
+item rendering, and resume interaction.
+- [ ] Create HomePage component tests that cover continue-watching section
+- [ ] Mock continue-watching data hooks and API calls
+- [ ] Test empty state (no progress), series items, movie items, resume click
 
 ---
 
 ## Recently Completed
+
+### P2.7 — Add component tests for Guide page
+Added 36 component tests for the EPG Guide page covering all render states:
+- Loading: skeleton shimmer placeholders, no heading/search/channels
+- Error: error message with retry button calling loadPage(0)
+- Empty: "No EPG data available", "No channels match your settings" (filtered),
+  "No programmes matching" (search with Clear search flow)
+- Normal: heading, channel count, programme titles, timeline slots, LIVE indicator,
+  channel icons, aria-labels, language badge, search match count badge
+- Favorites: isFavorite prop, toggleFavorite callback via ChannelRow
+- Loading more: spinner visibility
+✅ Done: web/src/pages/__tests__/Guide.test.tsx
+— 182 frontend + 59 backend tests pass, TypeScript clean (0 errors), committed and pushed.
+**Filed**: 2026-06-27
 
 ### P2.6 — Add component tests for HistoryPage
 Added 19 component tests for the recently-extracted HistoryPage:
@@ -100,39 +102,4 @@ remember `npx vitest run` instead of `npm test`. Added `"test": "vitest run"`
 and `"test:watch": "vitest"` scripts.
 ✅ Done: web/package.json
 — `npm test` now runs all 102 frontend tests.
-**Filed**: 2026-06-27
-
-### P3.8 — ManagedMediaSource API for MSE optimization
-Upgraded hls.js to latest canary (`1.7.0-beta.1` → `1.7.0-beta.1.0.canary.11864`)
-which includes incremental MSE/ManagedMediaSource fixes ahead of stable
-v1.7.0. Evaluated DASH mimeType auto-detection for shaka-player — explicit
-mimeType parameter (`application/dash+xml` / `application/x-mpegURL`) is
-correct and preferred over auto-detection. No further changes needed.
-- mpegts.js v1.8.0 ✅ — already installed, MMS auto-used on iOS
-- shaka-player v5.1.11 ✅ — MMS support, DRM, DASH/CMAF all covered
-✅ Done: web/package.json (hls.js@1.7.0-beta.1.0.canary.11864)
-— 102 frontend + 59 backend tests pass, TypeScript clean.
-
-### P2.2 — Fix act() warnings in Player.test.tsx
-All 8 Player tests were producing "An update to Player inside a test
-was not wrapped in act(...)" warnings because useVideoPlayer's initial
-useEffect fires setPhase("probing") outside an act() boundary. Added
-`await act(async () => {})` flush after render in all synchronous tests
-to settle pending React state updates before assertions. Zero act()
-warnings remaining across all 6 test files.
-✅ Done: web/src/components/__tests__/Player.test.tsx
-— 102 frontend + 59 backend tests pass, TypeScript clean.
-
-### P2.1 — Add frontend tests for api.ts fetch utilities
-Added 17 new tests covering the core networking primitives:
-- `fetchWithTimeout` (4 tests): normal resolution, abort on timeout,
-  custom timeout, parent signal integration
-- `fetchWithRetry` (6 tests): first-attempt success, retry on TypeError,
-  retry on AbortError, no retry on HTTP 4xx, exhaust retries, non-retryable
-  error propagation
-- `api` object integration (7 tests): `live.categories()`, `live.streams()`,
-  `movies.list()`, 404 error, `search()` with query encoding, `searchEnrich()`
-  POST method, `watchlist.progress()`
-- Exported `fetchWithTimeout` and `fetchWithRetry` from api.ts for testing
--- 102 frontend + 59 backend tests pass, TypeScript clean, committed and pushed.
 **Filed**: 2026-06-27
