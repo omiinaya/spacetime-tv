@@ -8,14 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.47 — Add DASH streaming support via shaka-player
-Now that shaka-player v5.1.11 is integrated as an HLS fallback (P3.45),
-we can extend it to support DASH/MPD streams natively. Many IPTV providers
-offer DASH as an alternative to HLS with better adaptive bitrate handling
-and lower latency. The `useShakaPlayer` hook already accepts a mimeType
-parameter; the server just needs DASH endpoint support.
-**Filed**: 2026-06-27
-
 ### P3.8 — ManagedMediaSource API for MSE optimization
 Research update (2026-06-27):
 - hls.js still at v1.7.0-beta.1 (June 2, 2026). Latest canary `1.7.0-beta.1.0.canary.11864`
@@ -23,16 +15,30 @@ Research update (2026-06-27):
 - mpegts.js v1.8.0 ✅ — supports ManagedMediaSource API for iOS Safari
   (iOS 17.1+). Already installed (^1.8.0). MMS is automatically used
   when available; no config changes needed.
-- shaka-player v5.1.11 (June 24, 2026) confirmed as latest — robust
+- shaka-player v5.1.11 (June 27, 2026) confirmed as latest — robust
   DRM, Offline playback, ManagedMediaSource support. Integrated as
-  hls.js fallback (P3.45 ✅).
+  hls.js fallback (P3.45 ✅). DASH streaming support added (P3.47 ✅).
 - **Action**: upgrade hls.js from beta once v1.7.0 stable ships. Monitor
   hls.js releases for "sourceended" event recovery for ManagedMediaSource.
-  Evaluate DASH support via shaka-player (P3.47).
+  Evaluate whether DASH via shaka-player needs mimeType auto-detection.
 
 ---
 
 ## Recently Completed
+
+### P3.47 — Add DASH streaming support via shaka-player
+Added MPD manifest generation on the server (`generate_live_mpd`,
+`generate_vod_mpd`) and three new endpoints:
+- `/api/stream/live/{stream_id}/manifest.mpd` (dynamic DASH profile)
+- `/api/stream/movie/{stream_id}/manifest.mpd` (static onDemand profile)
+- `/api/stream/series/{series_id}/{episode_id}/manifest.mpd`
+Frontend `useVideoPlayer` hook now computes `dashUrl` and the HLS fatal
+error fallback tries DASH MPD (`application/dash+xml`) via shaka-player
+before falling back to HLS. 11 new server-side tests for MPD validation.
+✅ Done: server/main.py, web/src/hooks/useVideoPlayer.ts,
+       server/tests/test_dash.py
+— 49 backend + 85 frontend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.48 — Resolve StarletteDeprecationWarning in test suite
 Added `httpx2>=2.0.0` to `server/requirements.txt`. Starlette's TestClient
