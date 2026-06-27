@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from "react";
-import { AlertTriangle, RotateCcw } from "lucide-react";
+import { AlertTriangle, Home, RotateCcw } from "lucide-react";
 import { reportRenderError } from "./ErrorReporter";
 
 interface Props {
@@ -28,6 +28,17 @@ export default class ErrorBoundary extends Component<Props, State> {
     reportRenderError(error, info.componentStack ?? "");
   }
 
+  /** Navigate to home with a full reload to recover from corrupted state. */
+  private goHome = () => {
+    window.location.href = "/";
+  };
+
+  /** Reload the current page. */
+  private reload = () => {
+    this.setState({ hasError: false, error: null });
+    window.location.reload();
+  };
+
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
@@ -42,18 +53,24 @@ export default class ErrorBoundary extends Component<Props, State> {
             </div>
             <h1 className="text-lg font-semibold mb-2">Something went wrong</h1>
             <p className="text-sm text-muted-foreground mb-6">
-              An unexpected error occurred. Try refreshing the page.
+              An unexpected error occurred. Try refreshing the page or going home.
             </p>
-            <button
-              onClick={() => {
-                this.setState({ hasError: false, error: null });
-                window.location.reload();
-              }}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Reload
-            </button>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={this.reload}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reload
+              </button>
+              <button
+                onClick={this.goHome}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 transition-colors"
+              >
+                <Home className="h-4 w-4" />
+                Go Home
+              </button>
+            </div>
             {this.state.error && (
               <details className="mt-6 text-left">
                 <summary className="text-xs text-muted-foreground/50 cursor-pointer hover:text-muted-foreground">

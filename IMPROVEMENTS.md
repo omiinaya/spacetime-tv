@@ -18,24 +18,6 @@ release. No evaluation possible until v1.7.0 stable ships. Monitor: still blocke
 - [ ] Run playback tests with stable v1.7.0-beta.1 (blocked — no stable release)
 - [ ] Update web/package.json if compatible
 
-### P3.11 — Add component tests for MovieOverlay and SeriesOverlay
-The MovieOverlay and SeriesOverlay are rich overlays with TMDB enrichment,
-episode lists, season tabs, recommendations, and TMDB images. No component
-tests exist for either overlay.
-- [ ] Create MovieOverlay tests for base info, cast, recommendations, trailer
-- [ ] Create SeriesOverlay tests for season tabs, episode list, recommendations
-- [ ] Test TMDB enrichment fallback when TMDB data unavailable
-- [ ] Test backdrop/thumbnail loading states
-
-### P3.12 — Frontend error boundary with user-facing recovery UI
-The app has an `/api/error` beacon endpoint for client error reporting but no
-React error boundary. A rendering crash shows a blank white page. Add a
-React error boundary with "Something went wrong" UI and recovery button.
-- [ ] Add ErrorBoundary component with fallback UI
-- [ ] Wire error beacon to boundary's componentDidCatch
-- [ ] Add "Reload" and "Go Home" recovery actions
-- [ ] Test that boundary catches rendering errors gracefully
-
 ### P2.10 — Add component tests for Movies page
 The Movies page renders category tabs, movie card grid with lazy loading,
 pagination controls, and search. No component tests exist.
@@ -53,9 +35,42 @@ progress, Recently Completed section, and search. No component tests exist.
 - [ ] Test Recently Completed section interaction
 - [ ] Test search and empty states
 
+### P3.13 — Add MSW (Mock Service Worker) for API-level integration tests
+The project uses `vi.mock()` for mocking imports in tests, but there are no
+API-level integration tests that exercise the full fetch/error handling layer.
+MSW would intercept actual fetch calls at the network level, providing more
+realistic integration tests for API error states, loading states, and edge cases.
+- [ ] Install and configure MSW in test setup
+- [ ] Rewrite a subset of tests to use MSW handlers instead of vi.mock()
+- [ ] Document MSW patterns for future tests
+
+### P3.14 — Investigate React Router v8 upgrade
+React Router v8.0.1 is available (project uses v7.18.0). v8 introduces new
+loaders/actions patterns and improved type safety. Worth investigating for
+potential migration benefits vs breaking changes.
+- [ ] Review React Router v8 changelog for breaking changes from v7
+- [ ] Evaluate if the project's routing patterns benefit from v8 features
+- [ ] Create migration plan or decide to defer
+
 ---
 
 ## Recently Completed
+
+### P3.12 — Frontend error boundary with user-facing recovery UI
+The ErrorBoundary component already existed with fallback UI and error beacon
+wiring. Added "Go Home" recovery action alongside existing "Reload" and wrote
+8 component tests covering:
+- Normal rendering (no error) — children render, no fallback shown
+- Error state — caught error shows fallback UI with warning icon and message
+- Error details expandable section showing the error message and stack trace
+- Backend beacon reporting via reportRenderError with correct error info
+- "Reload" button triggers window.location.reload()
+- "Go Home" button navigates to "/"
+- Custom fallback prop rendering instead of default
+✅ Done: web/src/components/ErrorBoundary.tsx (Go Home + refactored handlers)
+✅ Done: web/src/components/__tests__/ErrorBoundary.test.tsx (8 tests)
+— 279 frontend tests pass, TypeScript clean (0 errors), committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.11 — Add component tests for MovieOverlay and SeriesOverlay
 Added 40 component tests covering MovieOverlay (16 tests) and SeriesOverlay (24 tests):
