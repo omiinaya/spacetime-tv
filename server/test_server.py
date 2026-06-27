@@ -1,7 +1,7 @@
 """Integration tests for Spacetime-TV backend.
 
 Requires the server running on localhost:8720.
-Run: pytest test_server.py -v
+Run: pytest server/test_server.py -v -m integration
 """
 
 import pytest
@@ -14,6 +14,10 @@ BASE = "http://localhost:8720"
 def client():
     """httpx client — one per test module."""
     return httpx.Client(timeout=httpx.Timeout(60.0))
+
+
+# Mark all tests in this module as integration
+pytestmark = pytest.mark.integration
 
 
 # ── Health ──────────────────────────────────────────────────────────────
