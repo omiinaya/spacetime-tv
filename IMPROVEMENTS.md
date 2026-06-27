@@ -25,11 +25,6 @@ The project uses 1.7.0-beta.1 successfully. No stable release available.
 - [ ] If available, create migration plan → BLOCKED: no stable 1.7.0
 - **Re-checked**: 2026-06-27 — still at 1.6.16 (beta at 1.7.0-beta.1)
 
-### P3.20 — Add component tests for PersonPage
-Person page has no component test coverage. Tests should cover: person details,
-known-for credits carousel, biography rendering, and error/loading states.
-- [ ] Create PersonPage.test.tsx with 10+ component tests
-
 ### P3.21 — Add component tests for OfflineBanner and utility components
 OfflineBanner, ChannelRow, PWAInstallPrompt, and other utility components have
 no test coverage. These are small but widely used across the app.
@@ -57,6 +52,16 @@ The watchlist, searchHistory, and settings lib modules handle core app state
 
 ## Recently Completed
 
+### P3.20 — Add component tests for PersonPage
+| ✅ Done: web/src/pages/__tests__/PersonPage.test.tsx — 25 component tests
+| covering loading spinner, error states (no name, no results, API failure,
+| Go-back navigation), person header (name, photo, roles, birthday/age, TMDB
+| link), missing-data edge cases (no photo, no birthday, empty credits), known-for
+| credit grid (movie/TV titles, type badges, movie→movie search navigation,
+| TV→series search navigation, poster images), back button navigation.
+| — 527 frontend tests pass (23 files), 69 backend tests pass, TypeScript clean.
+**Filed**: 2026-06-27
+
 ### P3.19 — Add component tests for AdminDashboard
 | ✅ Done: web/src/pages/__tests__/AdminDashboard.test.tsx — 18 component tests
 | covering loading spinner, error/retry states, stats card rendering,
@@ -81,7 +86,7 @@ committed and pushed.
 | covering loading/error/empty states, movies tab (card rendering, ratings,
 | remove from watchlist, MovieOverlay), series tab (detail fetching, badges,
 | SeriesOverlay), tab switching, header, and CTA navigation.
-— 444 frontend tests pass (20 files), TypeScript clean, committed and pushed.
+|— 444 frontend tests pass (20 files), TypeScript clean, committed and pushed.
 **Filed**: 2026-06-27
 
 ### P3.15 — Add component tests for Search page
@@ -90,10 +95,4 @@ committed and pushed.
 | movies/series), filter tabs, sort controls, TMDB enrichment, load-more
 | pagination, now-playing EPG, search history, Enter key, URL param sync,
 | and short query handling. 407 frontend tests pass (19 files), TS clean.
-**Filed**: 2026-06-27
-
-### P3.13 — Add MSW (Mock Service Worker) for API-level integration tests
-| ✅ Done: MSW v2.14.6 installed, 21 integration tests, Series test migrated
-| to MSW (37 tests), documentation at web/src/mocks/README.md.
-— 367 frontend tests pass (18 files), TypeScript clean, committed and pushed.
 **Filed**: 2026-06-27
