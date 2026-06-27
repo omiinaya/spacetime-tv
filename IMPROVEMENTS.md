@@ -8,17 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P2.6 — Add component tests for HistoryPage
-HistoryPage was recently extracted from the home page sidebar but has no tests.
-Key behaviors to cover: renders channel cards, shows timestamps via timeAgo,
-empty state with "No watch history yet" message, Clear all button functionality.
-- [ ] Create `src/pages/__tests__/HistoryPage.test.tsx`
-- [ ] Mock `getRecentChannels` with sample data including timestamps
-- [ ] Test empty state rendering
-- [ ] Test channel list with icons and fallbacks
-- [ ] Test Clear all button clears list
-- [ ] Test relative timestamps render correctly
-
 ### P2.7 — Add component tests for Guide page
 The EPG Guide page (301 lines) is a core page with channel rows, search, and
 favorites — but has no component-level tests. The data layer (`useGuideData`) is
@@ -60,6 +49,20 @@ empty state, item rendering, and interaction.
 ---
 
 ## Recently Completed
+
+### P2.6 — Add component tests for HistoryPage
+Added 19 component tests for the recently-extracted HistoryPage:
+- Empty state: "No watch history yet" message, subtitle, Browse Live TV
+  button navigates to /live, no Clear all button, no channel cards
+- Channel rendering: names, icons with lazy loading, fallback TV icon
+  for channels without icons, relative timestamps via timeAgo mock
+- Missing timestamps: gracefully handles watchedAt=0
+- Channel click navigates to /watch/live/:stream_id
+- Clear all button calls clearRecentChannels and transitions to empty state
+- Edge cases: single channel, max 12 channels, data-watch-link attribute
+✅ Done: web/src/pages/__tests__/HistoryPage.test.tsx
+— 146 frontend + 59 backend tests pass, TypeScript clean (0 errors), committed and pushed.
+**Filed**: 2026-06-27
 
 ### P2.5 — Add unit tests for `timeAgo` helper and `recentChannels` module
 Added 25 new tests covering the `timeAgo` utility and `recentChannels` module:
