@@ -8,29 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.37 — Frontend integration of server-side watch progress
-P3.34 added server-side persistence for watch progress (POST/GET
-/api/watchlist/sync-progress and /api/watchlist/progress). The
-frontend currently only reads progress from localStorage/IndexedDB.
-On page load after reconnection, it should fetch from
-`GET /api/watchlist/progress` and merge synced entries into the
-continue-watching state, filling gaps when switching devices/browsers.
-**Action**: Add a `loadServerProgress()` call in HomePage and
-Movies page that fetches server progress on mount and merges
-with local continue-watching data via a new merge helper.
-**Filed**: 2026-06-26
-
-### P3.38 — Series page infinite scroll / pagination
-The Movies page has pagination (page numbers + jump-to-page) but the
-Series page loads all series at once via `get_vod_streams`. For large
-IPTV catalogs (1000+ series), this causes slow initial load and
-unnecessary data transfer.
-**Action**: Add server-side pagination support for series
-(`GET /api/series?page=N&per_page=50`), build paginated
-fetch in `Series.tsx`, and add page controls matching the
-Movies page pattern.
-**Filed**: 2026-06-26
-
 ### P3.39 — TMDB responsive images with srcset for posters
 Currently all posters/backdrops use a single TMDB image size (usually
 w500 or original). TMDB serves multiple sizes (w92, w154, w185, w342,
@@ -52,6 +29,31 @@ per season.
 in `SeriesOverlay.tsx`.
 **Filed**: 2026-06-26
 
+### P3.41 — Add tests for loadServerProgress() merge helper
+P3.37 added the `loadServerProgress()` function that merges server-side
+watch progress with local continue-watching state. This function has
+non-trivial merge logic (dedup by key, timestamp comparison, fallback
+on network error) that should be covered by unit tests.
+**Action**: Add vitest tests for `loadServerProgress()` in
+`web/src/lib/__tests__/continueWatching.test.ts` covering:
+- Happy path: server returns entries that merge correctly
+- Conflict resolution: server entry newer vs local entry newer
+- Server unreachable: falls back to local data
+- No server data: returns local data unchanged
+- Mixed series + movie entries
+**Filed**: 2026-06-27
+
+### P3.42 — useVideoPlayer refactor Phase 2: extract playback paths
+P3.36 Phase 1 extracted types, constants, and utilities into separate
+files. Phase 2 should extract the actual playback setup/teardown logic
+for each path into the sub-hooks:
+- `useMpegtsPlayer`: mpegts.js player creation, mpegts events, liveSync
+- `useHlsPlayer`: Hls.js setup, HLS events, level switching
+- `useRemuxPlayer`: direct video element assignment with remux URLs
+The main hook should delegate to these sub-hooks, keeping only
+shared state management (phase, error, retry, progress save).
+**Filed**: 2026-06-27
+
 ---
 
 ## Monitoring
@@ -72,6 +74,27 @@ Research update (2026-06-26):
 ---
 
 ## Recently Completed
+
+### P3.38 — Series page pagination controls (numbered pages)
+Added "Show All" button on each ContentRow with >20 items.
+Show All mode renders a paginated grid view (50 per page) with
+numbered page controls, jump-to-page input, and back-to-categories
+button. Reuses the existing Pagination component from Movies page.
+✅ Done: web/src/pages/Series.tsx
+— 66 frontend + 38 backend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-26
+
+### P3.37 — Frontend integration of server-side watch progress
+Added `loadServerProgress()` merge helper that fetches progress
+from the server (synced via PWA background sync from other devices)
+and merges with local continue-watching, keeping the most recent
+entry per series-episode or movieId. Wired into HomePage and Movies
+page with a two-phase load: instant first paint from local, then
+progressive enhancement from server.
+✅ Done: web/src/lib/continueWatching.ts, web/src/lib/api.ts,
+       web/src/pages/HomePage.tsx, web/src/pages/Movies.tsx
+— 38 backend + 66 frontend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.36 — Refactor useVideoPlayer.ts into smaller composables (Phase 1)
 Extracted types, constants, and utility functions into usePlayerTypes.ts
@@ -114,17 +137,4 @@ Changed enableWorker: false → true for reduced main-thread CPU.
 ### P3.31 — Keyboard shortcut registry (global shortcuts hub)
 Central useKeyboardShortcuts hook with g→Guide, h→Home, m→Movies, s→Series, ?→shortcuts overlay.
 ✅ Done: web/src/hooks/useKeyboardShortcuts.ts, web/src/components/KeyboardShortcuts.tsx
-**Filed**: 2026-06-26
-
-### P3.22 — Monitor Vite 8 + @vitejs/plugin-react v6
-✅ COMPLETED — Vite 8.1.0 and @vitejs/plugin-react 6.0.3 deployed.
-
-### P3.30 — EPG search/filter bar for TV Guide
-Search bar filters programmes by title/subtitle/category/desc across all channels.
-✅ Done: web/src/pages/Guide.tsx
-**Filed**: 2026-06-26
-
-### P3.29 — Enable liveSync for mpegts.js live playback
-Enabled liveSync with tuned parameters for smoother latency chasing.
-✅ Done: web/src/hooks/useVideoPlayer.ts
 **Filed**: 2026-06-26
