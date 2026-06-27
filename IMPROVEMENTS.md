@@ -8,15 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.32 — Enable hls.js Web Worker for off-thread parsing (performance)
-hls.js v1.7.0-beta.1 (already installed) supports `config.enableWorker:
-true` (the default) for offloading TS/MP4 segment parsing to a Web
-Worker, reducing main-thread CPU usage. Currently set to `false` in
-`web/src/hooks/useVideoPlayer.ts`.
-**Action**: Change `enableWorker: false` to `enableWorker: true` in the
-HLS config block. Test with VOD playback on low-end devices.
-**Filed**: 2026-06-26
-
 ### P3.33 — PWA background sync for watchlist/watch progress
 Service Worker API `SyncManager` allows deferring data sync until the
 device is online. Currently progress saving is real-time (every 5s via
@@ -43,6 +34,14 @@ Research update (2026-06-26):
 ---
 
 ## Recently Completed
+
+### P3.32 — Enable hls.js Web Worker for off-thread parsing (performance)
+Changed `enableWorker: false` → `enableWorker: true` in the HLS config
+block of `useVideoPlayer.ts`. hls.js v1.7.0-beta.1 now offloads TS/MP4
+segment parsing to a Web Worker, reducing main-thread CPU usage.
+✅ Done: web/src/hooks/useVideoPlayer.ts
+— 31 backend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-26
 
 ### P3.31 — Keyboard shortcut registry (global shortcuts hub)
 Already implemented before this tick — central `useKeyboardShortcuts` hook
