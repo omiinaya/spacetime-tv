@@ -8,13 +8,6 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.27 — Admin dashboard: EPG refresh trigger
-There's no manual "Refresh EPG now" button in the Admin Dashboard.
-Add a `POST /api/admin/epg/refresh` endpoint that calls
-`_refresh_epg_background()` and a button in the admin UI to trigger
-it, showing last refresh time and status.
-**Filed**: 2026-06-26
-
 ### P3.28 — Enable MSE-in-Workers for mpegts.js (performance)
 mpegts.js v1.8.0 supports MSE-in-Workers (`config.enableWorkerForMSE`)
 for offloading MSE processing to a Web Worker. Can reduce main-thread
@@ -30,6 +23,29 @@ chasing by adjusting playback rate. Currently live buffer uses
 parameters could reduce live delay naturally without abrupt seeks.
 **Action**: Enable `liveSync: true` in live player config, test
 behaviour with real streams.
+**Filed**: 2026-06-26
+
+### P3.30 — EPG search/filter bar for TV Guide
+The Guide page shows all channels/programmes but has no way to filter
+by programme title or channel name. Add a search bar at the top of the
+Guide that filters displayed programmes in real-time (client-side
+filtering on the already-loaded EPG data). Could reuse the existing
+`searchUtils` pattern if available.
+**Action**: Add a search input above the guide grid, filter programmes
+by title match as user types, show "no results" state when empty.
+**Filed**: 2026-06-26
+
+### P3.31 — Keyboard shortcut registry (global shortcuts hub)
+Currently keyboard shortcuts are scattered across components (player,
+guide, global `/` search). Add a central `useKeyboardShortcuts` hook
+that registers shortcuts in one place:
+- `g` → navigate to TV Guide
+- `h` → navigate to Home
+- `m` → navigate to Movies
+- `s` → navigate to Series
+- `?` or `Shift+/` → show shortcut overlay
+- Ensure shortcuts don't fire when typing in input fields
+**Action**: Create hook, integrate in App.tsx, handle input focus gating.
 **Filed**: 2026-06-26
 
 ---
@@ -53,6 +69,14 @@ Moved here from Recently Completed upon reaching the 10-entry cap.
 ---
 
 ## Recently Completed
+
+### P3.27 — Admin dashboard: EPG refresh trigger
+Added `POST /api/admin/epg/refresh` endpoint that calls
+`_refresh_epg_background()` and a "Refresh EPG Now" button in the
+admin UI showing last refresh time and status.
+✅ Done: server/main.py, web/src/pages/AdminDashboard.tsx
+— 31 backend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-26
 
 ### P3.26 — Connection quality indicator for video player
 Added real-time connection quality monitoring for both live and VOD playback:
@@ -104,14 +128,4 @@ season from localStorage. Each season tab now shows a green ✓N alongside
 the total episode count when episodes in that season have been watched.
 ✅ Done: web/src/components/SeriesOverlay.tsx — 31 backend tests pass,
 40 frontend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-26
-
-### P2.2 — Cache hit/miss metrics in admin dashboard
-Added `_cache_hits` and `_cache_misses` counters to the in-memory cache
-system. Track every `cached_fetch()` call and expose counts and hit_rate
-via `/api/admin/stats`. Display a "Cache Hit Rate" card on the AdminDashboard
-so operators can monitor cache effectiveness. Useful for tuning cache TTLs
-and warm strategies.
-✅ Done: server/main.py, web/src/pages/AdminDashboard.tsx — 31 backend tests
-pass, TypeScript clean, committed and pushed.
 **Filed**: 2026-06-26

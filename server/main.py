@@ -415,6 +415,32 @@ async def admin_warm_full_cache():
     return {"message": f"Full re-warm started. Cleared {count} stale entries."}
 
 
+# ── Admin EPG controls ───────────────────────────────────────────────────────
+
+
+@app.post("/api/admin/epg/refresh")
+async def admin_epg_refresh():
+    """Trigger an immediate EPG refresh in the background.
+
+    Returns the EPG status: last fetch time and whether a refresh was started.
+    """
+    global _epg_refresh_task
+    already_running = _epg_refresh_task is not None and not _epg_refresh_task.done()
+    if not already_running:
+        _epg_refresh_task = asyncio.create_task(_refresh_epg_background())
+
+    last_fetch = epg_cache["fetched"]
+    age = round(time.time() - last_fetch, 0) if last_fetch else None
+
+    return {
+        "refresh_started": not already_running,
+        "already_running": already_running,
+        "last_fetch_ts": last_fetch,
+        "epg_age_s": age,
+        "message": "EPG refresh triggered." if not already_running else "EPG refresh already in progress.",
+    }
+
+
 # ── LIVE TV ─────────────────────────────────────────────────────────────────
 
 @app.get("/api/live/categories")
