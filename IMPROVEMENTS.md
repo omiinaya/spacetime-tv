@@ -16,12 +16,6 @@ and lower latency. The `useShakaPlayer` hook already accepts a mimeType
 parameter; the server just needs DASH endpoint support.
 **Filed**: 2026-06-27
 
-### P3.48 — Resolve StarletteDeprecationWarning in test suite
-Backend test output shows:
-"Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead."
-Add `httpx2` to requirements.txt and update test imports.
-**Filed**: 2026-06-27
-
 ### P3.8 — ManagedMediaSource API for MSE optimization
 Research update (2026-06-27):
 - hls.js still at v1.7.0-beta.1 (June 2, 2026). Latest canary `1.7.0-beta.1.0.canary.11864`
@@ -39,6 +33,13 @@ Research update (2026-06-27):
 ---
 
 ## Recently Completed
+
+### P3.48 — Resolve StarletteDeprecationWarning in test suite
+Added `httpx2>=2.0.0` to `server/requirements.txt`. Starlette's TestClient
+auto-detects httpx2 and prefers it over httpx, eliminating the warning.
+✅ Done: server/requirements.txt
+— 38 tests pass with zero warnings, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.46 — Eliminate remaining `as any` type casts (done)
 Replaced 3 `as any` casts with proper TypeScript types:
