@@ -143,7 +143,10 @@ function AppLayout() {
     []
   );
 
-  const isActive = (path: string) => location.pathname.startsWith(path);
+  const isActive = (path: string) =>
+    path === "/"
+      ? location.pathname === "/"
+      : location.pathname.startsWith(path);
   const isWatchRoute = location.pathname.startsWith("/watch/");
 
   const sidebar = (
