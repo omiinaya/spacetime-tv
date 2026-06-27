@@ -8,6 +8,24 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
+### P2.1 — Add frontend tests for api.ts fetch utilities
+`fetchWithTimeout`, `fetchWithRetry`, and the `api` object methods
+in `web/src/lib/api.ts` have no unit tests. These are core networking
+primitives used by every API call. Add tests covering:
+- Timeout behavior (AbortSignal integration)
+- Retry logic (network errors retry, HTTP errors don't)
+- `imageUrl` edge cases (already covered but more could be added)
+- All `api.*` method signatures return expected shapes
+**Filed**: 2026-06-27
+
+### P2.2 — Fix act() warnings in Player.test.tsx
+The vitest output shows:
+"An update to Player inside a test was not wrapped in act(...)."
+Wrap state-updating events in `act()` or use `waitFor()` for
+async state updates to eliminate warnings and follow React testing
+best practices.
+**Filed**: 2026-06-27
+
 ### P3.8 — ManagedMediaSource API for MSE optimization
 Research update (2026-06-27):
 - hls.js still at v1.7.0-beta.1 (June 2, 2026). Latest canary `1.7.0-beta.1.0.canary.11864`
@@ -21,10 +39,21 @@ Research update (2026-06-27):
 - **Action**: upgrade hls.js from beta once v1.7.0 stable ships. Monitor
   hls.js releases for "sourceended" event recovery for ManagedMediaSource.
   Evaluate whether DASH via shaka-player needs mimeType auto-detection.
+**Filed**: 2026-06-27
 
 ---
 
 ## Recently Completed
+
+### P3.49 — Add backend tests for Admin dashboard endpoints
+Added 10 new tests for admin endpoints: stats structure, empty/fresh
+cache state, populated cache reflection, cache clear count/empty/EPG
+reset, warm cache, warm-full, EPG refresh status and already-running
+detection. All use existing test fixtures (mocked upstream, cleared
+cache per test).
+✅ Done: server/tests/test_admin.py
+— 59 backend + 85 frontend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.47 — Add DASH streaming support via shaka-player
 Added MPD manifest generation on the server (`generate_live_mpd`,
@@ -74,55 +103,5 @@ Added `web/[0-9]*/` and `server/[0-9]*/` patterns to `.gitignore`
 to prevent pytest worker temp directories from appearing in `git status`.
 ✅ Done: .gitignore
 — All existing tests pass, committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.43 — Stale server integration test file cleanup
-Added `pytest.mark.integration` marker to all 284-line integration
-test file. Created `pytest.ini` to register the marker and set
-default `testpaths`. Integration tests are now excluded from
-`pytest server/tests/` and can be run with `pytest -m integration`.
-✅ Done: server/test_server.py, pytest.ini
-— 38 backend + 85 frontend tests pass, committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.42 — useVideoPlayer refactor Phase 2: extract playback paths (DONE)
-Phase 2 extracted the actual playback setup/teardown logic for each path
-into sub-hooks: `useMpegtsPlayer` (live MPEG-TS), `useHlsPlayer` (HLS VOD),
-`useRemuxPlayer` (VOD remux). The main hook now delegates all playback paths
-to sub-hooks and uses sub-hook-owned refs & cleanup. Removed ~250 lines of
-inline code and 4 unused imports (mpegts.js, hls.js, continueWatching, watchProgressSync).
-— 85 frontend + 38 backend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.41 — Add tests for loadServerProgress() merge helper
-Added 6 vitest tests covering merge logic: happy path, conflict
-resolution (newer wins for both series and movies), server fallback,
-empty server response, and MAX_ITEMS cap. Also fixed a bug where an
-early return on empty server response skipped merging with local data.
-✅ Done: web/src/lib/continueWatching.test.ts, web/src/lib/continueWatching.ts
-— 38 backend + 85 frontend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.40 — Episode number badges in SeriesOverlay episode grid
-Added "E{num}" overlay badge (padded to 2 digits) at the top-right
-of each episode thumbnail in SeriesOverlay's episode selection grid.
-The badge uses black/70 background matching the existing duration
-badge style, and appears alongside the watched indicator (top-left)
-and duration (bottom-right).
-✅ Done: web/src/components/SeriesOverlay.tsx
-— 38 backend + 79 frontend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.39 — TMDB responsive images with srcset for posters
-Added `tmdbImageUrl`, `tmdbSrcset`, `tmdbImgProps` helpers to api.ts.
-Updated all components (HomePage, Movies, Series, MovieOverlay,
-SeriesOverlay, TmdbSimilarMovies, Search) to use responsive srcset
-for TMDB poster/backdrop images. Added 14 new unit tests for the
-helpers. Mobile browsers now download only the image size needed.
-✅ Done: web/src/lib/api.ts, web/src/lib/api.test.ts,
-       web/src/pages/{Movies,Series,HomePage,Search}.tsx,
-       web/src/components/{MovieOverlay,SeriesOverlay,
-         MediaOverlay,TmdbSimilarMovies}.tsx
-— 38 backend + 79 frontend tests pass, TypeScript clean, committed and pushed.
 **Filed**: 2026-06-27
 
