@@ -8,13 +8,15 @@ and works the top pending item each tick.
 
 ## Status: PENDING
 
-### P3.28 — Enable MSE-in-Workers for mpegts.js (performance)
+### P3.28 — Enable MSE-in-Workers for mpegts.js (performance) ✅
 mpegts.js v1.8.0 supports MSE-in-Workers (`config.enableWorkerForMSE`)
 for offloading MSE processing to a Web Worker. Can reduce main-thread
 jank during playback, especially on low-end devices.
 **Action**: Set `enableWorkerForMSE: true` in both live and VOD
 player configurations. Test on real devices for compatibility.
 **Filed**: 2026-06-26
+✅ Done: web/src/hooks/useVideoPlayer.ts — 31 backend tests pass,
+TypeScript clean, committed and pushed.
 
 ### P3.29 — Enable liveSync for mpegts.js live playback
 mpegts.js v1.8.0 supports `config.liveSync` for smoother live latency
@@ -46,6 +48,24 @@ that registers shortcuts in one place:
 - `?` or `Shift+/` → show shortcut overlay
 - Ensure shortcuts don't fire when typing in input fields
 **Action**: Create hook, integrate in App.tsx, handle input focus gating.
+**Filed**: 2026-06-26
+
+### P3.32 — Enable hls.js Web Worker for off-thread parsing (performance)
+hls.js v1.7.0-beta.1 (already installed) supports `config.enableWorker:
+true` (the default) for offloading TS/MP4 segment parsing to a Web
+Worker, reducing main-thread CPU usage. Currently set to `false` in
+`web/src/hooks/useVideoPlayer.ts`.
+**Action**: Change `enableWorker: false` to `enableWorker: true` in the
+HLS config block. Test with VOD playback on low-end devices.
+**Filed**: 2026-06-26
+
+### P3.33 — PWA background sync for watchlist/watch progress
+Service Worker API `SyncManager` allows deferring data sync until the
+device is online. Currently progress saving is real-time (every 5s via
+`setInterval`). Network failures during saves cause data loss.
+**Action**: Register a `sync` event in the service worker for
+`sync-watch-progress`. Queue unsaved progress in IndexedDB, flush when
+online. Use `navigator.serviceWorker.ready.then(reg => reg.sync.register('sync-watch-progress'))`.
 **Filed**: 2026-06-26
 
 ---
