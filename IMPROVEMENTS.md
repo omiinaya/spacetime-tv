@@ -9,9 +9,9 @@ and works the top pending item each tick.
 ## Status: PENDING
 
 ### P3.8 — ManagedMediaSource API for MSE optimization
-Research update (2026-06-27):
+Research update (2026-07-02):
 - hls.js still at v1.7.0-beta.1 (June 2, 2026). Latest canary `1.7.0-beta.1.0.canary.11864`
-  (verified 2026-06-27). No stable v1.7.0 shipped yet.
+  (verified 2026-07-02). No stable v1.7.0 shipped yet.
 - mpegts.js v1.8.0 ✅ — supports ManagedMediaSource API for iOS Safari
   (iOS 17.1+). Already installed (^1.8.0). MMS is automatically used
   when available; no config changes needed.
