@@ -9,17 +9,15 @@
  */
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import mpegts from "mpegts.js";
-import Hls from "hls.js";
-import { saveSeriesProgress, saveMovieProgress } from "@/lib/continueWatching";
-import { queueProgress } from "@/lib/watchProgressSync";
 import type { ConnectionQuality, DocumentWithWebkit, PlayPhase, ErrorType, UseVideoPlayerParams, UseVideoPlayerReturn } from "./usePlayerTypes";
 export type { ConnectionQuality, ProbeResult, PlayPhase, ErrorType, UseVideoPlayerParams, UseVideoPlayerReturn } from "./usePlayerTypes";
 export { QUALITIES, SPEEDS } from "./usePlayerTypes";
 export { fmtTime } from "./usePlayerUtils";
-import { getWatchPos, getVolume, getMuted, saveVolume, saveMuted, probeStream, tryAutoplay, transcodeCache, saveWatchPos } from "./usePlayerUtils";
+import { getWatchPos, getVolume, getMuted, saveVolume, saveMuted, probeStream, transcodeCache } from "./usePlayerUtils";
 import { QUALITIES } from "./usePlayerTypes";
 import { useMpegtsPlayer, type MpegtsPlayerCallbacks } from "./useMpegtsPlayer";
+import { useHlsPlayer, type HlsPlayerCallbacks } from "./useHlsPlayer";
+import { useRemuxPlayer, type RemuxPlayerCallbacks } from "./useRemuxPlayer";
 
 // ── Constants for LIVE quality levels ─────────────────────────
 const QUALITY_HEIGHTS = QUALITIES.map(q => q.height);
@@ -29,15 +27,11 @@ const QUALITY_HEIGHTS = QUALITIES.map(q => q.height);
 export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseVideoPlayerParams): UseVideoPlayerReturn {
   const videoRef = useRef<HTMLVideoElement>(null!);
   const containerRef = useRef<HTMLDivElement>(null!);
-  const playerRef = useRef<mpegts.Player | null>(null);
-  const hlsRef = useRef<Hls | null>(null);
-  const mpegtsCleanup = useRef<(() => void) | null>(null);
   const phaseRef = useRef<PlayPhase>("loading");
   const userTouchedMuteRef = useRef(true);
-  const vodUrlRef = useRef<string | null>(null);
-  const vodTranscodeRef = useRef<boolean>(false);
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCount = useRef(0);
+  const destroyAllRef = useRef<(() => void)[]>([]);
   const [retryKey, setRetryKey] = useState(0);
 
   const onAutoplayMuted = useCallback(() => { setMuted(true); }, []);
@@ -54,11 +48,8 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
           retryCount.current++;
           const v = videoRef.current;
           if (v) { v.pause(); v.removeAttribute("src"); v.load(); }
-          if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
-          try { playerRef.current?.destroy(); } catch {}
-          playerRef.current = null;
-          try { hlsRef.current?.destroy(); } catch {}
-          hlsRef.current = null;
+          destroyAllRef.current.forEach(fn => fn());
+          destroyAllRef.current = [];
           setRetryKey(k => k + 1);
           return;
         }
@@ -136,6 +127,54 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     destroy: destroyMpegts,
   } = useMpegtsPlayer(videoRef, mpegtsCallbacks);
 
+  // ── Sub-hooks: useHlsPlayer (HLS VOD) ─────────────────────────
+  const hlsCallbacks = useMemo<HlsPlayerCallbacks>(() => ({
+    onPhaseChange: setPhase,
+    onError: (type, msg) => { setErrorType(type); setErrorMsg(msg); },
+    onStall: () => { stallTimestampsRef.current.push(Date.now()); },
+    onTimeUpdate: (ct, buf) => { setCurrentTime(ct); setBuffered(buf); },
+    onDuration: (d) => setDuration(d),
+    onAutoplayMuted: () => { setMuted(true); },
+    clearLoadingTimeout,
+  }), [setPhase, setErrorType, setErrorMsg, setMuted, setCurrentTime, setBuffered, setDuration, clearLoadingTimeout]);
+
+  const {
+    hlsRef: subHlsRef,
+    hlsCleanupRef,
+    playHLS: subPlayHLS,
+    destroy: destroyHls,
+  } = useHlsPlayer(videoRef, hlsCallbacks);
+
+  // ── Sub-hooks: useRemuxPlayer (VOD remux) ─────────────────────
+  const remuxCallbacks = useMemo<RemuxPlayerCallbacks>(() => ({
+    onPhaseChange: setPhase,
+    onError: (type, msg) => { setErrorType(type); setErrorMsg(msg); },
+    onStats: (speed, dropped, decoded) => {
+      setDownloadSpeed(speed);
+      droppedFramesRef.current = dropped;
+      decodedFramesRef.current = decoded;
+    },
+    onStall: () => { stallTimestampsRef.current.push(Date.now()); },
+    onTimeUpdate: (ct, buf) => { setCurrentTime(ct); setBuffered(buf); },
+    onDuration: (d) => setDuration(d),
+    onAutoplayMuted: () => { setMuted(true); },
+    clearLoadingTimeout,
+    startLoadingTimeout,
+    setTranscoding,
+  }), [setPhase, setErrorType, setErrorMsg, setDownloadSpeed, setMuted, setCurrentTime, setBuffered, setDuration, clearLoadingTimeout, startLoadingTimeout, setTranscoding]);
+
+  const {
+    playerRef: remuxPlayerRef,
+    remuxCleanupRef,
+    vodUrlRef: remuxVodUrlRef,
+    vodTranscodeRef: remuxVodTranscodeRef,
+    playVodRemux: subPlayVodRemux,
+    destroy: destroyRemux,
+  } = useRemuxPlayer(videoRef, remuxCallbacks);
+
+  // Populate destroy-all for use in startLoadingTimeout (defined before sub-hooks)
+  destroyAllRef.current = [destroyMpegts, destroyHls, destroyRemux];
+
   const computeConnectionQuality = useCallback(() => {
     const now = Date.now();
     const recentStalls = stallTimestampsRef.current.filter(t => now - t < 30000);
@@ -205,272 +244,41 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
 
   // ── Playback: MPEG-TS via mpegts.js (live TV only) ──────────
   const playMPEGTS = useCallback((url: string, liveFlag: boolean, isTranscode: boolean) => {
-    // Clean up HLS if present before delegating to sub-hook
-    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+    // Clean up HLS and remux before delegating to sub-hook
+    if (hlsCleanupRef.current) { hlsCleanupRef.current(); hlsCleanupRef.current = null; }
+    try { subHlsRef.current?.destroy(); } catch {}
+    subHlsRef.current = null;
+    if (remuxCleanupRef.current) { remuxCleanupRef.current(); remuxCleanupRef.current = null; }
+    try { remuxPlayerRef.current?.destroy(); } catch {}
+    remuxPlayerRef.current = null;
     setPhase("loading"); setErrorMsg(null);
     if (isTranscode) setTranscoding(true);
     subHookPlayMPEGTS(url, liveFlag, isTranscode);
-  }, [setPhase, setErrorMsg, setTranscoding, subHookPlayMPEGTS]);
+  }, [setPhase, setErrorMsg, setTranscoding, subHookPlayMPEGTS, hlsCleanupRef, subHlsRef, remuxCleanupRef, remuxPlayerRef]);
 
   // ── Playback: VOD via mpegts remux ──────────────────────────
   const playVodRemux = useCallback((streamUrl: string, startPos: number | null = null, isTranscode: boolean = false) => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
-    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
-    video.removeAttribute("src");
-    if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
-
-    const url = startPos && startPos > 5 ? `${streamUrl}?start=${startPos}` : streamUrl;
-    vodUrlRef.current = streamUrl;
-    vodTranscodeRef.current = isTranscode;
-
-    const player = mpegts.createPlayer({ type: "mpegts", isLive: false, url }, {
-      enableWorkerForMSE: true,
-      autoCleanupSourceBuffer: false,
-    });
-    playerRef.current = player;
-    let errorCount = 0;
-    let timedOut = false;
-
-    player.attachMediaElement(video);
-    player.load();
-
-    player.on(mpegts.Events.LOADING_COMPLETE, () => { tryAutoplay(video, onAutoplayMuted).then(() => {}); });
-
-    let playStarted = false;
-    const tryPlay = () => {
-      if (playStarted) return;
-      playStarted = true;
-      clearLoadingTimeout();
-      tryAutoplay(video, onAutoplayMuted).then(() => {});
-    };
-    player.on(mpegts.Events.MEDIA_INFO, () => tryPlay());
-
-    const onTimeUpdate = () => {
-      setCurrentTime(video.currentTime);
-      if (video.buffered.length > 0) setBuffered(video.buffered.end(video.buffered.length - 1));
-      if ((phaseRef.current === "loading" || phaseRef.current === "probing") && video.currentTime > 0.1) {
-        clearLoadingTimeout();
-        setPhase("playing");
-      }
-    };
-    const onDurationChange = () => { const d = video.duration; if (d && isFinite(d)) setDuration(d); };
-    video.addEventListener("timeupdate", onTimeUpdate);
-    video.addEventListener("durationchange", onDurationChange);
-
-    player.on(mpegts.Events.MEDIA_INFO, (info: { duration?: number }) => {
-      if (info.duration && isFinite(info.duration)) setDuration(info.duration);
-    });
-
-    player.on(mpegts.Events.STATISTICS_INFO, (stats: any) => {
-      if (typeof stats?.speed === "number") setDownloadSpeed(stats.speed);
-      if (typeof stats?.droppedFrames === "number") droppedFramesRef.current = stats.droppedFrames;
-      if (typeof stats?.decodedFrames === "number") decodedFramesRef.current = stats.decodedFrames;
-    });
-
-    const onWaiting = () => { stallTimestampsRef.current.push(Date.now()); };
-    video.addEventListener("waiting", onWaiting);
-
-    player.on(mpegts.Events.ERROR, (_t: string, detail: { response?: { code?: number } }) => {
-      errorCount++;
-      if (detail?.response?.code === 0 || errorCount < 3) return;
-      if (!timedOut) { setPhase("error"); setErrorType("stream_error"); setErrorMsg("Stream interrupted. The connection may have been lost."); }
-    });
-
-    let saveInterval: ReturnType<typeof setInterval> | null = null;
-    if (watchKey) {
-      let syncCounter = 0;
-      saveInterval = setInterval(() => {
-        if (video && !video.paused) {
-          const t = video.currentTime;
-          if (t > 5) {
-            saveWatchPos(watchKey, t);
-            if (type === "series" && seriesId) {
-              let metaName = "", metaCover = "", metaSeason = 0, metaEpNum = 0, metaEpTitle = "";
-              let metaDuration = video?.duration || 0;
-              try {
-                const raw = sessionStorage.getItem(`stv_series_meta_${seriesId}`);
-                if (raw) {
-                  const m = JSON.parse(raw);
-                  metaName = m.name || "";
-                  metaCover = m.cover || m.episodeImage || "";
-                  metaSeason = m.seasonNumber || 0;
-                  metaEpNum = m.episodeNum || 0;
-                  metaEpTitle = m.episodeTitle || "";
-                  if (m.durationSeconds) metaDuration = m.durationSeconds;
-                }
-              } catch {}
-              saveSeriesProgress({
-                seriesId: parseInt(seriesId), seriesName: metaName, cover: metaCover,
-                seasonNumber: metaSeason, episodeNum: metaEpNum, episodeId: epId || "",
-                episodeTitle: metaEpTitle, progressSeconds: t, durationSeconds: metaDuration, updatedAt: Date.now(),
-              });
-              if (onAutoAdvance && metaDuration > 0 && (t / metaDuration) >= 0.95) {
-                const autoAdvanced = sessionStorage.getItem(`stv_auto_advanced_${seriesId}`);
-                if (!autoAdvanced && seriesId) {
-                  sessionStorage.setItem(`stv_auto_advanced_${seriesId}`, "1");
-                  const currentIdx = parseInt(sessionStorage.getItem(`stv_series_current_idx_${seriesId}`) || "0", 10);
-                  const activeSeason = parseInt(sessionStorage.getItem(`stv_series_active_season_${seriesId}`) || "1", 10);
-                  const episodesRaw = sessionStorage.getItem(`stv_series_episodes_${seriesId}_${activeSeason}`);
-                  if (episodesRaw) {
-                    try {
-                      const episodes = JSON.parse(episodesRaw) as { id: string; episode_num: number; title: string }[];
-                      const nextEp = episodes[currentIdx + 1];
-                      if (nextEp) {
-                        sessionStorage.setItem(`stv_series_current_idx_${seriesId}`, String(currentIdx + 1));
-                        setTimeout(() => sessionStorage.removeItem(`stv_auto_advanced_${seriesId}`), 1000);
-                        onAutoAdvance(`/watch/series/${seriesId}/${nextEp.id}`);
-                      }
-                    } catch {}
-                  }
-                }
-              }
-            } else if (type === "movie" && id) {
-              let movieName = "", moviePoster = "";
-              try {
-                const raw = sessionStorage.getItem("stv_movie_meta");
-                if (raw) {
-                  const m = JSON.parse(raw);
-                  if (String(m.id) === id) { movieName = m.name || ""; moviePoster = m.poster || ""; }
-                }
-              } catch {}
-              saveMovieProgress({
-                movieId: parseInt(id), movieName, poster: moviePoster,
-                progressSeconds: t, durationSeconds: video?.duration || 0, updatedAt: Date.now(),
-              });
-            }
-          }
-        }
-        syncCounter++;
-        if (syncCounter % 6 === 0) {
-          navigator.serviceWorker?.ready.then((reg) => (reg as any).sync.register("sync-watch-progress")).catch(() => {});
-        }
-      }, 5000);
-    }
-
-    const timeoutMs = isTranscode ? 45000 : 12000;
-    const timeout = setTimeout(() => {
-      if (phaseRef.current === "loading" || phaseRef.current === "probing") {
-        timedOut = true;
-        setPhase("error");
-        if (isTranscode) { setErrorType("transcode_timeout"); setErrorMsg("Video conversion is taking longer than expected. Try again."); }
-        else { setErrorType("timeout"); setErrorMsg("Stream is taking too long to load. The server may be slow."); }
-      }
-    }, timeoutMs);
-
-    mpegtsCleanup.current = () => {
-      clearTimeout(timeout);
-      if (saveInterval) clearInterval(saveInterval);
-      video.removeEventListener("timeupdate", onTimeUpdate);
-      video.removeEventListener("durationchange", onDurationChange);
-      video.removeEventListener("waiting", onWaiting);
-    };
-  }, [watchKey, type, seriesId, epId, id, onAutoplayMuted]);
+    // Clean up HLS if present before delegating to sub-hook
+    if (hlsCleanupRef.current) { hlsCleanupRef.current(); hlsCleanupRef.current = null; }
+    try { subHlsRef.current?.destroy(); } catch {}
+    subHlsRef.current = null;
+    if (mpegtsCleanupRef.current) { mpegtsCleanupRef.current(); mpegtsCleanupRef.current = null; }
+    try { mpegtsPlayerRef.current?.destroy(); } catch {}
+    mpegtsPlayerRef.current = null;
+    subPlayVodRemux(streamUrl, startPos, isTranscode, type, seriesId, epId, id, watchKey, onAutoAdvance);
+  }, [subPlayVodRemux, type, seriesId, epId, id, watchKey, onAutoAdvance, hlsCleanupRef, subHlsRef, mpegtsCleanupRef, mpegtsPlayerRef]);
 
   // ── Playback: HLS via hls.js (VOD, cached) ──────────────────
   const playHLS = useCallback((playlistUrl: string, startPos: number | null = null) => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
-    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
-    if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
-    video.removeAttribute("src");
-
-    let saveInterval: ReturnType<typeof setInterval> | null = null;
-
-    if (Hls.isSupported()) {
-      const hls = new Hls({ enableWorker: true, lowLatencyMode: false, maxBufferLength: 30, maxMaxBufferLength: 60 });
-      hlsRef.current = hls;
-      hls.loadSource(playlistUrl);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        setPhase("playing");
-        setDuration(hls.levels[0]?.details?.totalduration || video.duration || 0);
-        tryAutoplay(video, onAutoplayMuted).then((started) => { if (!started) setPhase("paused"); });
-      });
-
-      hls.on(Hls.Events.ERROR, (_event, data) => {
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
-            case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
-            default: setPhase("error"); setErrorType("stream_error"); setErrorMsg("Playback error. Try again."); hls.destroy(); break;
-          }
-        }
-      });
-
-      if (startPos && startPos > 5) {
-        const resumeHandler = () => { video.currentTime = startPos; hls.off(Hls.Events.MANIFEST_PARSED, resumeHandler); };
-        hls.on(Hls.Events.MANIFEST_PARSED, resumeHandler);
-      }
-    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = playlistUrl;
-      video.addEventListener("loadedmetadata", () => {
-        setDuration(video.duration || 0);
-        if (startPos && startPos > 5) video.currentTime = startPos;
-        setPhase("playing");
-        tryAutoplay(video, onAutoplayMuted).then((started) => { if (!started) setPhase("paused"); });
-      }, { once: true });
-    } else {
-      setPhase("error"); setErrorType("not_supported"); setErrorMsg("This video format is not supported by your browser.");
-      return;
-    }
-
-    const onTimeUpdate = () => {
-      setCurrentTime(video!.currentTime);
-      if (video!.buffered.length > 0) setBuffered(video!.buffered.end(video!.buffered.length - 1));
-    };
-    const onDurationChange = () => { const d = video!.duration; if (d && isFinite(d)) setDuration(d); };
-    const onEnded = () => { setPhase("paused"); };
-    const onWaiting = () => { stallTimestampsRef.current.push(Date.now()); };
-
-    video.addEventListener("timeupdate", onTimeUpdate);
-    video.addEventListener("durationchange", onDurationChange);
-    video.addEventListener("ended", onEnded);
-    video.addEventListener("waiting", onWaiting);
-
-    if (watchKey) {
-      let syncCounter = 0;
-      saveInterval = setInterval(() => {
-        if (!video!.paused && video!.currentTime > 5) {
-          saveWatchPos(watchKey, video!.currentTime);
-        }
-        syncCounter++;
-        if (syncCounter % 6 === 0) {
-          navigator.serviceWorker?.ready.then((reg) => (reg as any).sync.register("sync-watch-progress")).catch(() => {});
-        }
-      }, 5000);
-    }
-
-    const timeout = setTimeout(() => {
-      if (phaseRef.current === "loading" || phaseRef.current === "probing") {
-        setPhase("error"); setErrorType("timeout"); setErrorMsg("Video is taking too long to start. Try again.");
-      }
-    }, 15000);
-
-    const emptyCheck = setInterval(() => {
-      if (video.readyState === 0 && phaseRef.current === "loading") {
-        clearInterval(emptyCheck);
-        setPhase("error"); setErrorType("empty_stream"); setErrorMsg("Stream returned empty data. The content may not be available on this server.");
-      } else if (video.readyState > 0 || phaseRef.current !== "loading") {
-        clearInterval(emptyCheck);
-      }
-    }, 2000);
-
-    mpegtsCleanup.current = () => {
-      clearTimeout(timeout);
-      clearInterval(emptyCheck);
-      if (saveInterval) clearInterval(saveInterval);
-      video.removeEventListener("timeupdate", onTimeUpdate);
-      video.removeEventListener("durationchange", onDurationChange);
-      video.removeEventListener("ended", onEnded);
-      video.removeEventListener("waiting", onWaiting);
-    };
-  }, [watchKey, onAutoplayMuted]);
+    // Clean up remux/mpegts before delegating to sub-hook
+    if (remuxCleanupRef.current) { remuxCleanupRef.current(); remuxCleanupRef.current = null; }
+    try { remuxPlayerRef.current?.destroy(); } catch {}
+    remuxPlayerRef.current = null;
+    if (mpegtsCleanupRef.current) { mpegtsCleanupRef.current(); mpegtsCleanupRef.current = null; }
+    try { mpegtsPlayerRef.current?.destroy(); } catch {}
+    mpegtsPlayerRef.current = null;
+    subPlayHLS(playlistUrl, startPos, type, seriesId, epId, id, watchKey, onAutoAdvance);
+  }, [subPlayHLS, type, seriesId, epId, id, watchKey, onAutoAdvance, remuxCleanupRef, remuxPlayerRef, mpegtsCleanupRef, mpegtsPlayerRef]);
 
   // ── VOD startup ────────────────────────────────────────────
   const startVod = useCallback(async (isCancelled: () => boolean, seekPos?: number, needsTranscode: boolean = false) => {
@@ -591,11 +399,9 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       abortController.abort();
       const v = videoRef.current;
       if (v) { v.pause(); v.removeAttribute("src"); v.load(); }
-      if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
-      try { playerRef.current?.destroy(); } catch {}
-      playerRef.current = null;
-      try { hlsRef.current?.destroy(); } catch {}
-      hlsRef.current = null;
+      destroyMpegts();
+      destroyHls();
+      destroyRemux();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamPath, retryKey]);
@@ -605,11 +411,9 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     clearLoadingTimeout();
     const video = videoRef.current;
     if (video) { video.pause(); video.removeAttribute("src"); video.load(); }
-    if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
-    try { playerRef.current?.destroy(); } catch {}
-    playerRef.current = null;
-    try { hlsRef.current?.destroy(); } catch {}
-    hlsRef.current = null;
+    destroyMpegts();
+    destroyHls();
+    destroyRemux();
     retryCount.current++;
     setPhase("loading");
     setErrorMsg(null);
@@ -628,11 +432,9 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     const audioUrl = `/api/audio/stream/${mediaType}/${sid}/${audioIndex}`;
     clearLoadingTimeout();
     v.pause();
-    if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
-    try { playerRef.current?.destroy(); } catch {}
-    playerRef.current = null;
-    try { hlsRef.current?.destroy(); } catch {}
-    hlsRef.current = null;
+    destroyMpegts();
+    destroyHls();
+    destroyRemux();
     playVodRemux(audioUrl, savePos > 3 ? savePos : null, false);
   }, [isVod, type, id, epId, playVodRemux, clearLoadingTimeout]);
 
@@ -655,23 +457,24 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       setCurrentTime(clampedTime);
       return;
     }
-    if (hlsRef.current) {
+    if (subHlsRef.current) {
       v.currentTime = Math.max(0, time);
       setCurrentTime(v.currentTime);
       return;
     }
-    if (!vodUrlRef.current) return;
+    if (!remuxVodUrlRef.current) return;
     try {
       v.currentTime = Math.max(0, time);
       setCurrentTime(v.currentTime);
     } catch {
-      const url = vodUrlRef.current;
-      const isTC = vodTranscodeRef.current;
-      if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
+      const url = remuxVodUrlRef.current;
+      const isTC = remuxVodTranscodeRef.current;
+      destroyMpegts();
+      destroyHls();
       setPhase("loading");
       playVodRemux(url, Math.max(0, time), isTC);
     }
-  }, [isLive, playVodRemux]);
+  }, [isLive, playVodRemux, destroyMpegts, destroyHls]);
 
   const seek = useCallback((delta: number) => {
     const v = videoRef.current;
@@ -685,7 +488,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       return;
     }
     const target = Math.max(0, (v.currentTime || 0) + delta);
-    if (hlsRef.current) { v.currentTime = target; setCurrentTime(target); return; }
+    if (subHlsRef.current) { v.currentTime = target; setCurrentTime(target); return; }
     seekTo(target);
   }, [isLive, seekTo]);
 
@@ -738,11 +541,9 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       } catch {}
       const video = videoRef.current;
       if (video) { video.pause(); video.removeAttribute("src"); video.load(); }
-      if (mpegtsCleanup.current) { mpegtsCleanup.current(); mpegtsCleanup.current = null; }
-      try { playerRef.current?.destroy(); } catch {}
-      playerRef.current = null;
-      try { hlsRef.current?.destroy(); } catch {}
-      hlsRef.current = null;
+      destroyMpegts();
+      destroyHls();
+      destroyRemux();
     };
   }, []);
 

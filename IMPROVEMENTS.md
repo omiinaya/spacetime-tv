@@ -29,26 +29,6 @@ support with live streams. Worth evaluating as a potential
 replacement or complement to hls.js.
 **Filed**: 2026-06-27
 
-### P3.42 — useVideoPlayer refactor Phase 2: extract playback paths
-P3.36 Phase 1 extracted types, constants, and utilities into separate
-files. Phase 2 should extract the actual playback setup/teardown logic
-for each path into the sub-hooks:
-- `useMpegtsPlayer`: mpegts.js player creation, mpegts events, liveSync
-- `useHlsPlayer`: Hls.js setup, HLS events, level switching
-- `useRemuxPlayer`: direct video element assignment with remux URLs
-The main hook should delegate to these sub-hooks, keeping only
-shared state management (phase, error, retry, progress save).
-
-**Progress (tick 2026-06-27 01:52)**:
-- ✅ Wired `useMpegtsPlayer` sub-hook into main hook (lines removed: ~120)
-- ✅ Moved DVR and connection-quality state to hook top for callback access
-- 🔲 Wire `useHlsPlayer` sub-hook and remove inline playHLS (~100 lines)
-- 🔲 Wire `useRemuxPlayer` sub-hook and remove inline playVodRemux (~150 lines)
-- 🔲 Clean up duplicate refs (playerRef, mpegtsCleanup → sub-hook-owned)
-- 🔲 Clean up unused mpegts import from main hook
-- 85 frontend + 38 backend tests pass, TypeScript clean, committed and pushed.
-**Filed**: 2026-06-27
-
 ---
 
 ## Monitoring
@@ -69,6 +49,15 @@ Research update (2026-06-26):
 ---
 
 ## Recently Completed
+
+### P3.42 — useVideoPlayer refactor Phase 2: extract playback paths (DONE)
+Phase 2 extracted the actual playback setup/teardown logic for each path
+into sub-hooks: `useMpegtsPlayer` (live MPEG-TS), `useHlsPlayer` (HLS VOD),
+`useRemuxPlayer` (VOD remux). The main hook now delegates all playback paths
+to sub-hooks and uses sub-hook-owned refs & cleanup. Removed ~250 lines of
+inline code and 4 unused imports (mpegts.js, hls.js, continueWatching, watchProgressSync).
+— 85 frontend + 38 backend tests pass, TypeScript clean, committed and pushed.
+**Filed**: 2026-06-27
 
 ### P3.41 — Add tests for loadServerProgress() merge helper
 Added 6 vitest tests covering merge logic: happy path, conflict
