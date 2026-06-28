@@ -100,7 +100,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   const {
     isLive, isVod, watchKey, streamId,
     dashUrl, streamPath, transcodePath, remuxUrl,
-    vodTranscodeUrl, hlsInitUrl, probeUrl,
+    vodTranscodeUrl, probeUrl,
   } = useStreamUrls({ type, id, seriesId, epId, qualityIdx });
 
   // ── Sub-hooks: mpegts.js player (live TV) ─────────────────────
