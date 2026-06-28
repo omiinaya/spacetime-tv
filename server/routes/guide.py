@@ -358,7 +358,9 @@ async def guide_enrich(
     if cache_key in _EPG_ENRICH_CACHE:
         ts, data = _EPG_ENRICH_CACHE[cache_key]
         if now - ts < _EPG_ENRICH_TTL:
-            return data if data else {"enabled": False, "result": None}
+            if data:
+                return {"enabled": True, "result": data}
+            return {"enabled": False, "result": None}
 
     try:
         proc = await asyncio.create_subprocess_exec(

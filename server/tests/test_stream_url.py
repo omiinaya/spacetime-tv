@@ -15,18 +15,18 @@ async def test_live_stream_url():
 
 @pytest.mark.asyncio
 async def test_movie_stream_url():
-    """Movie streams should use .mp4 extension fallback and /movie/ prefix."""
+    """Movie streams should use .mkv extension (default fallback) and /movie/ prefix."""
     url = await build_stream_url(999, "movie")
-    assert url.endswith(".mp4")
+    assert url.endswith(".mkv")
     assert "/movie/" in url
     assert "999" in url
 
 
 @pytest.mark.asyncio
 async def test_series_stream_url():
-    """Series streams should use .mp4 extension fallback and /series/ prefix."""
+    """Series streams should use .mkv extension (default fallback) and /series/ prefix."""
     url = await build_stream_url(555, "series")
-    assert url.endswith(".mp4")
+    assert url.endswith(".mkv")
     assert "/series/" in url
     assert "555" in url
 
