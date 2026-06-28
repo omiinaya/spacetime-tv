@@ -437,7 +437,7 @@ async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
                     impersonate="chrome120",
                 )
             )
-            buf_size = 1048576  # 1MB chunks for curl_cffi download
+            buf_size = 262144  # 256KB chunks for curl_cffi -> ffmpeg pipe stream
             for chunk in resp.iter_content(chunk_size=buf_size):
                 if not chunk:
                     break
