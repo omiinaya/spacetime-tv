@@ -113,17 +113,42 @@ async def stream_bytes(url: str):
     """
     import curl_cffi.requests as CurlReq
     headers = {"User-Agent": UA_STR, "Referer": f"{IPTV_BASE}/"}
-    loop = asyncio.get_event_loop()
-    resp = await loop.run_in_executor(
-        None, lambda: CurlReq.get(url, headers=headers, stream=True,
-                                  timeout=60, impersonate="chrome120")
-    )
+
+    chunk_queue: asyncio.Queue = asyncio.Queue(maxsize=32)
+    _sentinel = object()
+
+    async def _download():
+        try:
+            loop = asyncio.get_event_loop()
+            resp = await loop.run_in_executor(
+                None,
+                lambda: CurlReq.get(url, headers=headers, stream=True,
+                                    timeout=120, impersonate="chrome120"),
+            )
+            def _iter():
+                for chunk in resp.iter_content(chunk_size=65536):
+                    if chunk:
+                        loop.call_soon_threadsafe(chunk_queue.put_nowait, chunk)
+                resp.close()
+            await loop.run_in_executor(None, _iter)
+        except Exception as e:
+            log.warning(f"stream_bytes error: {e}")
+        finally:
+            chunk_queue.put_nowait(_sentinel)
+
+    download_task = asyncio.create_task(_download())
     try:
-        for chunk in resp.iter_content(chunk_size=65536):
-            if chunk:
-                yield chunk
+        while True:
+            chunk = await chunk_queue.get()
+            if chunk is _sentinel:
+                break
+            yield chunk
     finally:
-        resp.close()
+        download_task.cancel()
+        try:
+            await download_task
+        except (asyncio.CancelledError, Exception):
+            pass
 
 
 async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
@@ -135,7 +160,6 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
     Supports Range/206 for seeking.
     """
     import curl_cffi.requests as CurlReq
-    import queue
     headers = {
         "User-Agent": UA_STR,
         "Referer": f"{IPTV_BASE}/",
@@ -143,48 +167,45 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
     if range_header:
         headers["Range"] = range_header
 
-    chunk_queue: queue.Queue = queue.Queue(maxsize=32)
+    chunk_queue: asyncio.Queue = asyncio.Queue(maxsize=32)
     _sentinel = object()
 
-    def _download():
-        """Run in a thread: download chunks and put them in the queue."""
+    async def _download():
+        """Download chunks in an async-compatible thread and queue them."""
         try:
-            log.info(f"stream_vod_bytes: starting download for {url[:80]}...")
-            resp = CurlReq.get(url, headers=headers, stream=True, timeout=120,
-                               impersonate="chrome120")
-            log.info(f"stream_vod_bytes: HTTP {resp.status_code}, CT: {resp.headers.get('content-type','?')}")
-            count = 0
-            for chunk in resp.iter_content(chunk_size=65536):
-                if chunk:
-                    chunk_queue.put(chunk)
-                    count += 1
-            resp.close()
-            log.info(f"stream_vod_bytes: download complete, {count} chunks")
+            loop = asyncio.get_event_loop()
+            resp = await loop.run_in_executor(
+                None,
+                lambda: CurlReq.get(url, headers=headers, stream=True,
+                                    timeout=120, impersonate="chrome120"),
+            )
+            # Iterate chunks in the thread pool and queue them
+            def _iter():
+                for chunk in resp.iter_content(chunk_size=65536):
+                    if chunk:
+                        loop.call_soon_threadsafe(chunk_queue.put_nowait, chunk)
+                resp.close()
+
+            await loop.run_in_executor(None, _iter)
         except Exception as e:
-            log.warning(f"stream_vod_bytes download error: {e}")
-            import traceback
-            log.warning(traceback.format_exc())
+            log.warning(f"stream_vod_bytes error: {e}")
         finally:
-            chunk_queue.put(_sentinel)
+            chunk_queue.put_nowait(_sentinel)
 
-    loop = asyncio.get_event_loop()
-    # Fire-and-forget the download thread (don't await it)
-    fut = loop.run_in_executor(None, _download)
+    download_task = asyncio.create_task(_download())
 
-    # Register cleanup on generator close
-    async def _cleanup():
-        if not fut.done():
-            fut.cancel()
-
-    # Read from the queue asynchronously
-    while True:
-        chunk = await loop.run_in_executor(None, chunk_queue.get)
-        if chunk is _sentinel:
-            break
-        yield chunk
-    # Ensure download thread finishes
-    if not fut.done():
-        await fut
+    try:
+        while True:
+            chunk = await chunk_queue.get()
+            if chunk is _sentinel:
+                break
+            yield chunk
+    finally:
+        download_task.cancel()
+        try:
+            await download_task
+        except (asyncio.CancelledError, Exception):
+            pass
 
 
 async def stream_proxy(url: str, content_type: str):
