@@ -135,6 +135,7 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
     Supports Range/206 for seeking.
     """
     import curl_cffi.requests as CurlReq
+    import queue
     headers = {
         "User-Agent": UA_STR,
         "Referer": f"{IPTV_BASE}/",
@@ -142,22 +143,31 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
     if range_header:
         headers["Range"] = range_header
 
-    # Use run_in_executor since curl_cffi is synchronous
+    chunk_queue: queue.Queue = queue.Queue(maxsize=32)
+    _sentinel = object()
+
+    def _download():
+        """Run in a thread: download chunks and put them in the queue."""
+        try:
+            resp = CurlReq.get(url, headers=headers, stream=True, timeout=120,
+                               impersonate="chrome120")
+            for chunk in resp.iter_content(chunk_size=65536):
+                if chunk:
+                    chunk_queue.put(chunk)
+            resp.close()
+        except Exception as e:
+            log.warning(f"stream_vod_bytes download error: {e}")
+        finally:
+            chunk_queue.put(_sentinel)
+
     loop = asyncio.get_event_loop()
+    # Kick off the download thread
+    await loop.run_in_executor(None, _download)
 
-    def _stream():
-        resp = CurlReq.get(url, headers=headers, stream=True, timeout=60,
-                           impersonate="chrome120")
-        for chunk in resp.iter_content(chunk_size=65536):
-            if chunk:
-                yield chunk
-        resp.close()
-
-    # Run the blocking generator in executor, yielding chunks async
-    chunk_iter = await loop.run_in_executor(None, _stream)
+    # Read from the queue asynchronously
     while True:
-        chunk = await loop.run_in_executor(None, lambda: next(chunk_iter, None))
-        if chunk is None:
+        chunk = await loop.run_in_executor(None, chunk_queue.get)
+        if chunk is _sentinel:
             break
         yield chunk
 
