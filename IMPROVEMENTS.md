@@ -13,10 +13,14 @@ and works the top pending item each tick.
   `server/routes/{health,admin}.py` — extracted 6 endpoints from main.py
 - ✅ **[Phase 2]** Extracted TMDB routes (`/api/tmdb/*` — 14 endpoints) into
   `server/routes/tmdb.py`
-- [ ] **Phase 3**: Extract stream proxy + transcode routes
-- [ ] **Phase 4**: Extract search + enrichment routes
-- [ ] **Phase 5**: Extract guide + EPG + SSE routes
-- [ ] **Phase 6**: Extract remaining (live TV, movies, series, etc.)
+- ✅ **[Phase 3]** Extracted stream proxy + transcode routes into
+  `server/routes/stream.py`
+- ✅ **[Phase 4]** Extracted search + enrichment routes into
+  `server/routes/search.py`
+- ✅ **[Phase 5]** Extracted guide + EPG + SSE routes into
+  `server/routes/guide.py`
+- [ ] **Phase 6**: Extract remaining routes (live TV, movies, series,
+  subtitles, audio, HLS, DASH, convert, image proxy, watchlist, SPA)
 - [ ] Write integration tests for uncovered endpoints
 - [ ] Target >70% coverage on main.py
 

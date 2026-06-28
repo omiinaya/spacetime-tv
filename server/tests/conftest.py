@@ -49,9 +49,11 @@ app.router.lifespan_context = noop_lifespan
 def clear_cache():
     """Clear all caches before each test so state doesn't leak."""
     _cache.clear()
-    # Also clear the module-level probe cache
+    # Also clear the module-level probe caches
     import main as m
-    m._probe_cache.clear()
+    # _probe_cache moved to routes/stream.py during P1.1 Phase 3 extraction
+    from routes.stream import _probe_cache as stream_probe_cache
+    stream_probe_cache.clear()
     m.epg_cache["data"] = None
     m.epg_cache["fetched"] = 0
     # Clear progress store

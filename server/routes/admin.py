@@ -102,8 +102,9 @@ async def admin_epg_refresh():
     from state import epg_cache, _epg_refresh_task
 
     already_running = _epg_refresh_task is not None and not _epg_refresh_task.done()
+    from routes.guide import _refresh_epg_background
     if not already_running:
-        _epg_refresh_task = asyncio.create_task(m._refresh_epg_background())
+        _epg_refresh_task = asyncio.create_task(_refresh_epg_background())
 
     last_fetch = epg_cache["fetched"]
     age = round(time.time() - last_fetch, 0) if last_fetch else None
