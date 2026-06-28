@@ -9,19 +9,20 @@ and works the top pending item each tick.
 ## Status: PENDING
 
 ### P1.1 — Backend: monolith decomposition & test coverage (HIGH RISK)
-`server/main.py` is **3,234 lines** with only **31% test coverage** (69 tests).
-67 API endpoints in a single file. This is the biggest risk in the project:
-refactor into standalone route modules (like `routes/streams.py`,
-`routes/admin.py`, `routes/categories.py`, etc.) and drive coverage to >70%.
-- [ ] Extract EPG/lifespan/progress into dedicated modules
-- [ ] Extract route handlers into router files
+- ✅ **[Phase 1]** Created `server/state.py` (shared state module) and
+  `server/routes/{health,admin}.py` — extracted 6 endpoints from main.py
+- [ ] **Phase 2**: Extract TMDB routes (`/api/tmdb/*` — 14 endpoints)
+- [ ] **Phase 3**: Extract stream proxy + transcode routes
+- [ ] **Phase 4**: Extract search + enrichment routes
+- [ ] **Phase 5**: Extract guide + EPG + SSE routes
+- [ ] **Phase 6**: Extract remaining (live TV, movies, series, etc.)
 - [ ] Write integration tests for uncovered endpoints
 - [ ] Target >70% coverage on main.py
 
-### P1.2 — watchProgressSync.ts has zero coverage
-IndexedDB-backed sync queue for watch progress — complex async code with
-IndexedDB fallback logic. If this breaks, watch progress is silently lost.
-- [ ] Write comprehensive tests for all states (online, offline, queue flush, IDB unavailable)
+### P1.2 — watchProgressSync.ts coverage
+✅ Done: 14 tests covering all states — queue, retrieve, remove, retry limits,
+flush success, flush failure (500), flush with network error, IDB unavailable
+graceful fallback. Uses fake-indexeddb for in-memory IndexedDB.
 
 ### P2.1 — 16 hooks have zero test coverage
 These are the most critical untested modules:
