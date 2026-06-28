@@ -39,7 +39,10 @@ and works the top pending item each tick.
 - ✅ **[Phase 10]** Added 16 async tests for cached_fetch empty-list/stale
   fallback, fetch_iptv error path, cleanup_stale_cache, and
   start_cleanup_task — main.py coverage 56% → 73% (target achieved)
-- [ ] Write integration tests for remaining uncovered routes (media, stream, tmdb, live, misc)
+- ✅ **[Phase 11]** Added integration tests for live (13), media (17), misc (14),
+  and health (4) routes — live.py 50%→92%, media.py 20%→92%, misc.py 44%→85%,
+  health.py 55%→100%. Overall coverage 67%→75%.
+- [ ] Write integration tests for remaining uncovered routes (stream, tmdb, search, guide)
 
 ### P2.1 — 16 hooks have zero test coverage
 - ✅ **useChannelFavorites** (12 tests) — add/remove/toggle, localStorage persistence,
