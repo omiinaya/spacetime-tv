@@ -42,7 +42,8 @@ and works the top pending item each tick.
 - ✅ **[Phase 11]** Added integration tests for live (13), media (17), misc (14),
   and health (4) routes — live.py 50%→92%, media.py 20%→92%, misc.py 44%→85%,
   health.py 55%→100%. Overall coverage 67%→75%.
-- [ ] Write integration tests for remaining uncovered routes (stream, tmdb, search, guide)
+- ✅ **Phase 12** Added 46 TMDB integration tests — tmdb.py 31%→75%.
+- [ ] Write integration tests for remaining uncovered routes (stream, search, guide)
 
 ### P2.1 — 16 hooks have zero test coverage
 - ✅ **useChannelFavorites** (12 tests) — add/remove/toggle, localStorage persistence,
