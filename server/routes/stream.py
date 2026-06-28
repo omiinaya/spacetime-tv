@@ -119,7 +119,7 @@ async def stream_bytes(url: str):
                            impersonate="chrome120")
 
     resp = await asyncio.to_thread(_get_stream)
-    chunk_iter = resp.iter_content(chunk_size=65536)
+    chunk_iter = resp.iter_content(chunk_size=1048576)
     try:
         while True:
             def _get_chunk(it=chunk_iter):
@@ -156,7 +156,7 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
     resp = await asyncio.to_thread(_get_stream)
 
     # Iterate chunks via to_thread so we don't block the event loop
-    chunk_iter = resp.iter_content(chunk_size=65536)
+    chunk_iter = resp.iter_content(chunk_size=1048576)
     try:
         while True:
             def _get_chunk(it=chunk_iter):
@@ -231,7 +231,7 @@ async def stream_bytes_transcode(url: str, target_height: Optional[int] = None):
                     impersonate="chrome120",
                 )
             )
-            for chunk in resp.iter_content(chunk_size=262144):
+            for chunk in resp.iter_content(chunk_size=1048576):
                 if not chunk:
                     break
                 if proc.stdin:
@@ -437,7 +437,7 @@ async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
                     impersonate="chrome120",
                 )
             )
-            buf_size = 262144  # 256KB
+            buf_size = 1048576  # 1MB chunks for curl_cffi download
             for chunk in resp.iter_content(chunk_size=buf_size):
                 if not chunk:
                     break
@@ -529,7 +529,7 @@ async def stream_vod_transcode(url: str):
                     impersonate="chrome120",
                 )
             )
-            for chunk in resp.iter_content(chunk_size=262144):
+            for chunk in resp.iter_content(chunk_size=1048576):
                 if not chunk:
                     break
                 if proc.stdin:
