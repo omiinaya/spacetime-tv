@@ -307,7 +307,7 @@ async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
     cdn_url = url
     cdn_error = None
     try:
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=headers) as c:
+        async with httpx.AsyncClient(timeout=4.0, follow_redirects=True, headers=headers) as c:
             async with c.stream("GET", url) as resp:
                 if resp.status_code in (405, 404, 403):
                     cdn_error = f"CDN returned {resp.status_code} — movie unavailable on this edge"
@@ -324,8 +324,8 @@ async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
     cmd = [
         "/usr/bin/ffmpeg",
         "-loglevel", "warning",
-        "-probesize", "2M",
-        "-analyzeduration", "2M",
+        "-probesize", "512K",
+        "-analyzeduration", "512K",
         "-user_agent", headers["User-Agent"],
     ]
     if start_time and start_time > 0:
@@ -427,19 +427,6 @@ async def stream_vod_transcode(url: str):
 async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
     """Remux movie MKV→MPEG-TS for browser playback (mpegts.js)."""
     url = build_stream_url(stream_id, "movie")
-    try:
-        async with httpx.AsyncClient(timeout=8.0, follow_redirects=True,
-                                     headers={"User-Agent": UA_STR}) as c:
-            async with c.stream("GET", url) as resp:
-                if resp.status_code in (405, 404, 403):
-                    log.info(f"Movie {stream_id}: CDN returned {resp.status_code} — unavailable")
-                    return Response(
-                        status_code=503,
-                        content=json.dumps({"error": f"Movie unavailable on this CDN edge (HTTP {resp.status_code})"}),
-                        media_type="application/json",
-                    )
-    except Exception as e:
-        log.debug(f"VOD CDN pre-flight failed for movie {stream_id}: {e} — proceeding anyway")
     try:
         return StreamingResponse(
             stream_vod_mpegts(url, start),
