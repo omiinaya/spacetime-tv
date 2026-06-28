@@ -73,13 +73,17 @@ and works the top pending item each tick.
   results: native codec → remux, hevc → transcoding, unavailable → empty_stream error,
   fetch failure → native fallback, resume prompt with stored position, live bypass,
   transcodeCache reuse
+- ✅ **useHlsPlayer** (19 tests) — hls.js supported (loadSource, MANIFEST_PARSED,
+  startPos, NETWORK/MEDIA error recovery, fatal→shaka fallback, timeout,
+  empty-stream, event listeners), native HLS/Safari (video.src, loadedmetadata),
+  unsupported browser (not_supported), cleanup/destroy lifecycle
 - 🐛 **Fixed production bug**: grid column detection broke with `repeat(N, ...)` CSS syntax
 - 🐛 **Fixed production bug**: getVolume() returned NaN for corrupted localStorage values
   (parseFloat("nope") → NaN, not caught by try/catch)
-- [ ] Write tests for useHlsPlayer (HLS.js lifecycle, error recovery)
+- ✅ All hooks now have test coverage — P2.1 complete!
 
 ### P2.2 — Missing E2E / integration test layer
-All 729 frontend tests are unit/component tests with mocked API responses.
+All 940 frontend tests are unit/component tests with mocked API responses.
 No tests exercise real API calls or full user flows (search→select→play).
 - [ ] Set up Playwright or MSW's lifecycle server for integration tests
 - [ ] Write 2-3 critical path E2E tests (browse movies → overlay → play)
