@@ -26,10 +26,16 @@ PROBE_CACHE_TTL = 3600
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
-def _lookup_extension(stream_id: int, stream_type: str) -> str:
-    """Look up the container_extension for a VOD stream from the in-memory cache."""
+async def _lookup_extension(stream_id: int, stream_type: str) -> str:
+    """Look up the container_extension for a VOD stream.
+
+    Checks the in-memory cache first. Falls back to the IPTV provider's VOD
+    info API when the stream isn't cached, caching the result for subsequent
+    lookups.
+    """
     from state import _cache
 
+    # ── 1. Check local in-memory cache ─────────────────────────────
     prefix = f"{stream_type}_" if stream_type == "series" else "vod_"
     for key, (ts, data) in _cache.items():
         if not key.startswith(prefix):
@@ -41,12 +47,44 @@ def _lookup_extension(stream_id: int, stream_type: str) -> str:
             if sid == stream_id:
                 ext = item.get("container_extension", "mkv")
                 return ext if ext else "mkv"
-    return "mkv"
+
+    # ── 2. Fallback: query the provider API directly ────────────────
+    # Build the same API URL main.py::fetch_iptv uses, but do it here
+    # to avoid a circular import / tight coupling.
+    params = {
+        "username": IPTV_USER,
+        "password": IPTV_PASS,
+        "action": "get_vod_info" if stream_type == "movie" else "get_series_info",
+    }
+    id_key = "vod_id" if stream_type == "movie" else "series_id"
+    params[id_key] = str(stream_id)
+    qs = "&".join(f"{k}={v}" for k, v in params.items())
+    api_url = f"{IPTV_BASE}/player_api.php?{qs}"
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as c:
+            resp = await c.get(api_url)
+            if resp.status_code == 200:
+                data = resp.json()
+                if stream_type == "movie":
+                    md = data.get("movie_data", {}) if isinstance(data, dict) else {}
+                    ext = md.get("container_extension", "")
+                else:
+                    md = data.get("info", {}) if isinstance(data, dict) else {}
+                    ext = md.get("container_extension", "")
+                if ext:
+                    log.info(f"Looked up extension for {stream_type} {stream_id}: {ext} (API fallback)")
+                    return ext
+    except Exception as e:
+        log.warning(f"Extension lookup API fallback failed for {stream_type} {stream_id}: {e}")
+
+    log.info(f"Extension lookup for {stream_type} {stream_id}: defaulting to mp4")
+    return "mp4"
 
 
-def build_stream_url(stream_id: int, stream_type: str) -> str:
+async def build_stream_url(stream_id: int, stream_type: str) -> str:
     """Build the IPTV stream URL for a given stream ID and type."""
-    ext = "ts" if stream_type == "live" else _lookup_extension(stream_id, stream_type)
+    ext = "ts" if stream_type == "live" else await _lookup_extension(stream_id, stream_type)
     prefix = "live" if stream_type == "live" else stream_type
     return f"{IPTV_BASE}/{prefix}/{IPTV_USER}/{IPTV_PASS}/{stream_id}.{ext}"
 
@@ -176,7 +214,7 @@ async def stream_bytes_transcode(url: str, target_height: Optional[int] = None):
 async def stream_live(stream_id: int, request: Request):
     """Proxy live TV stream (raw MPEG-TS). Closes upstream fast on disconnect."""
     track_hit("live", stream_id)
-    url = build_stream_url(stream_id, "live")
+    url = await build_stream_url(stream_id, "live")
     log.info(f"STREAM LIVE START id={stream_id}")
     try:
         async def monitored_stream():
@@ -206,7 +244,7 @@ async def stream_live(stream_id: int, request: Request):
 @router.get("/api/stream/live/{stream_id}/transcode")
 async def stream_live_transcode(stream_id: int):
     """Proxy live TV stream with HEVC→H.264 transcoding via ffmpeg."""
-    url = build_stream_url(stream_id, "live")
+    url = await build_stream_url(stream_id, "live")
     try:
         return StreamingResponse(
             stream_bytes_transcode(url),
@@ -224,7 +262,7 @@ async def stream_live_transcode(stream_id: int):
 @router.get("/api/stream/live/{stream_id}/quality/{height}")
 async def stream_live_quality(stream_id: int, height: int):
     """Proxy live TV stream transcoded to a specific height (360, 720, 1080)."""
-    url = build_stream_url(stream_id, "live")
+    url = await build_stream_url(stream_id, "live")
     try:
         return StreamingResponse(
             stream_bytes_transcode(url, target_height=height),
@@ -245,7 +283,7 @@ async def handle_vod_request(req: Request, stream_id: int, stream_type: str,
                               content_type: str = "video/x-matroska"):
     """Handle a VOD stream request with Range/206 support for seeking."""
     track_hit(stream_type, stream_id)
-    url = build_stream_url(stream_id, stream_type)
+    url = await build_stream_url(stream_id, stream_type)
     range_header = req.headers.get("range")
 
     if range_header:
@@ -403,7 +441,7 @@ async def stream_vod_transcode(url: str):
 @router.get("/api/stream/movie/{stream_id}/remux")
 async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
     """Remux movie MKV→MPEG-TS for browser playback (mpegts.js)."""
-    url = build_stream_url(stream_id, "movie")
+    url = await build_stream_url(stream_id, "movie")
     try:
         return StreamingResponse(
             stream_vod_mpegts(url, start),
@@ -418,7 +456,7 @@ async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
 @router.get("/api/stream/series/{series_id}/{episode_id}/remux")
 async def stream_series_remux(series_id: int, episode_id: int, start: Optional[float] = None):
     """Remux series episode MKV→MPEG-TS for browser playback (mpegts.js)."""
-    url = build_stream_url(episode_id, "series")
+    url = await build_stream_url(episode_id, "series")
     try:
         return StreamingResponse(
             stream_vod_mpegts(url, start),
@@ -433,7 +471,7 @@ async def stream_series_remux(series_id: int, episode_id: int, start: Optional[f
 @router.get("/api/stream/movie/{stream_id}/transcode")
 async def stream_movie_transcode(stream_id: int):
     """Transcode a HEVC movie to H.264 on-the-fly."""
-    url = build_stream_url(stream_id, "movie")
+    url = await build_stream_url(stream_id, "movie")
     try:
         return StreamingResponse(
             stream_vod_transcode(url),
@@ -448,7 +486,7 @@ async def stream_movie_transcode(stream_id: int):
 @router.get("/api/stream/series/{series_id}/{episode_id}/transcode")
 async def stream_series_transcode(series_id: int, episode_id: int):
     """Transcode a HEVC series episode to H.264 on-the-fly."""
-    url = build_stream_url(episode_id, "series")
+    url = await build_stream_url(episode_id, "series")
     try:
         return StreamingResponse(
             stream_vod_transcode(url),
@@ -488,7 +526,7 @@ async def convert_to_mp4(stream_id: str, stream_type: str):
     if output_path.exists():
         return
     lock_path.write_text(str(time.time()))
-    url = build_stream_url(int(stream_id), stream_type)
+    url = await build_stream_url(int(stream_id), stream_type)
     ua = UA_STR
     if not mkv_path.exists():
         log.info(f"Downloading {cache_key} → {mkv_path}")
@@ -657,7 +695,7 @@ async def download_mkv(stream_id: str, stream_type: str, cache_key: str) -> Opti
     mkv_path = CACHE_DIR / f"{cache_key}.mkv"
     if mkv_path.exists() and mkv_path.stat().st_size > 0:
         return mkv_path
-    url = build_stream_url(int(stream_id), stream_type)
+    url = await build_stream_url(int(stream_id), stream_type)
     ua = UA_STR
     log.info(f"[HLS] Downloading {cache_key} → {mkv_path}")
     cmd = [
@@ -848,7 +886,7 @@ def generate_vod_mpd(stream_id: int, stream_type: str, stream_url: str) -> str:
 @router.get("/api/stream/live/{stream_id}/manifest.mpd")
 async def live_dash_manifest(stream_id: int):
     """DASH MPD manifest for live TV stream playback via shaka-player."""
-    url = build_stream_url(stream_id, "live")
+    url = await build_stream_url(stream_id, "live")
     xml = generate_live_mpd(stream_id, url)
     return Response(
         content=xml,
@@ -860,7 +898,7 @@ async def live_dash_manifest(stream_id: int):
 @router.get("/api/stream/movie/{stream_id}/manifest.mpd")
 async def movie_dash_manifest(stream_id: int):
     """DASH MPD manifest for movie playback via shaka-player."""
-    url = build_stream_url(stream_id, "movie")
+    url = await build_stream_url(stream_id, "movie")
     xml = generate_vod_mpd(stream_id, "movie", url)
     return Response(
         content=xml,
@@ -872,7 +910,7 @@ async def movie_dash_manifest(stream_id: int):
 @router.get("/api/stream/series/{series_id}/{episode_id}/manifest.mpd")
 async def series_dash_manifest(series_id: int, episode_id: int):
     """DASH MPD manifest for series episode playback via shaka-player."""
-    url = build_stream_url(episode_id, "series")
+    url = await build_stream_url(episode_id, "series")
     xml = generate_vod_mpd(episode_id, "series", url)
     return Response(
         content=xml,
@@ -890,7 +928,7 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
     if cache_key in _probe_cache and (now - _probe_cache[cache_key][0]) < PROBE_CACHE_TTL:
         return _probe_cache[cache_key][1]
 
-    url = build_stream_url(stream_id, stream_type)
+    url = await build_stream_url(stream_id, stream_type)
     ua = UA_STR
 
     try:
