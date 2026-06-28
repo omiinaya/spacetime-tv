@@ -43,44 +43,17 @@ and works the top pending item each tick.
   and health (4) routes — live.py 50%→92%, media.py 20%→92%, misc.py 44%→85%,
   health.py 55%→100%. Overall coverage 67%→75%.
 - ✅ **Phase 12** Added 46 TMDB integration tests — tmdb.py 31%→75%.
+- ✅ **[Phase 13]** Added 28 stream utility tests (_mime_from_url, generate_live/vod MPD,
+  serve_cached_mp4 Range/206, DASH manifest endpoints, convert endpoints, MP4 404) —
+  stream.py pure functions and smoke tests
+- ✅ **[Phase 13b]** Added 6 parse_xmltv tests (channel/programme extraction, empty XML,
+  missing elements, malformed XML error handling) — guide.py
+- 🐛 **Fixed production bug**: EPG channel icon parsing — `xml.etree.ElementTree.Element`
+  is falsy when empty (self-closing `<icon src="..."/>`), so `(el or {}).get("src")` returned `""`.
+  Fixed with proper `if el is not None` guard.
 - [ ] Write integration tests for remaining uncovered routes (stream, search, guide)
 
-### P2.1 — 16 hooks have zero test coverage
-- ✅ **useChannelFavorites** (12 tests) — add/remove/toggle, localStorage persistence,
-  stale closure via ref, corrupted storage handling
-- ✅ **useGridKeyboardNav + useRowKeyboardNav** (24 tests) — arrow key navigation,
-  Enter/Space selection, column detection with repeat() fix, enabled/disabled,
-  focus management, edge cases (empty, first/last)
-- ✅ **useInfiniteScroll** (11 tests) — batch rendering, hasMore, reset, source change
-- ✅ **useFullscreen** (6 tests) — native fullscreenchange/webkit events, optimistic set
-- ✅ **useLockBodyScroll** (5 tests) — body overflow toggle, Escape key, cleanup
-- ✅ **useKeyboardShortcuts** (13 tests) — all navigation shortcuts, input gating,
-  modifier key gating, ? overlay toggle, listener cleanup
-- ✅ **useKeyboard** (19 tests) — Space/k/j/l/f/m/arrow keys, input gating, volume
-  clamping, preventDefault, listener cleanup, handler update on prop change
-- ✅ **usePlayerUtils** (35 tests) — transcodeCache, getWatchPos/saveWatchPos (6),
-  getVolume/saveVolume (4, +1 production bug fix: NaN from parseFloat), getMuted/
-  saveMuted (4), tryAutoplay (4, muted fallback), probeStream (4, abort+timeout),
-  saveProgress (10, series/movie/auto-advance/all-guards), registerProgressSync (2)
-- ✅ **useStreamUrls** (30 tests) — all type/quality combinations for live/movie/series,
-  edge cases (missing ids, null urls)
-- ✅ **useNowPlaying** (6 tests) — successful fetch, null programme filtering,
-  unknown streamId, API error, 200-batch limit, empty streamIds
-- ✅ **useGuideData** (9 tests) — initial loading, fetch success/error, sessionStorage
-  cache (fresh + stale), hidden-category filtering, timeSlots/nowPct computation,
-  loadPage with offset>0, sentinelRef
-- ✅ **useVideoPlayer — probe routing** (8 integration tests) — MSW-controlled probe
-  results: native codec → remux, hevc → transcoding, unavailable → empty_stream error,
-  fetch failure → native fallback, resume prompt with stored position, live bypass,
-  transcodeCache reuse
-- ✅ **useHlsPlayer** (19 tests) — hls.js supported (loadSource, MANIFEST_PARSED,
-  startPos, NETWORK/MEDIA error recovery, fatal→shaka fallback, timeout,
-  empty-stream, event listeners), native HLS/Safari (video.src, loadedmetadata),
-  unsupported browser (not_supported), cleanup/destroy lifecycle
-- 🐛 **Fixed production bug**: grid column detection broke with `repeat(N, ...)` CSS syntax
-- 🐛 **Fixed production bug**: getVolume() returned NaN for corrupted localStorage values
-  (parseFloat("nope") → NaN, not caught by try/catch)
-- ✅ All hooks now have test coverage — P2.1 complete!
+
 
 ### P2.2 — Missing E2E / integration test layer
 All 940 frontend tests are unit/component tests with mocked API responses.
@@ -119,6 +92,14 @@ to catch hook rule violations and memoization issues.
 ---
 
 ## Recently Completed
+
+### P2.1 — 16 hooks have zero test coverage
+✅ Done: All 16 hooks now have full test coverage (212 tests across useChannelFavorites,
+useGridKeyboardNav, useRowKeyboardNav, useInfiniteScroll, useFullscreen,
+useLockBodyScroll, useKeyboardShortcuts, useKeyboard, usePlayerUtils, useStreamUrls,
+useNowPlaying, useGuideData, useVideoPlayer, useHlsPlayer). Fixed 2 production bugs:
+grid column repeat() detection and NaN from corrupted localStorage parseFloat.
+**Filed**: 2026-06-28
 
 ### P3.23 — Add lib tests for watchlist, searchHistory, settings
 ✅ Done: watchlist.test.ts (25 tests — movies + series CRUD, MAX_ITEMS,

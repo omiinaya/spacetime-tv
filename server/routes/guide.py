@@ -33,12 +33,13 @@ def parse_xmltv(xml_text: str) -> dict:
 
     channels = []
     for ch in root.findall("channel"):
+        icon_el = ch.find("icon")
         channels.append({
             "id": ch.get("id", ""),
             "name": " ".join(
                 (ch.findtext("display-name") or "").split()
             ),
-            "icon": (ch.find("icon") or {}).get("src", ""),
+            "icon": icon_el.get("src", "") if icon_el is not None else "",
         })
 
     programmes = []

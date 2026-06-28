@@ -400,8 +400,12 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
           probeHeight = result.height || 0;
           transcodeCache.set(streamId, "hevc");
         } else if (result.codec === "unavailable") {
-          if (isLive) { needsTranscode = false; transcodeCache.set(streamId, "native"); }
-          else { setPhase("error"); setErrorType("empty_stream"); setErrorMsg("This video is not available on the current CDN edge server."); return; }
+          if (isLive) {
+            setPhase("error"); setErrorType("empty_stream");
+            setErrorMsg("This channel is not available on the current CDN edge. Try a different channel or source.");
+            transcodeCache.set(streamId, "native");
+            return;
+          } else { setPhase("error"); setErrorType("empty_stream"); setErrorMsg("This video is not available on the current CDN edge server."); return; }
         } else { transcodeCache.set(streamId, "native"); if (result.native) nativePlaybackRef.current = true; }
       }
       if (cancelled || phaseTimedOut) return;

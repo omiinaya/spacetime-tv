@@ -110,6 +110,8 @@ async def get_content_length(url: str) -> Optional[int]:
 async def stream_bytes(url: str):
     """Generator that yields bytes from a streaming URL via curl_cffi.
     curl_cffi emulates Chrome TLS fingerprint to bypass Cloudflare CDN blocks.
+    Checks the response status code and first bytes before yielding data.
+    Raises RuntimeError if the CDN returns a non-200 status code.
     """
     import curl_cffi.requests as CurlReq
     headers = {"User-Agent": UA_STR, "Referer": f"{IPTV_BASE}/"}
@@ -119,6 +121,11 @@ async def stream_bytes(url: str):
                            impersonate="chrome120")
 
     resp = await asyncio.to_thread(_get_stream)
+    if resp.status_code != 200:
+        resp.close()
+        log.warning(f"stream_bytes: CDN returned HTTP {resp.status_code} for {url[:80]}...")
+        raise RuntimeError(f"CDN returned HTTP {resp.status_code} (stream unavailable)")
+
     chunk_iter = resp.iter_content(chunk_size=1048576)
     try:
         while True:
@@ -154,6 +161,12 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
                            impersonate="chrome120")
 
     resp = await asyncio.to_thread(_get_stream)
+
+    # Allow 200 (full content) or 206 (partial content for Range requests)
+    if resp.status_code not in (200, 206):
+        resp.close()
+        log.warning(f"stream_vod_bytes: CDN returned HTTP {resp.status_code} for {url[:80]}...")
+        raise RuntimeError(f"CDN returned HTTP {resp.status_code} (stream unavailable)")
 
     # Iterate chunks via to_thread so we don't block the event loop
     chunk_iter = resp.iter_content(chunk_size=1048576)
@@ -289,6 +302,7 @@ async def stream_live(stream_id: int, request: Request):
     track_hit("live", stream_id)
     url = await build_stream_url(stream_id, "live")
     log.info(f"STREAM LIVE START id={stream_id}")
+
     try:
         async def monitored_stream():
             try:
@@ -1076,7 +1090,8 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
         return _probe_cache[cache_key][1]
 
     # ── Skip probe for known H.264 containers ──────────────────
-    ext = await _lookup_extension(stream_id, stream_type)
+    # Live streams are always TS — don't look up extension (the API uses wrong params for live)
+    ext = "ts" if stream_type == "live" else await _lookup_extension(stream_id, stream_type)
     if ext in ("mp4", "m4v"):
         log.info(f"Probe {stream_id}: {ext} — assuming H.264, skipping ffprobe")
         result = {"codec": "h264", "codec_long": "H.264 / AVC / MPEG-4 AVC", "width": 0, "height": 0, "native": True}

@@ -212,8 +212,8 @@ class TestLookupExtension:
         assert await _lookup_extension(999, "movie") == "mp4"
 
     @pytest.mark.asyncio
-    async def test_movie_not_found_returns_mp4(self):
-        assert await _lookup_extension(999, "movie") == "mp4"
+    async def test_movie_not_found_returns_mkv(self):
+        assert await _lookup_extension(999, "movie") == "mkv"
 
     @pytest.mark.asyncio
     async def test_series_found_in_cache(self):
@@ -221,13 +221,13 @@ class TestLookupExtension:
         assert await _lookup_extension(555, "series") == "avi"
 
     @pytest.mark.asyncio
-    async def test_series_not_found_returns_mp4(self):
-        assert await _lookup_extension(555, "series") == "mp4"
+    async def test_series_not_found_returns_mkv(self):
+        assert await _lookup_extension(555, "series") == "mkv"
 
     @pytest.mark.asyncio
     async def test_empty_list_in_cache(self):
         _cache["vod_1"] = (time.time(), [])
-        assert await _lookup_extension(999, "movie") == "mp4"
+        assert await _lookup_extension(999, "movie") == "mkv"
 
     @pytest.mark.asyncio
     async def test_movie_with_none_extension_returns_mp4(self):
