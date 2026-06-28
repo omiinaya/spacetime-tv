@@ -37,7 +37,7 @@ export function saveWatchPos(key: string, pos: number) {
 }
 
 export function getVolume(): number {
-  try { return parseFloat(localStorage.getItem("stv_volume") || "0.8"); }
+  try { const v = parseFloat(localStorage.getItem("stv_volume") || "0.8"); return isNaN(v) ? 0.8 : v; }
   catch { return 0.8; }
 }
 

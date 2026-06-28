@@ -35,7 +35,19 @@ graceful fallback. Uses fake-indexeddb for in-memory IndexedDB.
 - ✅ **useLockBodyScroll** (5 tests) — body overflow toggle, Escape key, cleanup
 - ✅ **useKeyboardShortcuts** (13 tests) — all navigation shortcuts, input gating,
   modifier key gating, ? overlay toggle, listener cleanup
-- **Fixed production bug**: grid column detection broke with `repeat(N, ...)` CSS syntax
+- ✅ **useKeyboard** (19 tests) — Space/k/j/l/f/m/arrow keys, input gating, volume
+  clamping, preventDefault, listener cleanup, handler update on prop change
+- ✅ **usePlayerUtils** (35 tests) — transcodeCache, getWatchPos/saveWatchPos (6),
+  getVolume/saveVolume (4, +1 production bug fix: NaN from parseFloat), getMuted/
+  saveMuted (4), tryAutoplay (4, muted fallback), probeStream (4, abort+timeout),
+  saveProgress (10, series/movie/auto-advance/all-guards), registerProgressSync (2)
+- ✅ **useStreamUrls** (30 tests) — all type/quality combinations for live/movie/series,
+  edge cases (missing ids, null urls)
+- ✅ **useNowPlaying** (6 tests) — successful fetch, null programme filtering,
+  unknown streamId, API error, 200-batch limit, empty streamIds
+- 🐛 **Fixed production bug**: grid column detection broke with `repeat(N, ...)` CSS syntax
+- 🐛 **Fixed production bug**: getVolume() returned NaN for corrupted localStorage values
+  (parseFloat("nope") → NaN, not caught by try/catch)
 - [ ] Write tests for useHlsPlayer (HLS.js lifecycle, error recovery)
 
 ### P2.2 — Missing E2E / integration test layer
@@ -45,12 +57,12 @@ No tests exercise real API calls or full user flows (search→select→play).
 - [ ] Write 2-3 critical path E2E tests (browse movies → overlay → play)
 
 ### P3.1 — Eliminate `any` type annotations (5 occurrences)
-Production code has 5 `: any` types:
+✅ Done (commit 8246a50)
 - `useRemuxPlayer.ts:122` — mpegts STATISTICS_INFO stats callback
 - `useVideoPlayer.ts:369` — generic result variable
 - `useMpegtsPlayer.ts:128` — mpegts STATISTICS_INFO stats callback
 - `Search.tsx:160,163` — reduce accumulator items
-- [ ] Replace each with proper typed interfaces
+- Each replaced with proper typed interfaces
 
 ### P3.2 — Enable noUnusedLocals / noUnusedParameters in tsconfig
 `tsconfig.json` has `"strict": true` but **not** `noUnusedLocals` or
@@ -59,9 +71,9 @@ Production code has 5 `: any` types:
 - [ ] Fix any resulting violations
 
 ### P3.3 — Eliminate non-null assertion in Guide.tsx
+✅ Done (commit 8246a50)
 `web/src/pages/Guide.tsx:276` uses `group.stream_id!` — will crash at runtime
-if `stream_id` is null/undefined.
-- [ ] Replace with optional chaining or guard
+if `stream_id` is null/undefined. Replaced with optional chaining or guard.
 
 ### P4.1 — Add tests for complex untested components
 - [ ] Player.tsx (largest component — ~700 lines, zero direct tests)
