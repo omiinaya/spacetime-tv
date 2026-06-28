@@ -40,6 +40,10 @@ def _img_meta_path(cache_key: str) -> Path:
     return IMG_CACHE_DIR / f"{cache_key}.meta"
 
 
+def _img_stamp_path(cache_key: str) -> Path:
+    return IMG_CACHE_DIR / f".{cache_key}.accessed"
+
+
 def _img_write_disk(cache_key: str, content: bytes, content_type: str):
     """Write image + metadata to disk cache (fire-and-forget)."""
     try:

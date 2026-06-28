@@ -22,8 +22,10 @@ and works the top pending item each tick.
 - ✅ **[Phase 6a]** Extracted watchlist, live TV, movies, series,
   subtitles, audio, download, IPTV raw, image proxy, and SPA catch-all
   into `routes/{watchlist,live,vod,media,misc}.py`
-- ✅ **[Phase 6b]** Extracted remaining streaming routes (stream proxy,
-  HLS, DASH, MP4, convert) from main.py into `routes/stream.py` —
+- ✅ **[Phase 6b]** Removed dead streaming code (MP4, HLS, DASH helper
+  stubs) from main.py. main.py reduced from 2687 to 312 lines (-88%).
+  Stream/transcode/DASH/MP4/HLS logic now lives entirely in
+  `routes/stream.py` (1005 lines, the largest module).
   removed 22 duplicate decorators from main.py
 - ✅ **[Phase 7]** Added 58 unit tests for pure utility functions in
   main.py (_mime_from_url, generate_live_mpd, generate_vod_mpd,

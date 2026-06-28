@@ -1,6 +1,6 @@
 """Tests for build_stream_url — pure utility with no external dependencies."""
 
-from main import build_stream_url
+from routes.stream import build_stream_url
 
 
 def test_live_stream_url():

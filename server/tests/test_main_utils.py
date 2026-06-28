@@ -22,18 +22,23 @@ os.environ.setdefault("CACHE_WARM_ENABLED", "false")
 
 from main import (
     _cache,
-    _img_cache_key,
-    _img_cache_path,
-    _img_meta_path,
-    _img_stamp_path,
+    get_last_access,
+    iptv_url,
+    touch_access,
+)
+from routes.stream import (
     _lookup_extension,
     _mime_from_url,
     generate_live_mpd,
     generate_vod_mpd,
-    get_last_access,
-    iptv_url,
     serve_cached_mp4,
-    touch_access,
+    build_stream_url,
+)
+from routes.misc import (
+    _img_cache_key,
+    _img_cache_path,
+    _img_meta_path,
+    _img_stamp_path,
 )
 
 

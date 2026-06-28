@@ -125,7 +125,8 @@ def test_admin_clear_cache_empties_cache(client_with_cache: TestClient):
 
 def test_admin_clear_cache_resets_epg(client_with_cache: TestClient):
     """POST /api/admin/cache/clear should reset EPG cache."""
-    from main import epg_cache, app
+    from state import epg_cache
+    from main import app
 
     epg_cache["data"] = {"some": "data"}
     epg_cache["fetched"] = time.time()
