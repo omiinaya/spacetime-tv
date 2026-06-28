@@ -19,8 +19,11 @@ and works the top pending item each tick.
   `server/routes/search.py`
 - ✅ **[Phase 5]** Extracted guide + EPG + SSE routes into
   `server/routes/guide.py`
-- [ ] **Phase 6**: Extract remaining routes (live TV, movies, series,
-  subtitles, audio, HLS, DASH, convert, image proxy, watchlist, SPA)
+- ✅ **[Phase 6a]** Extracted watchlist, live TV, movies, series,
+  subtitles, audio, download, IPTV raw, image proxy, and SPA catch-all
+  into `routes/{watchlist,live,vod,media,misc}.py`
+- [ ] **Phase 6b**: Extract remaining streaming routes (stream proxy,
+  HLS, DASH, MP4, convert) still in main.py
 - [ ] Write integration tests for uncovered endpoints
 - [ ] Target >70% coverage on main.py
 

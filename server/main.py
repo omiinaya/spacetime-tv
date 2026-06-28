@@ -371,84 +371,8 @@ async def stream_proxy(url: str, content_type: str):
         return Response(status_code=502, content="Stream unavailable")
 
 
-@app.get("/api/stream/live/{stream_id}")
-async def stream_live(stream_id: int, request: Request):
-    """Proxy live TV stream (raw MPEG-TS). Closes upstream fast on disconnect."""
-    track_hit("live", stream_id)
-    url = build_stream_url(stream_id, "live")
-    log.info(f"STREAM LIVE START id={stream_id}")
-    try:
-        async def monitored_stream():
-            try:
-                async for chunk in stream_bytes(url):
-                    if await request.is_disconnected():
-                        log.info(f"STREAM LIVE DISCONNECT id={stream_id} — stopping upstream")
-                        break
-                    yield chunk
-            except Exception as e:
-                log.warning(f"STREAM LIVE ERROR id={stream_id}: {e}")
-            finally:
-                log.info(f"STREAM LIVE END id={stream_id}")
-        return StreamingResponse(
-            monitored_stream(),
-            media_type="video/mp2t",
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Cache-Control": "no-cache",
-            },
-        )
-    except Exception as e:
-        log.error(f"Stream proxy error ({url}): {e}")
-        return Response(status_code=502, content="Stream unavailable")
+# ── Live stream routes (extracted to routes/stream.py) ──────────────────────
 
-
-@app.get("/api/stream/live/{stream_id}")
-async def stream_live(stream_id: int, request: Request):
-    """Proxy a live TV stream — direct pass-through from IPTV provider."""
-    url = build_stream_url(stream_id, "live")
-    ua = UA_STR
-    try:
-        resp = await stream_proxy(url, "video/mp2t")
-        return resp
-    except Exception as e:
-        log.error(f"Live stream error ({url}): {e}")
-        return Response(status_code=502, content="Stream unavailable")
-
-
-@app.get("/api/stream/live/{stream_id}/transcode")
-async def stream_live_transcode(stream_id: int):
-    """Proxy live TV stream with HEVC→H.264 transcoding via ffmpeg."""
-    url = build_stream_url(stream_id, "live")
-    try:
-        return StreamingResponse(
-            stream_bytes_transcode(url),
-            media_type="video/mp2t",
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Cache-Control": "no-cache",
-            },
-        )
-    except Exception as e:
-        log.error(f"Transcode setup error ({url}): {e}")
-        return Response(status_code=502, content="Transcode failed")
-
-
-@app.get("/api/stream/live/{stream_id}/quality/{height}")
-async def stream_live_quality(stream_id: int, height: int):
-    """Proxy live TV stream transcoded to a specific height (360, 720, 1080)."""
-    url = build_stream_url(stream_id, "live")
-    try:
-        return StreamingResponse(
-            stream_bytes_transcode(url, target_height=height),
-            media_type="video/mp2t",
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Cache-Control": "no-cache",
-            },
-        )
-    except Exception as e:
-        log.error(f"Quality transcode error ({url}): {e}")
-        return Response(status_code=502, content="Transcode failed")
 
 
 # ── VOD Transcode (HEVC→H.264 for movies/series) ───────────────────────────
@@ -581,104 +505,8 @@ async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
             proc.kill(); await proc.wait()
 
 
-@app.get("/api/stream/movie/{stream_id}/remux")
-async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
-    """Remux movie MKV→MPEG-TS for browser playback (mpegts.js)."""
-    url = build_stream_url(stream_id, "movie")
-    
-    # Pre-check CDN availability to avoid silent 0-byte responses
-    try:
-        async with httpx.AsyncClient(timeout=8.0, follow_redirects=True,
-                                     headers={"User-Agent": UA_STR}) as c:
-            async with c.stream("GET", url) as resp:
-                if resp.status_code in (405, 404, 403):
-                    log.info(f"Movie {stream_id}: CDN returned {resp.status_code} — unavailable")
-                    return Response(
-                        status_code=503,
-                        content=json.dumps({"error": f"Movie unavailable on this CDN edge (HTTP {resp.status_code})"}),
-                        media_type="application/json",
-                    )
-    except Exception as e:
-        log.debug(f"VOD CDN pre-flight failed for movie {stream_id}: {e} — proceeding anyway")
-    
-    try:
-        return StreamingResponse(
-            stream_vod_mpegts(url, start),
-            media_type="video/mp2t",
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Cache-Control": "no-cache",
-            },
-        )
-    except Exception as e:
-        log.error(f"Movie remux error ({stream_id}): {e}")
-        return Response(status_code=502, content="Remux failed")
+# ── VOD stream routes (movie/series proxy, remux, transcode — extracted to routes/stream.py) ──
 
-
-@app.get("/api/stream/series/{series_id}/{episode_id}/remux")
-async def stream_series_remux(series_id: int, episode_id: int, start: Optional[float] = None):
-    """Remux series episode MKV→MPEG-TS for browser playback (mpegts.js)."""
-    url = build_stream_url(episode_id, "series")
-    try:
-        return StreamingResponse(
-            stream_vod_mpegts(url, start),
-            media_type="video/mp2t",
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Cache-Control": "no-cache",
-            },
-        )
-    except Exception as e:
-        log.error(f"Series remux error ({episode_id}): {e}")
-        return Response(status_code=502, content="Remux failed")
-
-
-@app.get("/api/stream/movie/{stream_id}/transcode")
-async def stream_movie_transcode(stream_id: int):
-    """Transcode a HEVC movie to H.264 on-the-fly."""
-    url = build_stream_url(stream_id, "movie")
-    try:
-        return StreamingResponse(
-            stream_vod_transcode(url),
-            media_type="video/mp2t",
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Cache-Control": "no-cache",
-            },
-        )
-    except Exception as e:
-        log.error(f"VOD transcode error (movie {stream_id}): {e}")
-        return Response(status_code=502, content="Transcode failed")
-
-
-@app.get("/api/stream/series/{series_id}/{episode_id}/transcode")
-async def stream_series_transcode(series_id: int, episode_id: int):
-    """Transcode a HEVC series episode to H.264 on-the-fly."""
-    url = build_stream_url(episode_id, "series")
-    try:
-        return StreamingResponse(
-            stream_vod_transcode(url),
-            media_type="video/mp2t",
-            headers={
-                "Access-Control-Allow-Origin": "*",
-                "Cache-Control": "no-cache",
-            },
-        )
-    except Exception as e:
-        log.error(f"VOD transcode error (series {episode_id}): {e}")
-        return Response(status_code=502, content="Transcode failed")
-
-
-@app.get("/api/stream/movie/{stream_id}")
-async def stream_movie(req: Request, stream_id: int):
-    """Proxy movie stream (MKV) with Range support for seeking."""
-    return await handle_vod_request(req, stream_id, "movie")
-
-
-@app.get("/api/stream/series/{series_id}/{episode_id}")
-async def stream_series_ep(req: Request, series_id: int, episode_id: int):
-    """Proxy series episode stream (MKV) with Range support for seeking."""
-    return await handle_vod_request(req, episode_id, "series")
 
 # ── Cache Warming ───────────────────────────────────────────────────────────
 # Without this, the first search triggers hundreds of per-category fetches.
@@ -764,19 +592,10 @@ def start_cache_warmer():
 
 # ── GENERAL ─────────────────────────────────────────────────────────────────
 
-@app.get("/api/iptv/{path:path}")
-async def iptv_raw(path: str):
-    """Raw proxy for any IPTV API call (images, etc.)."""
-    params = {"username": IPTV_USER, "password": IPTV_PASS}
-    full = f"{IPTV_BASE}/{path}?{urlencode(params)}"
-    try:
-        resp = await client.get(full)
-        return Response(content=resp.content, media_type=resp.headers.get("content-type", "application/octet-stream"))
-    except Exception as e:
-        raise HTTPException(502, str(e))
+# ── IPTV raw proxy (extracted to routes/misc.py) ────────────────────────────
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# ── GENERAL
 # ── VOD MP4 Converter (MKV → MP4 via -c copy, cached on disk) ─────────────
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -1102,7 +921,7 @@ async def _safe_convert(stream_id: str, stream_type: str, cache_key: str):
         _converting.pop(cache_key, None)
 
 
-@app.get("/api/movie/convert/{stream_id}")
+# Moved to routes/stream.py
 async def convert_movie(stream_id: int, retry: bool = False):
     """Trigger MKV→MP4 conversion for a movie. Returns status.
     Set ?retry=1 to re-convert even if already cached."""
@@ -1132,7 +951,7 @@ async def convert_movie(stream_id: int, retry: bool = False):
     return {"status": "converting", "message": "Conversion started"}
 
 
-@app.get("/api/series/convert/{series_id}/{episode_id}")
+# Moved to routes/stream.py
 async def convert_series_ep(series_id: int, episode_id: int, retry: bool = False):
     """Trigger MKV→MP4 conversion for a series episode.
     Set ?retry=1 to re-convert even if already cached."""
@@ -1161,7 +980,7 @@ async def convert_series_ep(series_id: int, episode_id: int, retry: bool = False
     return {"status": "converting", "message": "Conversion started"}
 
 
-@app.get("/api/stream/movie/{stream_id}/mp4")
+# Moved to routes/stream.py
 async def serve_movie_mp4(stream_id: int, request: Request):
     """Serve a cached MP4 movie with byte-range support for seeking."""
     cache_key = f"movie_{stream_id}"
@@ -1174,7 +993,7 @@ async def serve_movie_mp4(stream_id: int, request: Request):
     return serve_cached_mp4(output_path, request)
 
 
-@app.get("/api/stream/series/{series_id}/{episode_id}/mp4")
+# Moved to routes/stream.py
 async def serve_series_mp4(series_id: int, episode_id: int, request: Request):
     """Serve a cached MP4 series episode with byte-range support."""
     cache_key = f"series_{episode_id}"
@@ -1356,7 +1175,7 @@ async def ensure_hls(stream_id: str, stream_type: str, seek_seconds: float = 0) 
     return False  # Will be ready after download + segment
 
 
-@app.get("/api/movie/hls/{stream_id}")
+# Moved to routes/stream.py
 async def movie_hls_start(stream_id: int, start: float = 0):
     """Start HLS streaming for a movie. Returns playlist URL when ready."""
     ready = await ensure_hls(str(stream_id), "movie", start)
@@ -1370,7 +1189,7 @@ async def movie_hls_start(stream_id: int, start: float = 0):
     return {"status": "preparing", "message": "Downloading and segmenting..."}
 
 
-@app.get("/api/series/hls/{series_id}/{episode_id}")
+# Moved to routes/stream.py
 async def series_hls_start(series_id: int, episode_id: int, start: float = 0):
     """Start HLS streaming for a series episode."""
     ready = await ensure_hls(str(episode_id), "series", start)
@@ -1388,7 +1207,7 @@ async def series_hls_start(series_id: int, episode_id: int, start: float = 0):
 from fastapi.responses import FileResponse as FastAPIFileResponse
 
 
-@app.get("/api/hls/{stream_type}/{stream_id}/{filename}")
+# Moved to routes/stream.py
 async def serve_hls_file(stream_type: str, stream_id: str, filename: str):
     """Serve .m3u8 playlist or .ts segment for HLS playback."""
     if ".." in filename or "/" in filename:
@@ -1495,7 +1314,7 @@ def generate_vod_mpd(stream_id: int, stream_type: str, stream_url: str) -> str:
 </MPD>'''
 
 
-@app.get("/api/stream/live/{stream_id}/manifest.mpd")
+# Moved to routes/stream.py
 async def live_dash_manifest(stream_id: int):
     """DASH MPD manifest for live TV stream playback via shaka-player.
 
@@ -1515,7 +1334,7 @@ async def live_dash_manifest(stream_id: int):
     )
 
 
-@app.get("/api/stream/movie/{stream_id}/manifest.mpd")
+# Moved to routes/stream.py
 async def movie_dash_manifest(stream_id: int):
     """DASH MPD manifest for movie playback via shaka-player.
 
@@ -1534,7 +1353,7 @@ async def movie_dash_manifest(stream_id: int):
     )
 
 
-@app.get("/api/stream/series/{series_id}/{episode_id}/manifest.mpd")
+# Moved to routes/stream.py
 async def series_dash_manifest(series_id: int, episode_id: int):
     """DASH MPD manifest for series episode playback via shaka-player.
 
@@ -1568,7 +1387,7 @@ _MAX_IMG_CACHE_SIZE = 500  # evict oldest entry when exceeded
 # Requires TMDB_API_KEY env var. When unset, endpoints return empty results.
 
 
-@app.get("/api/image-proxy")
+# Moved to routes/misc.py
 async def image_proxy(request: Request, url: str = Query(...)):
     """Proxy images from blocked CDNs (cmc.exchange-cdn.com) through our server."""
     from urllib.parse import urlparse
@@ -1640,7 +1459,7 @@ async def image_proxy(request: Request, url: str = Query(...)):
 # SPA catch-all: serve index.html for any unmatched route
 from fastapi.responses import FileResponse
 
-@app.get("/{full_path:path}")
+# Moved to routes/misc.py
 async def spa_fallback(full_path: str):
     """Serve index.html for client-side routing."""
     index = STATIC_DIR / "index.html"
