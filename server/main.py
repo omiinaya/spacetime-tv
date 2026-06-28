@@ -64,6 +64,9 @@ app.include_router(watchlist_router)
 app.include_router(live_router)
 app.include_router(vod_router)
 app.include_router(media_router)
+# Static files mount MUST come before catch-all misc router
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
 app.include_router(misc_router)
 
 # ── Rate Limiting (in-memory fixed window) ──────────────────────────────────
@@ -301,10 +304,6 @@ def start_cleanup_task():
         _cleanup_task = asyncio.create_task(cleanup_loop())
         log.info(f"[CLEANUP] Started — TTL={CACHE_TTL_HOURS}h, interval={CLEANUP_INTERVAL}s")
 
-
-# ── Serve Frontend (must be last) ───────────────────────────────────────────
-STATIC_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
 
 
 if __name__ == "__main__":
