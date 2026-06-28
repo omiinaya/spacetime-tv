@@ -177,7 +177,7 @@ export function useRemuxPlayer(
         }, 5000);
       }
 
-      const timeoutMs = isTranscode ? 45000 : 30000;
+      const timeoutMs = isTranscode ? 90000 : 60000;
       const timeout = setTimeout(() => {
         if (!timedOut) {
           timedOut = true;
