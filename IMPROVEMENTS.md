@@ -60,10 +60,11 @@ No tests exercise real API calls or full user flows (search→select→play).
 - [ ] Write 2-3 critical path E2E tests (browse movies → overlay → play)
 
 ### P3.2 — Enable noUnusedLocals / noUnusedParameters in tsconfig
-`tsconfig.json` has `"strict": true` but **not** `noUnusedLocals` or
-`noUnusedParameters`. Turning these on catches dead code and stale params.
-- [ ] Enable both flags
-- [ ] Fix any resulting violations
+- ✅ **Done** (commit 07070cc): Enabled both flags in tsconfig.json and fixed all
+  22 files with violations. Removed unused imports, orphaned callbacks,
+  unused parameters, and dead constants. Added underscore prefixes where
+  variables are intentionally kept for future use.
+  Verification: 0 TS errors, 921 frontend tests, 69 backend tests all pass.
 
 ### P4.1 — Add tests for complex untested components
 - [ ] Player.tsx (largest component — ~700 lines, zero direct tests)
