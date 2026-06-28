@@ -30,8 +30,13 @@ graceful fallback. Uses fake-indexeddb for in-memory IndexedDB.
 - ✅ **useGridKeyboardNav + useRowKeyboardNav** (24 tests) — arrow key navigation,
   Enter/Space selection, column detection with repeat() fix, enabled/disabled,
   focus management, edge cases (empty, first/last)
+- ✅ **useInfiniteScroll** (11 tests) — batch rendering, hasMore, reset, source change
+- ✅ **useFullscreen** (6 tests) — native fullscreenchange/webkit events, optimistic set
+- ✅ **useLockBodyScroll** (5 tests) — body overflow toggle, Escape key, cleanup
+- ✅ **useKeyboardShortcuts** (13 tests) — all navigation shortcuts, input gating,
+  modifier key gating, ? overlay toggle, listener cleanup
 - **Fixed production bug**: grid column detection broke with `repeat(N, ...)` CSS syntax
-- [ ] Write tests for useHlsPlayer (HLS.js lifecycle, error recovery, stalled detection)
+- [ ] Write tests for useHlsPlayer (HLS.js lifecycle, error recovery)
 
 ### P2.2 — Missing E2E / integration test layer
 All 729 frontend tests are unit/component tests with mocked API responses.

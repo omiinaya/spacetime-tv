@@ -13,6 +13,15 @@ vi.stubGlobal("ResizeObserver", function MockResizeObserver(this: Record<string,
 Element.prototype.scrollIntoView = vi.fn();
 Element.prototype.scrollBy = vi.fn();
 
+// Mock IntersectionObserver (missing in jsdom)
+const mockIntersectionObserver = vi.fn();
+mockIntersectionObserver.mockReturnValue({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+});
+vi.stubGlobal("IntersectionObserver", mockIntersectionObserver);
+
 // Start MSW server before all tests — intercepts fetch() at network level.
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
 
