@@ -285,8 +285,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     setLoadingStep(needsTranscode ? "Preparing H.264 conversion…" : "Starting stream…");
     if (needsTranscode) setTranscoding(true);
     playVodRemux(streamUrl, seekPos ?? null, needsTranscode);
-    if (hlsInitUrl) { try { fetch(hlsInitUrl).catch(() => {}); } catch {} }
-  }, [remuxUrl, vodTranscodeUrl, hlsInitUrl, playVodRemux]);
+  }, [remuxUrl, vodTranscodeUrl, playVodRemux]);
 
   const seekToLive = useCallback(() => {
     const v = videoRef.current;
