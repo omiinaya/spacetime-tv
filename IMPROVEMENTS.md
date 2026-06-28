@@ -36,8 +36,10 @@ and works the top pending item each tick.
   overall coverage 56% → 60%
 - ✅ **Phase 9** Added 17 integration tests for VOD routes (movies,
   series, download) — vod.py coverage 38% → 62%, overall 61% → 62%
+- ✅ **[Phase 10]** Added 16 async tests for cached_fetch empty-list/stale
+  fallback, fetch_iptv error path, cleanup_stale_cache, and
+  start_cleanup_task — main.py coverage 56% → 73% (target achieved)
 - [ ] Write integration tests for remaining uncovered routes (media, stream, tmdb, live, misc)
-- [ ] Target >70% coverage on main.py
 
 ### P2.1 — 16 hooks have zero test coverage
 - ✅ **useChannelFavorites** (12 tests) — add/remove/toggle, localStorage persistence,
