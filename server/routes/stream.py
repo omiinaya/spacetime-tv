@@ -109,30 +109,20 @@ async def stream_proxy(url: str, content_type: str):
 
 
 async def stream_bytes_transcode(url: str, target_height: Optional[int] = None):
-    """Generator: resolve CDN redirect, then transcode HEVC→H.264 via ffmpeg.
-    ffmpeg reads directly from the CDN URL (no pipe latency).
+    """Generator: transcode HEVC→H.264 via ffmpeg, letting ffmpeg follow
+    CDN redirects natively (no httpx pre-resolution needed).
     If target_height is set, scales video to that height.
     """
     headers = {"User-Agent": UA_STR}
 
-    # Resolve the redirect chain to get the final CDN URL for ffmpeg
-    cdn_url = url
-    try:
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=headers) as c:
-            async with c.stream("GET", url) as resp:
-                cdn_url = str(resp.url)
-    except Exception as e:
-        log.warning(f"URL resolution failed, using original: {e}")
-
-    log.info(f"Transcoding {cdn_url[:100]}...")
-
+    log.info(f"Transcoding {url[:100]}...")
     cmd = [
         "/usr/bin/ffmpeg",
         "-loglevel", "warning",
-        "-probesize", "2M",
-        "-analyzeduration", "2M",
+        "-probesize", "512K",
+        "-analyzeduration", "512K",
         "-user_agent", headers["User-Agent"],
-        "-i", cdn_url,
+        "-i", url,
         "-c:v", "libx264",
         "-preset", "ultrafast",
         "-tune", "zerolatency",
@@ -300,27 +290,13 @@ async def handle_vod_request(req: Request, stream_id: int, stream_type: str,
 async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
     """Remux VOD (any container) → MPEG-TS with -c copy (no re-encode).
     Output is playable by mpegts.js. Supports time-based seeking via start_time.
+
+    ffmpeg follows redirects natively so we skip the httpx redirect
+    resolution — that was causing a slow duplicate connection to the CDN.
     """
     headers = {"User-Agent": UA_STR}
 
-    # Resolve the redirect chain to get the final CDN URL for ffmpeg
-    cdn_url = url
-    cdn_error = None
-    try:
-        async with httpx.AsyncClient(timeout=4.0, follow_redirects=True, headers=headers) as c:
-            async with c.stream("GET", url) as resp:
-                if resp.status_code in (405, 404, 403):
-                    cdn_error = f"CDN returned {resp.status_code} — movie unavailable on this edge"
-                    log.warning(f"VOD remux {url[:100]}: {cdn_error}")
-                cdn_url = str(resp.url)
-    except Exception as e:
-        log.warning(f"VOD remux URL resolution failed, using original: {e}")
-
-    if cdn_error:
-        log.error(f"VOD remux aborted — {cdn_error}")
-        return
-
-    log.info(f"VOD remux {cdn_url[:100]}... start={start_time}")
+    log.info(f"VOD remux {IPTV_BASE}... start={start_time}")
     cmd = [
         "/usr/bin/ffmpeg",
         "-loglevel", "warning",
@@ -331,7 +307,7 @@ async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
     if start_time and start_time > 0:
         cmd += ["-ss", str(start_time), "-copyts"]
     cmd += [
-        "-i", cdn_url,
+        "-i", url,
         "-c", "copy",
         "-f", "mpegts",
         "pipe:1",
@@ -367,24 +343,19 @@ async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
 async def stream_vod_transcode(url: str):
     """Transcode VOD (MKV with HEVC) → H.264+AAC in MPEG-TS container.
     Used when the browser can't decode H.265 natively.
+
+    ffmpeg follows redirects natively so we skip the httpx redirect resolution.
     """
     headers = {"User-Agent": UA_STR}
-    cdn_url = url
-    try:
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=headers) as c:
-            async with c.stream("GET", url) as resp:
-                cdn_url = str(resp.url)
-    except Exception as e:
-        log.warning(f"VOD URL resolution failed, using original: {e}")
 
-    log.info(f"VOD transcode {cdn_url[:100]}...")
+    log.info(f"VOD transcode {IPTV_BASE}...")
     cmd = [
         "/usr/bin/ffmpeg",
         "-loglevel", "warning",
-        "-probesize", "2M",
-        "-analyzeduration", "2M",
+        "-probesize", "512K",
+        "-analyzeduration", "512K",
         "-user_agent", headers["User-Agent"],
-        "-i", cdn_url,
+        "-i", url,
         "-c:v", "libx264",
         "-preset", "ultrafast",
         "-tune", "zerolatency",
