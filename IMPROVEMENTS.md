@@ -22,8 +22,9 @@ and works the top pending item each tick.
 - ✅ **[Phase 6a]** Extracted watchlist, live TV, movies, series,
   subtitles, audio, download, IPTV raw, image proxy, and SPA catch-all
   into `routes/{watchlist,live,vod,media,misc}.py`
-- [ ] **Phase 6b**: Extract remaining streaming routes (stream proxy,
-  HLS, DASH, MP4, convert) still in main.py
+- ✅ **[Phase 6b]** Extracted remaining streaming routes (stream proxy,
+  HLS, DASH, MP4, convert) from main.py into `routes/stream.py` —
+  removed 22 duplicate decorators from main.py
 - [ ] Write integration tests for uncovered endpoints
 - [ ] Target >70% coverage on main.py
 
