@@ -11,7 +11,7 @@ export type ConnectionQuality = "excellent" | "good" | "fair" | "poor";
 
 export interface ProbeResult {
   codec: string; codec_long?: string; width?: number; height?: number;
-  profile?: string; container?: string; error?: string;
+  profile?: string; container?: string; error?: string; native?: boolean;
 }
 
 // WebKit-prefixed fullscreen API (not in standard TS DOM types)

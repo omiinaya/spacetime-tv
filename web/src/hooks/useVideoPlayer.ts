@@ -33,6 +33,8 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   const retryCount = useRef(0);
   const destroyAllRef = useRef<(() => void)[]>([]);
   const [retryKey, setRetryKey] = useState(0);
+  /** When true, the stream can be played natively by the browser (MP4/H.264) */
+  const nativePlaybackRef = useRef(false);
 
 
   const clearLoadingTimeout = useCallback(() => {
@@ -278,6 +280,58 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
 
   // ── VOD startup ────────────────────────────────────────────
   const startVod = useCallback(async (_isCancelled: () => boolean, seekPos?: number, needsTranscode: boolean = false) => {
+    // ── Native MP4/H.264 path — skip ffmpeg remux entirely ──
+    if (nativePlaybackRef.current && !needsTranscode) {
+      const v = videoRef.current;
+      if (!v) return;
+      // Clean up any existing sub-hook players
+      if (hlsCleanupRef.current) { hlsCleanupRef.current(); hlsCleanupRef.current = null; }
+      try { subHlsRef.current?.destroy(); } catch {}
+      subHlsRef.current = null;
+      if (shakaCleanupRef.current) { shakaCleanupRef.current(); shakaCleanupRef.current = null; }
+      try { shakaPlayerRef.current?.destroy(); } catch {}
+      shakaPlayerRef.current = null;
+      if (mpegtsCleanupRef.current) { mpegtsCleanupRef.current(); mpegtsCleanupRef.current = null; }
+      try { mpegtsPlayerRef.current?.destroy(); } catch {}
+      mpegtsPlayerRef.current = null;
+      if (remuxCleanupRef.current) { remuxCleanupRef.current(); remuxCleanupRef.current = null; }
+      try { remuxPlayerRef.current?.destroy(); } catch {}
+      remuxPlayerRef.current = null;
+      setPhase("loading");
+      setErrorMsg(null);
+      startLoadingTimeout();
+      setLoadingStep("Starting stream…");
+      setTranscoding(false);
+      // Register event listeners for time tracking
+      const onTimeUpdate = () => {
+        const ct = v.currentTime;
+        const buf = v.buffered;
+        const bufferedEnd = buf.length > 0 ? buf.end(buf.length - 1) : 0;
+        setCurrentTime(ct);
+        setBuffered(bufferedEnd);
+        if (ct > 0.1) {
+          clearLoadingTimeout();
+          setPhase("playing");
+        }
+      };
+      const onDuration = () => {
+        const d = v.duration;
+        if (d && isFinite(d)) setDuration(d);
+      };
+      const onWaiting = () => stallTimestampsRef.current.push(Date.now());
+      v.addEventListener("timeupdate", onTimeUpdate);
+      v.addEventListener("durationchange", onDuration);
+      v.addEventListener("waiting", onWaiting);
+      // Handle resume seeking after metadata loads
+      if (seekPos && seekPos > 5) {
+        v.addEventListener("loadedmetadata", () => { v.currentTime = seekPos; }, { once: true });
+      }
+      // Browser plays MP4 directly with Range-request proxy
+      v.src = streamPath;
+      v.load();
+      return;
+    }
+    // ── Standard remux/transcode path via ffmpeg + mpegts.js ──
     const streamUrl = needsTranscode ? vodTranscodeUrl : remuxUrl;
     if (!streamUrl) return;
     setPhase("loading");
@@ -286,7 +340,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     setLoadingStep(needsTranscode ? "Preparing H.264 conversion…" : "Starting stream…");
     if (needsTranscode) setTranscoding(true);
     playVodRemux(streamUrl, seekPos ?? null, needsTranscode);
-  }, [remuxUrl, vodTranscodeUrl, playVodRemux]);
+  }, [remuxUrl, vodTranscodeUrl, streamPath, playVodRemux, nativePlaybackRef]);
 
   const seekToLive = useCallback(() => {
     const v = videoRef.current;
@@ -347,7 +401,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
         } else if (result.codec === "unavailable") {
           if (isLive) { needsTranscode = false; transcodeCache.set(streamId, "native"); }
           else { setPhase("error"); setErrorType("empty_stream"); setErrorMsg("This video is not available on the current CDN edge server."); return; }
-        } else { transcodeCache.set(streamId, "native"); }
+        } else { transcodeCache.set(streamId, "native"); if (result.native) nativePlaybackRef.current = true; }
       }
       if (cancelled || phaseTimedOut) return;
 

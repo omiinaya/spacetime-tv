@@ -937,7 +937,7 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
     ext = await _lookup_extension(stream_id, stream_type)
     if ext in ("mp4", "m4v"):
         log.info(f"Probe {stream_id}: {ext} — assuming H.264, skipping ffprobe")
-        result = {"codec": "h264", "codec_long": "H.264 / AVC / MPEG-4 AVC", "width": 0, "height": 0}
+        result = {"codec": "h264", "codec_long": "H.264 / AVC / MPEG-4 AVC", "width": 0, "height": 0, "native": True}
         _probe_cache[cache_key] = (now, result)
         return result
 
