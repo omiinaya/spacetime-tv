@@ -149,20 +149,32 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
     def _download():
         """Run in a thread: download chunks and put them in the queue."""
         try:
+            log.info(f"stream_vod_bytes: starting download for {url[:80]}...")
             resp = CurlReq.get(url, headers=headers, stream=True, timeout=120,
                                impersonate="chrome120")
+            log.info(f"stream_vod_bytes: HTTP {resp.status_code}, CT: {resp.headers.get('content-type','?')}")
+            count = 0
             for chunk in resp.iter_content(chunk_size=65536):
                 if chunk:
                     chunk_queue.put(chunk)
+                    count += 1
             resp.close()
+            log.info(f"stream_vod_bytes: download complete, {count} chunks")
         except Exception as e:
             log.warning(f"stream_vod_bytes download error: {e}")
+            import traceback
+            log.warning(traceback.format_exc())
         finally:
             chunk_queue.put(_sentinel)
 
     loop = asyncio.get_event_loop()
-    # Kick off the download thread
-    await loop.run_in_executor(None, _download)
+    # Fire-and-forget the download thread (don't await it)
+    fut = loop.run_in_executor(None, _download)
+
+    # Register cleanup on generator close
+    async def _cleanup():
+        if not fut.done():
+            fut.cancel()
 
     # Read from the queue asynchronously
     while True:
@@ -170,6 +182,9 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
         if chunk is _sentinel:
             break
         yield chunk
+    # Ensure download thread finishes
+    if not fut.done():
+        await fut
 
 
 async def stream_proxy(url: str, content_type: str):
