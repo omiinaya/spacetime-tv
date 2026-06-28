@@ -922,11 +922,24 @@ async def series_dash_manifest(series_id: int, episode_id: int):
 # ── Probe functions ─────────────────────────────────────────────────────────
 
 async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
-    """Run ffprobe on a stream to detect codec. Cached for 1 hour."""
+    """Run ffprobe on a stream to detect codec. Cached for 1 hour.
+
+    For known H.264 containers (mp4, m4v) we skip ffprobe entirely —
+    it would need to download the whole file for MP4s with moov-at-end,
+    which is slow and unnecessary.
+    """
     cache_key = f"{stream_type}_{stream_id}"
     now = time.time()
     if cache_key in _probe_cache and (now - _probe_cache[cache_key][0]) < PROBE_CACHE_TTL:
         return _probe_cache[cache_key][1]
+
+    # ── Skip probe for known H.264 containers ──────────────────
+    ext = await _lookup_extension(stream_id, stream_type)
+    if ext in ("mp4", "m4v"):
+        log.info(f"Probe {stream_id}: {ext} — assuming H.264, skipping ffprobe")
+        result = {"codec": "h264", "codec_long": "H.264 / AVC / MPEG-4 AVC", "width": 0, "height": 0}
+        _probe_cache[cache_key] = (now, result)
+        return result
 
     url = await build_stream_url(stream_id, stream_type)
     ua = UA_STR
