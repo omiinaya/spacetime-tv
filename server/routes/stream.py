@@ -936,7 +936,7 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
             "/usr/bin/timeout", "8", "/usr/bin/ffprobe",
             "-v", "error",
             "-print_format", "json",
-            "-show_streams", "-show_format",
+            "-show_streams",
             "-user_agent", ua,
             "-select_streams", "v:0",
             url,
