@@ -296,7 +296,11 @@ async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
     """
     headers = {"User-Agent": UA_STR}
 
-    log.info(f"VOD remux {IPTV_BASE}... start={start_time}")
+    log.info(f"VOD remux starting for {IPTV_BASE}... start={start_time}")
+
+    # First try: let ffmpeg follow the redirect by passing -http_proxy or -headers
+    # ffmpeg's http protocol follows redirects automatically.
+    # Need to set user-agent via -user_agent option.
     cmd = [
         "/usr/bin/ffmpeg",
         "-loglevel", "warning",
@@ -312,6 +316,8 @@ async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
         "-f", "mpegts",
         "pipe:1",
     ]
+
+    log.info(f"VOD remux cmd: {' '.join(cmd[-6:])}")  # log last 6 args
     proc = await asyncio.create_subprocess_exec(
         *cmd,
         stdout=asyncio.subprocess.PIPE,

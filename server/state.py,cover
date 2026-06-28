@@ -1,0 +1,92 @@
+> """Shared mutable state for Spacetime-TV backend.
+  
+> Extracted from main.py to enable route decomposition into separate modules.
+> All module-level mutable state that routes depend on lives here.
+> """
+> import asyncio
+> import json
+> import time
+> from pathlib import Path
+> from typing import Optional
+  
+  # ── Server start ──────────────────────────────────────────────────────────
+> SERVER_START_TIME = time.time()
+  
+  # ── Cache (API response cache, TTL-based) ─────────────────────────────────
+> _cache: dict[str, tuple[float, list | dict]] = {}
+> _cache_hits: int = 0
+> _cache_misses: int = 0
+> CACHE_TTL = 300  # 5 min for API data
+  
+  # ── EPG Cache ─────────────────────────────────────────────────────────────
+> epg_cache: dict = {"data": None, "fetched": 0}
+> _epg_refresh_task: Optional[asyncio.Task] = None
+  
+  # ── Health & Monitoring ───────────────────────────────────────────────────
+> STREAM_HITS_FILE = "/tmp/stv_stream_hits.json"
+> _stream_hits: dict[str, int] = {}
+> _error_log: list[dict] = []
+> _search_queries: list[dict] = []
+  
+> def _load_stream_hits():
+>     global _stream_hits
+!     try:
+!         with open(STREAM_HITS_FILE) as f:
+!             disk = json.load(f)
+!             for k, v in disk.items():
+!                 _stream_hits[k] = max(_stream_hits.get(k, 0), v)
+!     except (FileNotFoundError, json.JSONDecodeError):
+!         pass
+  
+> def _save_stream_hits():
+!     try:
+!         with open(STREAM_HITS_FILE, "w") as f:
+!             json.dump(_stream_hits, f)
+!     except Exception:
+!         pass
+  
+> def track_hit(stream_type: str, stream_id: int | str):
+!     key = f"{stream_type}:{stream_id}"
+!     _stream_hits[key] = _stream_hits.get(key, 0) + 1
+!     _save_stream_hits()
+  
+> def log_error(msg: str, path: str = ""):
+!     _error_log.append({"ts": time.time(), "message": msg, "path": path})
+!     if len(_error_log) > 100:
+!         _error_log.pop(0)
+  
+> def record_search(query: str):
+>     _search_queries.append({"ts": time.time(), "query": query[:80]})
+>     if len(_search_queries) > 1000:
+!         _search_queries.pop(0)
+  
+  # ── SSE (EPG broadcast) ───────────────────────────────────────────────────
+> _epg_clients: list[asyncio.Queue] = []
+  
+  # ── Watch Progress Store ──────────────────────────────────────────────────
+> PROGRESS_FILE = Path("/tmp/stv_watch_progress.json")
+> _progress_store: dict = {}
+  
+> def _load_progress_store():
+>     global _progress_store
+!     try:
+!         if PROGRESS_FILE.exists():
+!             _progress_store = json.loads(PROGRESS_FILE.read_text())
+!     except Exception:
+!         _progress_store = {}
+  
+> def _save_progress_store():
+>     try:
+>         PROGRESS_FILE.write_text(json.dumps(_progress_store))
+!     except Exception:
+!         pass
+  
+  # ── Cache Warming ─────────────────────────────────────────────────────────
+> _warm_task: Optional[asyncio.Task] = None
+  
+  # ── Image Cache (in-memory, TTL-based) ────────────────────────────────────
+> _img_cache: dict[str, tuple[float, bytes, str]] = {}  # url → (ts, data, content_type)
+  
+  # ── Disk Cache TTL & Budget ───────────────────────────────────────────────
+> DISK_CACHE_TTL = 86400 * 7  # 7 days
+> DISK_CACHE_BUDGET = 500 * 1024 * 1024  # 500 MB
