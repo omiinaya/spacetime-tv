@@ -76,7 +76,7 @@ export function useRemuxPlayer(
       const player = mpegts.createPlayer(
         { type: "mpegts", isLive: false, url },
         {
-          enableWorkerForMSE: true,
+          enableWorkerForMSE: false,
           autoCleanupSourceBuffer: false,
         },
       );
