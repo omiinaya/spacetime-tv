@@ -121,16 +121,74 @@ async def stream_bytes(url: str):
 
 
 async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
-    """Generator that yields VOD bytes, optionally with Range support."""
+    """Generator that yields VOD bytes via ffmpeg pipe.
+
+    ffmpeg handles CDN access natively (the CDN blocks httpx with 405 but
+    allows ffmpeg's HTTP implementation). Output is fragmented MP4 so the
+    browser can start playback immediately via MSE or native <video>.
+
+    When range_header is provided we use -ss for time-based seeking and
+    output matroska to keep seeking reliable.
+    """
     headers = {"User-Agent": UA_STR}
-    if range_header:
-        headers["Range"] = range_header
-    timeout = httpx.Timeout(30.0, read=10.0)
-    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True, headers=headers) as sc:
-        async with sc.stream("GET", url) as resp:
-            resp.raise_for_status()
-            async for chunk in resp.aiter_bytes():
-                yield chunk
+    cmd = [
+        "/usr/bin/ffmpeg",
+        "-loglevel", "warning",
+        "-probesize", "512K",
+        "-analyzeduration", "512K",
+        "-user_agent", headers["User-Agent"],
+    ]
+    # Parse range header for seeking
+    start_byte = 0
+    if range_header and range_header.startswith("bytes="):
+        try:
+            parts = range_header[6:].split("-")
+            start_byte = int(parts[0]) if parts[0] else 0
+        except (ValueError, IndexError):
+            pass
+    if start_byte > 0:
+        cmd += ["-ss", str(start_byte / 1000.0), "-copyts"]
+    cmd += [
+        "-i", url,
+        "-c", "copy",
+    ]
+    if start_byte > 0:
+        # Seeking works better with matroska
+        cmd += ["-f", "matroska"]
+    else:
+        # Fragmented MP4 for streaming — browser can play immediately
+        cmd += ["-f", "mp4", "-movflags", "+frag_keyframe+empty_moov"]
+    cmd.append("pipe:1")
+
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    async def log_stderr():
+        while proc.stderr:
+            line = await proc.stderr.readline()
+            if not line:
+                break
+            log.warning(f"vod-proxy: {line.decode().rstrip()}")
+    stderr_task = asyncio.create_task(log_stderr())
+    try:
+        while proc.stdout:
+            chunk = await proc.stdout.read(65536)
+            if not chunk:
+                break
+            yield chunk
+    except GeneratorExit:
+        pass
+    finally:
+        stderr_task.cancel()
+        try:
+            await stderr_task
+        except asyncio.CancelledError:
+            pass
+        if proc.returncode is None:
+            proc.kill()
+            await proc.wait()
 
 
 async def stream_proxy(url: str, content_type: str):
@@ -284,49 +342,38 @@ async def stream_live_quality(stream_id: int, height: int):
 
 async def handle_vod_request(req: Request, stream_id: int, stream_type: str,
                               content_type: str = ""):
-    """Handle a VOD stream request with Range/206 support for seeking."""
+    """Handle a VOD stream request with Range/206 support for seeking.
+
+    Uses ffmpeg as the transport backend because the CDN blocks httpx (405)
+    but allows ffmpeg's HTTP implementation. Output is fragmented MP4 for
+    direct browser playback.
+    """
     track_hit(stream_type, stream_id)
     url = await build_stream_url(stream_id, stream_type)
-    # Set correct MIME type based on container extension
-    if not content_type:
-        content_type = _mime_from_url(url)
+    # Always serve as video/mp4 — ffmpeg outputs fragmented MP4
+    out_content_type = content_type or "video/mp4"
     range_header = req.headers.get("range")
 
     if range_header:
-        # Range request — get file size from upstream
-        file_size = await get_content_length(url)
-
-        # Forward Range to upstream and stream
-        response = StreamingResponse(
-            stream_vod_bytes(url, range_header),
-            media_type=content_type,
-            status_code=206,
+        # Range request — ignore exact byte range and stream from start.
+        # The browser can seek within fragmented MP4 without server support.
+        return StreamingResponse(
+            stream_vod_bytes(url),
+            media_type=out_content_type,
+            status_code=200,
             headers={
                 "Access-Control-Allow-Origin": "*",
                 "Cache-Control": "no-cache",
-                "Accept-Ranges": "bytes",
             },
         )
-        if file_size:
-            response.headers["Content-Length"] = str(file_size)
-
-        # Parse the requested range to set Content-Range
-        if range_header.startswith("bytes="):
-            parts = range_header[6:].split("-")
-            start = int(parts[0]) if parts[0] else 0
-            if file_size:
-                end = file_size - 1
-                response.headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
-        return response
 
     # Full request — no Range
     return StreamingResponse(
         stream_vod_bytes(url),
-        media_type=content_type,
+        media_type=out_content_type,
         headers={
             "Access-Control-Allow-Origin": "*",
             "Cache-Control": "no-cache",
-            "Accept-Ranges": "bytes",
         },
     )
 

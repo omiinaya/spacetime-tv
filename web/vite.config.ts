@@ -3,9 +3,22 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+import { readFileSync, writeFileSync } from "fs";
 
 export default defineConfig({
-  plugins: [tailwindcss(), react()],
+  plugins: [
+    tailwindcss(),
+    react(),
+    {
+      name: "strip-crossorigin",
+      closeBundle() {
+        const indexPath = path.resolve(__dirname, "dist/index.html");
+        let html = readFileSync(indexPath, "utf-8");
+        html = html.replace(/\s+crossorigin(=["'][^"']*["'])?/g, "");
+        writeFileSync(indexPath, html);
+      },
+    },
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
