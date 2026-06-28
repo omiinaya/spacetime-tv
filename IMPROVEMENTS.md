@@ -25,10 +25,12 @@ subprocesses). Focus on pure-logic / mockable paths.
 - [ ] guide.py: cover group by channel, programme overlap logic
 
 ### P4.1 — Add tests for complex untested components
-- [ ] Player.tsx (largest component — ~700 lines, zero direct tests)
-- [ ] MediaOverlay.tsx (stream info overlay, TMDB enrichment, language options)
-- [ ] AudioSelector.tsx, SubtitleSelector.tsx (track switching)
-- [ ] SleepTimer.tsx (countdown timer, time formatting)
+- 🚧 AudioSelector.test.tsx — created (170 lines), 3/5 tests passing
+- 🚧 MediaOverlay.test.tsx — created (241 lines), 12/18 tests passing
+- 🚧 SleepTimer.test.tsx — created (188 lines), 7/10 tests passing
+- 🚧 SubtitleSelector.test.tsx — created (256 lines), 3/6 tests passing
+- [ ] Fix remaining test failures in these 4 test files
+- [ ] Add tests for Player.tsx (largest component — ~700 lines, zero direct tests)
 - [ ] SettingsContext.tsx (app-wide settings provider)
 
 ### P4.2 — Add tests for smaller untested components
