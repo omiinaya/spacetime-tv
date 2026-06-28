@@ -13,7 +13,7 @@ import type { ConnectionQuality, DocumentWithWebkit, PlayPhase, ErrorType, Probe
 export type { ConnectionQuality, ProbeResult, PlayPhase, ErrorType, UseVideoPlayerParams, UseVideoPlayerReturn } from "./usePlayerTypes";
 export { QUALITIES, SPEEDS } from "./usePlayerTypes";
 export { fmtTime } from "./usePlayerUtils";
-import { getWatchPos, getVolume, getMuted, saveVolume, saveMuted, probeStream, transcodeCache } from "./usePlayerUtils";
+import { getWatchPos, getVolume, getMuted, saveVolume, saveMuted, probeStream, transcodeCache, tryAutoplay } from "./usePlayerUtils";
 import { QUALITIES } from "./usePlayerTypes";
 import { useStreamUrls } from "./useStreamUrls";
 import { useMpegtsPlayer, type MpegtsPlayerCallbacks } from "./useMpegtsPlayer";
@@ -329,6 +329,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       // Browser plays MP4 directly with Range-request proxy
       v.src = streamPath;
       v.load();
+      tryAutoplay(v, () => setMuted(true));
       return;
     }
     // ── Standard remux/transcode path via ffmpeg + mpegts.js ──

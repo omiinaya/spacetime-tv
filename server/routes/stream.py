@@ -90,15 +90,18 @@ async def build_stream_url(stream_id: int, stream_type: str) -> str:
 
 
 async def get_content_length(url: str) -> Optional[int]:
-    """HEAD the remote URL to discover Content-Length."""
+    """Discover Content-Length via Range request (HEAD returns 0 for this CDN)."""
     try:
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True,
-                                     headers={"User-Agent": UA_STR}) as c:
-            resp = await c.head(url)
+                                     headers={"User-Agent": UA_STR, "Range": "bytes=0-0"}) as c:
+            resp = await c.get(url)
+            cr = resp.headers.get("content-range")
+            if cr and cr.startswith("bytes"):
+                return int(cr.split("/")[-1])
             cl = resp.headers.get("content-length")
             return int(cl) if cl else None
     except Exception as e:
-        log.debug(f"Content-Length HEAD failed for {url}: {e}")
+        log.debug(f"Content-Length probe failed for {url}: {e}")
         return None
 
 
