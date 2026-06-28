@@ -45,8 +45,8 @@ async def _lookup_extension(stream_id: int, stream_type: str) -> str:
         for item in data:
             sid = item.get("stream_id") if stream_type == "movie" else item.get("series_id")
             if sid == stream_id:
-                ext = item.get("container_extension", "mkv")
-                return ext if ext else "mkv"
+                ext = item.get("container_extension", "mp4")
+                return ext if ext else "mp4"
 
     # ── 2. Fallback: query the provider API directly ────────────────
     # Build the same API URL main.py::fetch_iptv uses, but do it here
