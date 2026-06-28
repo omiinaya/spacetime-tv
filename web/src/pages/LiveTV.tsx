@@ -41,7 +41,7 @@ export default function LiveTV() {
       const raw = sessionStorage.getItem(SLIM_ALL_KEY);
       if (!raw) return [];
       const parsed = JSON.parse(raw) as SlimAllCache;
-      if (parsed.a && Date.now() - parsed.ts < 900000) {
+      if (parsed.a?.length && Date.now() - parsed.ts < 900000) {
         return parsed.a.map((s) => ({
           stream_id: s.id, name: s.n, stream_icon: "",
           category_id: s.c, num: 0, stream_type: "live",
@@ -63,7 +63,16 @@ export default function LiveTV() {
   const [allStreams, setAllStreams] = useState<LiveStream[]>(() => restoreAllStreams());
   const [loading, setLoading] = useState(() => !loadCache("stv_live_cats", "categories"));
   const [streamsLoading, setStreamsLoading] = useState(false);
-  const [allLoading, setAllLoading] = useState(() => !sessionStorage.getItem(SLIM_ALL_KEY));
+  const [allLoading, setAllLoading] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem(SLIM_ALL_KEY);
+      if (!raw) return true;
+      const parsed = JSON.parse(raw);
+      return !(parsed.a?.length && Date.now() - parsed.ts < 900000);
+    } catch {
+      return true;
+    }
+  });
   const [error, setError] = useState<string | null>(null);
 
   const searchQuery = searchParams.get("q") || "";
@@ -143,7 +152,9 @@ export default function LiveTV() {
       .categories()
       .then((d) => {
         setCategories(d.categories);
-        sessionStorage.setItem("stv_live_cats", JSON.stringify({ categories: d.categories, ts: Date.now() }));
+        if (d.categories?.length) {
+          sessionStorage.setItem("stv_live_cats", JSON.stringify({ categories: d.categories, ts: Date.now() }));
+        }
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -154,10 +165,8 @@ export default function LiveTV() {
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        if (parsed.a && Date.now() - parsed.ts < 900000) {
+        if (parsed.a?.length && Date.now() - parsed.ts < 900000) {
           restored = true;
-          // Already loaded via useState initializer (restoreAllStreams),
-          // but re-set in case the cache was stale and we showed nothing.
           if (allStreams.length === 0) {
             setAllStreams(restoreAllStreams());
           }
@@ -171,14 +180,16 @@ export default function LiveTV() {
         .then((d) => {
           setAllStreams(d.streams);
           // Slim cache: only id, name, category_id (~3MB vs 17MB)
-          try {
-            const slim = d.streams.map((s) => ({
-              id: s.stream_id, n: s.name, c: s.category_id,
-            }));
-            sessionStorage.setItem(SLIM_ALL_KEY, JSON.stringify({ a: slim, ts: Date.now() }));
-          } catch {}
+          if (d.streams?.length) {
+            try {
+              const slim = d.streams.map((s) => ({
+                id: s.stream_id, n: s.name, c: s.category_id,
+              }));
+              sessionStorage.setItem(SLIM_ALL_KEY, JSON.stringify({ a: slim, ts: Date.now() }));
+            } catch {}
+          }
         })
-        .catch(() => {})
+        .catch((e) => console.warn("LiveTV: failed to fetch all streams", e))
         .finally(() => setAllLoading(false));
     }
   }, []);
