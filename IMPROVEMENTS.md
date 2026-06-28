@@ -58,8 +58,10 @@ and works the top pending item each tick.
 ### P2.2 — Missing E2E / integration test layer
 All 940 frontend tests are unit/component tests with mocked API responses.
 No tests exercise real API calls or full user flows (search→select→play).
-- [ ] Set up Playwright or MSW's lifecycle server for integration tests
-- [ ] Write 2-3 critical path E2E tests (browse movies → overlay → play)
+- ✅ Set up Playwright in web/e2e/ — 5 E2E tests covering live TV loading,
+  video player rendering, playback verification, SPA navigation, and
+  multi-channel probe validation. Run with `npm run test:e2e`.
+- [ ] Set up CI integration to run E2E tests automatically
 
 ### P4.1 — Add tests for complex untested components
 - [ ] Player.tsx (largest component — ~700 lines, zero direct tests)

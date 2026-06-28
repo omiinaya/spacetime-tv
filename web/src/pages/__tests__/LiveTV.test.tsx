@@ -16,6 +16,7 @@ import type { Category, LiveStream } from "@/lib/api";
 const mockCategories = vi.fn();
 const mockStreams = vi.fn();
 const mockAll = vi.fn();
+const mockAllSlim = vi.fn();
 
 vi.mock("@/lib/api", () => ({
   api: {
@@ -26,6 +27,8 @@ vi.mock("@/lib/api", () => ({
         (mockStreams as unknown as (...a: unknown[]) => Promise<{ streams: LiveStream[] }>)(...args),
       all: (...args: unknown[]) =>
         (mockAll as unknown as (...a: unknown[]) => Promise<{ streams: LiveStream[] }>)(...args),
+      allSlim: (...args: unknown[]) =>
+        (mockAllSlim as unknown as (...a: unknown[]) => Promise<{ streams: LiveStream[] }>)(...args),
       info: vi.fn(),
     },
     guide: { now: vi.fn() },
@@ -112,6 +115,7 @@ function renderLiveTV() {
 function setupDefaultMocks() {
   mockCategories.mockResolvedValue({ categories: sampleCategories });
   mockAll.mockResolvedValue({ streams: sampleStreams });
+  mockAllSlim.mockResolvedValue({ streams: sampleStreams });
   mockStreams.mockResolvedValue({ streams: sampleStreams.filter(s => s.category_id === "1") });
   mockGetNowPlaying.mockReturnValue(null);
   mockIsFavorite.mockReturnValue(false);
@@ -137,6 +141,7 @@ describe("LiveTV", () => {
       // Make categories take forever by returning a promise that doesn't resolve
       mockCategories.mockReturnValue(new Promise(() => {}));
       mockAll.mockReturnValue(new Promise(() => {}));
+      mockAllSlim.mockReturnValue(new Promise(() => {}));
     });
 
     it("shows skeleton header while categories load", async () => {
@@ -185,7 +190,7 @@ describe("LiveTV", () => {
   // ── Empty states ───────────────────────────────────────────
   describe("empty states", () => {
     it('shows "No channels available" when allStreams is empty', async () => {
-      mockAll.mockResolvedValue({ streams: [] });
+      mockAllSlim.mockResolvedValue({ streams: [] });
 
       renderLiveTV();
 
@@ -489,7 +494,7 @@ describe("LiveTV", () => {
   // ── Edge cases ─────────────────────────────────────────────
   describe("edge cases", () => {
     it("handles single channel gracefully", async () => {
-      mockAll.mockResolvedValue({
+      mockAllSlim.mockResolvedValue({
         streams: [sampleStreams[0]],
       });
 
