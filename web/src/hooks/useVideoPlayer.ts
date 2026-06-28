@@ -41,6 +41,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
 
   const startLoadingTimeout = useCallback(() => {
     clearLoadingTimeout();
+    const vodTimeout = type !== "live" ? 60000 : 20000;
     loadingTimeoutRef.current = setTimeout(() => {
       if (phaseRef.current === "loading") {
         if (type === "live" && retryCount.current < 5) {
@@ -61,7 +62,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
           setErrorMsg("Stream timed out. The server may be slow or the content may be temporarily unavailable.");
         }
       }
-    }, 20_000);
+    }, vodTimeout);
   }, [type]);
 
   // ── State ──────────────────────────────────────────────────
