@@ -59,13 +59,6 @@ No tests exercise real API calls or full user flows (search→select→play).
 - [ ] Set up Playwright or MSW's lifecycle server for integration tests
 - [ ] Write 2-3 critical path E2E tests (browse movies → overlay → play)
 
-### P3.2 — Enable noUnusedLocals / noUnusedParameters in tsconfig
-- ✅ **Done** (commit 07070cc): Enabled both flags in tsconfig.json and fixed all
-  22 files with violations. Removed unused imports, orphaned callbacks,
-  unused parameters, and dead constants. Added underscore prefixes where
-  variables are intentionally kept for future use.
-  Verification: 0 TS errors, 921 frontend tests, 69 backend tests all pass.
-
 ### P4.1 — Add tests for complex untested components
 - [ ] Player.tsx (largest component — ~700 lines, zero direct tests)
 - [ ] MediaOverlay.tsx (stream info overlay, TMDB enrichment, language options)
@@ -91,12 +84,18 @@ Present in coverage report at 0% — appears to be test utility scaffolding
 not wired into any test run. Either use it or delete it.
 
 ### P5.3 — Audit `react-compiler` / lint rules
-Vite 8 + React 19 — consider adding the React Compiler eslint plugin
+Consider adding the React Compiler eslint plugin
 to catch hook rule violations and memoization issues.
 
 ---
 
 ## Recently Completed
+
+### P3.2 — Enable noUnusedLocals / noUnusedParameters in tsconfig
+✅ Done (commit 07070cc)
+- Enabled both flags in tsconfig.json and fixed 22 files with violations.
+- Removed unused imports, orphaned callbacks, unused parameters, and dead
+  constants. Verification: 0 TS errors, 921 frontend, 69 backend all pass.
 
 ### P3.1 — Eliminate `any` type annotations (5 occurrences)
 ✅ Done (commit 8246a50)
