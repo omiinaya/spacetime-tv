@@ -280,10 +280,13 @@ async def stream_live_quality(stream_id: int, height: int):
 # ── VOD stream helpers ──────────────────────────────────────────────────────
 
 async def handle_vod_request(req: Request, stream_id: int, stream_type: str,
-                              content_type: str = "video/x-matroska"):
+                              content_type: str = ""):
     """Handle a VOD stream request with Range/206 support for seeking."""
     track_hit(stream_type, stream_id)
     url = await build_stream_url(stream_id, stream_type)
+    # Set correct MIME type based on container extension
+    if not content_type:
+        content_type = _mime_from_url(url)
     range_header = req.headers.get("range")
 
     if range_header:
