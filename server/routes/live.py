@@ -26,6 +26,27 @@ async def live_all_streams():
     return {"streams": data}
 
 
+@router.get("/api/live/all-slim")
+async def live_all_streams_slim():
+    """Slim live TV streams — only fields needed for the channel grid.
+    Reduces payload from ~19 MB to ~6 MB for the 48k-channel list view.
+    """
+    import main as _main
+    data = await _main.cached_fetch("live_all", "get_live_streams")
+    return {
+        "streams": [
+            {
+                "stream_id": s["stream_id"],
+                "name": s["name"],
+                "stream_icon": s.get("stream_icon", ""),
+                "category_id": s["category_id"],
+                "num": s.get("num", 0),
+            }
+            for s in data
+        ]
+    }
+
+
 @router.get("/api/live/streams")
 async def live_streams(category_id: str = Query(...)):
     """Live streams for a category."""

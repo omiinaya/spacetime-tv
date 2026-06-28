@@ -176,7 +176,7 @@ export default function LiveTV() {
     }
     if (!restored) {
       api.live
-        .all()
+        .allSlim()
         .then((d) => {
           setAllStreams(d.streams);
           // Slim cache: only id, name, category_id (~3MB vs 17MB)

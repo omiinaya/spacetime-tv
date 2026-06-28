@@ -180,6 +180,14 @@ async def warm_cache():
     start = time.time()
 
     try:
+        # Warm live_all early — without this the first user triggers a provider fetch
+        # that blocks the channel list for 10+ seconds
+        live_all = await cached_fetch("live_all", "get_live_streams")
+        log.info(f"[WARMER] Live: {len(live_all)} streams cached")
+    except Exception as e:
+        log.warning(f"[WARMER] Live warm failed (non-fatal): {e}")
+
+    try:
         vod_cats = await cached_fetch("vod_categories", "get_vod_categories")
         if not vod_cats:
             log.warning("[WARMER] VOD categories empty — upstream may be degraded, will retry next cycle")
