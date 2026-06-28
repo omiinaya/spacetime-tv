@@ -9,6 +9,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { fmtTime, QUALITIES, useVideoPlayer } from "@/hooks/useVideoPlayer";
+import { http, HttpResponse } from "msw";
+import { server } from "@/mocks/server";
 
 // ── fmtTime ──────────────────────────────────────────────────
 describe("fmtTime", () => {
@@ -282,8 +284,161 @@ describe("useVideoPlayer — resume prompt", () => {
     const { result, unmount } = renderHook(() =>
       useVideoPlayer({ type: "live", id: "123", seriesId: undefined, epId: undefined }),
     );
-    // Live doesn't have a watchKey, so resume prompt should not appear
     expect(result.current.showResumePrompt).toBe(false);
+    unmount();
+  });
+});
+
+// ── useVideoPlayer — probe routing (main effect) ────────────
+describe("useVideoPlayer — probe routing", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    vi.clearAllMocks();
+    server.resetHandlers();
+  });
+
+  it("transitions to probing state on mount", () => {
+    const { result, unmount } = renderHook(() =>
+      useVideoPlayer({ type: "movie", id: "probe1", seriesId: undefined, epId: undefined }),
+    );
+    expect(result.current.phase).toBe("probing");
+    expect(result.current.loadingStep).toBe("Detecting video format…");
+    unmount();
+  });
+
+  it("probes and starts remux for native codec", async () => {
+    server.use(
+      http.get("*/movie/probe/probe2", () =>
+        HttpResponse.json({ codec: "h264", width: 1920 }),
+      ),
+    );
+
+    const { result, unmount } = renderHook(() =>
+      useVideoPlayer({ type: "movie", id: "probe2", seriesId: undefined, epId: undefined }),
+    );
+
+    await vi.waitFor(() => {
+      expect(result.current.phase !== "probing").toBe(true);
+    });
+    expect(result.current.transcoding).toBe(false);
+    unmount();
+  });
+
+  it("probes and sets transcoding for hevc codec", async () => {
+    server.use(
+      http.get("*/movie/probe/probe3", () =>
+        HttpResponse.json({ codec: "hevc", height: 1080 }),
+      ),
+    );
+
+    const { result, unmount } = renderHook(() =>
+      useVideoPlayer({ type: "movie", id: "probe3", seriesId: undefined, epId: undefined }),
+    );
+
+    await vi.waitFor(() => {
+      expect(result.current.phase !== "probing").toBe(true);
+    });
+    expect(result.current.transcoding).toBe(true);
+    unmount();
+  });
+
+  it("probes and shows empty_stream error for unavailable codec", async () => {
+    server.use(
+      http.get("*/movie/probe/probe4", () =>
+        HttpResponse.json({ codec: "unavailable" }),
+      ),
+    );
+
+    const { result, unmount } = renderHook(() =>
+      useVideoPlayer({ type: "movie", id: "probe4", seriesId: undefined, epId: undefined }),
+    );
+
+    await vi.waitFor(() => {
+      expect(result.current.phase).toBe("error");
+    });
+    expect(result.current.errorType).toBe("empty_stream");
+    unmount();
+  });
+
+  it("probes and handles probe fetch error gracefully", async () => {
+    server.use(
+      http.get("*/movie/probe/probe5", () => HttpResponse.error()),
+    );
+
+    const { result, unmount } = renderHook(() =>
+      useVideoPlayer({ type: "movie", id: "probe5", seriesId: undefined, epId: undefined }),
+    );
+
+    await vi.waitFor(() => {
+      expect(result.current.phase !== "probing").toBe(true);
+    });
+    expect(result.current.transcoding).toBe(false);
+    unmount();
+  });
+
+  it("shows resume prompt when stored position exists for movie", async () => {
+    localStorage.setItem(
+      "stv_watch",
+      JSON.stringify({ vod_resume1: { pos: 300, ts: Date.now() } }),
+    );
+
+    server.use(
+      http.get("*/movie/probe/resume1", () =>
+        HttpResponse.json({ codec: "h264" }),
+      ),
+    );
+
+    const { result, unmount } = renderHook(() =>
+      useVideoPlayer({ type: "movie", id: "resume1", seriesId: undefined, epId: undefined }),
+    );
+
+    await vi.waitFor(() => {
+      expect(result.current.showResumePrompt).toBe(true);
+    });
+    expect(result.current.resumePos).toBe(300);
+    unmount();
+  });
+
+  it("does not show resume prompt for live type even with stored position", async () => {
+    localStorage.setItem(
+      "stv_watch",
+      JSON.stringify({ vod_live1: { pos: 300, ts: Date.now() } }),
+    );
+
+    server.use(
+      http.get("*/live/probe/live1", () =>
+        HttpResponse.json({ codec: "h264" }),
+      ),
+    );
+
+    const { result, unmount } = renderHook(() =>
+      useVideoPlayer({ type: "live", id: "live1", seriesId: undefined, epId: undefined }),
+    );
+
+    await vi.waitFor(() => {
+      expect(result.current.phase !== "probing").toBe(true);
+    });
+    expect(result.current.showResumePrompt).toBe(false);
+    unmount();
+  });
+
+  it("starts remux for live type after probe", async () => {
+    server.use(
+      http.get("*/live/probe/liveProbe1", () =>
+        HttpResponse.json({ codec: "h264" }),
+      ),
+    );
+
+    const { result, unmount } = renderHook(() =>
+      useVideoPlayer({ type: "live", id: "liveProbe1", seriesId: undefined, epId: undefined }),
+    );
+
+    await vi.waitFor(() => {
+      expect(result.current.phase !== "probing").toBe(true);
+    });
+    expect(result.current.isLive).toBe(true);
+    expect(result.current.transcoding).toBe(false);
     unmount();
   });
 });

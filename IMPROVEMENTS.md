@@ -11,18 +11,14 @@ and works the top pending item each tick.
 ### P1.1 — Backend: monolith decomposition & test coverage (HIGH RISK)
 - ✅ **[Phase 1]** Created `server/state.py` (shared state module) and
   `server/routes/{health,admin}.py` — extracted 6 endpoints from main.py
-- [ ] **Phase 2**: Extract TMDB routes (`/api/tmdb/*` — 14 endpoints)
+- ✅ **[Phase 2]** Extracted TMDB routes (`/api/tmdb/*` — 14 endpoints) into
+  `server/routes/tmdb.py`
 - [ ] **Phase 3**: Extract stream proxy + transcode routes
 - [ ] **Phase 4**: Extract search + enrichment routes
 - [ ] **Phase 5**: Extract guide + EPG + SSE routes
 - [ ] **Phase 6**: Extract remaining (live TV, movies, series, etc.)
 - [ ] Write integration tests for uncovered endpoints
 - [ ] Target >70% coverage on main.py
-
-### P1.2 — watchProgressSync.ts coverage
-✅ Done: 14 tests covering all states — queue, retrieve, remove, retry limits,
-flush success, flush failure (500), flush with network error, IDB unavailable
-graceful fallback. Uses fake-indexeddb for in-memory IndexedDB.
 
 ### P2.1 — 16 hooks have zero test coverage
 - ✅ **useChannelFavorites** (12 tests) — add/remove/toggle, localStorage persistence,
@@ -48,6 +44,10 @@ graceful fallback. Uses fake-indexeddb for in-memory IndexedDB.
 - ✅ **useGuideData** (9 tests) — initial loading, fetch success/error, sessionStorage
   cache (fresh + stale), hidden-category filtering, timeSlots/nowPct computation,
   loadPage with offset>0, sentinelRef
+- ✅ **useVideoPlayer — probe routing** (8 integration tests) — MSW-controlled probe
+  results: native codec → remux, hevc → transcoding, unavailable → empty_stream error,
+  fetch failure → native fallback, resume prompt with stored position, live bypass,
+  transcodeCache reuse
 - 🐛 **Fixed production bug**: grid column detection broke with `repeat(N, ...)` CSS syntax
 - 🐛 **Fixed production bug**: getVolume() returned NaN for corrupted localStorage values
   (parseFloat("nope") → NaN, not caught by try/catch)
@@ -59,24 +59,11 @@ No tests exercise real API calls or full user flows (search→select→play).
 - [ ] Set up Playwright or MSW's lifecycle server for integration tests
 - [ ] Write 2-3 critical path E2E tests (browse movies → overlay → play)
 
-### P3.1 — Eliminate `any` type annotations (5 occurrences)
-✅ Done (commit 8246a50)
-- `useRemuxPlayer.ts:122` — mpegts STATISTICS_INFO stats callback
-- `useVideoPlayer.ts:369` — generic result variable
-- `useMpegtsPlayer.ts:128` — mpegts STATISTICS_INFO stats callback
-- `Search.tsx:160,163` — reduce accumulator items
-- Each replaced with proper typed interfaces
-
 ### P3.2 — Enable noUnusedLocals / noUnusedParameters in tsconfig
 `tsconfig.json` has `"strict": true` but **not** `noUnusedLocals` or
 `noUnusedParameters`. Turning these on catches dead code and stale params.
 - [ ] Enable both flags
 - [ ] Fix any resulting violations
-
-### P3.3 — Eliminate non-null assertion in Guide.tsx
-✅ Done (commit 8246a50)
-`web/src/pages/Guide.tsx:276` uses `group.stream_id!` — will crash at runtime
-if `stream_id` is null/undefined. Replaced with optional chaining or guard.
 
 ### P4.1 — Add tests for complex untested components
 - [ ] Player.tsx (largest component — ~700 lines, zero direct tests)
@@ -110,11 +97,23 @@ to catch hook rule violations and memoization issues.
 
 ## Recently Completed
 
-### P3.22 — Add component tests for Pagination, Skeleton, and ContentRow
-✅ Done: Pagination.test.tsx (26 tests), Skeleton.test.tsx (23 tests),
-ContentRow.test.tsx (18 tests). All utility components now have coverage
-covering rendering, props, loading states, keyboard nav, scroll behavior,
-and edge cases. — 642 frontend tests pass (29 files), TS clean.
+### P3.1 — Eliminate `any` type annotations (5 occurrences)
+✅ Done (commit 8246a50)
+- `useRemuxPlayer.ts:122` — mpegts STATISTICS_INFO stats callback
+- `useVideoPlayer.ts:369` — generic result variable
+- `useMpegtsPlayer.ts:128` — mpegts STATISTICS_INFO stats callback
+- `Search.tsx:160,163` — reduce accumulator items
+- Each replaced with proper typed interfaces
+
+### P3.3 — Eliminate non-null assertion in Guide.tsx
+✅ Done (commit 8246a50)
+`web/src/pages/Guide.tsx:276` uses `group.stream_id!` — will crash at runtime
+if `stream_id` is null/undefined. Replaced with optional chaining or guard.
+
+### P1.2 — watchProgressSync.ts coverage
+✅ Done: 14 tests covering all states — queue, retrieve, remove, retry limits,
+flush success, flush failure (500), flush with network error, IDB unavailable
+graceful fallback. Uses fake-indexeddb for in-memory IndexedDB.
 
 ### P3.23 — Add lib tests for watchlist, searchHistory, settings
 ✅ Done: watchlist.test.ts (25 tests — movies + series CRUD, MAX_ITEMS,
@@ -124,22 +123,16 @@ service detection, adult detection, filterCategories with language/service/
 adult/hidden combos, collectAllPrefixes, collectAllServices).
 729 frontend tests pass (32 files), 69 backend tests pass, TS clean.
 
+### P3.22 — Add component tests for Pagination, Skeleton, and ContentRow
+✅ Done: Pagination.test.tsx (26 tests), Skeleton.test.tsx (23 tests),
+ContentRow.test.tsx (18 tests). All utility components now have coverage
+covering rendering, props, loading states, keyboard nav, scroll behavior,
+and edge cases. — 642 frontend tests pass (29 files), TS clean.
+
 ### P3.21 — Add component tests for OfflineBanner, ChannelRow, PWAInstallPrompt
 ✅ Done: OfflineBanner.test.tsx (11 tests), ChannelRow.test.tsx (25 tests),
 PWAInstallPrompt.test.tsx (12 tests). — 575 frontend tests pass (26 files),
 TS clean.
-
-### P3.14 — Migrate to React Router v8
-✅ Done: switched from `react-router-dom` v7.18.0 to `react-router` v8.0.1.
-react-router-dom was merged into react-router in v8. Updated 30 import lines
-across the codebase, 8 test file mocks, and package.json. 575 tests pass
-(was 554), TypeScript clean. Committed and pushed.
-
-### P3.17 — hls.js dependency status
-✅ Already on latest available hls.js (`^1.7.0-beta.1`). No stable v1.7.0
-published on npm — latest tag is 1.6.16, latest overall is 1.7.0-beta.1
-(already in use). No action needed. Canary builds (`1.7.0-beta.1.0.canary.*`)
-are dev builds with no stable milestone in sight.
 
 ### P3.20 — Add component tests for PersonPage
 | ✅ Done: web/src/pages/__tests__/PersonPage.test.tsx — 25 component tests
@@ -168,12 +161,4 @@ category_name display without prefix stripping ("EN| Entertainment" not
 "Entertainment"), and multiple type badges ("Movies"/"Series" per category).
 — 484 frontend tests pass (21 files), TypeScript clean, 69 backend tests pass,
 committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.16 — Add component tests for WatchlistPage
-| ✅ Done: web/src/pages/__tests__/WatchlistPage.test.tsx — 37 component tests
-| covering loading/error/empty states, movies tab (card rendering, ratings,
-| remove from watchlist, MovieOverlay), series tab (detail fetching, badges,
-| SeriesOverlay), tab switching, header, and CTA navigation.
-|— 444 frontend tests pass (20 files), TypeScript clean, committed and pushed.
 **Filed**: 2026-06-27
