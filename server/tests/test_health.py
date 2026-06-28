@@ -22,7 +22,6 @@ def test_health_includes_cached_categories(client):
 def test_health_after_cache_populated(client_with_cache):
     """Pre-populated cache should show up in health stats."""
     from main import _cache
-    # Directly populate cache (bypasses cached_fetch)
     test_data = [{"stream_id": 1, "name": "Test"}]
     _cache["vod_1"] = (1000.0, test_data)
     _cache["vod_categories"] = (1000.0, [{"category_id": 1, "category_name": "Movies"}])
@@ -34,8 +33,56 @@ def test_health_after_cache_populated(client_with_cache):
     assert "vod_categories" in data["cached_categories"]
 
 
+def test_health_with_dict_cache_values(client_with_cache):
+    """Health should handle dict cache values (not just lists)."""
+    from main import _cache
+
+    _cache["some_dict"] = (1000.0, {"key1": "val1", "key2": "val2"})
+    _cache["empty_dict"] = (1000.0, {})
+
+    resp = client_with_cache.get("/api/health")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "some_dict" in data["cached_categories"]
+    assert "empty_dict" in data["cached_categories"]
+
+
 def test_cors_headers_present(client):
     """All endpoints should include CORS headers (allow all origins)."""
-    # TestClient doesn't send Origin by default — add it to trigger CORS
     resp = client.get("/api/health", headers={"Origin": "http://localhost:5180"})
     assert resp.headers.get("access-control-allow-origin") == "*"
+
+
+# ── /api/error (POST) ─────────────────────────────────────────────────
+
+def test_error_endpoint_accepts_body(client):
+    """POST /api/error should accept a JSON error report and return ok."""
+    resp = client.post("/api/error", json={
+        "message": "Test error",
+        "stack": "Error: test\n    at Component (file.tsx:10:5)",
+        "componentStack": "div > Button > Component",
+        "url": "http://localhost:5180/movies",
+    })
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True}
+
+
+def test_error_endpoint_empty_body(client):
+    """POST /api/error with empty body should still return ok."""
+    resp = client.post("/api/error", json={})
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True}
+
+
+def test_error_endpoint_invalid_json(client):
+    """POST /api/error with invalid JSON should be handled gracefully."""
+    resp = client.post("/api/error", content=b"not valid json", headers={"Content-Type": "application/json"})
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True}
+
+
+def test_error_endpoint_no_body(client):
+    """POST /api/error with no body should return ok."""
+    resp = client.post("/api/error", content=b"", headers={"Content-Type": "application/json"})
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True}
