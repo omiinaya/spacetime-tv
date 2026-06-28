@@ -10,7 +10,7 @@ import { useChannelFavorites } from "@/hooks/useChannelFavorites";
 export default function Guide() {
   const navigate = useNavigate();
   const { settings } = useSettings();
-  const { favorites, toggleFavorite, isFavorite } = useChannelFavorites();
+  const { favorites, toggleFavorite } = useChannelFavorites();
   const {
     filteredChannels, allData, totalChannels, loading, loadingMore,
     error, sentinelRef, timeSlots, now, nowPct, loadPage,

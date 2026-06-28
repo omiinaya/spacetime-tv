@@ -9,7 +9,6 @@ import {
   Heart,
   History,
   Menu,
-  X,
   Settings,
 } from "lucide-react";
 import { Toaster } from "sonner";
@@ -58,9 +57,6 @@ const BACK_KEY = "stv_back_url";
 
 function saveBackPath(path: string) {
   try { sessionStorage.setItem(BACK_KEY, path); } catch {}
-}
-function getBackPath(fallback: string): string {
-  try { return sessionStorage.getItem(BACK_KEY) || fallback; } catch { return fallback; }
 }
 
 // Intercept all clicks that navigate to /watch/ routes and save the

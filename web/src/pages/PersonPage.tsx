@@ -16,7 +16,6 @@ import {
   type TmdbPersonCredit,
 } from "@/lib/api";
 
-const TMDB_IMG = "https://image.tmdb.org/t/p";
 
 export default function PersonPage() {
   const { encodedName } = useParams<{ encodedName: string }>();
@@ -183,7 +182,6 @@ export default function PersonPage() {
               const title = credit.title || "";
               const poster = credit.poster || "";
               const ct = creditType(credit);
-              const path = credit.path || "";
 
               return (
                 <div

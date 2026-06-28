@@ -10,7 +10,6 @@ import {
   Search,
   X,
   Heart,
-  TrendingUp,
   Check,
   ArrowLeft,
 } from "lucide-react";
@@ -373,9 +372,6 @@ export default function SeriesPage() {
         <div>
           <ContentRow title="Trending This Week" itemCount={trending.length}>
             {trending.map((t, idx) => {
-              const posterUrl = t.poster_path
-                ? `https://image.tmdb.org/t/p/w342${t.poster_path}`
-                : "";
               const posterProps = t.poster_path ? tmdbImgProps(t.poster_path) : null;
               const year = t.first_air_date ? t.first_air_date.slice(0, 4) : "";
               return (
@@ -521,7 +517,7 @@ export default function SeriesPage() {
           {/* Series grid */}
           {!showAllLoading && showAllSeries.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-              {showAllSeries.map((s, sIdx) => (
+              {showAllSeries.map((s, _sIdx) => (
                 <div
                   key={s.series_id}
                   onClick={() => setOverlaySeries(s)}

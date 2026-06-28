@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Moon, Timer } from "lucide-react";
+import { Moon } from "lucide-react";
 
 interface SleepTimerProps {
   onPause: () => void;

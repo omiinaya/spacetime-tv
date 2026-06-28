@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 // WebKit-prefixed fullscreen API (not in standard TS DOM types)
 interface DocumentWithWebkit extends Document {

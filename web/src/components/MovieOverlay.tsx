@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import {
   Play,
-  Film,
   ExternalLink,
   Clock,
   Calendar,
@@ -10,7 +9,7 @@ import {
   ChevronDown,
   Heart,
 } from "lucide-react";
-import { api, MovieInfo, UnifiedMovie, MovieLanguage, imageUrl, tmdbSrcset } from "@/lib/api";
+import { api, MovieInfo, UnifiedMovie, MovieLanguage, tmdbSrcset } from "@/lib/api";
 import MediaOverlay from "@/components/MediaOverlay";
 import SimilarMovies from "@/components/SimilarMovies";
 import TmdbSimilarMovies from "@/components/TmdbSimilarMovies";

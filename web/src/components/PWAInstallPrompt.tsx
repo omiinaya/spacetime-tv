@@ -19,7 +19,7 @@ export default function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [_dismissed, _setDismissed] = useState(false);
 
   useEffect(() => {
     // Check if already installed
@@ -69,7 +69,7 @@ export default function PWAInstallPrompt() {
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    setDismissed(true);
+    _setDismissed(true);
     try {
       localStorage.setItem("stv_pwa_dismissed", String(Date.now()));
     } catch {}

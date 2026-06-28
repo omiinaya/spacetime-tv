@@ -1,15 +1,11 @@
 import { useEffect, useState, useMemo } from "react";
-import { Settings, Globe, Eye, EyeOff, Film, Tv2, Tv, RotateCcw, Check, Search } from "lucide-react";
+import { Settings, Globe, EyeOff, Film, Tv2, Tv, RotateCcw, Check, Search } from "lucide-react";
 import { api, Category } from "@/lib/api";
 import { useSettings } from "@/context/SettingsContext";
 import {
-  AppSettings,
   collectAllPrefixes,
   collectAllServices,
   filterCategories,
-  isAdultCategory,
-  extractPrefix,
-  extractService,
 } from "@/lib/settings";
 import { Skeleton } from "@/components/Skeleton";
 

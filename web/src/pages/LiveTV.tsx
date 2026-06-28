@@ -84,7 +84,7 @@ export default function LiveTV() {
     q ? allStreams : (isAllMode ? allStreams : streams), BATCH
   );
   const { settings } = useSettings();
-  const { favorites, toggleFavorite, isFavorite } = useChannelFavorites();
+  const { favorites, toggleFavorite } = useChannelFavorites();
   const [favoritesOnly, setFavoritesOnly] = useState(false);
 
   // Now-playing EPG data for visible channels

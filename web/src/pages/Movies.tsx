@@ -4,12 +4,10 @@ import {
   Film,
   Loader2,
   Star,
-  Play,
   Search,
   X,
   Globe,
   Heart,
-  TrendingUp,
 } from "lucide-react";
 import { api, UnifiedMovie, TmdbMovieResult, imageUrl, tmdbImgProps } from "@/lib/api";
 import MovieOverlay from "@/components/MovieOverlay";
@@ -374,9 +372,6 @@ export default function Movies() {
         <div>
           <ContentRow title="Trending This Week" itemCount={trending.length}>
             {trending.map((t, idx) => {
-              const posterUrl = t.poster_path
-                ? `https://image.tmdb.org/t/p/w342${t.poster_path}`
-                : "";
               const posterProps = t.poster_path ? tmdbImgProps(t.poster_path) : null;
               const year = t.release_date ? t.release_date.slice(0, 4) : "";
               return (

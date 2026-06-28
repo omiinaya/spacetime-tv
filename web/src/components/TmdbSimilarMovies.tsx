@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { api, TmdbMovieResult, imageUrl, tmdbImgProps } from "@/lib/api";
+import { api, TmdbMovieResult, tmdbImgProps } from "@/lib/api";
 import { Film, Star } from "lucide-react";
 
 interface TmdbSimilarMoviesProps {

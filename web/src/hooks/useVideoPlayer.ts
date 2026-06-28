@@ -22,8 +22,6 @@ import { useRemuxPlayer, type RemuxPlayerCallbacks } from "./useRemuxPlayer";
 import { useShakaPlayer, type ShakaPlayerCallbacks } from "./useShakaPlayer";
 
 // ── Constants for LIVE quality levels ─────────────────────────
-const QUALITY_HEIGHTS = QUALITIES.map(q => q.height);
-
 
 // ── Hook ──────────────────────────────────────────────────────
 export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseVideoPlayerParams): UseVideoPlayerReturn {
@@ -36,7 +34,6 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   const destroyAllRef = useRef<(() => void)[]>([]);
   const [retryKey, setRetryKey] = useState(0);
 
-  const onAutoplayMuted = useCallback(() => { setMuted(true); }, []);
 
   const clearLoadingTimeout = useCallback(() => {
     if (loadingTimeoutRef.current) { clearTimeout(loadingTimeoutRef.current); loadingTimeoutRef.current = null; }
@@ -186,7 +183,6 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   const {
     hlsRef: subHlsRef,
     hlsCleanupRef,
-    playHLS: subPlayHLS,
     destroy: destroyHls,
   } = useHlsPlayer(videoRef, hlsCallbacks);
 
@@ -279,23 +275,8 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     subPlayVodRemux(streamUrl, startPos, isTranscode, type, seriesId, epId, id, watchKey, onAutoAdvance);
   }, [subPlayVodRemux, type, seriesId, epId, id, watchKey, onAutoAdvance, hlsCleanupRef, subHlsRef, shakaCleanupRef, shakaPlayerRef, mpegtsCleanupRef, mpegtsPlayerRef]);
 
-  // ── Playback: HLS via hls.js (VOD, cached) ──────────────────
-  const playHLS = useCallback((playlistUrl: string, startPos: number | null = null) => {
-    // Clean up remux/mpegts/shaka before delegating to sub-hook
-    if (remuxCleanupRef.current) { remuxCleanupRef.current(); remuxCleanupRef.current = null; }
-    try { remuxPlayerRef.current?.destroy(); } catch {}
-    remuxPlayerRef.current = null;
-    if (mpegtsCleanupRef.current) { mpegtsCleanupRef.current(); mpegtsCleanupRef.current = null; }
-    try { mpegtsPlayerRef.current?.destroy(); } catch {}
-    mpegtsPlayerRef.current = null;
-    if (shakaCleanupRef.current) { shakaCleanupRef.current(); shakaCleanupRef.current = null; }
-    try { shakaPlayerRef.current?.destroy(); } catch {}
-    shakaPlayerRef.current = null;
-    subPlayHLS(playlistUrl, startPos, type, seriesId, epId, id, watchKey, onAutoAdvance);
-  }, [subPlayHLS, type, seriesId, epId, id, watchKey, onAutoAdvance, remuxCleanupRef, remuxPlayerRef, mpegtsCleanupRef, mpegtsPlayerRef, shakaCleanupRef, shakaPlayerRef]);
-
   // ── VOD startup ────────────────────────────────────────────
-  const startVod = useCallback(async (isCancelled: () => boolean, seekPos?: number, needsTranscode: boolean = false) => {
+  const startVod = useCallback(async (_isCancelled: () => boolean, seekPos?: number, needsTranscode: boolean = false) => {
     const streamUrl = needsTranscode ? vodTranscodeUrl : remuxUrl;
     if (!streamUrl) return;
     setPhase("loading");
@@ -306,19 +287,6 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
     playVodRemux(streamUrl, seekPos ?? null, needsTranscode);
     if (hlsInitUrl) { try { fetch(hlsInitUrl).catch(() => {}); } catch {} }
   }, [remuxUrl, vodTranscodeUrl, hlsInitUrl, playVodRemux]);
-
-  const startVodHLS = useCallback(async (isCancelled: () => boolean, seekPos?: number) => {
-    if (!hlsInitUrl) return;
-    setPhase("loading");
-    setErrorMsg(null);
-    setLoadingStep("Checking for cached video…");
-    try {
-      const res = await fetch(`${hlsInitUrl}`);
-      const data = await res.json();
-      if (data.status === "ready") { playHLS(data.playlist, seekPos ?? null); return; }
-      setPhase("error"); setErrorMsg("Video not cached yet. Using streaming mode.");
-    } catch { setPhase("error"); setErrorMsg("Failed to load cached video."); }
-  }, [hlsInitUrl, playHLS]);
 
   const seekToLive = useCallback(() => {
     const v = videoRef.current;

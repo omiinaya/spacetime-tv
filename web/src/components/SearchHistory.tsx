@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Search, X, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import {
   getSearchHistory,
   addSearchHistory,

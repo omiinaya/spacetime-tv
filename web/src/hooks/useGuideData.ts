@@ -130,7 +130,7 @@ export function useGuideData() {
         loadPage(0);
       });
 
-      evt.addEventListener("ping", (e: MessageEvent) => {
+      evt.addEventListener("ping", (_e: MessageEvent) => {
         lastPing = Date.now();
       });
 

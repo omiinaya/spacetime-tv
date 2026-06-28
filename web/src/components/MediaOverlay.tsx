@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { X, Star, Play, Loader2, AlertCircle, Clock, Calendar } from "lucide-react";
-import { imageUrl, tmdbSrcset } from "@/lib/api";
+import { X, Star, Loader2, AlertCircle } from "lucide-react";
+import { imageUrl } from "@/lib/api";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
 interface MediaOverlayProps {

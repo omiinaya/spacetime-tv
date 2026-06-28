@@ -79,7 +79,7 @@ export function filterCategories<T extends { category_id: string; category_name:
 ): T[] {
   return categories.filter((cat) => {
     const name = cat.category_name;
-    const nameUpper = name.toUpperCase();
+    // const nameUpper unused
 
     // Adult filter
     if (!settings.showAdult && isAdultCategory(name)) return false;

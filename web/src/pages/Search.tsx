@@ -8,8 +8,6 @@ import {
   Tv2,
   Star,
   AlertCircle,
-  Tags,
-  List,
   ArrowUpDown,
   ArrowUpAZ,
   TrendingUp,

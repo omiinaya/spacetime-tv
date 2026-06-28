@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { Heart, Loader2, Star, Play, Trash2, Tv2, Bookmark } from "lucide-react";
+import { Heart, Star, Play, Trash2, Tv2, Bookmark } from "lucide-react";
 import { api, UnifiedMovie, Series, imageUrl } from "@/lib/api";
 import MovieOverlay from "@/components/MovieOverlay";
 import SeriesOverlay from "@/components/SeriesOverlay";
@@ -8,16 +8,13 @@ import { PosterCardSkeleton } from "@/components/Skeleton";
 import {
   getWatchlist,
   toggleWatchlist,
-  isInWatchlist,
   getSeriesWatchlist,
   toggleSeriesWatchlist,
-  isSeriesInWatchlist,
 } from "@/lib/watchlist";
 
 type Tab = "movies" | "series";
 
 export default function WatchlistPage() {
-  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("movies");
 
   return (
