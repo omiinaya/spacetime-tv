@@ -31,10 +31,12 @@ and works the top pending item each tick.
   main.py (_mime_from_url, generate_live_mpd, generate_vod_mpd,
   _lookup_extension, iptv_url, _img_cache_key, touch_access,
   get_last_access, serve_cached_mp4) — coverage 42% → 48%
-- ✅ **[Phase 8]** Added 12 integration tests for EPG guide endpoints
+- ✅ **Phase 8** Added 12 integration tests for EPG guide endpoints
   (/api/guide, /api/guide/now) — guide.py coverage 18% → 54%,
   overall coverage 56% → 60%
-- [ ] Write integration tests for remaining uncovered routes (media, stream, vod, tmdb, live, misc)
+- ✅ **Phase 9** Added 17 integration tests for VOD routes (movies,
+  series, download) — vod.py coverage 38% → 62%, overall 61% → 62%
+- [ ] Write integration tests for remaining uncovered routes (media, stream, tmdb, live, misc)
 - [ ] Target >70% coverage on main.py
 
 ### P2.1 — 16 hooks have zero test coverage
