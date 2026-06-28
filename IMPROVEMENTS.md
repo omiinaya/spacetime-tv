@@ -45,6 +45,9 @@ graceful fallback. Uses fake-indexeddb for in-memory IndexedDB.
   edge cases (missing ids, null urls)
 - ✅ **useNowPlaying** (6 tests) — successful fetch, null programme filtering,
   unknown streamId, API error, 200-batch limit, empty streamIds
+- ✅ **useGuideData** (9 tests) — initial loading, fetch success/error, sessionStorage
+  cache (fresh + stale), hidden-category filtering, timeSlots/nowPct computation,
+  loadPage with offset>0, sentinelRef
 - 🐛 **Fixed production bug**: grid column detection broke with `repeat(N, ...)` CSS syntax
 - 🐛 **Fixed production bug**: getVolume() returned NaN for corrupted localStorage values
   (parseFloat("nope") → NaN, not caught by try/catch)
