@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import type { ConnectionQuality, DocumentWithWebkit, PlayPhase, ErrorType, UseVideoPlayerParams, UseVideoPlayerReturn } from "./usePlayerTypes";
+import type { ConnectionQuality, DocumentWithWebkit, PlayPhase, ErrorType, ProbeResult, UseVideoPlayerParams, UseVideoPlayerReturn } from "./usePlayerTypes";
 export type { ConnectionQuality, ProbeResult, PlayPhase, ErrorType, UseVideoPlayerParams, UseVideoPlayerReturn } from "./usePlayerTypes";
 export { QUALITIES, SPEEDS } from "./usePlayerTypes";
 export { fmtTime } from "./usePlayerUtils";
@@ -366,7 +366,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
         const probeTimer = setTimeout(() => {
           if (!cancelled && !phaseTimedOut) setLoadingStep("Analyzing video format…");
         }, 5_000);
-        let result: any;
+        let result: ProbeResult;
         try { result = await probeStream(probeUrl, abortController.signal); }
         catch { result = { codec: "unknown" }; }
         clearTimeout(probeTimer);

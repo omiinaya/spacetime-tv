@@ -157,10 +157,10 @@ export default function SearchPage() {
         setResults((prev) => {
           if (!prev) return prev;
           const existingIds = new Set(
-            prev[section].map((item: any) => item.stream_id ?? item.series_id)
+            prev[section].map((item: { stream_id?: number; series_id?: number }) => item.stream_id ?? item.series_id)
           );
           const newItems = r[section].filter(
-            (item: any) => !existingIds.has(item.stream_id ?? item.series_id)
+            (item: { stream_id?: number; series_id?: number }) => !existingIds.has(item.stream_id ?? item.series_id)
           );
           // Build merged result with safe indexed access
           const merged: SearchResults = {

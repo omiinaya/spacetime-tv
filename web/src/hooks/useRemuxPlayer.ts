@@ -11,6 +11,13 @@ import mpegts from "mpegts.js";
 import { tryAutoplay, saveProgress, registerProgressSync } from "./usePlayerUtils";
 import type { PlayPhase, ErrorType, VideoSourceType } from "./usePlayerTypes";
 
+// Stats object from mpegts.js STATISTICS_INFO events
+interface MpegtsStats {
+  speed?: number;
+  droppedFrames?: number;
+  decodedFrames?: number;
+}
+
 export interface RemuxPlayerCallbacks {
   onPhaseChange: (phase: PlayPhase) => void;
   onError: (type: ErrorType, msg: string) => void;
@@ -119,7 +126,7 @@ export function useRemuxPlayer(
       });
 
       // Track mpegts.js statistics for VOD connection quality
-      player.on(mpegts.Events.STATISTICS_INFO, (stats: any) => {
+      player.on(mpegts.Events.STATISTICS_INFO, (stats: MpegtsStats) => {
         if (typeof stats?.speed === "number") {
           callbacks.onStats(
             stats.speed,

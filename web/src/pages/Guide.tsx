@@ -273,7 +273,7 @@ export default function Guide() {
                 }
               }}
               isFavorite={group.stream_id ? favorites.has(group.stream_id) : false}
-              onToggleFavorite={group.stream_id ? () => toggleFavorite(group.stream_id!) : undefined}
+              onToggleFavorite={group.stream_id ? () => toggleFavorite(group.stream_id as number) : undefined}
             />
           ))}
         </div>

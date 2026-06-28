@@ -11,6 +11,13 @@ import mpegts from "mpegts.js";
 import { tryAutoplay } from "./usePlayerUtils";
 import type { PlayPhase, ErrorType } from "./usePlayerTypes";
 
+// Stats object from mpegts.js STATISTICS_INFO events
+interface MpegtsStats {
+  speed?: number;
+  droppedFrames?: number;
+  decodedFrames?: number;
+}
+
 export interface MpegtsPlayerCallbacks {
   onPhaseChange: (phase: PlayPhase) => void;
   onError: (type: ErrorType, msg: string) => void;
@@ -125,7 +132,7 @@ export function useMpegtsPlayer(
         video.addEventListener("playing", onPlaying);
 
         let lastStatsTime = Date.now();
-        player.on(mpegts.Events.STATISTICS_INFO, (stats: any) => {
+        player.on(mpegts.Events.STATISTICS_INFO, (stats: MpegtsStats) => {
           lastStatsTime = Date.now();
           if (typeof stats?.speed === "number") {
             callbacks.onStats(stats.speed, 0, 0);

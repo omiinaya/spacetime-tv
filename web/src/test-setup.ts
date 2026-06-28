@@ -3,11 +3,11 @@ import { beforeAll, afterAll, afterEach, vi } from "vitest";
 import { server } from "@/mocks/server";
 
 // Mock ResizeObserver for jsdom (used by useGridKeyboardNav et al.)
-vi.stubGlobal("ResizeObserver", function MockResizeObserver() {
+vi.stubGlobal("ResizeObserver", function MockResizeObserver(this: Record<string, ReturnType<typeof vi.fn>>) {
   this.observe = vi.fn();
   this.unobserve = vi.fn();
   this.disconnect = vi.fn();
-});
+} as unknown as typeof ResizeObserver);
 
 // Mock scrollIntoView (missing in jsdom)
 Element.prototype.scrollIntoView = vi.fn();
