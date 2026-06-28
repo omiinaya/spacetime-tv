@@ -25,6 +25,10 @@ and works the top pending item each tick.
 - ✅ **[Phase 6b]** Extracted remaining streaming routes (stream proxy,
   HLS, DASH, MP4, convert) from main.py into `routes/stream.py` —
   removed 22 duplicate decorators from main.py
+- ✅ **[Phase 7]** Added 58 unit tests for pure utility functions in
+  main.py (_mime_from_url, generate_live_mpd, generate_vod_mpd,
+  _lookup_extension, iptv_url, _img_cache_key, touch_access,
+  get_last_access, serve_cached_mp4) — coverage 42% → 48%
 - [ ] Write integration tests for uncovered endpoints
 - [ ] Target >70% coverage on main.py
 
@@ -99,30 +103,6 @@ to catch hook rule violations and memoization issues.
 
 ## Recently Completed
 
-### P3.2 — Enable noUnusedLocals / noUnusedParameters in tsconfig
-✅ Done (commit 07070cc)
-- Enabled both flags in tsconfig.json and fixed 22 files with violations.
-- Removed unused imports, orphaned callbacks, unused parameters, and dead
-  constants. Verification: 0 TS errors, 921 frontend, 69 backend all pass.
-
-### P3.1 — Eliminate `any` type annotations (5 occurrences)
-✅ Done (commit 8246a50)
-- `useRemuxPlayer.ts:122` — mpegts STATISTICS_INFO stats callback
-- `useVideoPlayer.ts:369` — generic result variable
-- `useMpegtsPlayer.ts:128` — mpegts STATISTICS_INFO stats callback
-- `Search.tsx:160,163` — reduce accumulator items
-- Each replaced with proper typed interfaces
-
-### P3.3 — Eliminate non-null assertion in Guide.tsx
-✅ Done (commit 8246a50)
-`web/src/pages/Guide.tsx:276` uses `group.stream_id!` — will crash at runtime
-if `stream_id` is null/undefined. Replaced with optional chaining or guard.
-
-### P1.2 — watchProgressSync.ts coverage
-✅ Done: 14 tests covering all states — queue, retrieve, remove, retry limits,
-flush success, flush failure (500), flush with network error, IDB unavailable
-graceful fallback. Uses fake-indexeddb for in-memory IndexedDB.
-
 ### P3.23 — Add lib tests for watchlist, searchHistory, settings
 ✅ Done: watchlist.test.ts (25 tests — movies + series CRUD, MAX_ITEMS,
 independence), searchHistory.test.ts (18 tests — add/dedup/cap/clear/trim/
@@ -143,30 +123,20 @@ PWAInstallPrompt.test.tsx (12 tests). — 575 frontend tests pass (26 files),
 TS clean.
 
 ### P3.20 — Add component tests for PersonPage
-| ✅ Done: web/src/pages/__tests__/PersonPage.test.tsx — 25 component tests
-| covering loading spinner, error states (no name, no results, API failure,
-| Go-back navigation), person header (name, photo, roles, birthday/age, TMDB
-| link), missing-data edge cases (no photo, no birthday, empty credits), known-for
-| credit grid (movie/TV titles, type badges, movie→movie search navigation,
-| TV→series search navigation, poster images), back button navigation.
-| — 527 frontend tests pass (23 files), 69 backend tests pass, TypeScript clean.
+✅ Done: web/src/pages/__tests__/PersonPage.test.tsx — 25 component tests
+covering loading spinner, error states (no name, no results, API failure,
+Go-back navigation), person header (name, photo, roles, birthday/age, TMDB
+link), missing-data edge cases (no photo, no birthday, empty credits), known-for
+credit grid (movie/TV titles, type badges, movie→movie search navigation,
+TV→series search navigation, poster images), back button navigation.
+— 527 frontend tests pass (23 files), 69 backend tests pass, TypeScript clean.
 **Filed**: 2026-06-27
 
 ### P3.19 — Add component tests for AdminDashboard
-| ✅ Done: web/src/pages/__tests__/AdminDashboard.test.tsx — 18 component tests
-| covering loading spinner, error/retry states, stats card rendering,
-| cache control buttons (Clear/Warm/Full Rewarm), EPG refresh trigger,
-| popular content table (populated + empty), error log (populated + empty),
-| search queries (populated + empty), and negative hit rate display.
-| — 502 frontend tests pass (22 files), TypeScript clean, committed and pushed.
-**Filed**: 2026-06-27
-
-### P3.18 — Fix SettingsPage component tests (12 failures → 484 pass)
-✅ Done: 12 test failures in SettingsPage.test.tsx — all fixed. Root causes:
-duplicate text elements (getAllByText for counts like "3"/"1"/"4"), "All"
-button ambiguity in Language vs Service sections (within() scoping), full
-category_name display without prefix stripping ("EN| Entertainment" not
-"Entertainment"), and multiple type badges ("Movies"/"Series" per category).
-— 484 frontend tests pass (21 files), TypeScript clean, 69 backend tests pass,
-committed and pushed.
+✅ Done: web/src/pages/__tests__/AdminDashboard.test.tsx — 18 component tests
+covering loading spinner, error/retry states, stats card rendering,
+cache control buttons (Clear/Warm/Full Rewarm), EPG refresh trigger,
+popular content table (populated + empty), error log (populated + empty),
+search queries (populated + empty), and negative hit rate display.
+— 502 frontend tests pass (22 files), TypeScript clean, committed and pushed.
 **Filed**: 2026-06-27
