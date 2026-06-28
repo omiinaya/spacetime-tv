@@ -114,7 +114,7 @@ async def stream_bytes(url: str):
     import curl_cffi.requests as CurlReq
     headers = {"User-Agent": UA_STR, "Referer": f"{IPTV_BASE}/"}
 
-    chunk_queue: asyncio.Queue = asyncio.Queue(maxsize=32)
+    chunk_queue: asyncio.Queue = asyncio.Queue()
     _sentinel = object()
 
     async def _download():
@@ -167,7 +167,7 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
     if range_header:
         headers["Range"] = range_header
 
-    chunk_queue: asyncio.Queue = asyncio.Queue(maxsize=32)
+    chunk_queue: asyncio.Queue = asyncio.Queue()
     _sentinel = object()
 
     async def _download():
