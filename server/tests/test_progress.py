@@ -29,9 +29,9 @@ def test_sync_progress_persists_entry(client):
     assert data["synced"] is True
 
     # Check it was stored in the module-level progress store
-    import main as m
-    assert "vod_42" in m._progress_store
-    assert m._progress_store["vod_42"][0]["position"] == 120.5
+    from state import _progress_store
+    assert "vod_42" in _progress_store
+    assert _progress_store["vod_42"][0]["position"] == 120.5
 
 
 def test_sync_progress_keeps_only_last_5_per_key(client):
@@ -44,11 +44,11 @@ def test_sync_progress_keeps_only_last_5_per_key(client):
         })
         assert resp.status_code == 200
 
-    import main as m
-    assert len(m._progress_store["vod_99"]) == 5
+    from state import _progress_store
+    assert len(_progress_store["vod_99"]) == 5
     # Most recent entries first (highest timestamp)
-    assert m._progress_store["vod_99"][0]["position"] == 90.0
-    assert m._progress_store["vod_99"][4]["position"] == 50.0
+    assert _progress_store["vod_99"][0]["position"] == 90.0
+    assert _progress_store["vod_99"][4]["position"] == 50.0
 
 
 def test_sync_progress_with_series_metadata(client):
@@ -70,8 +70,8 @@ def test_sync_progress_with_series_metadata(client):
     })
     assert resp.status_code == 200
 
-    import main as m
-    entry = m._progress_store["ep_1_2"][0]
+    from state import _progress_store
+    entry = _progress_store["ep_1_2"][0]
     assert entry["seriesData"]["seriesName"] == "Test Series"
     assert entry["seriesData"]["episodeNum"] == 2
 
@@ -91,8 +91,8 @@ def test_sync_progress_with_movie_metadata(client):
     })
     assert resp.status_code == 200
 
-    import main as m
-    entry = m._progress_store["vod_100"][0]
+    from state import _progress_store
+    entry = _progress_store["vod_100"][0]
     assert entry["movieData"]["movieName"] == "Test Movie"
 
 

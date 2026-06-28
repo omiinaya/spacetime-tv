@@ -54,10 +54,11 @@ def clear_cache():
     # _probe_cache moved to routes/stream.py during P1.1 Phase 3 extraction
     from routes.stream import _probe_cache as stream_probe_cache
     stream_probe_cache.clear()
-    m.epg_cache["data"] = None
-    m.epg_cache["fetched"] = 0
+    from state import epg_cache, _progress_store
+    epg_cache["data"] = None
+    epg_cache["fetched"] = 0
     # Clear progress store
-    m._progress_store.clear()
+    _progress_store.clear()
     yield
 
 
