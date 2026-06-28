@@ -46,8 +46,10 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 # ── Route modules ─────────────────────────────────────────────────────────
 from routes.health import router as health_router
 from routes.admin import router as admin_router
+from routes.tmdb import router as tmdb_router
 app.include_router(health_router)
 app.include_router(admin_router)
+app.include_router(tmdb_router)
 
 # ── Rate Limiting (in-memory fixed window) ──────────────────────────────────
 from starlette.middleware.base import BaseHTTPMiddleware

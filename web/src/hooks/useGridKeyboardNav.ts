@@ -26,7 +26,13 @@ export function useGridKeyboardNav(
     if (!el) return;
     const style = getComputedStyle(el);
     const template = style.gridTemplateColumns;
-    colsRef.current = template.split(/\s+/).length;
+    // Handle repeat(N, ...) syntax — extract N
+    const repeatMatch = template.match(/repeat\(\s*(\d+)/i);
+    if (repeatMatch) {
+      colsRef.current = parseInt(repeatMatch[1], 10);
+    } else {
+      colsRef.current = template.split(/\s+/).length;
+    }
   }, [containerRef]);
 
   // Recompute on resize

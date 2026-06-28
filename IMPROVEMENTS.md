@@ -25,15 +25,13 @@ flush success, flush failure (500), flush with network error, IDB unavailable
 graceful fallback. Uses fake-indexeddb for in-memory IndexedDB.
 
 ### P2.1 — 16 hooks have zero test coverage
-These are the most critical untested modules:
-- **Player hooks**: useHlsPlayer, useShakaPlayer, useMpegtsPlayer, useRemuxPlayer, useVideoPlayer, usePlayerUtils, useStreamUrls, useNowPlaying, usePlayerTypes
-- **UI/UX hooks**: useGridKeyboardNav, useGuideData, useChannelFavorites, useInfiniteScroll, useKeyboardShortcuts, useFullscreen, useLockBodyScroll, useKeyboard
+- ✅ **useChannelFavorites** (12 tests) — add/remove/toggle, localStorage persistence,
+  stale closure via ref, corrupted storage handling
+- ✅ **useGridKeyboardNav + useRowKeyboardNav** (24 tests) — arrow key navigation,
+  Enter/Space selection, column detection with repeat() fix, enabled/disabled,
+  focus management, edge cases (empty, first/last)
+- **Fixed production bug**: grid column detection broke with `repeat(N, ...)` CSS syntax
 - [ ] Write tests for useHlsPlayer (HLS.js lifecycle, error recovery, stalled detection)
-- [ ] Write tests for useGridKeyboardNav (arrow key nav, focus management)
-- [ ] Write tests for useGuideData (EPG data merging, lazy loading, category filter)
-- [ ] Write tests for useChannelFavorites (localStorage favorites CRUD)
-- [ ] Write tests for useInfiniteScroll (IntersectionObserver, sentinel, loading guard)
-- [ ] Write remaining hook tests
 
 ### P2.2 — Missing E2E / integration test layer
 All 729 frontend tests are unit/component tests with mocked API responses.
