@@ -35,10 +35,13 @@ npm run dev            # starts on :5183, proxies /api to :8720
 
 ## Documentation
 
-| Document | Audience | Purpose |
-|---|---|---|
-| [AGENTS.md](./AGENTS.md) | AI coding agents | Full agent onboarding |
-| [CLAUDE.md](./CLAUDE.md) | Claude Code | Short signpost |
-| [CONTRIBUTING.md](./CONTRIBUTING.md) | Contributors | How to contribute |
-| [ROADMAP.md](./ROADMAP.md) | Planning | Current status, priorities, audit |
-| [IMPROVEMENTS.md](./IMPROVEMENTS.md) | Development | Known issues, refactoring targets |
+38|| Document | Audience | Purpose |
+39||---|---|---|
+40|| [AGENTS.md](./AGENTS.md) | AI coding agents | Full agent onboarding |
+41|| [CLAUDE.md](./CLAUDE.md) | Claude Code | Short signpost |
+42|| [CONTRIBUTING.md](./CONTRIBUTING.md) | Contributors | How to contribute |
+43|| [ROADMAP.md](./ROADMAP.md) | Planning | Current status, priorities, audit |
+44|| [IMPROVEMENTS.md](./IMPROVEMENTS.md) | Development | Known issues, refactoring targets |
+45|
+
+| [SETUP.md](./SETUP.md) | AI agents | Zero-to-running setup guide |
