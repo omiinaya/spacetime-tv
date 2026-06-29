@@ -166,7 +166,7 @@ def test_series_categories_with_cache(client_with_cache):
     test_cats = [
         {"category_id": 30, "category_name": "EN - Drama", "parent_id": 0},
     ]
-    _cache["series_cats"] = (time.time() + 3600, test_cats)
+    _cache["series_categories"] = (time.time() + 3600, test_cats)
 
     resp = client_with_cache.get("/api/series/categories")
     assert resp.status_code == 200

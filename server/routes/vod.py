@@ -126,7 +126,7 @@ async def movie_details(stream_id: int):
 async def series_categories():
     """All series categories."""
     import main as _main
-    data = await _main.cached_fetch("series_cats", "get_series_categories")
+    data = await _main.cached_fetch("series_categories", "get_series_categories")
     return {"categories": data}
 
 
