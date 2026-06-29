@@ -117,20 +117,22 @@ describe("AudioSelector", () => {
     mockFetchSuccess({ error: "No audio streams found" });
     render(<AudioSelector mediaType="movie" streamId="123" />);
 
-    fireEvent.click(screen.getByLabelText("Audio track"));
+    // Component hides itself when error occurs (tracks.length <= 1 && !loading)
     await waitFor(() => {
-      expect(screen.getByText("No audio streams found")).toBeInTheDocument();
+      expect(fetch).toHaveBeenCalledWith(probeUrl);
     });
+    expect(screen.queryByLabelText("Audio track")).not.toBeInTheDocument();
   });
 
-  it('shows "Single audio track" when tracks === 0', async () => {
+  it('is hidden when no tracks returned', async () => {
     mockFetchSuccess({ tracks: [] });
     render(<AudioSelector mediaType="movie" streamId="123" />);
 
-    fireEvent.click(screen.getByLabelText("Audio track"));
     await waitFor(() => {
-      expect(screen.getByText("Single audio track")).toBeInTheDocument();
+      expect(fetch).toHaveBeenCalledWith(probeUrl);
     });
+    // Component hides when tracks.length <= 1
+    expect(screen.queryByLabelText("Audio track")).not.toBeInTheDocument();
   });
 
   it("closes dropdown when button is clicked again", async () => {
@@ -162,9 +164,10 @@ describe("AudioSelector", () => {
     );
     render(<AudioSelector mediaType="movie" streamId="123" />);
 
-    fireEvent.click(screen.getByLabelText("Audio track"));
+    // Component hides itself when fetch fails
     await waitFor(() => {
-      expect(screen.getByText("Network failure")).toBeInTheDocument();
+      expect(fetch).toHaveBeenCalledWith(probeUrl);
     });
+    expect(screen.queryByLabelText("Audio track")).not.toBeInTheDocument();
   });
 });

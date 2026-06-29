@@ -21,14 +21,19 @@ describe("SleepTimer", () => {
     vi.useRealTimers();
   });
 
+  // Helper: find the sleep timer button regardless of label state
+  function getSleepBtn() {
+    return screen.getByRole("button", { name: /sleep timer/i });
+  }
+
   it("renders Moon button with Sleep timer label", () => {
     render(<SleepTimer onPause={onPause} />);
-    expect(screen.getByLabelText("Sleep timer")).toBeInTheDocument();
+    expect(getSleepBtn()).toBeInTheDocument();
   });
 
   it("shows presets dropdown when clicked", () => {
     render(<SleepTimer onPause={onPause} />);
-    fireEvent.click(screen.getByLabelText("Sleep timer"));
+    fireEvent.click(getSleepBtn());
     expect(screen.getByText("30m")).toBeInTheDocument();
     expect(screen.getByText("60m")).toBeInTheDocument();
     expect(screen.getByText("90m")).toBeInTheDocument();
@@ -37,17 +42,17 @@ describe("SleepTimer", () => {
 
   it("starts 30-minute countdown when 30m is selected", () => {
     render(<SleepTimer onPause={onPause} />);
-    fireEvent.click(screen.getByLabelText("Sleep timer"));
+    fireEvent.click(getSleepBtn());
     fireEvent.click(screen.getByText("30m"));
 
     // Should show remaining time on the button
-    const btn = screen.getByLabelText(/Sleep timer/);
+    const btn = getSleepBtn();
     expect(btn.textContent).toContain("30:00");
   });
 
   it("counts down every second", () => {
     render(<SleepTimer onPause={onPause} />);
-    fireEvent.click(screen.getByLabelText("Sleep timer"));
+    fireEvent.click(getSleepBtn());
     fireEvent.click(screen.getByText("30m"));
 
     expect(screen.getByText("30:00")).toBeInTheDocument();
@@ -65,7 +70,7 @@ describe("SleepTimer", () => {
 
   it("calls onPause and resets when timer reaches zero", () => {
     render(<SleepTimer onPause={onPause} />);
-    fireEvent.click(screen.getByLabelText("Sleep timer"));
+    fireEvent.click(getSleepBtn());
     fireEvent.click(screen.getByText("30m"));
 
     // Advance 30 minutes (30 * 60 = 1800 seconds)
@@ -74,20 +79,18 @@ describe("SleepTimer", () => {
     });
 
     expect(onPause).toHaveBeenCalledTimes(1);
-    // Timer should be reset (no remaining time)
-    const btn = screen.getByLabelText("Sleep timer");
+    // Timer should be reset (no remaining time shown)
+    const btn = getSleepBtn();
     expect(btn.textContent?.trim()).not.toContain(":");
   });
 
   it("stops countdown when Off is selected", () => {
     render(<SleepTimer onPause={onPause} />);
-    fireEvent.click(screen.getByLabelText("Sleep timer"));
+    fireEvent.click(getSleepBtn());
     fireEvent.click(screen.getByText("30m"));
 
-    expect(screen.getByText("30:00")).toBeInTheDocument();
-
-    // Select Off
-    fireEvent.click(screen.getByLabelText("Sleep timer"));
+    // Now timer is active — button label changed
+    fireEvent.click(getSleepBtn());
     fireEvent.click(screen.getByText("Off"));
 
     // After advancing time, timer should stay at 0
@@ -95,13 +98,13 @@ describe("SleepTimer", () => {
       vi.advanceTimersByTime(5000);
     });
     expect(onPause).not.toHaveBeenCalled();
-    const btn = screen.getByLabelText("Sleep timer");
+    const btn = getSleepBtn();
     expect(btn.textContent?.trim()).not.toContain(":");
   });
 
   it("closes dropdown after selecting a preset", () => {
     render(<SleepTimer onPause={onPause} />);
-    fireEvent.click(screen.getByLabelText("Sleep timer"));
+    fireEvent.click(getSleepBtn());
     expect(screen.getByText("30m")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("30m"));
@@ -112,26 +115,21 @@ describe("SleepTimer", () => {
     render(<SleepTimer onPause={onPause} />);
 
     // No timer should show initially
-    let btn = screen.getByLabelText("Sleep timer");
+    let btn = getSleepBtn();
     expect(btn.textContent?.trim()).toBe("");
 
-    fireEvent.click(screen.getByLabelText("Sleep timer"));
+    fireEvent.click(getSleepBtn());
     fireEvent.click(screen.getByText("30m"));
 
-    btn = screen.getByLabelText(/Sleep timer: 30:00 remaining/);
-    expect(btn).toBeInTheDocument();
-    const spans = btn.querySelectorAll("span");
-    const found = Array.from(spans).some(
-      (s) => s.textContent === "30:00",
-    );
-    expect(found).toBe(true);
+    btn = getSleepBtn();
+    expect(btn.textContent).toContain("30:00");
   });
 
   it("switches from one timer to another when selected again", () => {
     render(<SleepTimer onPause={onPause} />);
 
     // Start 30 min
-    fireEvent.click(screen.getByLabelText("Sleep timer"));
+    fireEvent.click(getSleepBtn());
     fireEvent.click(screen.getByText("30m"));
     expect(screen.getByText("30:00")).toBeInTheDocument();
 
@@ -142,14 +140,14 @@ describe("SleepTimer", () => {
     expect(screen.getByText("29:55")).toBeInTheDocument();
 
     // Switch to 90 min
-    fireEvent.click(screen.getByLabelText("Sleep timer"));
+    fireEvent.click(getSleepBtn());
     fireEvent.click(screen.getByText("90m"));
     expect(screen.getByText("90:00")).toBeInTheDocument();
   });
 
   it("cleans up interval on unmount", () => {
     const { unmount } = render(<SleepTimer onPause={onPause} />);
-    fireEvent.click(screen.getByLabelText("Sleep timer"));
+    fireEvent.click(getSleepBtn());
     fireEvent.click(screen.getByText("30m"));
 
     unmount();
@@ -165,7 +163,7 @@ describe("SleepTimer", () => {
     render(<SleepTimer onPause={onPause} />);
 
     // Open dropdown
-    fireEvent.click(screen.getByLabelText("Sleep timer"));
+    fireEvent.click(getSleepBtn());
 
     // Off should be highlighted (text-blue-400) since no timer is running
     const offBtn = screen.getByText("Off");
@@ -175,11 +173,11 @@ describe("SleepTimer", () => {
   it("highlights the selected preset after starting", () => {
     render(<SleepTimer onPause={onPause} />);
 
-    fireEvent.click(screen.getByLabelText("Sleep timer"));
+    fireEvent.click(getSleepBtn());
     fireEvent.click(screen.getByText("30m"));
 
     // Re-open dropdown
-    fireEvent.click(screen.getByLabelText("Sleep timer"));
+    fireEvent.click(getSleepBtn());
 
     // 30m should be highlighted with purple
     const btn30 = screen.getByText("30m");

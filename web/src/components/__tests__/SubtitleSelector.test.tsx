@@ -178,7 +178,7 @@ describe("SubtitleSelector", () => {
     });
   });
 
-  it("shows highlight color when a track is active", async () => {
+  it("selecting a track adds a <track> element with correct attributes", async () => {
     mockFetchSuccess({ tracks: sampleTracks });
     render(
       <SubtitleSelector
@@ -193,10 +193,20 @@ describe("SubtitleSelector", () => {
       expect(screen.getByText(/eng/)).toBeInTheDocument();
     });
 
-    // After selecting a track, the Subtitles button should have yellow-400
+    // Before selection: no track element
+    expect(videoRef.current.querySelector("track")).toBeNull();
+    expect(videoRef.current.querySelectorAll("track").length).toBe(0);
+
     fireEvent.click(screen.getByText(/eng/));
-    const btn = screen.getByLabelText("Subtitles");
-    expect(btn.className).toContain("text-yellow-400");
+
+    // A <track> element should have been added with correct attributes
+    const track = videoRef.current.querySelector("track");
+    expect(track).not.toBeNull();
+    expect(track?.getAttribute("src")).toBe("/api/subtitles/movie/123/0");
+    expect(track?.getAttribute("kind")).toBe("subtitles");
+    expect(track?.getAttribute("default")).toBe("");
+    expect(track?.getAttribute("srclang")).toBe("eng");
+    expect(track?.getAttribute("label")).toBe("eng");
   });
 
   it("handles network error gracefully", async () => {

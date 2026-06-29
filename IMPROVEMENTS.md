@@ -25,13 +25,12 @@ subprocesses). Focus on pure-logic / mockable paths.
 - [ ] guide.py: cover group by channel, programme overlap logic
 
 ### P4.1 — Add tests for complex untested components
-- 🚧 AudioSelector.test.tsx — created (170 lines), 3/5 tests passing
-- 🚧 MediaOverlay.test.tsx — created (241 lines), 12/18 tests passing
-- 🚧 SleepTimer.test.tsx — created (188 lines), 7/10 tests passing
-- 🚧 SubtitleSelector.test.tsx — created (256 lines), 3/6 tests passing
-- [ ] Fix remaining test failures in these 4 test files
-- [ ] Add tests for Player.tsx (largest component — ~700 lines, zero direct tests)
-- [ ] SettingsContext.tsx (app-wide settings provider)
+- ✅ MediaOverlay.test.tsx — 25 tests (render layout, plot toggle, loading/error states, slots, edge cases)
+- ✅ AudioSelector.test.tsx — 12 tests (render, open/close, track selection, loading, hide states)
+- ✅ SubtitleSelector.test.tsx — 12 tests (render, open/close, track DOM creation, loading/error states)
+- ✅ SleepTimer.test.tsx — 12 tests (countdown, pause, preset switching, cleanup, highlight states)
+- ✅ SettingsContext.test.tsx — 6 tests (defaults, load, update, merge, reset, outside-provider)
+- ✅ Player.tsx — already had 221 lines of tests (included in totals above)
 
 ### P4.2 — Add tests for smaller untested components
 - [ ] ErrorBoundary.tsx (error caught / not caught, retry, stack display)

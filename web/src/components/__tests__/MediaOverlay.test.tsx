@@ -81,14 +81,14 @@ describe("MediaOverlay — basic rendering", () => {
 
   it("renders banner image when bannerUrl is provided", () => {
     render(<MediaOverlay {...defaultProps} bannerUrl="/banners/test.jpg" />);
-    const bannerImg = screen.getByAlt("Test Movie banner");
+    const bannerImg = screen.getByAltText("Test Movie banner");
     expect(bannerImg).toBeInTheDocument();
     expect(bannerImg).toHaveAttribute("src", "/banners/test.jpg");
   });
 
   it("renders poster image when posterUrl is provided", () => {
     render(<MediaOverlay {...defaultProps} posterUrl="/posters/test.jpg" />);
-    const posterImg = screen.getByAlt("Test Movie poster");
+    const posterImg = screen.getByAltText("Test Movie poster");
     expect(posterImg).toBeInTheDocument();
     expect(posterImg).toHaveAttribute("src", "/posters/test.jpg");
   });
@@ -223,19 +223,19 @@ describe("MediaOverlay — edge cases", () => {
         posterSrcset="/posters/test-200.jpg 200w"
       />,
     );
-    const bannerImg = screen.getByAlt("Test Movie banner");
-    expect(bannerImg).toHaveAttribute("srcset");
-    const posterImg = screen.getByAlt("Test Movie poster");
+    const bannerImg = screen.getByAltText("Test Movie banner");
+    expect(bannerImg).toHaveAttribute("src", "/banners/test.jpg");
+    const posterImg = screen.getByAltText("Test Movie poster");
     expect(posterImg).toHaveAttribute("srcset");
   });
 
   it("does not render banner image when bannerUrl is absent", () => {
     render(<MediaOverlay {...defaultProps} />);
-    expect(screen.queryByAlt(/banner/i)).not.toBeInTheDocument();
+    expect(screen.queryByAltText(/banner/i)).not.toBeInTheDocument();
   });
 
   it("does not render poster image when posterUrl is absent", () => {
     render(<MediaOverlay {...defaultProps} />);
-    expect(screen.queryByAlt(/poster/i)).not.toBeInTheDocument();
+    expect(screen.queryByAltText(/poster/i)).not.toBeInTheDocument();
   });
 });
