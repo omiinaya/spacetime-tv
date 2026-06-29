@@ -56,6 +56,68 @@ async def admin_stats():
     }
 
 
+@router.get("/api/admin/stream-health")
+async def admin_stream_health():
+    """Stream health dashboard: probe cache stats and sampled results."""
+    try:
+        from routes.stream import _probe_cache
+    except ImportError:
+        return {"enabled": False, "error": "probe cache not available"}
+
+    now = time.time()
+    total = len(_probe_cache)
+    by_codec: dict[str, int] = {}
+    by_resolution: dict[str, int] = {}
+    by_type: dict[str, int] = {}
+    cached_recent: list[dict] = []
+    stale_count = 0
+
+    for key, (ts, data) in _probe_cache.items():
+        age = round(now - ts, 0)
+        if age > 3600:
+            stale_count += 1
+
+        codec = data.get("codec", "unknown")
+        by_codec[codec] = by_codec.get(codec, 0) + 1
+
+        w = data.get("width", 0)
+        h = data.get("height", 0)
+        if w > 0 and h > 0:
+            if h >= 2160: res = "4K"
+            elif h >= 1440: res = "1440p"
+            elif h >= 1080: res = "1080p"
+            elif h >= 720: res = "720p"
+            elif h >= 480: res = "480p"
+            else: res = f"{h}p"
+            by_resolution[res] = by_resolution.get(res, 0) + 1
+        else:
+            by_resolution["unknown"] = by_resolution.get("unknown", 0) + 1
+
+        stream_type = key.split("_")[0] if "_" in key else "?"
+        by_type[stream_type] = by_type.get(stream_type, 0) + 1
+
+        if len(cached_recent) < 20:
+            err = data.get("error", "")
+            cached_recent.append({
+                "key": key,
+                "age_s": age,
+                "codec": codec,
+                "width": w,
+                "height": h,
+                "error": err if err else None,
+            })
+
+    return {
+        "enabled": True,
+        "total_probed": total,
+        "stale_count": stale_count,
+        "by_codec": dict(sorted(by_codec.items(), key=lambda x: -x[1])),
+        "by_resolution": dict(sorted(by_resolution.items(), key=lambda x: -x[1])),
+        "by_type": dict(sorted(by_type.items(), key=lambda x: -x[1])),
+        "recent": cached_recent,
+    }
+
+
 @router.post("/api/admin/cache/clear")
 async def admin_clear_cache():
     """Clear all in-memory cache entries. Triggers a fresh warm."""
