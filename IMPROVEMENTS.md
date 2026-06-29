@@ -11,16 +11,6 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-### P4.1 — Fix flaky test_guide_channel_filter (pre-existing)
-`test_guide_channel_filter` asserts `total_channels == 1` for `?channel=BBC1.uk`
-but the test fixture setup produces 2 matching channels. Needs investigation:
-either the fixture data is wrong or the filter is matching too broadly.
-
-### P3.3 — Stream health dashboard
-Live channel probe aggregator showing bitrate/codec stats per channel. Could
-be a new admin page that runs ffprobe probes in the background and reports
-results. Uses the existing `admin.py` route module.
-
 ### P3.4 — Upgrade FastAPI from 0.111.0 → 0.138.x
 Current: 0.111.0. Latest: 0.138.1. Check changelog for breaking changes
 (especially OpenAPI schema generation, dependency injection). Run full
@@ -32,6 +22,22 @@ Check latest version for any IPTV provider compatibility improvements.
 ---
 
 ## Recently Completed
+
+### P3.3 — Stream health dashboard
+New admin section showing codec distribution, resolution distribution, stream
+type breakdown, and recent probe results from `_probe_cache`. Backend:
+`GET /api/admin/stream-health` aggregates all cached ffprobe results. Frontend:
+3-column stats grid + sortable recent-probes table with color-coded codecs.
+Found 0 issues uncovered during review.
+
+### P4.1 — Guide channel filter returning unfiltered total
+`/api/guide?channel=X` was returning the total count of ALL channels (before
+filter) in `total_channels`. After filtering, `total` is now recalculated.
+Fixes the flaky `test_guide_channel_filter` assertion `total_channels == 1`.
+
+### Back-to-top button
+Floating button appears on long pages (Movies, Series, Watchlist, Search)
+when scrolled past 600px. Smooth-scrolls the main content area to top.
 
 ### P3.2 — Watchlist UI popover
 Sidebar watchlist button now opens a compact popover showing the last 6 saved
