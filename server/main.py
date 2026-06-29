@@ -168,7 +168,7 @@ from state import track_hit, log_error, record_search, _stream_hits, _error_log,
 # Without this, the first search triggers hundreds of per-category fetches.
 
 CACHE_WARM_ENABLED = os.getenv("CACHE_WARM_ENABLED", "true").lower() in ("1", "true", "yes")
-CACHE_WARM_CONCURRENCY = int(os.getenv("CACHE_WARM_CONCURRENCY", "20"))
+CACHE_WARM_CONCURRENCY = int(os.getenv("CACHE_WARM_CONCURRENCY", "50"))
 CACHE_WARM_CATEGORIES = os.getenv("CACHE_WARM_CATEGORIES", "")
 
 async def warm_cache():
@@ -184,46 +184,78 @@ async def warm_cache():
     log.info("[WARMER] Starting cache warming for VOD + Series...")
     start = time.time()
 
+    # ── Live (single request, fast) ────────────────────────────────
     try:
-        # Warm live_all early — without this the first user triggers a provider fetch
-        # that blocks the channel list for 10+ seconds
         live_all = await cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
         log.info(f"[WARMER] Live: {len(live_all)} streams cached")
     except Exception as e:
         log.warning(f"[WARMER] Live warm failed (non-fatal): {e}")
 
-    try:
-        vod_cats = await cached_fetch(CACHE_VOD_CATEGORIES, "get_vod_categories")
-        if not vod_cats:
-            log.warning("[WARMER] VOD categories empty — upstream may be degraded, will retry next cycle")
-        vod_cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
-        if filter_cats:
-            vod_cat_ids = [cid for cid in vod_cat_ids if cid in filter_cats]
-        sem = asyncio.Semaphore(CACHE_WARM_CONCURRENCY)
-        async def fetch_vod_cat(cid):
-            async with sem:
-                return await cached_fetch(CACHE_VOD_CAT.format(id=cid), "get_vod_streams", category_id=cid)
-        await asyncio.gather(*[fetch_vod_cat(cid) for cid in vod_cat_ids], return_exceptions=True)
-        log.info(f"[WARMER] VOD: {len(vod_cat_ids)} categories cached")
-    except Exception as e:
-        log.warning(f"[WARMER] VOD warm failed (non-fatal): {e}")
+    # ── VOD + Series in parallel ────────────────────────────────────
+    # These are independent — fetching both concurrently cuts wall time
+    # from VOD_time + series_time to max(VOD_time, series_time).
+    # On restart with 246 series cats, this saves ~60s cold.
 
-    try:
-        series_cats = await cached_fetch(CACHE_SERIES_CATEGORIES, "get_series_categories")
-        if not series_cats:
-            log.warning("[WARMER] Series categories empty — upstream may be degraded, will retry next cycle")
-        series_cat_ids = [c["category_id"] for c in series_cats if c.get("category_id")]
-        if filter_cats:
-            series_cat_ids = [cid for cid in series_cat_ids if cid in filter_cats]
-        sem = asyncio.Semaphore(CACHE_WARM_CONCURRENCY)
-        async def fetch_series_cat(cid):
-            async with sem:
-                return await cached_fetch(CACHE_SERIES_CAT.format(id=cid), "get_series", category_id=cid)
-        await asyncio.gather(*[fetch_series_cat(cid) for cid in series_cat_ids], return_exceptions=True)
-        log.info(f"[WARMER] Series: {len(series_cat_ids)} categories cached")
-    except Exception as e:
-        log.warning(f"[WARMER] Series warm failed (non-fatal): {e}")
+    async def _warm_vod():
+        try:
+            vod_cats = await cached_fetch(CACHE_VOD_CATEGORIES, "get_vod_categories")
+            if not vod_cats:
+                log.warning("[WARMER] VOD categories empty — upstream may be degraded, will retry next cycle")
+            vod_cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
+            if filter_cats:
+                vod_cat_ids = [cid for cid in vod_cat_ids if cid in filter_cats]
+            sem = asyncio.Semaphore(CACHE_WARM_CONCURRENCY)
 
+            async def fetch_vod_cat(cid):
+                async with sem:
+                    for attempt in range(2):
+                        try:
+                            return await cached_fetch(CACHE_VOD_CAT.format(id=cid), "get_vod_streams", category_id=cid)
+                        except Exception as e:
+                            if attempt == 0:
+                                log.warning(f"[WARMER] VOD cat {cid} failed (retrying): {e}")
+                                await asyncio.sleep(1)
+                            else:
+                                log.warning(f"[WARMER] VOD cat {cid} failed after retry: {e}")
+                                return None
+
+            await asyncio.gather(*[fetch_vod_cat(cid) for cid in vod_cat_ids], return_exceptions=True)
+            log.info(f"[WARMER] VOD: {len(vod_cat_ids)} categories cached")
+        except Exception as e:
+            log.warning(f"[WARMER] VOD warm failed (non-fatal): {e}")
+
+    async def _warm_series():
+        try:
+            series_cats = await cached_fetch(CACHE_SERIES_CATEGORIES, "get_series_categories")
+            if not series_cats:
+                log.warning("[WARMER] Series categories empty — upstream may be degraded, will retry next cycle")
+            series_cat_ids = [c["category_id"] for c in series_cats if c.get("category_id")]
+            if filter_cats:
+                series_cat_ids = [cid for cid in series_cat_ids if cid in filter_cats]
+            sem = asyncio.Semaphore(CACHE_WARM_CONCURRENCY)
+
+            async def fetch_series_cat(cid):
+                async with sem:
+                    for attempt in range(2):
+                        try:
+                            return await cached_fetch(CACHE_SERIES_CAT.format(id=cid), "get_series", category_id=cid)
+                        except Exception as e:
+                            if attempt == 0:
+                                log.warning(f"[WARMER] Series cat {cid} failed (retrying): {e}")
+                                await asyncio.sleep(1)
+                            else:
+                                log.warning(f"[WARMER] Series cat {cid} failed after retry: {e}")
+                                return None
+
+            await asyncio.gather(*[fetch_series_cat(cid) for cid in series_cat_ids], return_exceptions=True)
+            log.info(f"[WARMER] Series: {len(series_cat_ids)} categories cached")
+        except Exception as e:
+            log.warning(f"[WARMER] Series warm failed (non-fatal): {e}")
+
+    # Fire VOD and series in parallel
+    await asyncio.gather(_warm_vod(), _warm_series())
+
+    # ── EPG ─────────────────────────────────────────────────────────
     try:
         log.info("[WARMER] Pre-warming EPG...")
         from routes.guide import load_epg
