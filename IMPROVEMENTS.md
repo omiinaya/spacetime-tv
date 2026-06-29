@@ -24,8 +24,9 @@ subprocesses). Focus on pure-logic / mockable paths.
   series plot match, VOD fallback path, exception handling, enrichment edge cases
 - ✅ guide.py: 67%→70% — added 7 tests: single-channel filter, no-match filter,
   empty EPG, now/partial IDs, now empty, now no-data, enrich not-found
-- [ ] stream.py: cover DASH MPD endpoints, convert endpoints, MP4 serve
-  (28% coverage, 486 uncovered — hardest: ffmpeg subprocess mocking)
+- [x] stream.py: 28%→28% — added 10 tests: DASH manifest endpoints (live/movie/series),
+  probe endpoints with pre-populated cache, error paths
+  (486 uncovered — heavy ffmpeg/curl_cffi subprocess dependencies)
 
 ### P4.1 — Add tests for complex untested components
 - ✅ MediaOverlay.test.tsx — 25 tests (render layout, plot toggle, loading/error states, slots, edge cases)
