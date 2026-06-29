@@ -526,24 +526,23 @@ def test_probe_stream_ffprobe_returns_405_curl_cffi_fallback():
     proc.returncode = 1
     proc.communicate = AsyncMock(return_value=(b"", b"405 Method Not Allowed"))
 
-    # Mock curl_cffi to succeed
+    # Mock curl_cffi to succeed via module-level CurlReq
     class _MockCurlResp:
         status_code = 206
         headers = {"content-length": "1000000"}
 
-    err_ctx = None  # won't get that far if curl succeeds
+    mock_get = MagicMock(return_value=_MockCurlResp())
+
+    async def _mock_run_in_executor(_none, fn, *_a):
+        """Run the callable directly instead of in a thread pool."""
+        return fn()
 
     with patch("asyncio.create_subprocess_exec", return_value=proc), \
-         patch.dict("sys.modules", {"curl_cffi": MagicMock()}):
-        # We need curl_cffi to be importable and return a good response
-        mock_curl = MagicMock()
-        mock_curl.get.return_value = _MockCurlResp()
-        # Need to make sure the loop.run_in_executor works
-        with patch("asyncio.get_event_loop") as mock_loop:
-            mock_loop.return_value.run_in_executor.return_value = _MockCurlResp()
-            result = asyncio.run(probe_stream(444, "live"))
-            # curl_cffi fallback returns codec h264
-            assert result["codec"] in ("h264", "unavailable")
+         patch("routes.stream.CurlReq.get", mock_get), \
+         patch("asyncio.get_event_loop") as mock_loop:
+        mock_loop.return_value.run_in_executor = _mock_run_in_executor
+        result = asyncio.run(probe_stream(444, "live"))
+        assert result["codec"] == "h264"
 
 
 # ── serve_cached_mp4 tests ──────────────────────────────────────────
@@ -785,3 +784,136 @@ def test_series_dash_manifest_nonexistent(client_with_cache):
     resp = client_with_cache.get("/api/stream/series/99999/1/manifest.mpd")
     assert resp.status_code == 200
     assert "<MPD" in resp.text
+
+
+# ── Helper tests ──────────────────────────────────────────────────
+
+async def _gather(agen):
+    """Collect all items from an async generator into a list."""
+    result = []
+    async for item in agen:
+        result.append(item)
+    return result
+
+
+def test_curl_iter_chunks_yields_chunks():
+    """_curl_iter_chunks yields chunks from curl_cffi response."""
+    import asyncio
+    from unittest.mock import patch, MagicMock
+    from routes.stream import _curl_iter_chunks
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.iter_content.return_value = iter([b"chunk1", b"chunk2", b""])
+
+    def _fake_get(*a, **kw):
+        return mock_resp
+
+    with patch("routes.stream.CurlReq.get", _fake_get):
+        chunks = asyncio.run(_gather(_curl_iter_chunks("http://test/stream")))
+    assert chunks == [b"chunk1", b"chunk2"]
+
+
+def test_curl_iter_chunks_raises_on_non_200():
+    """_curl_iter_chunks raises RuntimeError for non-200 status."""
+    import asyncio
+    from unittest.mock import patch, MagicMock
+    import pytest
+    from routes.stream import _curl_iter_chunks
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 403
+
+    def _fake_get(*a, **kw):
+        return mock_resp
+
+    with patch("routes.stream.CurlReq.get", _fake_get):
+        with pytest.raises(RuntimeError, match="403"):
+            asyncio.run(_gather(_curl_iter_chunks("http://test/stream")))
+
+
+def test_curl_iter_chunks_accepts_206_with_vod():
+    """_curl_iter_chunks accepts 206 when status_ok includes 206."""
+    import asyncio
+    from unittest.mock import patch, MagicMock
+    from routes.stream import _curl_iter_chunks
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 206
+    mock_resp.iter_content.return_value = iter([b"data"])
+
+    def _fake_get(*a, **kw):
+        return mock_resp
+
+    with patch("routes.stream.CurlReq.get", _fake_get):
+        chunks = asyncio.run(_gather(
+            _curl_iter_chunks("http://test/stream", status_ok=(200, 206))))
+    assert chunks == [b"data"]
+
+
+def test_curl_iter_chunks_passes_range_header():
+    """_curl_iter_chunks passes Range header to curl_cffi."""
+    import asyncio
+    from unittest.mock import patch, MagicMock
+    from routes.stream import _curl_iter_chunks
+
+    captured = {}
+
+    def _fake_get(url, *, headers, **kw):
+        captured["range"] = headers.get("Range")
+        captured["url"] = url
+        resp = MagicMock()
+        resp.status_code = 206
+        resp.iter_content.return_value = iter([])
+        return resp
+
+    with patch("routes.stream.CurlReq.get", _fake_get):
+        asyncio.run(_gather(
+            _curl_iter_chunks("http://test/stream", range_header="bytes=0-999",
+                              status_ok=(200, 206))))
+    assert captured.get("range") == "bytes=0-999"
+
+
+def test_ffmpeg_pipe_yields_stdout():
+    """_ffmpeg_pipe yields data from proc.stdout and cleans up."""
+    import asyncio
+    from unittest.mock import patch, AsyncMock, MagicMock
+    from routes.stream import _ffmpeg_pipe
+
+    proc = AsyncMock()
+    proc.returncode = 0
+    proc.stdout.read.side_effect = [b"hello", b"world", b""]
+    proc.stderr.readline.side_effect = [b"", b""]
+    proc.stdin = MagicMock()
+
+    async def fake_feed(p):
+        p.stdin.write(b"x")
+        await p.stdin.drain()
+
+    with patch("asyncio.create_subprocess_exec", return_value=proc):
+        chunks = asyncio.run(_gather(_ffmpeg_pipe(["/ffmpeg"], fake_feed)))
+    assert chunks == [b"hello", b"world"]
+
+
+def test_ffmpeg_pipe_kills_on_generator_exit():
+    """_ffmpeg_pipe kills ffmpeg when generator exits early."""
+    import asyncio
+    from unittest.mock import patch, AsyncMock, MagicMock
+    from routes.stream import _ffmpeg_pipe
+
+    proc = AsyncMock()
+    proc.returncode = None
+    proc.stdout.read.side_effect = [b"data", b""]
+    proc.stderr.readline.side_effect = [b"", b""]
+    proc.stdin = MagicMock()
+
+    async def fake_feed(p):
+        await asyncio.sleep(0.1)
+
+    with patch("asyncio.create_subprocess_exec", return_value=proc):
+        async def run():
+            gen = _ffmpeg_pipe(["/ffmpeg"], fake_feed)
+            async for chunk in gen:
+                break
+        asyncio.run(run())
+    assert proc.kill.called

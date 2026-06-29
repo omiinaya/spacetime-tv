@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 import httpx
+import curl_cffi.requests as CurlReq
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response, StreamingResponse
 
@@ -137,8 +138,6 @@ async def _curl_iter_chunks(url: str, *,
     RuntimeError
         If the CDN returns a status code not in *status_ok*.
     """
-    import curl_cffi.requests as CurlReq
-
     headers = {
         "User-Agent": UA_STR,
         "Referer": f"{IPTV_BASE}/",
@@ -199,7 +198,6 @@ async def _curl_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
     log_prefix : str
         Prefix for log messages (e.g. ``"transcode"``, ``"vod-remux"``).
     """
-    import curl_cffi.requests as CurlReq
     try:
         loop = asyncio.get_event_loop()
         headers = {"User-Agent": UA_STR, "Referer": f"{IPTV_BASE}/"}
@@ -1036,25 +1034,21 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
         if "405" in stderr_text or "Method Not Allowed" in stderr_text:
             log.info(f"Probe {stream_id}: ffprobe got 405 — trying curl_cffi fallback")
             # curl_cffi emulates Chrome TLS fingerprint and can bypass Cloudflare
-            try:
-                import curl_cffi.requests as CurlReq
-                cffi_url = await build_stream_url(stream_id, stream_type)
-                resp = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: CurlReq.get(
-                        cffi_url,
-                        headers={"User-Agent": UA_STR, "Referer": f"{IPTV_BASE}/", "Range": "bytes=0-65535"},
-                        timeout=10,
-                        impersonate="chrome120",
-                    )
+            cffi_url = await build_stream_url(stream_id, stream_type)
+            resp = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: CurlReq.get(
+                    cffi_url,
+                    headers={"User-Agent": UA_STR, "Referer": f"{IPTV_BASE}/", "Range": "bytes=0-65535"},
+                    timeout=10,
+                    impersonate="chrome120",
                 )
-                cl = resp.headers.get("content-length", "0")
-                if resp.status_code in (200, 206) and cl.isdigit() and int(cl) > 0:
-                    log.info(f"Probe {stream_id}: curl_cffi OK (HTTP {resp.status_code}, {cl}B) — accessible")
-                    result = {"codec": "h264", "codec_long": "H.264 (curl_cffi)", "width": 0, "height": 0}
-                    _probe_cache[cache_key] = (now, result)
-                    return result
-            except Exception as cffi_err:
-                log.warning(f"Probe {stream_id}: curl_cffi fallback failed: {cffi_err}")
+            )
+            cl = resp.headers.get("content-length", "0")
+            if resp.status_code in (200, 206) and cl.isdigit() and int(cl) > 0:
+                log.info(f"Probe {stream_id}: curl_cffi OK (HTTP {resp.status_code}, {cl}B) — accessible")
+                result = {"codec": "h264", "codec_long": "H.264 (curl_cffi)", "width": 0, "height": 0}
+                _probe_cache[cache_key] = (now, result)
+                return result
             log.info(f"Probe {stream_id}: all probe methods failed — reporting unavailable")
             result = {"codec": "unavailable", "error": "Not on this CDN edge"}
             _probe_cache[cache_key] = (now, result)
