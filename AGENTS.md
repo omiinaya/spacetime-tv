@@ -11,6 +11,29 @@ stdb: false
 ---
 
 # SpacetimeTV — Agent Guide
+
+This file is read by AI coding agents (Claude Code, Cursor, Hermes, Copilot, etc.) to bootstrap project context. For Claude Code specifically, also see [CLAUDE.md](./CLAUDE.md). Complements [README.md](./README.md) and [ROADMAP.md](./ROADMAP.md).
+
+---
+
+## Architecture
+
+```
+Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :8720 ──┬── iptv-provider.example.com (IPTV)
+                  │                                              ├── TMDB API (metadata)
+                  │                                              ├── ffmpeg (VOD remux)
+                  │                                              └── epg_cache.json (disk)
+                  └── nginx :8722 ──proxy──→ FastAPI :8720
+```
+
+**Layers:**
+- **Frontend** (React 19 + Vite 8 + Tailwind) — 11 pages, custom HLS/mpegts player. Proxies `/api/*` to backend.
+- **Backend** (FastAPI Python) — 12 route modules. Handles live TV streaming, VOD remux (ffmpeg), EPG parsing, search, watchlists.
+- **External:** IPTV provider (iptv-provider.example.com via curl_cffi chrome120), TMDB API for metadata.
+
+---
+
+## Workspace Layout
 2|
 3|This file is read by AI coding agents (Claude Code, Cursor, Hermes, Copilot, etc.) to bootstrap project context. For Claude Code specifically, also see [CLAUDE.md](./CLAUDE.md). Complements [README.md](./README.md) and [ROADMAP.md](./ROADMAP.md).
 4|
