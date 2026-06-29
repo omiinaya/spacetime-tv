@@ -14,7 +14,9 @@ No tests exercise real API calls or full user flows (search→select→play).
 - ✅ Set up Playwright in web/e2e/ — 5 E2E tests covering live TV loading,
   video player rendering, playback verification, SPA navigation, and
   multi-channel probe validation. Run with `npm run test:e2e`.
-- [ ] Set up CI integration to run E2E tests automatically
+- ✅ Set up CI integration to run E2E tests automatically — created
+  `.github/workflows/e2e.yml` (self-hosted runner, requires IPTV credentials).
+  Playwright baseURL made configurable via `E2E_BASE_URL` env var.
 
 ### P1.2 — Write integration tests for remaining uncovered backend routes
 Following the P1.1 monolith decomposition, some higher-level routes still lack
@@ -56,9 +58,13 @@ fails intermittently due to debounce/fake-timer interaction. Stabilize it.
 - ✅ **Deleted** — file had 0% coverage with no imports, no test integration
 - Next: enable the test-discovery lint rule to catch orphan files early
 
-### P5.3 — Audit `react-compiler` / lint rules
-Consider adding the React Compiler eslint plugin
-to catch hook rule violations and memoization issues.
+### P5.3 — ~~Audit `react-compiler` / lint rules~~
+- **Assessed**: TypeScript strict mode is already on (`strict`, `noUnusedLocals`,
+  `noUnusedParameters`). Build is clean (0 errors, 0 `: any` casts, no TODO/FIXME).
+  React Compiler would require `babel-plugin-react-compiler` + `eslint-plugin-react-compiler`
+  dependencies, Vite config changes, and risks experimental instability.
+  **Deferred** — revisit when the compiler reaches stable (not worth the risk/configuration
+  overhead on a 0-error strict codebase).
 
 ---
 

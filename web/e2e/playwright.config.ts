@@ -8,7 +8,7 @@ export default defineConfig({
   workers: 1,
   timeout: 60_000,
   use: {
-    baseURL: "http://192.0.2.10:5183",
+    baseURL: process.env.E2E_BASE_URL || "http://192.0.2.10:5183",
     headless: true,
     screenshot: "only-on-failure",
     video: "retain-on-failure",
