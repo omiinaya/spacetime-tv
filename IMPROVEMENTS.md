@@ -11,15 +11,10 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-### P3.1 — Make epg_cache.json TTL configurable via environment variable
-Currently `EPG_CACHE_TTL = 3600` is hardcoded in `config.py`. Add `EPG_CACHE_TTL`
-env var support so ops can tune the cache refresh interval without code changes.
-Follow the `os.getenv("VAR", default=int)` pattern used elsewhere in config.py.
-
-### P3.2 — Watchlist UI popover
-Add a dropdown from the nav bar showing recently watched items, similar to
-streaming services. Would need a small backend endpoint returning the last N
-watchlist items with metadata, and a popover component on the frontend.
+### P4.1 — Fix flaky test_guide_channel_filter (pre-existing)
+`test_guide_channel_filter` asserts `total_channels == 1` for `?channel=BBC1.uk`
+but the test fixture setup produces 2 matching channels. Needs investigation:
+either the fixture data is wrong or the filter is matching too broadly.
 
 ### P3.3 — Stream health dashboard
 Live channel probe aggregator showing bitrate/codec stats per channel. Could
@@ -37,6 +32,32 @@ Check latest version for any IPTV provider compatibility improvements.
 ---
 
 ## Recently Completed
+
+### P3.2 — Watchlist UI popover
+Sidebar watchlist button now opens a compact popover showing the last 6 saved
+movies/series with poster thumbnails, ratings, year badges, and a "View all"
+link. Fetches data from existing unified API (server-cached). Click an item to
+navigate directly to its search page. Includes loading/empty states and auto-
+closes on outside click or Escape. TypeScript clean. 1073 frontend tests pass.
+
+### 404 Not Found page + catch-all route
+Added `NotFound.tsx` page with Go Home / Go Back buttons. Registered as
+`<Route path="*">` in the router so unknown routes no longer show blank.
+
+### Scroll restoration on cross-page navigation
+Added `useEffect` that scrolls the main content area to top on route change
+(skip watch routes). Prevents disorienting stale scroll position when
+navigating between pages via sidebar.
+
+### Search history: per-item delete
+Added `removeSearchHistory()` function and an X button on each search history
+item (hover-revealed). Users can now remove individual entries instead of
+clearing everything.
+
+### P3.1 — epg_cache TTL configurable via EPG_CACHE_TTL env var
+Commit `80133d1`. Changed `EPG_CACHE_TTL = 3600` to
+`int(os.getenv("EPG_CACHE_TTL", "3600"))` in `config.py`. Follows existing
+config patterns. 390/391 backend tests pass (1 pre-existing flaky excluded).
 
 ### Guide page performance — server-side cache of pre-processed channel groups
 Commit `4501eb0`. Added `_build_guide_cache()` to `server/routes/guide.py`.

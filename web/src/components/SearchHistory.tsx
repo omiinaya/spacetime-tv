@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Clock } from "lucide-react";
+import { Clock, X } from "lucide-react";
 import {
   getSearchHistory,
   addSearchHistory,
   clearSearchHistory,
+  removeSearchHistory,
 } from "@/lib/searchHistory";
 
 interface SearchHistoryProps {
@@ -48,6 +49,12 @@ export function SearchHistory({ onSelect, show, onClose }: SearchHistoryProps) {
     setHistory([]);
   }, []);
 
+  const handleRemove = useCallback((q: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeSearchHistory(q);
+    setHistory(prev => prev.filter(item => item.toLowerCase() !== q.toLowerCase()));
+  }, []);
+
   if (!show || history.length === 0) return null;
 
   return (
@@ -68,14 +75,26 @@ export function SearchHistory({ onSelect, show, onClose }: SearchHistoryProps) {
       </div>
       <div className="max-h-56 overflow-y-auto">
         {history.map((q, i) => (
-          <button
+          <div
             key={`${q}-${i}`}
-            onClick={() => handleSelect(q)}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors"
+            className="group flex items-center"
           >
-            <Clock className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
-            <span className="truncate">{q}</span>
-          </button>
+            <button
+              onClick={() => handleSelect(q)}
+              className="flex-1 flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors min-w-0"
+            >
+              <Clock className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+              <span className="truncate">{q}</span>
+            </button>
+            <button
+              onClick={(e) => handleRemove(q, e)}
+              className="shrink-0 px-2 py-2 opacity-0 group-hover:opacity-100 hover:text-destructive transition-all text-muted-foreground/40 hover:opacity-100"
+              aria-label={`Remove "${q}" from search history`}
+              title="Remove"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
         ))}
       </div>
     </div>

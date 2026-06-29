@@ -3,6 +3,10 @@ dist/
 __pycache__/
 *.pyc
 .coverage
+# Test
+coverage/
+test-results/
+playwright-report/
 .pytest_cache/
 .env
 epg_cache.json

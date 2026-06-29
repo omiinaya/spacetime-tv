@@ -30,3 +30,11 @@ export function clearSearchHistory(): void {
     localStorage.removeItem(KEY);
   } catch {}
 }
+
+export function removeSearchHistory(query: string): void {
+  try {
+    const current = getSearchHistory();
+    const updated = current.filter((q) => q.toLowerCase() !== query.toLowerCase());
+    localStorage.setItem(KEY, JSON.stringify(updated));
+  } catch {}
+}

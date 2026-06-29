@@ -19,6 +19,7 @@ import ErrorReporter from "@/components/ErrorReporter";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 import OfflineBanner from "@/components/OfflineBanner";
+import WatchlistPopover from "@/components/WatchlistPopover";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 // Lazy-loaded pages for code splitting
@@ -34,6 +35,7 @@ const HistoryPage = lazy(() => import("@/pages/HistoryPage"));
 const PersonPage = lazy(() => import("@/pages/PersonPage"));
 const Player = lazy(() => import("@/components/Player"));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
 
 // Loading fallback for lazy routes
 function PageLoader() {
@@ -87,6 +89,7 @@ function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [showWatchlistPopover, setShowWatchlistPopover] = useState(false);
 
   // Centralized keyboard shortcut registry
   useKeyboardShortcuts();
@@ -97,6 +100,15 @@ function AppLayout() {
       saveBackPath(location.pathname + location.search);
     }
   }, [location]);
+
+  // Scroll to top on cross-page navigation (not watch routes)
+  useEffect(() => {
+    const main = document.querySelector("main");
+    if (main && !location.pathname.startsWith("/watch/")) {
+      main.scrollTop = 0;
+    }
+  }, [location.pathname]);
+
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("stv_sidebar_width") || localStorage.getItem("stv-sidebar-width");
     return saved
@@ -160,26 +172,53 @@ function AppLayout() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5" role="navigation" aria-label="Main navigation">
-        {NAV_ITEMS.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => {
-              navigate(item.id);
-              setMobileOpen(false);
-            }}
-            className={cn(
-              "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left",
-              isActive(item.id)
-                ? "bg-primary/10 text-foreground font-medium border-l-2 border-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent"
-            )}
-            aria-label={item.label}
-            aria-current={isActive(item.id) ? "page" : undefined}
-          >
-            <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-            {item.label}
-          </button>
-        ))}
+        {NAV_ITEMS.map((item) =>
+          item.id === "/watchlist" ? (
+            <div key={item.id} className="relative">
+              <button
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).closest("[data-watchlist-close]")) return;
+                  setShowWatchlistPopover(v => !v);
+                }}
+                className={cn(
+                  "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left",
+                  isActive(item.id)
+                    ? "bg-primary/10 text-foreground font-medium border-l-2 border-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent"
+                )}
+                aria-label={item.label}
+                aria-current={isActive(item.id) ? "page" : undefined}
+                aria-expanded={showWatchlistPopover}
+                aria-haspopup="dialog"
+              >
+                <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {item.label}
+              </button>
+              {showWatchlistPopover && !mobileOpen && (
+                <WatchlistPopover onClose={() => setShowWatchlistPopover(false)} />
+              )}
+            </div>
+          ) : (
+            <button
+              key={item.id}
+              onClick={() => {
+                navigate(item.id);
+                setMobileOpen(false);
+              }}
+              className={cn(
+                "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left",
+                isActive(item.id)
+                  ? "bg-primary/10 text-foreground font-medium border-l-2 border-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent"
+              )}
+              aria-label={item.label}
+              aria-current={isActive(item.id) ? "page" : undefined}
+            >
+              <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {item.label}
+            </button>
+          )
+        )}
       </nav>
 
       {/* Bottom section: Settings + Footer */}
@@ -280,6 +319,7 @@ function AppLayout() {
               path="/watch/series/:seriesId/:epId"
               element={<Player type="series" />}
             />
+            <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
           </ErrorBoundary>
