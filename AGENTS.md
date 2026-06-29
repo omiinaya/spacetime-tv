@@ -10,7 +10,7 @@ deps: [python3, node, npm, ffmpeg]
 stdb: false
 ---
 
-1|# SpacetimeTV — Agent Guide
+# SpacetimeTV — Agent Guide
 2|
 3|This file is read by AI coding agents (Claude Code, Cursor, Hermes, Copilot, etc.) to bootstrap project context. For Claude Code specifically, also see [CLAUDE.md](./CLAUDE.md). Complements [README.md](./README.md) and [ROADMAP.md](./ROADMAP.md).
 4|

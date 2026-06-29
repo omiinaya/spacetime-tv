@@ -107,47 +107,38 @@ async def get_content_length(url: str) -> Optional[int]:
 
 # ── Stream generators (byte-level) ─────────────────────────────────────────
 
-async def stream_bytes(url: str):
-    """Generator that yields bytes from a streaming URL via curl_cffi.
-    curl_cffi emulates Chrome TLS fingerprint to bypass Cloudflare CDN blocks.
-    Checks the response status code and first bytes before yielding data.
-    Raises RuntimeError if the CDN returns a non-200 status code.
+async def _curl_iter_chunks(url: str, *,
+                            range_header: Optional[str] = None,
+                            chunk_size: int = 1048576,
+                            status_ok: tuple[int, ...] = (200,),
+                            timeout: int = 120) -> ...:
+    """Async generator: yield chunks from a CDN URL via curl_cffi streaming.
+
+    Uses ``curl_cffi`` with ``impersonate="chrome120"`` to bypass Cloudflare
+    bot detection (the CDN blocks httpx/ffmpeg with 405 but accepts
+    curl_cffi's Chrome-emulated TLS fingerprint).
+
+    Parameters
+    ----------
+    url : str
+        Full stream URL to fetch.
+    range_header : str or None
+        Optional HTTP Range header for byte-range seeking (VOD).
+    chunk_size : int
+        Bytes per chunk (1 MB default, 256 KB for ffmpeg pipe).
+    status_ok : tuple of int
+        HTTP status codes considered successful (default: (200,)).
+        VOD streams also accept (206,) for partial content.
+    timeout : int
+        curl_cffi request timeout in seconds.
+
+    Raises
+    ------
+    RuntimeError
+        If the CDN returns a status code not in *status_ok*.
     """
     import curl_cffi.requests as CurlReq
-    headers = {"User-Agent": UA_STR, "Referer": f"{IPTV_BASE}/"}
 
-    def _get_stream():
-        return CurlReq.get(url, headers=headers, stream=True, timeout=120,
-                           impersonate="chrome120")
-
-    resp = await asyncio.to_thread(_get_stream)
-    if resp.status_code != 200:
-        resp.close()
-        log.warning(f"stream_bytes: CDN returned HTTP {resp.status_code} for {url[:80]}...")
-        raise RuntimeError(f"CDN returned HTTP {resp.status_code} (stream unavailable)")
-
-    chunk_iter = resp.iter_content(chunk_size=1048576)
-    try:
-        while True:
-            def _get_chunk(it=chunk_iter):
-                return next(it, b"")
-            chunk = await asyncio.to_thread(_get_chunk)
-            if not chunk:
-                break
-            yield chunk
-    finally:
-        resp.close()
-
-
-async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
-    """Generator that yields VOD bytes via curl_cffi streaming.
-
-    curl_cffi emulates Chrome TLS fingerprint (impersonate="chrome120"),
-    which bypasses Cloudflare's bot detection. The CDN blocks httpx and
-    ffmpeg/libav with 405 but accepts curl_cffi's browser-emulated TLS.
-    Supports Range/206 for seeking.
-    """
-    import curl_cffi.requests as CurlReq
     headers = {
         "User-Agent": UA_STR,
         "Referer": f"{IPTV_BASE}/",
@@ -155,31 +146,157 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
     if range_header:
         headers["Range"] = range_header
 
-    # Use asyncio.to_thread for the synchronous curl_cffi request
-    def _get_stream():
-        return CurlReq.get(url, headers=headers, stream=True, timeout=120,
-                           impersonate="chrome120")
+    def _do_get():
+        return CurlReq.get(url, headers=headers, stream=True,
+                           timeout=timeout, impersonate="chrome120")
 
-    resp = await asyncio.to_thread(_get_stream)
+    resp = await asyncio.to_thread(_do_get)
 
-    # Allow 200 (full content) or 206 (partial content for Range requests)
-    if resp.status_code not in (200, 206):
+    if resp.status_code not in status_ok:
         resp.close()
-        log.warning(f"stream_vod_bytes: CDN returned HTTP {resp.status_code} for {url[:80]}...")
+        log.warning(f"_curl_iter_chunks: CDN returned HTTP {resp.status_code} for {url[:80]}...")
         raise RuntimeError(f"CDN returned HTTP {resp.status_code} (stream unavailable)")
 
-    # Iterate chunks via to_thread so we don't block the event loop
-    chunk_iter = resp.iter_content(chunk_size=1048576)
+    chunk_iter = resp.iter_content(chunk_size=chunk_size)
     try:
         while True:
-            def _get_chunk(it=chunk_iter):
+            def _next_chunk(it=chunk_iter):
                 return next(it, b"")
-            chunk = await asyncio.to_thread(_get_chunk)
+            chunk = await asyncio.to_thread(_next_chunk)
             if not chunk:
                 break
             yield chunk
     finally:
         resp.close()
+
+
+async def stream_bytes(url: str):
+    """Generator that yields bytes from a live stream URL via curl_cffi."""
+    async for chunk in _curl_iter_chunks(url, status_ok=(200,)):
+        yield chunk
+
+
+async def _curl_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
+                           range_header: Optional[str] = None,
+                           buf_size: int = 1048576,
+                           log_prefix: str = ""):
+    """Fetch a URL via curl_cffi and pipe the data to an ffmpeg process stdin.
+
+    Designed to be used as the *feed_coro* argument to :func:`_ffmpeg_pipe`.
+    Runs curl_cffi in a thread (blocking API), iterates response chunks and
+    writes them to ``proc.stdin``, then closes stdin on completion.
+
+    Parameters
+    ----------
+    proc : asyncio.subprocess.Process
+        The running ffmpeg process with ``stdin=PIPE``.
+    url : str
+        CDN stream URL to download.
+    range_header : str or None
+        Optional Range header for time-based seeking (VOD remux).
+    buf_size : int
+        Chunk size for iter_content (1 MB default, 256 KB for remux).
+    log_prefix : str
+        Prefix for log messages (e.g. ``"transcode"``, ``"vod-remux"``).
+    """
+    import curl_cffi.requests as CurlReq
+    try:
+        loop = asyncio.get_event_loop()
+        headers = {"User-Agent": UA_STR, "Referer": f"{IPTV_BASE}/"}
+        if range_header:
+            headers["Range"] = range_header
+
+        resp = await loop.run_in_executor(
+            None, lambda: CurlReq.get(url, headers=headers, stream=True,
+                                      timeout=120, impersonate="chrome120"),
+        )
+        for chunk in resp.iter_content(chunk_size=buf_size):
+            if not chunk:
+                break
+            proc.stdin.write(chunk)
+            await proc.stdin.drain()
+        resp.close()
+    except Exception as e:
+        log.warning(f"{log_prefix} download error: {e}")
+    finally:
+        try:
+            proc.stdin.close()
+        except Exception:
+            pass
+
+
+async def _ffmpeg_pipe(cmd: list[str],
+                       feed_coro):
+    """Run ffmpeg with pipes and yield its stdout chunks.
+
+    Starts *ffmpeg cmd* with ``stdin=PIPE``, ``stdout=PIPE``, ``stderr=PIPE``.
+    Runs *feed_coro(proc)* in a background task to feed data to stdin,
+    logs stderr via another background task, then yields chunks from stdout.
+    On completion, cancellation, or error, all background tasks are cancelled
+    and the ffmpeg process is killed if still running.
+
+    Parameters
+    ----------
+    cmd : list[str]
+        ffmpeg command-line arguments.
+    feed_coro : async callable(proc)
+        Coroutine function that receives the process and writes to
+        ``proc.stdin``. Typically ``partial(_curl_feed_stdin, url=...)``.
+
+    Yields
+    ------
+    bytes
+        ffmpeg stdout data (MPEG-TS segments).
+    """
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
+    feed_task = asyncio.create_task(feed_coro(proc))
+
+    async def log_stderr():
+        while proc.stderr:
+            line = await proc.stderr.readline()
+            if not line:
+                break
+            log.warning(f"ffmpeg: {line.decode().rstrip()}")
+
+    stderr_task = asyncio.create_task(log_stderr())
+
+    try:
+        while proc.stdout:
+            chunk = await proc.stdout.read(65536)
+            if not chunk:
+                break
+            yield chunk
+    except GeneratorExit:
+        pass
+    finally:
+        feed_task.cancel()
+        stderr_task.cancel()
+        for t in (feed_task, stderr_task):
+            try:
+                await t
+            except (asyncio.CancelledError, Exception):
+                pass
+        if proc.returncode is None:
+            proc.kill()
+            try:
+                await proc.wait()
+            except Exception:
+                pass
+
+
+async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
+    """Generator that yields VOD bytes via curl_cffi streaming.
+    Supports Range/206 for seeking.
+    """
+    async for chunk in _curl_iter_chunks(url, range_header=range_header,
+                                         status_ok=(200, 206)):
+        yield chunk
 
 
 async def stream_proxy(url: str, content_type: str):
@@ -199,13 +316,8 @@ async def stream_proxy(url: str, content_type: str):
 
 
 async def stream_bytes_transcode(url: str, target_height: Optional[int] = None):
-    """Generator: transcode HEVC→H.264 via ffmpeg.
-
-    Uses curl_cffi to download from the CDN (bypasses Cloudflare bot detection)
-    and pipes the data to ffmpeg's stdin for transcoding to H.264 MPEG-TS.
-    If target_height is set, scales video to that height.
-    """
-    log.info(f"Transcoding {url[:100]}...")
+    """Transcode HEVC→H.264 via ffmpeg using curl_cffi download pipe."""
+    from functools import partial
     cmd = [
         "/usr/bin/ffmpeg",
         "-loglevel", "warning",
@@ -224,74 +336,9 @@ async def stream_bytes_transcode(url: str, target_height: Optional[int] = None):
         "-f", "mpegts",
         "pipe:1",
     ]
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-
-    # ── Start curl_cffi download ──
-    import curl_cffi.requests as CurlReq
-    headers = {"User-Agent": UA_STR, "Referer": f"{IPTV_BASE}/"}
-
-    async def download_to_stdin():
-        try:
-            loop = asyncio.get_event_loop()
-            resp = await loop.run_in_executor(
-                None, lambda: CurlReq.get(
-                    url, headers=headers, stream=True, timeout=120,
-                    impersonate="chrome120",
-                )
-            )
-            for chunk in resp.iter_content(chunk_size=1048576):
-                if not chunk:
-                    break
-                if proc.stdin:
-                    proc.stdin.write(chunk)
-                    await proc.stdin.drain()
-            resp.close()
-        except Exception as e:
-            log.warning(f"transcode download error: {e}")
-        finally:
-            if proc.stdin:
-                try:
-                    proc.stdin.close()
-                except:
-                    pass
-
-    async def log_stderr():
-        while proc.stderr:
-            line = await proc.stderr.readline()
-            if not line:
-                break
-            log.warning(f"ffmpeg: {line.decode().rstrip()}")
-
-    download_task = asyncio.create_task(download_to_stdin())
-    stderr_task = asyncio.create_task(log_stderr())
-
-    try:
-        while proc.stdout:
-            chunk = await proc.stdout.read(65536)
-            if not chunk:
-                break
-            yield chunk
-    except GeneratorExit:
-        pass
-    finally:
-        download_task.cancel()
-        stderr_task.cancel()
-        for t in (download_task, stderr_task):
-            try:
-                await t
-            except (asyncio.CancelledError, Exception):
-                pass
-        if proc.returncode is None:
-            proc.kill()
-            try:
-                await proc.wait()
-            except:
-                pass
+    feed = partial(_curl_feed_stdin, url=url, log_prefix="transcode")
+    async for chunk in _ffmpeg_pipe(cmd, feed):
+        yield chunk
 
 
 # ── Live stream routes ──────────────────────────────────────────────────────
@@ -410,105 +457,34 @@ async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
     MPEG-TS, which is playable by mpegts.js.
     Supports time-based seeking via start_time.
     """
-    log.info(f"VOD remux starting for {IPTV_BASE}... start={start_time}")
-
-    # ── Start ffmpeg — reads from stdin (pipe:0), outputs MPEG-TS ──
+    from functools import partial
     cmd = [
         "/usr/bin/ffmpeg",
         "-loglevel", "warning",
         "-probesize", "512K",
         "-analyzeduration", "512K",
     ]
+    range_header = None
     if start_time and start_time > 0:
         cmd += ["-ss", str(start_time), "-copyts"]
+        range_header = f"bytes={int(start_time * 5_000_000)}-"
     cmd += [
         "-i", "pipe:0",
         "-c", "copy",
         "-f", "mpegts",
         "pipe:1",
     ]
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-
-    # ── Start curl_cffi download in a thread ──
-    import curl_cffi.requests as CurlReq
-    headers = {"User-Agent": UA_STR, "Referer": f"{IPTV_BASE}/"}
-    if start_time and start_time > 0:
-        # Approximate byte offset from time (conservative 5MB/s estimate)
-        headers["Range"] = f"bytes={int(start_time * 5_000_000)}-"
-
-    async def download_to_stdin():
-        """Read from curl_cffi and write to ffmpeg stdin."""
-        try:
-            loop = asyncio.get_event_loop()
-            resp = await loop.run_in_executor(
-                None, lambda: CurlReq.get(
-                    url, headers=headers, stream=True, timeout=120,
-                    impersonate="chrome120",
-                )
-            )
-            buf_size = 262144  # 256KB chunks for curl_cffi -> ffmpeg pipe stream
-            for chunk in resp.iter_content(chunk_size=buf_size):
-                if not chunk:
-                    break
-                if proc.stdin:
-                    proc.stdin.write(chunk)
-                    await proc.stdin.drain()
-            resp.close()
-        except Exception as e:
-            log.warning(f"vod-remux download error: {e}")
-        finally:
-            if proc.stdin:
-                try:
-                    proc.stdin.close()
-                except:
-                    pass
-
-    async def log_stderr():
-        while proc.stderr:
-            line = await proc.stderr.readline()
-            if not line:
-                break
-            log.warning(f"vod-remux: {line.decode().rstrip()}")
-
-    download_task = asyncio.create_task(download_to_stdin())
-    stderr_task = asyncio.create_task(log_stderr())
-
-    try:
-        while proc.stdout:
-            chunk = await proc.stdout.read(65536)
-            if not chunk:
-                break
-            yield chunk
-    except GeneratorExit:
-        pass
-    finally:
-        download_task.cancel()
-        stderr_task.cancel()
-        for t in (download_task, stderr_task):
-            try:
-                await t
-            except (asyncio.CancelledError, Exception):
-                pass
-        if proc.returncode is None:
-            proc.kill()
-            try:
-                await proc.wait()
-            except:
-                pass
+    feed = partial(_curl_feed_stdin, url=url, range_header=range_header,
+                   buf_size=262144, log_prefix="vod-remux")
+    async for chunk in _ffmpeg_pipe(cmd, feed):
+        yield chunk
 
 
 async def stream_vod_transcode(url: str):
     """Transcode VOD (MKV with HEVC) → H.264+AAC in MPEG-TS container.
     Used when the browser can't decode H.265 natively.
-
-    Uses curl_cffi to download from CDN, pipes to ffmpeg stdin for transcoding.
     """
-    log.info(f"VOD transcode {IPTV_BASE}...")
+    from functools import partial
     cmd = [
         "/usr/bin/ffmpeg",
         "-loglevel", "warning",
@@ -524,72 +500,9 @@ async def stream_vod_transcode(url: str):
         "-f", "mpegts",
         "pipe:1",
     ]
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-
-    import curl_cffi.requests as CurlReq
-    headers = {"User-Agent": UA_STR, "Referer": f"{IPTV_BASE}/"}
-
-    async def download_to_stdin():
-        try:
-            loop = asyncio.get_event_loop()
-            resp = await loop.run_in_executor(
-                None, lambda: CurlReq.get(
-                    url, headers=headers, stream=True, timeout=120,
-                    impersonate="chrome120",
-                )
-            )
-            for chunk in resp.iter_content(chunk_size=1048576):
-                if not chunk:
-                    break
-                if proc.stdin:
-                    proc.stdin.write(chunk)
-                    await proc.stdin.drain()
-            resp.close()
-        except Exception as e:
-            log.warning(f"vod-transcode download error: {e}")
-        finally:
-            if proc.stdin:
-                try:
-                    proc.stdin.close()
-                except:
-                    pass
-
-    async def log_stderr():
-        while proc.stderr:
-            line = await proc.stderr.readline()
-            if not line:
-                break
-            log.warning(f"vod-transcode: {line.decode().rstrip()}")
-
-    download_task = asyncio.create_task(download_to_stdin())
-    stderr_task = asyncio.create_task(log_stderr())
-    try:
-        while proc.stdout:
-            chunk = await proc.stdout.read(65536)
-            if not chunk:
-                break
-            yield chunk
-    except GeneratorExit:
-        pass
-    finally:
-        download_task.cancel()
-        stderr_task.cancel()
-        for t in (download_task, stderr_task):
-            try:
-                await t
-            except (asyncio.CancelledError, Exception):
-                pass
-        if proc.returncode is None:
-            proc.kill()
-            try:
-                await proc.wait()
-            except:
-                pass
+    feed = partial(_curl_feed_stdin, url=url, log_prefix="vod-transcode")
+    async for chunk in _ffmpeg_pipe(cmd, feed):
+        yield chunk
 
 
 # ── VOD stream routes ───────────────────────────────────────────────────────
