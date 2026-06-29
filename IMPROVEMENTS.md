@@ -20,9 +20,12 @@ No tests exercise real API calls or full user flows (search→select→play).
 Following the P1.1 monolith decomposition, some higher-level routes still lack
 direct test coverage (especially streaming/transcode endpoints that spawn
 subprocesses). Focus on pure-logic / mockable paths.
+- ✅ search.py: 79%→84% — added 8 tests: special chars, unicode, section filter,
+  series plot match, VOD fallback path, exception handling, enrichment edge cases
+- ✅ guide.py: 67%→70% — added 7 tests: single-channel filter, no-match filter,
+  empty EPG, now/partial IDs, now empty, now no-data, enrich not-found
 - [ ] stream.py: cover DASH MPD endpoints, convert endpoints, MP4 serve
-- [ ] search.py: cover search result sorting, pagination
-- [ ] guide.py: cover group by channel, programme overlap logic
+  (28% coverage, 486 uncovered — hardest: ffmpeg subprocess mocking)
 
 ### P4.1 — Add tests for complex untested components
 - ✅ MediaOverlay.test.tsx — 25 tests (render layout, plot toggle, loading/error states, slots, edge cases)
