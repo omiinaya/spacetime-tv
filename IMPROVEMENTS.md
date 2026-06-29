@@ -48,9 +48,9 @@ fails intermittently due to debounce/fake-timer interaction. Stabilize it.
 - [ ] Investigate fake timer + debounce timing
 - [ ] Fix to use vi.advanceTimersByTime or vi.runAllTimers
 
-### P5.2 — Remove unused server/test_server.py
-Present in coverage report at 0% — appears to be test utility scaffolding
-not wired into any test run. Either use it or delete it.
+### P5.2 — ~~Remove unused server/test_server.py~~
+- ✅ **Deleted** — file had 0% coverage with no imports, no test integration
+- Next: enable the test-discovery lint rule to catch orphan files early
 
 ### P5.3 — Audit `react-compiler` / lint rules
 Consider adding the React Compiler eslint plugin
