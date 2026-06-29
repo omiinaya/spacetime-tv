@@ -11,17 +11,21 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-### P3.4 — Upgrade FastAPI from 0.111.0 → 0.138.x
-Current: 0.111.0. Latest: 0.138.1. Check changelog for breaking changes
-(especially OpenAPI schema generation, dependency injection). Run full
-test suite before and after.
-
 ### P3.5 — Upgrade curl_cffi from 0.15.0
 Check latest version for any IPTV provider compatibility improvements.
+*(Note: curl_cffi 0.15.0 is already the latest as of June 2026)*
 
 ---
 
 ## Recently Completed
+
+### P3.4 — Upgrade FastAPI from 0.111.0 → 0.138.2
+Upgraded across 27 minor/patch versions. Fixed 2 SSE tests that inspected
+`app.routes` metadata — Starlette 1.3.1 changed how included routers are
+stored (now `_IncludedRouter` instead of flat `Route` objects). Replaced
+with HEAD-request route verification. One pre-existing test isolation flake
+in `test_misc.py` (passes in isolation but fails in suite order). 390/391
+tests pass, 2 xfailed (same as before upgrade).
 
 ### P3.3 — Stream health dashboard
 New admin section showing codec distribution, resolution distribution, stream
