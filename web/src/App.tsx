@@ -20,6 +20,7 @@ import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 import OfflineBanner from "@/components/OfflineBanner";
 import WatchlistPopover from "@/components/WatchlistPopover";
+import { BackToTop } from "@/components/BackToTop";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 // Lazy-loaded pages for code splitting
@@ -331,6 +332,7 @@ function AppLayout() {
       <OfflineBanner />
       <KeyboardShortcuts />
       <Toaster richColors theme="dark" position="bottom-right" />
+      <BackToTop />
     </div>
   );
 }

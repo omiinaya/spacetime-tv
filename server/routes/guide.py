@@ -263,6 +263,7 @@ async def tv_guide(
 
     if channel:
         channel_groups = [g for g in channel_groups if g["channel_id"] == channel]
+        total = len(channel_groups)
 
     # Recompute is_live labels for the paginated slice (time-sensitive)
     now_dt = datetime.now(timezone.utc)
