@@ -33,11 +33,14 @@ subprocesses). Focus on pure-logic / mockable paths.
 - ✅ Player.tsx — already had 221 lines of tests (included in totals above)
 
 ### P4.2 — Add tests for smaller untested components
-- [ ] ErrorBoundary.tsx (error caught / not caught, retry, stack display)
-- [ ] ErrorReporter.tsx (error reporting POST)
-- [ ] SearchHistory.tsx (dropdown, click away, keyboard nav)
-- [ ] SimilarMovies.tsx, SimilarSeries.tsx, TmdbSimilarMovies.tsx, TmdbSimilarShows.tsx
-- [ ] KeyboardShortcuts.tsx
+- ✅ ErrorReporter.test.tsx — 9 tests (error/rejection events, POST beacon, cleanup, edge cases)
+- ✅ KeyboardShortcuts.test.tsx — 12 tests (toggle, categories, labels, Escape/click close, cleanup)
+- ✅ SearchHistory.test.tsx — 9 tests (show/hide, select, clear, outside click, history refresh)
+- ✅ SimilarMovies.test.tsx — 9 tests (fetch, filter current, posters, limit, API call)
+- ✅ SimilarSeries.test.tsx — 10 tests (fetch, filter current, covers, navigation, limit)
+- ✅ TmdbSimilarMovies.test.tsx — 9 tests (loading skeleton, poster, navigation, null/empty/error)
+- ✅ TmdbSimilarShows.test.tsx — 8 tests (loading skeleton, poster, navigation, null/empty/error)
+- ✅ ErrorBoundary.tsx — already had 186 lines of tests
 
 ### P5.1 — Fix pre-existing ChannelRow test flakiness
 `ChannelRow.test.tsx:283` — "shows enrichment result after debounce resolves"
