@@ -313,7 +313,8 @@ export default function LiveTV() {
             ))}
           </div>
         ) : (
-          <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin" style={{ touchAction: "manipulation" }}>
+          <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin relative"
+               style={{ touchAction: "manipulation", WebkitMaskImage: "linear-gradient(to right, black calc(100% - 48px), transparent 100%)", maskImage: "linear-gradient(to right, black calc(100% - 48px), transparent 100%)" }}>
             {/* "All" tab — shows all channels across every category */}
             <button
               onClick={() => setActiveCat(ALL_CAT)}

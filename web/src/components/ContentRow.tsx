@@ -142,7 +142,7 @@ export default function ContentRow({
       {/* Scrollable row */}
       <div
         ref={rowRef}
-        className="flex gap-2 overflow-x-auto scrollbar-none scroll-smooth pb-1"
+        className="flex gap-2 overflow-x-auto scrollbar-none scroll-smooth pb-1 pr-4 md:pr-0"
         style={{ touchAction: "manipulation" }}
       >
         {children}

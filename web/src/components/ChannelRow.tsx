@@ -44,7 +44,7 @@ export function ChannelRow({
       }`}
     >
       {/* Channel info */}
-      <div className="flex items-center gap-1 shrink-0 w-[184px] pr-1">
+      <div className="flex items-center gap-1 shrink-0 w-[130px] md:w-[184px] pr-1">
         <button
           onClick={onPlay}
           disabled={!hasStream}
@@ -95,7 +95,8 @@ export function ChannelRow({
       </div>
 
       {/* Programme cards */}
-      <div ref={scrollRef} className="flex-1 flex gap-2 overflow-x-auto scrollbar-none min-w-0" style={{ touchAction: "manipulation" }}>
+      <div ref={scrollRef} className="flex-1 flex gap-2 overflow-x-auto scrollbar-none min-w-0 relative"
+           style={{ touchAction: "manipulation", WebkitMaskImage: "linear-gradient(to right, black calc(100% - 32px), transparent 100%)", maskImage: "linear-gradient(to right, black calc(100% - 32px), transparent 100%)" }}>
         {sorted.length === 0 ? (
           <div className="flex items-center h-[52px] text-[11px] text-muted-foreground/40">
             <Clock className="h-3 w-3 mr-1" />

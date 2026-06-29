@@ -236,7 +236,7 @@ export default function Movies() {
         return (
           <div>
             <h2 className="text-sm font-semibold text-muted-foreground mb-3">Continue Watching</h2>
-            <div className="flex gap-3 overflow-x-auto pb-2" style={{ touchAction: "manipulation" }}>
+            <div className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-0" style={{ touchAction: "manipulation" }}>
               {inProgress.slice(0, 10).map((cw) => {
                 const movie = movies.find(m => m.stream_id === cw.movieId);
                 if (!movie) return null;
@@ -287,7 +287,7 @@ export default function Movies() {
               <span className="text-green-400">✓</span>
               Recently Completed
             </h2>
-            <div className="flex gap-3 overflow-x-auto pb-2" style={{ touchAction: "manipulation" }}>
+            <div className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-0" style={{ touchAction: "manipulation" }}>
               {completed.slice(0, 8).map((cw) => {
                 const movie = movies.find(m => m.stream_id === cw.movieId);
                 if (!movie) return null;
@@ -334,7 +334,7 @@ export default function Movies() {
       {!loading && movies.length > 0 && (
         <div>
           <h2 className="text-sm font-semibold text-muted-foreground mb-3">Recently Added</h2>
-          <div className="flex gap-3 overflow-x-auto pb-2" style={{ touchAction: "manipulation" }}>
+          <div className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-0" style={{ touchAction: "manipulation" }}>
             {[...movies]
               .filter((m): m is typeof m & { added: string } => !!m.added)
               .sort((a, b) => parseInt(b.added) - parseInt(a.added))

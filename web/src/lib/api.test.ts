@@ -88,10 +88,10 @@ describe("tmdbSrcset", () => {
 });
 
 describe("tmdbImgProps", () => {
-  it("returns src, srcset, sizes, and loading=lazy", () => {
+  it("returns src, srcSet, sizes, and loading=lazy", () => {
     const props = tmdbImgProps("/poster.jpg");
     expect(props.src).toBe("https://image.tmdb.org/t/p/w342/poster.jpg");
-    expect(props.srcset).toContain("w92");
+    expect(props.srcSet).toContain("w92");
     expect(props.sizes).toBeTruthy();
     expect(props.loading).toBe("lazy");
   });

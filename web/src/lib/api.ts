@@ -50,13 +50,13 @@ export function tmdbSrcset(path: string): string {
 }
 
 /**
- * Get src + srcset + sizes props for a responsive TMDB image.
+ * Get src + srcSet + sizes props for a responsive TMDB image.
  * Spread directly onto an `<img>` element.
  */
 export function tmdbImgProps(path: string, defaultSize: string = "w342", sizes: string = "(max-width: 640px) 185px, (max-width: 1024px) 342px, 500px") {
   const src = tmdbImageUrl(path, defaultSize);
-  const srcset = tmdbSrcset(path);
-  return { src, srcset, sizes, loading: "lazy" as const };
+  const srcSet = tmdbSrcset(path);
+  return { src, srcSet, sizes, loading: "lazy" as const };
 }
 
 const FETCH_TIMEOUT = 15000; // 15s

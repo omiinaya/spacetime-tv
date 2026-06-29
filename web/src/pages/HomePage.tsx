@@ -31,7 +31,7 @@ export default function HomePage() {
   const hasTrending = trendingMovies.length > 0 || trendingSeries.length > 0;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6 md:space-y-10">
       {/* ── Hero section ─────────────────────────────────────── */}
       <div className="flex flex-col gap-2">
         <h1 className="text-xl font-semibold">Welcome</h1>
@@ -51,10 +51,10 @@ export default function HomePage() {
           <button
             key={item.path}
             onClick={() => navigate(item.path)}
-            className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/30 transition-all hover:translate-y-[-1px]"
+            className="flex items-center gap-3 p-4 md:p-3 rounded-xl bg-card border border-border hover:border-primary/30 transition-all hover:translate-y-[-1px] min-h-[56px] md:min-h-0"
           >
-            <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center shrink-0`}>
-              <item.icon className="h-4 w-4 text-white" />
+            <div className={`w-10 h-10 md:w-9 md:h-9 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center shrink-0`}>
+              <item.icon className="h-5 w-5 md:h-4 md:w-4 text-white" />
             </div>
             <span className="text-sm font-medium">{item.label}</span>
           </button>
@@ -180,16 +180,16 @@ export default function HomePage() {
           <p className="text-xs text-muted-foreground/50 mt-1">
             Start watching from Live TV, Movies, or Series
           </p>
-          <div className="flex gap-3 mt-6">
+          <div className="flex flex-col sm:flex-row gap-3 mt-6 w-full sm:w-auto px-4 sm:px-0">
             <button
               onClick={() => navigate("/live")}
-              className="px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
+              className="w-full sm:w-auto px-5 py-3 sm:px-4 sm:py-2 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors text-center"
             >
               Browse Live TV
             </button>
             <button
               onClick={() => navigate("/movies")}
-              className="px-4 py-2 rounded-lg bg-card border border-border text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="w-full sm:w-auto px-5 py-3 sm:px-4 sm:py-2 rounded-lg bg-card border border-border text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
             >
               Browse Movies
             </button>

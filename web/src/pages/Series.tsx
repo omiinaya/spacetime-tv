@@ -792,7 +792,7 @@ function ContinueWatchingRow({ navigate }: { navigate: (path: string) => void })
   return (
     <div className="space-y-3">
       <h2 className="text-lg font-semibold px-1">Continue Watching</h2>
-      <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1" style={{ touchAction: "manipulation" }}>
+      <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1 pr-4 md:pr-0" style={{ touchAction: "manipulation" }}>
         {enriched.map((item) => (
           <div
             key={`${item.seriesId}-${item.seasonNumber}-${item.episodeNum}`}
@@ -897,7 +897,7 @@ function RecentlyCompletedRow({ navigate }: { navigate: (path: string) => void }
         <Check className="h-4 w-4 text-green-400" />
         Recently Completed
       </h2>
-      <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1" style={{ touchAction: "manipulation" }}>
+      <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1 pr-4 md:pr-0" style={{ touchAction: "manipulation" }}>
         {enriched.map((item) => (
           <div
             key={`done-${item.seriesId}-${item.seasonNumber}-${item.episodeNum}`}
