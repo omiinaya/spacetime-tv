@@ -11,14 +11,25 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-### P4.2 — Fix pre-existing flaky test in test_misc.py
-`test_image_proxy_with_localhost_referer_allows_access` passes in
-isolation (187/187) but fails in suite order (1/391). Investigate
-test isolation issue — likely shared state leak from earlier test.
+(none — all caught up!)
 
 ---
 
 ## Recently Completed
+
+### P4.2 — Fix pre-existing flaky test in test_misc.py
+`test_image_proxy_with_localhost_referer_allows_access` returned 429
+in suite order because the `_rate_limits` global in main.py accumulated
+across all tests without being reset. The `clear_cache` fixture now
+clears `_rate_limits` and `_search_queries` before each test — fixing
+both the misc flake and an unrelated search-query leak in admin stats.
+393 tests pass, 0 failed.
+
+### Cache key centralisation — prevent key drift
+The warmer and endpoint used different strings for the series categories
+cache key ('series_categories' vs 'series_cats'). All cache keys are now
+centralised constants in state.py with a startup coherence check and
+integration tests.
 
 ### P2.1 — Upgrade npm dependencies to latest
 Upgraded @tailwindcss/vite 4.3.1→4.3.2, lucide-react 1.21.0→1.22.0,

@@ -59,6 +59,13 @@ def clear_cache():
     epg_cache["fetched"] = 0
     # Clear progress store
     _progress_store.clear()
+    # Clear rate limiter state — otherwise test ordering can cause 429s
+    # on image-proxy tests that run later in the suite
+    from main import _rate_limits
+    _rate_limits.clear()
+    # Clear search query log so admin stats test doesn't leak
+    from state import _search_queries
+    _search_queries.clear()
     yield
 
 
