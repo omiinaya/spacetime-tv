@@ -126,6 +126,11 @@ async def fetch_iptv(action: str, **params) -> dict | list:
 
 # ── Cache helpers ───────────────────────────────────────────────────────────
 from state import _cache, _cache_hits, _cache_misses, CACHE_TTL
+from state import (
+    CACHE_LIVE_ALL, CACHE_VOD_CATEGORIES, CACHE_SERIES_CATEGORIES,
+    CACHE_VOD_CAT, CACHE_SERIES_CAT,
+    CACHE_KEY_PATTERNS,
+)
 
 async def cached_fetch(key: str, action: str, **params) -> list | dict:
     global _cache_hits, _cache_misses
@@ -182,13 +187,13 @@ async def warm_cache():
     try:
         # Warm live_all early — without this the first user triggers a provider fetch
         # that blocks the channel list for 10+ seconds
-        live_all = await cached_fetch("live_all", "get_live_streams")
+        live_all = await cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
         log.info(f"[WARMER] Live: {len(live_all)} streams cached")
     except Exception as e:
         log.warning(f"[WARMER] Live warm failed (non-fatal): {e}")
 
     try:
-        vod_cats = await cached_fetch("vod_categories", "get_vod_categories")
+        vod_cats = await cached_fetch(CACHE_VOD_CATEGORIES, "get_vod_categories")
         if not vod_cats:
             log.warning("[WARMER] VOD categories empty — upstream may be degraded, will retry next cycle")
         vod_cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
@@ -197,14 +202,14 @@ async def warm_cache():
         sem = asyncio.Semaphore(CACHE_WARM_CONCURRENCY)
         async def fetch_vod_cat(cid):
             async with sem:
-                return await cached_fetch(f"vod_{cid}", "get_vod_streams", category_id=cid)
+                return await cached_fetch(CACHE_VOD_CAT.format(id=cid), "get_vod_streams", category_id=cid)
         await asyncio.gather(*[fetch_vod_cat(cid) for cid in vod_cat_ids], return_exceptions=True)
         log.info(f"[WARMER] VOD: {len(vod_cat_ids)} categories cached")
     except Exception as e:
         log.warning(f"[WARMER] VOD warm failed (non-fatal): {e}")
 
     try:
-        series_cats = await cached_fetch("series_categories", "get_series_categories")
+        series_cats = await cached_fetch(CACHE_SERIES_CATEGORIES, "get_series_categories")
         if not series_cats:
             log.warning("[WARMER] Series categories empty — upstream may be degraded, will retry next cycle")
         series_cat_ids = [c["category_id"] for c in series_cats if c.get("category_id")]
@@ -213,7 +218,7 @@ async def warm_cache():
         sem = asyncio.Semaphore(CACHE_WARM_CONCURRENCY)
         async def fetch_series_cat(cid):
             async with sem:
-                return await cached_fetch(f"series_{cid}", "get_series", category_id=cid)
+                return await cached_fetch(CACHE_SERIES_CAT.format(id=cid), "get_series", category_id=cid)
         await asyncio.gather(*[fetch_series_cat(cid) for cid in series_cat_ids], return_exceptions=True)
         log.info(f"[WARMER] Series: {len(series_cat_ids)} categories cached")
     except Exception as e:
@@ -231,6 +236,34 @@ async def warm_cache():
 
     elapsed = time.time() - start
     log.info(f"[WARMER] Done in {elapsed:.1f}s — all searches now instant")
+    await _verify_cache_coherence()
+
+
+async def _verify_cache_coherence():
+    """After warming, verify that every static cache key has an entry in _cache.
+
+    This catches producer/consumer key drift: if the warmer cached under one
+    key but an endpoint reads a different key, the endpoint gets an empty/miss.
+    Template keys (containing {id} placeholder) are checked for any matching
+    prefix entries rather than an exact match.
+    """
+    from state import CACHE_KEY_PATTERNS
+    warnings_issued = 0
+    for name, pattern in CACHE_KEY_PATTERNS.items():
+        if "{id}" in pattern:
+            prefix = pattern.split("{")[0]  # e.g. "vod_" from "vod_{id}"
+            matching = sum(1 for k in _cache if k.startswith(prefix))
+            if matching == 0:
+                log.warning(f"[CACHE-COHERENCE] No entries for template key '{pattern}' (prefix '{prefix}')")
+                warnings_issued += 1
+        else:
+            if pattern not in _cache:
+                log.warning(f"[CACHE-COHERENCE] Missing cache key '{pattern}' (alias '{name}') — endpoint may serve stale/empty data")
+                warnings_issued += 1
+    if warnings_issued:
+        log.warning(f"[CACHE-COHERENCE] {warnings_issued} coherence warnings — check for key drift")
+    else:
+        log.info(f"[CACHE-COHERENCE] All {len(CACHE_KEY_PATTERNS)} cache keys verified OK")
 
 _warm_task: Optional[asyncio.Task] = None
 

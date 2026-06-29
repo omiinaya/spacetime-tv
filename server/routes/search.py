@@ -12,7 +12,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 
 from config import TMDB_API_KEY
-from state import _cache, record_search
+from state import _cache, record_search, CACHE_LIVE_ALL, CACHE_VOD_CATEGORIES, CACHE_VOD_CAT, CACHE_SERIES_CATEGORIES, CACHE_SERIES_CAT
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["search"])
@@ -156,7 +156,7 @@ async def search(
     # Always collect *all* matching items for totals, even if we only
     # return a single section.
     try:
-        live_data = await _main.cached_fetch("live_all", "get_live_streams")
+        live_data = await _main.cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
         all_live = [s for s in live_data if query in s.get("name", "").lower()]
     except Exception as e:
         log.error(f"Live search error: {e}")
@@ -188,12 +188,12 @@ async def search(
     if not all_movies:
         async def get_all_vod():
             try:
-                vod_cats = await _main.cached_fetch("vod_categories", "get_vod_categories")
+                vod_cats = await _main.cached_fetch(CACHE_VOD_CATEGORIES, "get_vod_categories")
                 cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
                 sem = asyncio.Semaphore(20)
                 async def f(cid):
                     async with sem:
-                        return await _main.cached_fetch(f"vod_{cid}", "get_vod_streams", category_id=cid)
+                        return await _main.cached_fetch(CACHE_VOD_CAT.format(id=cid), "get_vod_streams", category_id=cid)
                 all_streams = await asyncio.gather(*[f(cid) for cid in cat_ids], return_exceptions=True)
                 seen = set()
                 out = []
@@ -215,12 +215,12 @@ async def search(
     if not all_series:
         async def get_all_series():
             try:
-                cats = await _main.cached_fetch("series_categories", "get_series_categories")
+                cats = await _main.cached_fetch(CACHE_SERIES_CATEGORIES, "get_series_categories")
                 cat_ids = [c["category_id"] for c in cats if c.get("category_id")]
                 sem = asyncio.Semaphore(20)
                 async def f(cid):
                     async with sem:
-                        return await _main.cached_fetch(f"series_{cid}", "get_series", category_id=cid)
+                        return await _main.cached_fetch(CACHE_SERIES_CAT.format(id=cid), "get_series", category_id=cid)
                 all_series_data = await asyncio.gather(*[f(cid) for cid in cat_ids], return_exceptions=True)
                 seen = set()
                 out = []

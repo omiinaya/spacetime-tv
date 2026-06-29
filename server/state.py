@@ -9,6 +9,39 @@ import time
 from pathlib import Path
 from typing import Optional
 
+# ── Cache Keys (single source of truth) ───────────────────────────────────
+# Every cache key prefix/constant used across the codebase is defined here.
+# Both the warmer (main.py) and route modules import from here to prevent
+# string drift between producers and consumers.
+#
+# Convention:
+#   CACHE_<description> = "literal_key"
+#   CACHE_VOD_CAT = "vod_{id}"  — f-string templates use {id} placeholder
+#
+# When adding a new cache key, add it here and update both warmer + route.
+
+CACHE_LIVE_ALL = "live_all"
+CACHE_LIVE_CATS = "live_cats"
+CACHE_VOD_CATEGORIES = "vod_categories"
+CACHE_VOD_CAT = "vod_{id}"          # f"vod_{category_id}"
+CACHE_VOD_INFO = "vod_info_{id}"    # f"vod_info_{stream_id}"
+CACHE_SERIES_CATEGORIES = "series_categories"
+CACHE_SERIES_CAT = "series_{id}"    # f"series_{category_id}"
+CACHE_SERIES_INFO = "series_info_{id}"  # f"series_info_{series_id}"
+CACHE_TMDB_ENRICH = "tmdb_enrich_{type}_{id}"  # f"tmdb_enrich_{item_type}_{tmdb_id}"
+
+# All known cache key patterns (for coherence checks)
+CACHE_KEY_PATTERNS = {
+    "live_all": CACHE_LIVE_ALL,
+    "live_cats": CACHE_LIVE_CATS,
+    "vod_categories": CACHE_VOD_CATEGORIES,
+    "vod_cat": CACHE_VOD_CAT,
+    "vod_info": CACHE_VOD_INFO,
+    "series_categories": CACHE_SERIES_CATEGORIES,
+    "series_cat": CACHE_SERIES_CAT,
+    "series_info": CACHE_SERIES_INFO,
+}
+
 # ── Server start ──────────────────────────────────────────────────────────
 SERVER_START_TIME = time.time()
 

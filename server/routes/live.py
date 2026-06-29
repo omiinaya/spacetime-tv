@@ -6,6 +6,9 @@ import logging
 
 from fastapi import APIRouter, Query
 
+from state import CACHE_LIVE_ALL, CACHE_LIVE_CATS
+# live_{category_id} is fetched on-demand (not pre-warmed), so no constant needed for it
+
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["live"])
 
@@ -14,7 +17,7 @@ router = APIRouter(tags=["live"])
 async def live_categories():
     """All live TV categories."""
     import main as _main
-    data = await _main.cached_fetch("live_cats", "get_live_categories")
+    data = await _main.cached_fetch(CACHE_LIVE_CATS, "get_live_categories")
     return {"categories": data}
 
 

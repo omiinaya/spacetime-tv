@@ -10,7 +10,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import RedirectResponse
 
 from config import IPTV_BASE, IPTV_PASS, IPTV_USER
-from state import _cache
+from state import _cache, CACHE_VOD_CATEGORIES, CACHE_VOD_CAT, CACHE_VOD_INFO, CACHE_SERIES_CATEGORIES, CACHE_SERIES_CAT, CACHE_SERIES_INFO
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["vod"])
@@ -28,7 +28,7 @@ def get_stream_url(stream_id: int, media_type: str = "movie") -> str:
 async def movies_categories():
     """All VOD categories."""
     import main as _main
-    data = await _main.cached_fetch("vod_categories", "get_vod_categories")
+    data = await _main.cached_fetch(CACHE_VOD_CATEGORIES, "get_vod_categories")
     return {"categories": data}
 
 
@@ -40,7 +40,7 @@ async def movies(
 ):
     """Movies in a category, with pagination."""
     import main as _main
-    data = await _main.cached_fetch(f"vod_{category_id}", "get_vod_streams", category_id=category_id)
+    data = await _main.cached_fetch(CACHE_VOD_CAT.format(id=category_id), "get_vod_streams", category_id=category_id)
     if isinstance(data, list):
         total = len(data)
         data = data[offset : offset + limit]
@@ -63,7 +63,7 @@ async def movies_unified(
     groups: dict[str, dict] = {}
 
     for key, (ts, data) in _cache.items():
-        if not key.startswith("vod_") or key in ("vod_categories", "vod_cats"):
+        if not key.startswith("vod_") or key == CACHE_VOD_CATEGORIES:
             continue
         if not isinstance(data, list):
             continue
@@ -114,7 +114,7 @@ async def movies_unified(
 async def movie_details(stream_id: int):
     """Movie details — plot, cast, director, genre, backdrop, etc."""
     import main as _main
-    data = await _main.cached_fetch(f"vod_info_{stream_id}", "get_vod_info", vod_id=stream_id)
+    data = await _main.cached_fetch(CACHE_VOD_INFO.format(id=stream_id), "get_vod_info", vod_id=stream_id)
     if isinstance(data, dict):
         info = data.get("info", data)
         return {"info": info}
@@ -126,7 +126,7 @@ async def movie_details(stream_id: int):
 async def series_categories():
     """All series categories."""
     import main as _main
-    data = await _main.cached_fetch("series_categories", "get_series_categories")
+    data = await _main.cached_fetch(CACHE_SERIES_CATEGORIES, "get_series_categories")
     return {"categories": data}
 
 
@@ -138,7 +138,7 @@ async def series_list(
 ):
     """Series in a category, with pagination."""
     import main as _main
-    data = await _main.cached_fetch(f"series_{category_id}", "get_series", category_id=category_id)
+    data = await _main.cached_fetch(CACHE_SERIES_CAT.format(id=category_id), "get_series", category_id=category_id)
     if isinstance(data, list):
         total = len(data)
         data = data[offset : offset + limit]
@@ -150,7 +150,7 @@ async def series_list(
 async def series_details(series_id: int):
     """Series details with episodes."""
     import main as _main
-    data = await _main.cached_fetch(f"series_info_{series_id}", "get_series_info", series_id=series_id)
+    data = await _main.cached_fetch(CACHE_SERIES_INFO.format(id=series_id), "get_series_info", series_id=series_id)
     if isinstance(data, dict):
         return data
     return {"info": data}

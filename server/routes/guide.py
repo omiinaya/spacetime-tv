@@ -14,7 +14,7 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import StreamingResponse
 
 from config import EPG_CACHE_FILE, EPG_CACHE_TTL, IPTV_BASE, IPTV_PASS, IPTV_USER, UA_STR
-from state import _epg_clients, epg_cache, _epg_refresh_task, _guide_cache
+from state import _epg_clients, epg_cache, _epg_refresh_task, _guide_cache, CACHE_LIVE_ALL
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["guide"])
@@ -174,7 +174,7 @@ async def _build_guide_cache() -> tuple[list[dict], int]:
     # Stream ID mapping (48K live channels → EPG channel IDs)
     ch_to_stream: dict[str, int] = {}
     try:
-        live_all = await _main.cached_fetch("live_all", "get_live_streams")
+        live_all = await _main.cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
         for s in live_all:
             epg_id = s.get("epg_channel_id")
             if epg_id and epg_id not in ch_to_stream:
@@ -344,7 +344,7 @@ async def guide_now(
 
     stream_to_ch: dict[int, str] = {}
     try:
-        live_all = await _main.cached_fetch("live_all", "get_live_streams")
+        live_all = await _main.cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
         for s in live_all:
             sid = s["stream_id"]
             epg_id = s.get("epg_channel_id")
