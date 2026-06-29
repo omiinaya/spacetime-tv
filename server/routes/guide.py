@@ -14,7 +14,7 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import StreamingResponse
 
 from config import EPG_CACHE_FILE, EPG_CACHE_TTL, IPTV_BASE, IPTV_PASS, IPTV_USER, UA_STR
-from state import _epg_clients, epg_cache, _epg_refresh_task
+from state import _epg_clients, epg_cache, _epg_refresh_task, _guide_cache
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["guide"])
@@ -84,6 +84,8 @@ async def load_epg() -> dict:
             if (now - cached.get("fetched", 0)) < EPG_CACHE_TTL:
                 epg_cache["data"] = cached["data"]
                 epg_cache["fetched"] = cached["fetched"]
+                # Invalidate guide cache since EPG was reloaded from disk
+                _guide_cache["channel_groups"] = None
                 return cached["data"]
         except Exception as e:
             log.warning(f"EPG cache file corrupted: {e} — will refetch")
@@ -96,6 +98,8 @@ async def load_epg() -> dict:
         data = parse_xmltv(resp.text)
         epg_cache["data"] = data
         epg_cache["fetched"] = now
+        # Invalidate guide cache so _build_guide_cache recomputes channel groups
+        _guide_cache["channel_groups"] = None
         # Save to disk
         EPG_CACHE_FILE.write_text(json.dumps({"data": data, "fetched": now}))
         log.info(f"EPG parsed: {len(data.get('programmes', []))} programmes")
@@ -151,16 +155,12 @@ async def _epg_broadcast_loop():
 
 
 # ── Route: TV Guide ──────────────────────────────────────────────────
-@router.get("/api/guide")
-async def tv_guide(
-    channel: Optional[str] = None,
-    offset: int = Query(0, ge=0),
-    limit: int = Query(60, ge=1, le=200),
-):
-    """EPG guide — paginated by channel, with stream_id mapping for click-to-play.
+async def _build_guide_cache() -> tuple[list[dict], int]:
+    """Build and cache the full channel_groups list from EPG data.
 
-    Returns: { channel_groups: [...], total_channels: N }
-    Each group: { channel_id, channel_name, channel_icon, stream_id, programmes: [...] }
+    Returns (channel_groups, total_channels). The result is cached in
+    _guide_cache so paginated requests don't re-parse every programme.
+    Invalidated automatically when EPG data is refreshed.
     """
     import main as _main  # noqa: E402
 
@@ -168,12 +168,10 @@ async def tv_guide(
     programmes = epg.get("programmes", [])
     channels = epg.get("channels", [])
 
-    if channel:
-        programmes = [p for p in programmes if p["channel"] == channel]
-
     ch_map = {c["id"]: c["name"] for c in channels}
     ch_icon_map = {c["id"]: c.get("icon", "") for c in channels}
 
+    # Stream ID mapping (48K live channels → EPG channel IDs)
     ch_to_stream: dict[str, int] = {}
     try:
         live_all = await _main.cached_fetch("live_all", "get_live_streams")
@@ -213,8 +211,7 @@ async def tv_guide(
                 "category": p.get("category", ""),
                 "is_live": start <= now <= stop,
             })
-        except (ValueError, IndexError) as e:
-            log.debug(f"Bad EPG timestamp in programme: {e}")
+        except (ValueError, IndexError):
             continue
 
     channel_groups = []
@@ -230,7 +227,56 @@ async def tv_guide(
 
     channel_groups.sort(key=lambda g: g["channel_name"].lower())
     total = len(channel_groups)
+
+    _guide_cache["channel_groups"] = channel_groups
+    _guide_cache["total_channels"] = total
+    _guide_cache["built_at"] = time.time()
+
+    log.info(f"Guide cache built: {total} channels, {sum(len(g['programmes']) for g in channel_groups)} programmes")
+    return channel_groups, total
+
+
+@router.get("/api/guide")
+async def tv_guide(
+    channel: Optional[str] = None,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(60, ge=1, le=200),
+):
+    """EPG guide — paginated by channel, with stream_id mapping for click-to-play.
+
+    Uses _guide_cache to avoid re-parsing all EPG data on every request.
+    Cache is invalidated when EPG data is refreshed.
+    Returns: { channel_groups: [...], total_channels: N }
+    """
+    # Use cached guide if available and EPG hasn't been refreshed since
+    now = time.time()
+    use_cache = (
+        _guide_cache["channel_groups"] is not None
+        and _guide_cache["built_at"] >= epg_cache["fetched"]
+    )
+
+    if use_cache:
+        channel_groups: list[dict] = _guide_cache["channel_groups"]  # type: ignore
+        total = _guide_cache["total_channels"]
+    else:
+        channel_groups, total = await _build_guide_cache()
+
+    if channel:
+        channel_groups = [g for g in channel_groups if g["channel_id"] == channel]
+
+    # Recompute is_live labels for the paginated slice (time-sensitive)
+    now_dt = datetime.now(timezone.utc)
     page = channel_groups[offset:offset + limit]
+    for group in page:
+        for prog in group["programmes"]:
+            try:
+                iso = f"{prog['start'][:4]}-{prog['start'][4:6]}-{prog['start'][6:8]}T{prog['start'][8:10]}:{prog['start'][10:12]}:{prog['start'][12:14]}{prog['start'][15:18]}:{prog['start'][18:20]}"
+                start = datetime.fromisoformat(iso)
+                iso = f"{prog['stop'][:4]}-{prog['stop'][4:6]}-{prog['stop'][6:8]}T{prog['stop'][8:10]}:{prog['stop'][10:12]}:{prog['stop'][12:14]}{prog['stop'][15:18]}:{prog['stop'][18:20]}"
+                stop = datetime.fromisoformat(iso)
+                prog["is_live"] = start <= now_dt <= stop
+            except (ValueError, IndexError):
+                pass
 
     return {
         "channel_groups": page,

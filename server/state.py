@@ -22,6 +22,9 @@ CACHE_TTL = 300  # 5 min for API data
 epg_cache: dict = {"data": None, "fetched": 0}
 _epg_refresh_task: Optional[asyncio.Task] = None
 
+# ── Guide Cache (pre-processed channel groups, rebuilt on EPG refresh) ──────
+_guide_cache: dict = {"channel_groups": None, "total_channels": 0, "built_at": 0}
+
 # ── Health & Monitoring ───────────────────────────────────────────────────
 STREAM_HITS_FILE = "/tmp/stv_stream_hits.json"
 _stream_hits: dict[str, int] = {}
