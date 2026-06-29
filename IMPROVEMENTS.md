@@ -4,61 +4,67 @@ Living queue managed by the continuous-improvement cron. The cron reads this fil
 cleans up completed items, researches new improvement opportunities, adds them,
 and works the top pending item each tick.
 
+Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
+**P4** = tech debt / DX.
+
 ---
 
-## Status: COMPLETED — all backlog items cleared
+## Pending Items
 
-Pending items and their current state:
+### P3.1 — Make epg_cache.json TTL configurable via environment variable
+Currently `EPG_CACHE_TTL = 3600` is hardcoded in `config.py`. Add `EPG_CACHE_TTL`
+env var support so ops can tune the cache refresh interval without code changes.
+Follow the `os.getenv("VAR", default=int)` pattern used elsewhere in config.py.
 
-### ~~P2.2 — Missing E2E / integration test layer~~
-- ✅ Set up Playwright in web/e2e/ — 46 E2E tests covering all features (live TV
-  player/playback/probe, movies, series, search, EPG guide, watchlist, navigation/routing).
-- ✅ CI workflow in `.github/workflows/e2e.yml` (self-hosted runner, IPTV credentials).
+### P3.2 — Watchlist UI popover
+Add a dropdown from the nav bar showing recently watched items, similar to
+streaming services. Would need a small backend endpoint returning the last N
+watchlist items with metadata, and a popover component on the frontend.
 
-### ~~P1.2 — Write integration tests for remaining uncovered backend routes~~
-- ✅ search.py: 79%→84%, guide.py: 67%→70%, stream.py: 28%→~65% (55 tests, 2 xfail).
-- ✅ 391 backend tests (22 files), 1073 frontend tests (32 files).
+### P3.3 — Stream health dashboard
+Live channel probe aggregator showing bitrate/codec stats per channel. Could
+be a new admin page that runs ffprobe probes in the background and reports
+results. Uses the existing `admin.py` route module.
 
-### ~~P4.1 — Tests for complex untested components~~
-- ✅ MediaOverlay (25), AudioSelector (12), SubtitleSelector (12), SleepTimer (12),
-  SettingsContext (6), Player (221 existing).
+### P3.4 — Upgrade FastAPI from 0.111.0 → 0.138.x
+Current: 0.111.0. Latest: 0.138.1. Check changelog for breaking changes
+(especially OpenAPI schema generation, dependency injection). Run full
+test suite before and after.
 
-### ~~P4.2 — Tests for smaller untested components~~
-- ✅ ErrorReporter (9), KeyboardShortcuts (12), SearchHistory (9), SimilarMovies (9),
-  SimilarSeries (10), TmdbSimilarMovies (9), TmdbSimilarShows (8), ErrorBoundary (186 existing).
-
-### ~~P5.1 — Fix ChannelRow test flakiness~~
-- ✅ Investigated: "shows enrichment result after debounce resolves" test no longer
-  exists in current codebase. All 25 ChannelRow tests pass 5/5 consistently.
-
-### ~~P5.2 — Remove unused server/test_server.py~~
-- ✅ Deleted — file had 0% coverage with no imports, no test integration.
-
-### ~~P5.3 — Audit react-compiler / lint rules~~
-- ✅ Assessed: TypeScript strict mode on, 0 build errors, 0 `: any` casts.
-  React Compiler deferred — not worth experimental instability on a clean codebase.
+### P3.5 — Upgrade curl_cffi from 0.15.0
+Check latest version for any IPTV provider compatibility improvements.
 
 ---
 
 ## Recently Completed
 
-### Phase 5-6 — stream.py generator refactoring
-Committed `daddb96`. Extracted 3 shared helpers (`_curl_iter_chunks`, `_curl_feed_stdin`,
-`_ffmpeg_pipe`) from 5 duplicated generators. All 5 generators reduced to ~10-line
-wrappers. Net -87 lines (179 ins, 266 del). +6 dedicated helper tests.
+### Guide page performance — server-side cache of pre-processed channel groups
+Commit `4501eb0`. Added `_build_guide_cache()` to `server/routes/guide.py`.
+Before: 4.9s per /api/guide call parsing all EPG programmes + 48K live
+stream fetch on every request. After: cache builds once (1.09s cold),
+subsequent requests served in ~4ms. Guide page E2E load improved from
+1.1m timeout → 11.2s (cold).
+
+### Mobile responsive polish: homepage, carousels, filter tabs, guide layout
+Commit `d39c1e2`. Homepage: reduced vertical spacing, 56px min-height touch
+targets. LiveTV filter tabs: right-edge CSS mask gradient for scrollable
+indicator. ContentRow carousels: pr-4 on mobile to prevent last-card truncation.
+Guide/ChannelRow: 130px channel name column on mobile (vs 184px desktop),
+right-edge fade indicator on programme scroll area.
 
 ### 46 E2E Browser Tests
-Committed `ebf6024`. 6 new files (807 lines) covering navigation (13 tests),
+Commit `ebf6024`. 6 new files (807 lines) covering navigation (13 tests),
 live TV (5), movies (6), series (5), search (6), guide (4), watchlist (7).
 All verified green with real backend + headless chromium.
 
+### Phase 5-6 — stream.py generator refactoring
+Commit `daddb96`. Extracted 3 shared helpers (`_curl_iter_chunks`, `_curl_feed_stdin`,
+`_ffmpeg_pipe`) from 5 duplicated generators. All 5 generators reduced to ~10-line
+wrappers. Net -87 lines (179 ins, 266 del). +6 dedicated helper tests.
+
 ---
 
-## Future Opportunities (not yet prioritized)
+## Completed Items (archived)
 
-- **Guide page performance** — EPG endpoint loads 3,467 channels with full schedule;
-  takes ~15s to render. Could add server-side pagination optimization or UI streaming.
-- **Mobile responsive layout** — verify + polish mobile breakpoints across all pages.
-- **Watchlist UI popover** — add dropdown from the nav bar showing recent items.
-- **Stream health dashboard** — live channel probe aggregator showing bitrate/codec stats.
-- **epg_cache.json TTL** — currently 1 hour, could make configurable.
+Items older than the last 5-10 completed entries are removed from this file.
+Check `git log --oneline` for the full history.

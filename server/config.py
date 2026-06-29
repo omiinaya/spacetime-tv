@@ -15,7 +15,7 @@ IPTV_PASS = os.getenv("IPTV_PASS", "")
 
 # EPG
 EPG_CACHE_FILE = Path(__file__).parent / "epg_cache.json"
-EPG_CACHE_TTL = 3600  # 1 hour
+EPG_CACHE_TTL = int(os.getenv("EPG_CACHE_TTL", "3600"))  # 1 hour default
 
 # Paths
 ROOT = Path(__file__).resolve().parent.parent
