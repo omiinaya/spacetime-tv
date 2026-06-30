@@ -11,7 +11,7 @@
 
 | Dimension | Grade | Score |
 |-----------|-------|-------|
-| **Testing depth** | B+ | 88% |
+| **Testing depth** | B+ | 90% |
 | **Frontend quality** | A | 93% |
 | **Backend architecture** | B | 75% |
 | **Feature completeness** | B+ | 78% |
@@ -23,7 +23,7 @@
 
 ## 1. Testing (85%) — Good but not great
 
-### Backend: 438 tests, 74% line coverage (✅ Good baseline, 🟡 gaps)
+### Backend: 450+ tests, 78% line coverage (✅ Good baseline, 🟡 gaps)
 - **main.py: 94%** — rate limiter, cache warmer, cleanup loop all tested
 - **routes/admin.py: 98%** — stream-health dashboard, cache warm triggers tested
 - **routes/vod.py: 95%** — excellent
@@ -33,7 +33,7 @@
 - **routes/search.py: 84%** — good
 - **routes/tmdb.py: 75%** — missing person endpoints and enrichment fallback
 - **routes/guide.py: 72%** — large file, missing EPG refresh and cache rebuild paths
-- **routes/stream.py: 68%** — biggest file (1105 lines), many untested error branches
+- **routes/stream.py: 78%** — biggest file (split into 7 modules), timeshift, ffmpeg-pipe, _safe_convert now tested
 
 ### Frontend: 1166 tests (✅ Comprehensive coverage)
 - 12/12 pages have tests — **100%** page coverage

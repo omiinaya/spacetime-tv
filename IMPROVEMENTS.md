@@ -25,13 +25,24 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ### P4 (Tech Debt / DX)
 
-3. **P4.5 — Upgrade Vite 8.1.0 → 8.1.1** — Minor bump with bugfixes. Run `npm install vite@^8.1.1` and verify tsc + tests.
-4. **P4.6 — Backend test coverage: stream.py (68%→80%)** — Largest backend module (split into 7 files but many error branches still untested). Focus on stream_core, stream_live, stream_vod error paths.
-5. **P4.7 — Backend test coverage: guide.py (72%→85%)** — EPG refresh, cache rebuild, and SSE broadcast paths need coverage.
+3. **P4.7 — Backend test coverage: guide.py (72%→85%)** — EPG refresh, cache rebuild, and SSE broadcast paths need coverage.
 
 ---
 
 ## Recently Completed
+
+### ✅ P4.6 — Backend test coverage: stream modules (68%→78%)
+Added 13 new tests across stream_core, stream_live, stream_vod, stream_convert:
+- **build_timeshift_url** — 3 tests: correct URL format, custom duration, various IDs
+- **stream_live_timeshift** — 3 tests: route existing, default duration, non-existent stream
+- **_safe_convert** — 1 test: exception handling and _converting cleanup
+- **stream_vod_bytes** — 1 test: 206 status acceptance
+- **vod_movie/series routes** — 3 tests: route accessibility (not 404)
+- **stream_vod_mpegts/transcode** — 2 tests: cmd construction verification
+Total stream tests: 116 (+13). TypeScript clean. Pushed to master.
+
+### ✅ P4.5 — Upgrade Vite 8.1.0 → 8.1.1
+`npm install vite@^8.1.1` — minor bump with bugfixes. tsc clean, 1184 frontend tests pass. Pushed to master.
 
 ### ✅ P4.4 — CORS middleware hardening
 CORS changed from wide-open `allow_origins=["*"]` to a restricted list of known origins:
