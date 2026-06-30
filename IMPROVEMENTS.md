@@ -25,14 +25,21 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ### P4 (Tech Debt / DX)
 
-8. **P4.1 — Backend test coverage: guide.py (72%)** — Missing EPG refresh and cache rebuild test paths.
-9. **P4.2 — Backend test coverage: tmdb.py (75%)** — Missing person endpoints and enrichment fallback tests.
+8. **P4.1 — Backend test coverage: guide_epg.py (60%), guide_routes.py (64%)** — guide.py was split into guide_core.py (100%), guide_epg.py (60%), guide_routes.py (64%). Missing EPG file cache corruption handling, HTTP XMLTV fetch path, background broadcast loop, stream ID mapping failures, guide_enrich CLI error paths, and catchup timeline edge cases.
 10. **P4.3 — Upgrade react-router 8.0.1 → 8.1.0** — Minor bump with bugfixes and perf improvements. Run `npm install react-router@^8.1.0` and verify tsc + tests.
 11. **P4.4 — CORS middleware hardening** — Currently wide open (`*`) per ROADMAP audit. Restrict to known origins (Vite dev, nginx prod domains).
 
 ---
 
 ## Recently Completed
+
+### ✅ P4.2 — Backend test coverage: tmdb.py (75%→100%)
+Added 9 new tests covering:
+- **HTTP fetch path**: stale cache refetch, non-200 error, httpx exception — all with `httpx.AsyncClient` mocked via MagicMock/AsyncMock
+- **Cache edge cases**: fresh cache hit avoids HTTP call, stale entry deletion before refetch
+- **CLI error branches**: non-zero exit, `asyncio.TimeoutError`, generic `Exception` in `tmdb_enrich_cli`
+- **Person endpoint None paths**: both `person/search` and `person/{id}` return `enabled: False` when CLI returns None
+- Total backend tests: 447 (+9), tmdb.py line coverage: 118/118 (100%)
 
 ### ✅ P3.1 — Auto frame-rate switching
 Added `useFrameRateDetector` hook using `requestVideoFrameCallback` API:

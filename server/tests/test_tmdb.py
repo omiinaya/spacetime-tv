@@ -7,6 +7,7 @@ Tests cover:
 - Edge cases (empty results, missing data, pagination)
 """
 
+import asyncio
 import os
 import time
 import pytest
@@ -534,3 +535,179 @@ def test_tmdb_person_details_response_structure(client):
     data = resp.json()
     assert "info" in data
     assert "enabled" in data
+
+
+# ── tmdb_fetch HTTP fetch path (requires httpx mocking) ────────────
+
+
+@pytest.mark.asyncio
+async def test_tmdb_fetch_stale_cache_refetches():
+    """When cache entry exists but is stale, tmdb_fetch re-fetches via HTTP."""
+    from routes.tmdb import tmdb_fetch, _TMDB_CACHE
+    from unittest.mock import MagicMock
+    _TMDB_CACHE.clear()
+
+    # Plant a stale cache entry
+    old_time = time.time() - 3600  # 1 hour ago >> 10-min TTL
+    _TMDB_CACHE["tmdb_movie/550"] = (old_time, {"old": "yes"})
+
+    # Response uses MagicMock (sync .json(), not async)
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"id": 550, "title": "Fight Club"}
+
+    # Client returned by __aenter__
+    mock_client = AsyncMock()
+    mock_client.get.return_value = mock_resp
+
+    with patch.dict(os.environ, {"TMDB_API_KEY": "test_key"}):
+        with patch("httpx.AsyncClient") as mc:
+            mc.return_value.__aenter__.return_value = mock_client
+            result = await tmdb_fetch("movie/550")
+            assert result == {"id": 550, "title": "Fight Club"}
+            # Should have deleted stale cache before refetch
+            assert _TMDB_CACHE["tmdb_movie/550"][1] == {"id": 550, "title": "Fight Club"}
+
+    _TMDB_CACHE.clear()
+
+
+@pytest.mark.asyncio
+async def test_tmdb_fetch_http_error_returns_none():
+    """tmdb_fetch returns None when upstream returns non-200."""
+    from routes.tmdb import tmdb_fetch, _TMDB_CACHE
+    from unittest.mock import MagicMock
+    _TMDB_CACHE.clear()
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 404
+
+    mock_client = AsyncMock()
+    mock_client.get.return_value = mock_resp
+
+    with patch.dict(os.environ, {"TMDB_API_KEY": "test_key"}):
+        with patch("httpx.AsyncClient") as mc:
+            mc.return_value.__aenter__.return_value = mock_client
+            result = await tmdb_fetch("movie/9999")
+            assert result is None
+
+    _TMDB_CACHE.clear()
+
+
+@pytest.mark.asyncio
+async def test_tmdb_fetch_http_exception_returns_none():
+    """tmdb_fetch returns None when httpx raises."""
+    from routes.tmdb import tmdb_fetch, _TMDB_CACHE
+    from unittest.mock import MagicMock
+    _TMDB_CACHE.clear()
+
+    mock_client = AsyncMock()
+    mock_client.get.side_effect = httpx.ConnectError("connection refused")
+
+    with patch.dict(os.environ, {"TMDB_API_KEY": "test_key"}):
+        with patch("httpx.AsyncClient") as mc:
+            mc.return_value.__aenter__.return_value = mock_client
+            result = await tmdb_fetch("movie/550")
+            assert result is None
+
+    _TMDB_CACHE.clear()
+
+
+# ── tmdb_fetch caching edge cases ─────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_tmdb_fetch_fresh_cache_returns_directly():
+    """tmdb_fetch returns from cache without HTTP call when TTL is valid."""
+    from routes.tmdb import tmdb_fetch, _TMDB_CACHE
+    _TMDB_CACHE.clear()
+
+    now = time.time()
+    _TMDB_CACHE["tmdb_movie/550"] = (now, {"id": 550, "title": "Fight Club"})
+
+    # Mock HTTP to ensure it's NOT called
+    with patch.dict(os.environ, {"TMDB_API_KEY": "test_key"}):
+        with patch("httpx.AsyncClient") as mc:
+            result = await tmdb_fetch("movie/550")
+            assert result == {"id": 550, "title": "Fight Club"}
+            mc.assert_not_called()
+
+    _TMDB_CACHE.clear()
+
+
+# ── tmdb_enrich_cli error paths ───────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_tmdb_enrich_cli_nonzero_exit():
+    """tmdb_enrich_cli returns None when CLI exits non-zero."""
+    from routes.tmdb import tmdb_enrich_cli, _TMDB_CACHE
+
+    mock_proc = AsyncMock()
+    mock_proc.returncode = 1
+    mock_proc.communicate.return_value = (b"", b"error message")
+
+    with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+        result = await tmdb_enrich_cli("person", "unknown")
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_tmdb_enrich_cli_timeout():
+    """tmdb_enrich_cli returns None on asyncio.TimeoutError."""
+    from routes.tmdb import tmdb_enrich_cli, _TMDB_CACHE
+
+    mock_proc = AsyncMock()
+    mock_proc.communicate.side_effect = asyncio.TimeoutError()
+
+    with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+        result = await tmdb_enrich_cli("person", "slow")
+        assert result is None
+
+
+@pytest.mark.asyncio
+async def test_tmdb_enrich_cli_generic_exception():
+    """tmdb_enrich_cli returns None on generic Exception."""
+    from routes.tmdb import tmdb_enrich_cli, _TMDB_CACHE
+
+    with patch("asyncio.create_subprocess_exec", side_effect=FileNotFoundError("no CLI")):
+        result = await tmdb_enrich_cli("person", "nobody")
+        assert result is None
+
+
+# ── Person endpoint None-return paths ─────────────────────────────
+
+
+def test_tmdb_person_search_cli_returns_none(client):
+    """Person search returns enabled=False when CLI returns None."""
+    from routes.tmdb import _TMDB_CACHE
+    _TMDB_CACHE.clear()
+
+    async def mock_cli(*args):
+        return None
+
+    with patch("routes.tmdb.tmdb_enrich_cli", mock_cli):
+        resp = client.get("/api/tmdb/person/search?q=tom+hanks")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["enabled"] is False
+        assert data["info"] is None
+
+    _TMDB_CACHE.clear()
+
+
+def test_tmdb_person_details_cli_returns_none(client):
+    """Person details returns enabled=False when CLI returns None."""
+    from routes.tmdb import _TMDB_CACHE
+    _TMDB_CACHE.clear()
+
+    async def mock_cli(*args):
+        return None
+
+    with patch("routes.tmdb.tmdb_enrich_cli", mock_cli):
+        resp = client.get("/api/tmdb/person/123")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["enabled"] is False
+        assert data["info"] is None
+
+    _TMDB_CACHE.clear()

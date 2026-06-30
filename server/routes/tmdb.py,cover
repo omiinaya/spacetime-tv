@@ -22,11 +22,11 @@
   
 > async def tmdb_fetch(path: str) -> dict | None:
 >     """Fetch from TMDB v3 API with caching."""
-!     api_key = os.getenv("TMDB_API_KEY", "")
-!     tmdb_base = "https://api.themoviedb.org/3"
+>     api_key = os.getenv("TMDB_API_KEY", "")
+>     tmdb_base = "https://api.themoviedb.org/3"
   
-!     if not api_key:
-!         return None
+>     if not api_key:
+>         return None
   
 !     cache_key = f"tmdb_{path}"
 !     now = time.time()
@@ -63,15 +63,15 @@
 >     Requires TMDB_API_KEY to be set. Returns empty trending list when unset.
 >     Results are cached for 10 minutes.
 >     """
-!     data = await tmdb_fetch(f"trending/movie/{time_window}?page={page}")
-!     if data is None:
-!         return {"trending": [], "total_pages": 0, "total_results": 0, "enabled": False}
-!     return {
-!         "trending": data.get("results", []),
-!         "total_pages": data.get("total_pages", 0),
-!         "total_results": data.get("total_results", 0),
-!         "enabled": True,
-!     }
+>     data = await tmdb_fetch(f"trending/movie/{time_window}?page={page}")
+>     if data is None:
+>         return {"trending": [], "total_pages": 0, "total_results": 0, "enabled": False}
+>     return {
+>         "trending": data.get("results", []),
+>         "total_pages": data.get("total_pages", 0),
+>         "total_results": data.get("total_results", 0),
+>         "enabled": True,
+>     }
   
   
 > @router.get("/api/tmdb/search")
@@ -84,15 +84,15 @@
 >     Useful as a fallback when the provider catalog lacks results.
 >     Requires TMDB_API_KEY to be set.
 >     """
-!     data = await tmdb_fetch(f"search/movie?query={q}&page={page}")
-!     if data is None:
-!         return {"results": [], "total_pages": 0, "total_results": 0, "enabled": False}
-!     return {
-!         "results": data.get("results", []),
-!         "total_pages": data.get("total_pages", 0),
-!         "total_results": data.get("total_results", 0),
-!         "enabled": True,
-!     }
+>     data = await tmdb_fetch(f"search/movie?query={q}&page={page}")
+>     if data is None:
+>         return {"results": [], "total_pages": 0, "total_results": 0, "enabled": False}
+>     return {
+>         "results": data.get("results", []),
+>         "total_pages": data.get("total_pages", 0),
+>         "total_results": data.get("total_results", 0),
+>         "enabled": True,
+>     }
   
   
 > @router.get("/api/tmdb/movie/{tmdb_id}")
@@ -103,10 +103,10 @@
 >     IMDb ID, budget/revenue, production companies, etc.
 >     Requires TMDB_API_KEY to be set.
 >     """
-!     data = await tmdb_fetch(f"movie/{tmdb_id}")
-!     if data is None:
-!         return {"enabled": False, "info": None}
-!     return {"enabled": True, "info": data}
+>     data = await tmdb_fetch(f"movie/{tmdb_id}")
+>     if data is None:
+>         return {"enabled": False, "info": None}
+>     return {"enabled": True, "info": data}
   
   
 > @router.get("/api/tmdb/movie/{tmdb_id}/similar")
@@ -116,15 +116,15 @@
 >     Used for 'More Like This' recommendations.
 >     Requires TMDB_API_KEY to be set.
 >     """
-!     data = await tmdb_fetch(f"movie/{tmdb_id}/similar?page={page}")
-!     if data is None:
-!         return {"results": [], "total_pages": 0, "total_results": 0, "enabled": False}
-!     return {
-!         "results": data.get("results", []),
-!         "total_pages": data.get("total_pages", 0),
-!         "total_results": data.get("total_results", 0),
-!         "enabled": True,
-!     }
+>     data = await tmdb_fetch(f"movie/{tmdb_id}/similar?page={page}")
+>     if data is None:
+>         return {"results": [], "total_pages": 0, "total_results": 0, "enabled": False}
+>     return {
+>         "results": data.get("results", []),
+>         "total_pages": data.get("total_pages", 0),
+>         "total_results": data.get("total_results", 0),
+>         "enabled": True,
+>     }
   
   
 > @router.get("/api/tmdb/configuration")
@@ -134,10 +134,10 @@
 >     Useful for the frontend to construct correct image URLs.
 >     Requires TMDB_API_KEY to be set.
 >     """
-!     data = await tmdb_fetch("configuration")
-!     if data is None:
-!         return {"enabled": False, "images": None}
-!     return {"enabled": True, "images": data.get("images", {})}
+>     data = await tmdb_fetch("configuration")
+>     if data is None:
+>         return {"enabled": False, "images": None}
+>     return {"enabled": True, "images": data.get("images", {})}
   
   
   # ── TV / Series ──────────────────────────────────────────────────
@@ -153,15 +153,15 @@
 >     Requires TMDB_API_KEY to be set. Returns empty list when unset.
 >     Results are cached for 10 minutes.
 >     """
-!     data = await tmdb_fetch(f"trending/tv/{time_window}?page={page}")
-!     if data is None:
-!         return {"trending": [], "total_pages": 0, "total_results": 0, "enabled": False}
-!     return {
-!         "trending": data.get("results", []),
-!         "total_pages": data.get("total_pages", 0),
-!         "total_results": data.get("total_results", 0),
-!         "enabled": True,
-!     }
+>     data = await tmdb_fetch(f"trending/tv/{time_window}?page={page}")
+>     if data is None:
+>         return {"trending": [], "total_pages": 0, "total_results": 0, "enabled": False}
+>     return {
+>         "trending": data.get("results", []),
+>         "total_pages": data.get("total_pages", 0),
+>         "total_results": data.get("total_results", 0),
+>         "enabled": True,
+>     }
   
   
 > @router.get("/api/tmdb/tv/search")
@@ -174,15 +174,15 @@
 >     Useful when the provider catalog lacks series results.
 >     Requires TMDB_API_KEY to be set.
 >     """
-!     data = await tmdb_fetch(f"search/tv?query={q}&page={page}")
-!     if data is None:
-!         return {"results": [], "total_pages": 0, "total_results": 0, "enabled": False}
-!     return {
-!         "results": data.get("results", []),
-!         "total_pages": data.get("total_pages", 0),
-!         "total_results": data.get("total_results", 0),
-!         "enabled": True,
-!     }
+>     data = await tmdb_fetch(f"search/tv?query={q}&page={page}")
+>     if data is None:
+>         return {"results": [], "total_pages": 0, "total_results": 0, "enabled": False}
+>     return {
+>         "results": data.get("results", []),
+>         "total_pages": data.get("total_pages", 0),
+>         "total_results": data.get("total_results", 0),
+>         "enabled": True,
+>     }
   
   
 > @router.get("/api/tmdb/tv/{series_id}")
@@ -193,10 +193,10 @@
 >     runtime, networks, homepage, etc.
 >     Requires TMDB_API_KEY to be set.
 >     """
-!     data = await tmdb_fetch(f"tv/{series_id}")
-!     if data is None:
-!         return {"enabled": False, "info": None}
-!     return {"enabled": True, "info": data}
+>     data = await tmdb_fetch(f"tv/{series_id}")
+>     if data is None:
+>         return {"enabled": False, "info": None}
+>     return {"enabled": True, "info": data}
   
   
 > @router.get("/api/tmdb/tv/{series_id}/similar")
@@ -206,38 +206,37 @@
 >     Used for 'More Like This' recommendations on series.
 >     Requires TMDB_API_KEY to be set.
 >     """
-!     data = await tmdb_fetch(f"tv/{series_id}/similar?page={page}")
-!     if data is None:
-!         return {"results": [], "total_pages": 0, "total_results": 0, "enabled": False}
-!     return {
-!         "results": data.get("results", []),
-!         "total_pages": data.get("total_pages", 0),
-!         "total_results": data.get("total_results", 0),
-!         "enabled": True,
-!     }
+>     data = await tmdb_fetch(f"tv/{series_id}/similar?page={page}")
+>     if data is None:
+>         return {"results": [], "total_pages": 0, "total_results": 0, "enabled": False}
+>     return {
+>         "results": data.get("results", []),
+>         "total_pages": data.get("total_pages", 0),
+>         "total_results": data.get("total_results", 0),
+>         "enabled": True,
+>     }
   
   
   # ── Person / Cast (CLI-backed, browserless SSR) ─────────────────
   
   # Path to tmdb-enrich CLI tool (browserless SSR extraction)
-  # Used by both TMDB person endpoints and search enrichment in main.py
-> TMDB_ENRICH_PATH = "/home/user/.local/share/hermes-cli-tools-venv/bin/tmdb-enrich"
+> from config import TMDB_ENRICH_PATH
   
   
 > async def tmdb_enrich_cli(*args: str) -> dict | None:
 >     """Call tmdb-enrich CLI and return parsed JSON result."""
-!     try:
-!         proc = await asyncio.create_subprocess_exec(
-!             TMDB_ENRICH_PATH, "--json", *args,
-!             stdout=asyncio.subprocess.PIPE,
-!             stderr=asyncio.subprocess.PIPE,
-!         )
-!         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=20)
-!         if proc.returncode != 0:
+>     try:
+>         proc = await asyncio.create_subprocess_exec(
+>             TMDB_ENRICH_PATH, "--json", *args,
+>             stdout=asyncio.subprocess.PIPE,
+>             stderr=asyncio.subprocess.PIPE,
+>         )
+>         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=20)
+>         if proc.returncode != 0:
 !             log.warning(f"tmdb-enrich failed (exit {proc.returncode}): {stderr.decode()[:200]}")
 !             return None
-!         result = json.loads(stdout.decode())
-!         return result
+>         result = json.loads(stdout.decode())
+>         return result
 !     except asyncio.TimeoutError:
 !         log.warning(f"tmdb-enrich timed out for: {' '.join(args)[:80]}")
 !         return None
@@ -255,10 +254,10 @@
 >     No API key needed — mines TMDB's internal API via browserless SSR.
 >     Returns best match person detail when found.
 >     """
-!     data = await tmdb_enrich_cli("person", q)
-!     if data is None:
+>     data = await tmdb_enrich_cli("person", q)
+>     if data is None:
 !         return {"enabled": False, "info": None}
-!     return {"enabled": True, "info": data}
+>     return {"enabled": True, "info": data}
   
   
 > @router.get("/api/tmdb/person/{person_id}")
@@ -268,7 +267,7 @@
 >     Returns name, photo, birthday, roles, and known_for credits.
 >     No API key needed.
 >     """
-!     data = await tmdb_enrich_cli("person", str(person_id))
-!     if data is None:
+>     data = await tmdb_enrich_cli("person", str(person_id))
+>     if data is None:
 !         return {"enabled": False, "info": None}
-!     return {"enabled": True, "info": data}
+>     return {"enabled": True, "info": data}
