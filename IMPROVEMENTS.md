@@ -11,13 +11,28 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
+### P3 (Nice to Have)
+
+- **P3.1 — Sonner toast coverage for error paths** — Many backend/streaming errors use `console.error` instead of showing a sonner toast notification to the user. Audit all API call sites in the frontend and wrap with toast.error() for better UX.
+
+- **P3.2 — Upgrade Vite 8.1.1 → 8.1.2** — Minor bump available via `npm outdated`.
+
 ### P4 (Tech Debt / DX)
 
-- **P4.1 — Clean up 26 RuntimeWarnings in test suite** — Various async mock coroutines never awaited (`proc.kill()`, `mock_stream_bytes`, etc.). Each is a real (if benign) async leak. Fix by either awaiting in implementation or silencing in tests.
+- **P4.1 — Add API versioning prefix** — All routes are bare `/api/...` with no `/v1/` prefix. Add versioning to allow future breaking changes without disrupting clients. Approach: mount all routes under `/api/v1/`, add redirect from bare `/api/...` to `/api/v1/...`.
 
 ---
 
 ## Recently Completed
+
+### ✅ P4.1 — Eliminate all 13 RuntimeWarnings from test suite
+Root causes and fixes:
+- **test_main.py**: `patch('routes.guide.load_epg', new_callable=AsyncMock)` without return_value left AsyncMock coroutines dangling during warm_cache cleanup. Changed all 10 instances to `return_value={'channels': [], 'programmes': []}`.
+- **test_stream.py**: `mock_stream_bytes` async function with `raise()` left dangling coroutine on generator exit — switched to `side_effect=RuntimeError`.
+- **test_stream.py**: `proc.kill` was an `AsyncMock` but called without `await` in `_ffmpeg_pipe` — changed to `MagicMock()`.
+- **test_media.py**: `proc.kill=AsyncMock()` in `test_stream_audio_success` caused unawaited coroutine — changed to `MagicMock()`.
+- **test_media.py**: `_make_mock_process` used `proc.communicate=AsyncMock` — when `wait_for` side_effect raised `TimeoutError`, the communicate coroutine was never awaited. Changed to `MagicMock()`.
+- **Result**: 0 RuntimeWarnings, 575 tests pass, 3 xfailed, TypeScript clean. Remaining 12 warnings are `CurlCffiWarning` from the `curl_cffi` library.
 
 ### ✅ P3.2 — useCloudBackup hook tests (+17 tests)
 `useCloudBackup` hook (uploadBackup, downloadBackup, mergeFavorites, backupStatus). Added 17 tests covering:
