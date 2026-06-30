@@ -14,6 +14,7 @@ import { CatchupTimeline } from "@/components/CatchupTimeline";
 import { saveRecentChannel } from "@/lib/recentChannels";
 import { api } from "@/lib/api";
 import { useRecording } from "@/hooks/useRecording";
+import { useDocumentPiP } from "@/hooks/useDocumentPiP";
 
 // ── Types ─────────────────────────────────────────────────────
 interface PlayerProps { type: "live" | "movie" | "series"; }
@@ -69,6 +70,9 @@ export default function Player({ type }: PlayerProps) {
 
   // ── Recording ────────────────────────────────────────────────
   const { isRecording, startRecording, stopRecording } = useRecording();
+
+  // ── Document Picture-in-Picture ──────────────────────────────
+  const { isPiPActive, enterPiP, exitPiP } = useDocumentPiP(videoRef, containerRef);
 
   const handleRecordToggle = useCallback(() => {
     if (isRecording) {
@@ -360,14 +364,14 @@ export default function Player({ type }: PlayerProps) {
           <div className="flex items-center gap-1">
             <button
               onClick={() => {
-                const v = videoRef.current;
-                if (v) {
-                  if (document.pictureInPictureElement) document.exitPictureInPicture();
-                  else v.requestPictureInPicture().catch(() => {});
+                if (isPiPActive) {
+                  exitPiP();
+                } else {
+                  enterPiP();
                 }
               }}
-              className="text-white/80 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
-              aria-label="Picture in Picture"
+              className={`text-white/80 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center ${isPiPActive ? "text-white bg-white/10 rounded-lg" : ""}`}
+              aria-label={isPiPActive ? "Exit Picture in Picture" : "Picture in Picture"}
             >
               <PictureInPicture2 className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
             </button>

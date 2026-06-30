@@ -13,7 +13,7 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ### P1 (Ship Blockers)
 
-1. **P1.3 — System Picture-in-Picture** — Player has a PiP button but doesn't use the native Document Picture-in-Picture API. Wire up `documentPictureInPicture` for proper system-level PiP with resize/close events.
+*(none — all P1 items completed)*
 
 ### P2 (UX Polish)
 
@@ -34,6 +34,16 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 ---
 
 ## Recently Completed
+
+### ✅ P1.3 — System Picture-in-Picture
+Added `useDocumentPiP` hook with Document Picture-in-Picture API support (Chrome 116+):
+- Detects `documentPictureInPicture` availability via feature detection
+- Opens a styled floating PiP window with the video element + play/pause controls + close button
+- Falls back seamlessly to `HTMLVideoElement.requestPictureInPicture()` when Document PiP unavailable
+- Returns video to original container when PiP window is closed (pagehide/unload events)
+- Active state styling on button (highlighted when PiP is open)
+- PiP button shows "Exit Picture in Picture" aria-label when active
+- Zero breaking changes — all 1154 frontend tests pass
 
 ### ✅ P1.2 — Backend test coverage: main.py (59%→94%)
 Added 37 new tests across 7 test classes:
