@@ -1092,6 +1092,45 @@ def test_stream_live_quality_route_exists(client_with_cache):
     assert resp.status_code in (200, 502)
 
 
+# ── Live route error handler presence checks ──────────────────────────
+
+
+def test_stream_live_has_error_handler():
+    """stream_live wraps proxying in try/except returning 502 JSON."""
+    from routes.stream_live import stream_live
+    import inspect
+    source = inspect.getsource(stream_live)
+    assert "except" in source
+    assert "JSONResponse(status_code=502" in source
+
+
+def test_stream_live_transcode_has_error_handler():
+    """stream_live_transcode wraps streaming in try/except returning 502 JSON."""
+    from routes.stream_live import stream_live_transcode
+    import inspect
+    source = inspect.getsource(stream_live_transcode)
+    assert "except" in source
+    assert "JSONResponse(status_code=502" in source
+
+
+def test_stream_live_timeshift_has_error_handler():
+    """stream_live_timeshift wraps streaming in try/except returning 502 JSON."""
+    from routes.stream_live import stream_live_timeshift
+    import inspect
+    source = inspect.getsource(stream_live_timeshift)
+    assert "except" in source
+    assert "JSONResponse(status_code=502" in source
+
+
+def test_stream_live_quality_has_error_handler():
+    """stream_live_quality wraps streaming in try/except returning 502 JSON."""
+    from routes.stream_live import stream_live_quality
+    import inspect
+    source = inspect.getsource(stream_live_quality)
+    assert "except" in source
+    assert "JSONResponse(status_code=502" in source
+
+
 # ── Error handler paths for stream_vod ────────────────────────────────
 
 def test_stream_movie_remux_route_exists(client_with_cache):
