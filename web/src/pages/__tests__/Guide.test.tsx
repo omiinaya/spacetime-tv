@@ -360,8 +360,8 @@ describe("Guide", () => {
       fireEvent.change(input, { target: { value: "test" } });
 
       // Click the X button
-      const clearBtn = input.parentElement?.querySelector("button")!;
-      fireEvent.click(clearBtn);
+      const clearBtn = input.parentElement?.querySelector("button");
+      if (clearBtn) fireEvent.click(clearBtn);
 
       // Search should be cleared, channels visible
       expect((input as HTMLInputElement).value).toBe("");

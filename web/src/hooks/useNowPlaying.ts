@@ -36,7 +36,7 @@ export function useNowPlaying(streamIds: number[]) {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [streamIds.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [streamIds.join(",")]);
 
   const getNowPlaying = (streamId: number): string | null => {
     const prog = programmes.get(streamId);

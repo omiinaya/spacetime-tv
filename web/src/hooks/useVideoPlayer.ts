@@ -451,7 +451,6 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance, timesh
       destroyRemux();
       destroyShaka();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamPath, retryKey]);
 
   // ── Retry ──────────────────────────────────────────────────

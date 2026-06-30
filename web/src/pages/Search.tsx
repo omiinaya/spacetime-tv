@@ -177,7 +177,7 @@ export default function SearchPage() {
         });
         setTotals(r.totals ?? null);
       }
-    } catch (e: unknown) {
+    } catch {
       // Silently ignore — non-critical
     } finally {
       setLoadingMore(null);

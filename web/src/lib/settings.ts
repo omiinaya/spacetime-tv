@@ -54,6 +54,7 @@ const SERVICE_PREFIXES = [
 /** Extract the 2-3 letter language/country prefix from a category name.
  *  "US| ENTERTAINMENT" → "US", "EN - DRAMA" → "EN", "4K| UHD" → null */
 export function extractPrefix(name: string): string | null {
+  // eslint-disable-next-line no-useless-escape
   const m = name.match(/^([A-Z]{2,3})\s*[\|\-]\s*/);
   return m ? m[1] : null;
 }

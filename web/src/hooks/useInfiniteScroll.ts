@@ -19,7 +19,6 @@ export function useInfiniteScroll<T>(
   // Reset when the source array identity changes
   useEffect(() => {
     setVisibleCount(batchSize);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
   useEffect(() => {
