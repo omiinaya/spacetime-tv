@@ -244,7 +244,7 @@ def test_lookup_extension_api_fallback_returns_extension(client_with_cache):
         async def get(self, url):
             return mock_resp
 
-    with patch("routes.stream.httpx.AsyncClient") as MockClient:
+    with patch("routes.stream_core.httpx.AsyncClient") as MockClient:
         MockClient.return_value.__aenter__.return_value = _MockCtx()
         result = asyncio.run(_lookup_extension(999, "movie"))
     assert result == "avi"
@@ -260,7 +260,7 @@ def test_lookup_extension_api_fallback_error_returns_mkv(client_with_cache):
         async def get(self, url):
             raise Exception("Network error")
 
-    with patch("routes.stream.httpx.AsyncClient") as MockClient:
+    with patch("routes.stream_core.httpx.AsyncClient") as MockClient:
         MockClient.return_value.__aenter__.return_value = _MockCtxError()
         result = asyncio.run(_lookup_extension(999, "movie"))
     assert result == "mkv"
@@ -280,7 +280,7 @@ def test_lookup_extension_api_series_info_path(client_with_cache):
         async def get(self, url):
             return mock_resp
 
-    with patch("routes.stream.httpx.AsyncClient") as MockClient:
+    with patch("routes.stream_core.httpx.AsyncClient") as MockClient:
         MockClient.return_value.__aenter__.return_value = _MockCtx()
         result = asyncio.run(_lookup_extension(888, "series"))
     assert result == "webm"
@@ -328,7 +328,7 @@ def test_get_content_length_from_content_range():
         async def get(self, url):
             return resp
 
-    with patch("routes.stream.httpx.AsyncClient") as MockClient:
+    with patch("routes.stream_core.httpx.AsyncClient") as MockClient:
         MockClient.return_value.__aenter__.return_value = _MockCtx()
         result = asyncio.run(get_content_length("http://test.url/stream"))
     assert result == 12345678
@@ -346,7 +346,7 @@ def test_get_content_length_from_content_length():
             resp.headers = {"content-length": "54321"}
             return resp
 
-    with patch("routes.stream.httpx.AsyncClient") as MockClient:
+    with patch("routes.stream_core.httpx.AsyncClient") as MockClient:
         MockClient.return_value.__aenter__.return_value = _MockCtx()
         result = asyncio.run(get_content_length("http://test.url/stream"))
     assert result == 54321
@@ -364,7 +364,7 @@ def test_get_content_length_returns_none_on_missing_headers():
             resp.headers = {}
             return resp
 
-    with patch("routes.stream.httpx.AsyncClient") as MockClient:
+    with patch("routes.stream_core.httpx.AsyncClient") as MockClient:
         MockClient.return_value.__aenter__.return_value = _MockCtx()
         result = asyncio.run(get_content_length("http://test.url/stream"))
     assert result is None
@@ -380,7 +380,7 @@ def test_get_content_length_handles_exception():
         async def get(self, url):
             raise Exception("Connection error")
 
-    with patch("routes.stream.httpx.AsyncClient") as MockClient:
+    with patch("routes.stream_core.httpx.AsyncClient") as MockClient:
         MockClient.return_value.__aenter__.return_value = _MockCtxErr()
         result = asyncio.run(get_content_length("http://test.url/stream"))
     assert result is None
@@ -397,7 +397,7 @@ def test_stream_proxy_returns_502_on_error():
     async def mock_stream_bytes(*args, **kwargs):
         raise RuntimeError("CDN error")
 
-    with patch("routes.stream.stream_bytes", mock_stream_bytes):
+    with patch("routes.stream_core.stream_bytes", mock_stream_bytes):
         resp = asyncio.run(stream_proxy("http://test.url/stream", "video/mp4"))
     # StreamingResponse wraps the generator — error surfaces on body iteration
     # So we can't assert status_code==502 from this call alone; the 502 path
@@ -510,7 +510,7 @@ def test_probe_stream_nonzero_exit_no_405():
             return resp
 
     with patch("asyncio.create_subprocess_exec", return_value=proc), \
-         patch("routes.stream.httpx.AsyncClient") as MockClient:
+         patch("routes.stream_core.httpx.AsyncClient") as MockClient:
         MockClient.return_value.__aenter__.return_value = _MockHttpxCtx()
         result = asyncio.run(probe_stream(333, "live"))
     assert result["codec"] == "unknown"
@@ -538,7 +538,7 @@ def test_probe_stream_ffprobe_returns_405_curl_cffi_fallback():
         return fn()
 
     with patch("asyncio.create_subprocess_exec", return_value=proc), \
-         patch("routes.stream.CurlReq.get", mock_get), \
+         patch("routes.stream_core.CurlReq.get", mock_get), \
          patch("asyncio.get_event_loop") as mock_loop:
         mock_loop.return_value.run_in_executor = _mock_run_in_executor
         result = asyncio.run(probe_stream(444, "live"))
@@ -809,7 +809,7 @@ def test_curl_iter_chunks_yields_chunks():
     def _fake_get(*a, **kw):
         return mock_resp
 
-    with patch("routes.stream.CurlReq.get", _fake_get):
+    with patch("routes.stream_core.CurlReq.get", _fake_get):
         chunks = asyncio.run(_gather(_curl_iter_chunks("http://test/stream")))
     assert chunks == [b"chunk1", b"chunk2"]
 
@@ -827,7 +827,7 @@ def test_curl_iter_chunks_raises_on_non_200():
     def _fake_get(*a, **kw):
         return mock_resp
 
-    with patch("routes.stream.CurlReq.get", _fake_get):
+    with patch("routes.stream_core.CurlReq.get", _fake_get):
         with pytest.raises(RuntimeError, match="403"):
             asyncio.run(_gather(_curl_iter_chunks("http://test/stream")))
 
@@ -845,7 +845,7 @@ def test_curl_iter_chunks_accepts_206_with_vod():
     def _fake_get(*a, **kw):
         return mock_resp
 
-    with patch("routes.stream.CurlReq.get", _fake_get):
+    with patch("routes.stream_core.CurlReq.get", _fake_get):
         chunks = asyncio.run(_gather(
             _curl_iter_chunks("http://test/stream", status_ok=(200, 206))))
     assert chunks == [b"data"]
@@ -867,7 +867,7 @@ def test_curl_iter_chunks_passes_range_header():
         resp.iter_content.return_value = iter([])
         return resp
 
-    with patch("routes.stream.CurlReq.get", _fake_get):
+    with patch("routes.stream_core.CurlReq.get", _fake_get):
         asyncio.run(_gather(
             _curl_iter_chunks("http://test/stream", range_header="bytes=0-999",
                               status_ok=(200, 206))))
