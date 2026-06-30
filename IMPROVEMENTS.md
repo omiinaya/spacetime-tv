@@ -33,8 +33,6 @@ ErrorBoundary's `console.error` calls retained — they fire `reportRenderError(
 
 ---
 
-## Recently Completed
-
 ### ✅ P4.1 — Eliminate all 13 RuntimeWarnings from test suite
 Root causes and fixes:
 - **test_main.py**: `patch('routes.guide.load_epg', new_callable=AsyncMock)` without return_value left AsyncMock coroutines dangling during warm_cache cleanup. Changed all 10 instances to `return_value={'channels': [], 'programmes': []}`.
