@@ -14,8 +14,8 @@
 | **Testing depth** | B+ | 85% |
 | **Frontend quality** | A- | 90% |
 | **Backend architecture** | B | 75% |
-| **Feature completeness** | B- | 72% |
-| **Security** | C+ | 65% |
+| **Feature completeness** | B+ | 78% |
+| **Security** | B- | 72% |
 | **Developer experience** | B- | 70% |
 | **Performance** | B | 75% |
 
@@ -121,7 +121,7 @@
 |---------|----------|--------------|------|----------|
 | **Catch-up / Timeshift TV** | ✅ | ✅ | ✅ | **High** |
 | **DVR / Recording** | ✅ | ✅ | ✅ | **High** |
-| **Parental Controls (PIN)** | ✅ | ✅ | ❌ | Medium |
+| **Parental Controls (PIN)** | ✅ | ✅ | ✅ | **High** |
 | **EPG Search** | ✅ | ✅ | ❌ | Medium |
 | **Multi-provider** | ❌ | ✅ | ❌ | Low (architectural) |
 | **Cloud favorites/backup** | ❌ | ✅ | ❌ | Medium |
@@ -228,6 +228,7 @@
 ||| **Split guide.py (429 lines) → 3 focused modules** | guide_core, guide_epg, guide_routes. Umbrella guide.py re-exports everything. Zero test changes. Backend architecture B-→B. |
 ||| **Catch-up / Timeshift TV** | Full backend (timeshift route + EPG timeline endpoint + tv_archive fields) + frontend (CatchupTimeline with programme timeline bar, click-to-seek, Live button, query-param timeshift mode, ARCH badge on channel cards). 366 lines, 1154 tests pass. |
 ||| **DVR / Recording** | Backend: record/start, record/stop, recordings list/get/delete, MP4 serve via ffmpeg. Frontend: RecordingsPage (list, play, delete, auto-refresh), WatchRecording standalone player, Record button in Player (desktop + mobile), Radio icon in sidebar nav. 454 lines, 1154 frontend tests pass, 395 backend pass. |
+||| **Parental Controls (PIN)** | SHA-256 hashed PIN via Web Crypto API, PinPrompt modal with 4-digit numpad, adult toggle always visible (PIN-gated when configured), PIN setup/change/remove in Settings, adultUnlocked session state, filterCategories blocks adult channels when PIN locked. 432 lines, 1152/1154 tests pass. |
 
 ## Completed (previous sessions)
 
