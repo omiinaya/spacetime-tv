@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
-import { SettingsProvider } from "@/context/SettingsContext";
+import { SettingsProvider, useSettings } from "@/context/SettingsContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ErrorReporter from "@/components/ErrorReporter";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
@@ -95,6 +95,7 @@ function AppLayout() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showWatchlistPopover, setShowWatchlistPopover] = useState(false);
+  const { resolvedTheme } = useSettings();
 
   // Centralized keyboard shortcut registry
   useKeyboardShortcuts();
@@ -337,7 +338,7 @@ function AppLayout() {
       <PWAInstallPrompt />
       <OfflineBanner />
       <KeyboardShortcuts />
-      <Toaster richColors theme="dark" position="bottom-right" />
+      <Toaster richColors theme={resolvedTheme} position="bottom-right" />
       <BackToTop />
     </div>
   );

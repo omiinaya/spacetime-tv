@@ -1,5 +1,7 @@
 // ── App Settings: persistent filters for reducing IPTV noise ────────────────
 
+export type ThemeMode = "dark" | "light" | "system";
+
 export interface AppSettings {
   /** Language/country prefixes to show (empty = show all). E.g. ["EN", "US", "UK"] */
   languages: string[];
@@ -11,6 +13,8 @@ export interface AppSettings {
   services: string[];
   /** Hashed PIN for parental controls (empty = no PIN set) */
   adultPin: string;
+  /** Theme mode: dark, light, or follow system preference */
+  theme: ThemeMode;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -19,6 +23,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   showAdult: false,
   services: [],
   adultPin: "",
+  theme: "dark",
 };
 
 const KEY = "stv_settings";

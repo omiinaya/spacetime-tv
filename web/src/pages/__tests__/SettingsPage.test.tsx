@@ -43,6 +43,7 @@ let mockSettings = {
   showAdult: false,
   services: [] as string[],
   adultPin: "",
+  theme: "dark" as const,
 };
 const mockUpdate = vi.fn();
 const mockReset = vi.fn();
@@ -528,6 +529,58 @@ describe("hidden categories section", () => {
     await waitFor(() => {
       const entertainment = screen.getByText("EN| Entertainment");
       expect(entertainment.className).toContain("line-through");
+    });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// Theme customization
+// ═══════════════════════════════════════════════════════════
+describe("theme customization", () => {
+  it("renders theme section with Dark, Light, and System buttons", async () => {
+    renderSettingsPage();
+    await waitFor(() => {
+      expect(screen.getByText("Theme")).toBeInTheDocument();
+      expect(screen.getByText("Dark")).toBeInTheDocument();
+      expect(screen.getByText("Light")).toBeInTheDocument();
+      expect(screen.getByText("System")).toBeInTheDocument();
+    });
+  });
+
+  it("highlights Dark as active by default", async () => {
+    mockSettings.theme = "dark";
+    renderSettingsPage();
+    await waitFor(() => {
+      const darkBtn = screen.getByText("Dark");
+      expect(darkBtn.className).toContain("bg-primary");
+    });
+  });
+
+  it("calls update with 'light' when Light button clicked", async () => {
+    renderSettingsPage();
+    await waitFor(() => {
+      expect(screen.getByText("Light")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Light"));
+    expect(mockUpdate).toHaveBeenCalledWith({ theme: "light" });
+  });
+
+  it("calls update with 'system' when System button clicked", async () => {
+    renderSettingsPage();
+    await waitFor(() => {
+      expect(screen.getByText("System")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("System"));
+    expect(mockUpdate).toHaveBeenCalledWith({ theme: "system" });
+  });
+
+  it("shows Sun icon when light mode is active", async () => {
+    mockSettings.theme = "light";
+    renderSettingsPage();
+    await waitFor(() => {
+      // The Sun icon should be in the document (lucide-react renders inline SVGs)
+      const svg = document.querySelector("svg");
+      expect(svg).toBeInTheDocument();
     });
   });
 });

@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { Settings, Globe, EyeOff, Film, Tv2, Tv, RotateCcw, Check, Search, Lock } from "lucide-react";
+import { Settings, Globe, EyeOff, Film, Tv2, Tv, RotateCcw, Check, Search, Lock, Sun, Moon, Monitor } from "lucide-react";
 import { api, Category } from "@/lib/api";
 import { useSettings } from "@/context/SettingsContext";
 import {
@@ -187,6 +187,39 @@ export default function SettingsPage() {
           Reset
         </button>
       </div>
+
+      {/* ── Theme ──────────────────────────��───────────────────────── */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          {settings.theme === "light" ? (
+            <Sun className="h-4 w-4 text-muted-foreground" />
+          ) : settings.theme === "system" ? (
+            <Monitor className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <Moon className="h-4 w-4 text-muted-foreground" />
+          )}
+          <h2 className="text-sm font-semibold">Theme</h2>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Choose your preferred appearance.
+        </p>
+        <div className="flex gap-2">
+          {([["dark", "Dark", Moon], ["light", "Light", Sun], ["system", "System", Monitor]] as const).map(([mode, label, Icon]) => (
+            <button
+              key={mode}
+              onClick={() => update({ theme: mode })}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors border ${
+                settings.theme === mode
+                  ? "bg-primary/15 text-primary border-primary/20"
+                  : "bg-muted text-muted-foreground hover:text-foreground border-transparent"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* ── Language Filter ─────────────────────────────────────── */}
       <section className="space-y-3">

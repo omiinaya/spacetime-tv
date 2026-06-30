@@ -20,6 +20,20 @@
   --radius: 0.5rem;
 }
 
+/* ── Light theme override ───────────────────────────────────── */
+.light {
+  --color-background: oklch(0.97 0 0);
+  --color-foreground: oklch(0.09 0.004 285.823);
+  --color-card: oklch(0.93 0.005 285.885);
+  --color-primary: oklch(0.55 0.19 262.881);
+  --color-secondary: oklch(0.88 0.006 286.033);
+  --color-muted: oklch(0.9 0.005 286.033);
+  --color-muted-foreground: oklch(0.4 0.015 286.067);
+  --color-border: oklch(0.82 0.005 286.033);
+  --color-sidebar: oklch(0.95 0.003 285.823);
+  --color-destructive: oklch(0.52 0.21 21.519);
+}
+
 * {
   border-color: var(--color-border);
 }

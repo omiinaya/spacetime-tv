@@ -20,6 +20,7 @@ const defaultSettings = {
   playbackSpeed: 1,
   subtitleLanguage: "eng",
   audioLanguage: "eng",
+  theme: "dark",
 };
 
 vi.mock("@/lib/settings", () => ({
@@ -34,6 +35,7 @@ vi.mock("@/lib/settings", () => ({
     playbackSpeed: 1,
     subtitleLanguage: "eng",
     audioLanguage: "eng",
+    theme: "dark",
   },
   AppSettings: {},
 }));
@@ -162,5 +164,76 @@ describe("SettingsContext", () => {
     const { container } = render(<TestConsumer />);
     expect(container.querySelector('[data-testid="quality"]')?.textContent).toBe("auto");
     expect(container.querySelector('[data-testid="showAdult"]')?.textContent).toBe("false");
+  });
+});
+
+describe("SettingsContext — theme application", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockLoadSettings.mockReturnValue({ ...defaultSettings });
+    // Ensure clean document state
+    document.documentElement.classList.remove("dark", "light");
+  });
+
+  function renderWithProvider() {
+    return render(
+      <SettingsProvider>
+        <TestConsumer />
+      </SettingsProvider>,
+    );
+  }
+
+  it("applies dark class to html element by default", async () => {
+    renderWithProvider();
+    await vi.waitFor(() => {
+      expect(document.documentElement.classList.contains("dark")).toBe(true);
+      expect(document.documentElement.classList.contains("light")).toBe(false);
+    });
+  });
+
+  it("applies light class when theme is light", async () => {
+    mockLoadSettings.mockReturnValue({ ...defaultSettings, theme: "light" });
+    renderWithProvider();
+    await vi.waitFor(() => {
+      expect(document.documentElement.classList.contains("light")).toBe(true);
+      expect(document.documentElement.classList.contains("dark")).toBe(false);
+    });
+  });
+
+  it("updates html classes when theme setting changes via update", async () => {
+    // Render a consumer that can update theme
+    function ThemeConsumer() {
+      const { update } = useSettings();
+      return (
+        <div>
+          <button data-testid="set-light" onClick={() => update({ theme: "light" })}>
+            Set Light
+          </button>
+          <button data-testid="set-dark" onClick={() => update({ theme: "dark" })}>
+            Set Dark
+          </button>
+        </div>
+      );
+    }
+    render(
+      <SettingsProvider>
+        <ThemeConsumer />
+      </SettingsProvider>,
+    );
+    await vi.waitFor(() => {
+      expect(document.documentElement.classList.contains("dark")).toBe(true);
+    });
+
+    fireEvent.click(screen.getByTestId("set-light"));
+    await vi.waitFor(() => {
+      expect(document.documentElement.classList.contains("light")).toBe(true);
+      expect(document.documentElement.classList.contains("dark")).toBe(false);
+    });
+
+    fireEvent.click(screen.getByTestId("set-dark"));
+    await vi.waitFor(() => {
+      expect(document.documentElement.classList.contains("dark")).toBe(true);
+      expect(document.documentElement.classList.contains("light")).toBe(false);
+    });
   });
 });
