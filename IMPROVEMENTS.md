@@ -17,6 +17,20 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Recently Completed
 
+### P3.22 — Component tests: BackToTop, WatchlistPopover (2 untested components)
+Last 2 untested components now have full test coverage:
+- **BackToTop**: 8 tests — render, hidden/default, visibility on scroll, click-to-top, no-main fallback, positioning, ChevronUp icon
+- **WatchlistPopover**: 16 tests — loading state, empty state, movie/series items, 6-item limit, error state, outside click, Escape, navigation, poster/images, total count
+All 24 tests pass. Frontend component coverage: **25/25 = 100%**.
+
+### S9 — Hook test coverage: usePlayerTypes, useMpegtsPlayer, useRemuxPlayer, useShakaPlayer
+All 4 previously-untested hook modules now have full test coverage:
+- **usePlayerTypes**: 4 tests — constants, quality tiers, speed presets
+- **useMpegtsPlayer**: 15 tests — lifecycle, MEDIA_INFO, LOADING_COMPLETE, STATISTICS_INFO, error reconnect, health check reconnect, DVR tracking, stall, cleanup
+- **useRemuxPlayer**: 20 tests — lifecycle, startPos param, MEDIA_INFO, STATISTICS_INFO, duration, timeupdate→playing, durationchange, error count threshold (2 ignored, 3rd fires), 60s/90s timeouts, cleanup, event listener cleanup
+- **useShakaPlayer**: 19 tests — attach/configure/load chain, load/attach errors, critical events, native HLS (Safari), unsupported browser, event listeners, timeout, empty-stream, destroy/cleanup
+All 272 hook tests pass across 17 test files. Frontend test total: 1109. Hook coverage: 16/16 = **100%**.
+
 ### S1 — Admin endpoint auth (Security D→C+)
 `X-Admin-Key` header required on all admin routes. `ADMIN_API_KEY` env var in .env.
 Frontend prompts for key on 403. Backward-compatible (empty key = dev mode, no auth).

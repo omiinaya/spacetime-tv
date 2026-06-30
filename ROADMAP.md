@@ -38,7 +38,7 @@
 ### Frontend: 1073 tests, coverage tool missing (✅ Many tests, 🟡 no coverage data)
 - 23/23 components have tests — **100%** component coverage
 - 11/12 pages have tests — **92%** (NotFound missing)
-- 12/16 hooks have tests — **75%** (useMpegtsPlayer, usePlayerTypes, useRemuxPlayer, useShakaPlayer untested)
+- 16/16 hooks have tests — **100%** (all hooks now covered)
 - 10/10 lib modules have tests — **100%**
 
 ### E2E: 46 tests, all passing (✅ Covers all major flows)
@@ -67,8 +67,8 @@
 - **sonner toasts** — used for notifications, but many error paths just use console.error
 - **ESLint broken** — ESLint v9 requires flat config format, project still uses `.eslintrc.*`
 - **No Storybook or visual regression** — component tests exist but no visual diff
-- **2 untested components**: BackToTop, WatchlistPopover
-- **4 untested hooks**: useMpegtsPlayer, usePlayerTypes, useRemuxPlayer, useShakaPlayer
+- **2 untested components**: ~~BackToTop, WatchlistPopover~~ ✅ **All 25 components now tested**
+- **4 untested hooks** ~~useMpegtsPlayer, usePlayerTypes, useRemuxPlayer, useShakaPlayer~~ ✅ **All 16 hooks now tested**
 
 ---
 
