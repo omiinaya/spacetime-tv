@@ -14,7 +14,7 @@
 | **Testing depth** | B+ | 85% |
 | **Frontend quality** | A- | 90% |
 | **Backend architecture** | B | 75% |
-|| **Feature completeness** | C+ | 67% ||
+| **Feature completeness** | B- | 72% |
 | **Security** | C+ | 65% |
 | **Developer experience** | B- | 70% |
 | **Performance** | B | 75% |
@@ -120,7 +120,7 @@
 | Feature | TiviMate | IPTV Smarters | Ours | Priority |
 |---------|----------|--------------|------|----------|
 | **Catch-up / Timeshift TV** | ✅ | ✅ | ✅ | **High** |
-| **DVR / Recording** | ✅ | ✅ | ❌ | Medium |
+| **DVR / Recording** | ✅ | ✅ | ✅ | **High** |
 | **Parental Controls (PIN)** | ✅ | ✅ | ❌ | Medium |
 | **EPG Search** | ✅ | ✅ | ❌ | Medium |
 | **Multi-provider** | ❌ | ✅ | ❌ | Low (architectural) |
@@ -227,6 +227,7 @@
 || **Split stream.py (1105 lines) → 7 focused modules** | stream_core, stream_live, stream_vod, stream_convert, stream_hls, stream_dash, stream_probe. Umbrella stream.py re-exports everything. Zero test changes. Backend architecture C+→B-. |
 ||| **Split guide.py (429 lines) → 3 focused modules** | guide_core, guide_epg, guide_routes. Umbrella guide.py re-exports everything. Zero test changes. Backend architecture B-→B. |
 ||| **Catch-up / Timeshift TV** | Full backend (timeshift route + EPG timeline endpoint + tv_archive fields) + frontend (CatchupTimeline with programme timeline bar, click-to-seek, Live button, query-param timeshift mode, ARCH badge on channel cards). 366 lines, 1154 tests pass. |
+||| **DVR / Recording** | Backend: record/start, record/stop, recordings list/get/delete, MP4 serve via ffmpeg. Frontend: RecordingsPage (list, play, delete, auto-refresh), WatchRecording standalone player, Record button in Player (desktop + mobile), Radio icon in sidebar nav. 454 lines, 1154 frontend tests pass, 395 backend pass. |
 
 ## Completed (previous sessions)
 
