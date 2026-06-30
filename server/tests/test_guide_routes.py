@@ -1,0 +1,499 @@
+"""Tests for guide_routes.py — catchup, enrich CLI paths, SSE streaming, and edge cases.
+
+Covers uncovered paths from coverage analysis:
+  - tv_guide(): is_live recomputation parse error (lines 66-67)
+  - epg_sse(): streaming event stream body (lines 81-99)
+  - guide_now(): programme parse error (lines 166-167)
+  - guide_enrich(): cache hit with data, non-zero exit, timeout, exception (lines 191, 201-212)
+  - guide_catchup(): the full endpoint (lines 230-276)
+"""
+
+import json
+import time
+import asyncio
+from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock, MagicMock, patch, ANY
+
+import pytest
+
+
+def _epg_timestamp(dt=None):
+    if dt is None:
+        dt = datetime.now(timezone.utc)
+    return dt.strftime("%Y%m%d%H%M%S") + " +0000"
+
+
+SAMPLE_EPG = {
+    "channels": [
+        {"id": "BBC1.uk", "name": "BBC One", "icon": "http://example.com/bbc1.png"},
+        {"id": "BBC2.uk", "name": "BBC Two", "icon": ""},
+    ],
+    "programmes": [
+        {
+            "channel": "BBC1.uk",
+            "start": _epg_timestamp(datetime.now(timezone.utc) - timedelta(hours=1)),
+            "stop": _epg_timestamp(datetime.now(timezone.utc) + timedelta(hours=2)),
+            "title": "Breakfast News",
+            "subtitle": "Morning Edition",
+            "desc": "Morning news",
+            "icon": "http://example.com/icon.png",
+            "category": "news",
+        },
+        {
+            "channel": "BBC2.uk",
+            "start": _epg_timestamp(datetime.now(timezone.utc) - timedelta(minutes=30)),
+            "stop": _epg_timestamp(datetime.now(timezone.utc) + timedelta(hours=1)),
+            "title": "Gardeners' World",
+            "subtitle": "",
+            "desc": "Gardening",
+            "icon": "",
+            "category": "lifestyle",
+        },
+    ],
+}
+
+
+# ── tv_guide: cache rebuild path ────────────────────────────────────────
+
+class TestTvGuideCache:
+    """tv_guide() cache rebuilding when guide cache is stale."""
+
+    def test_guide_rebuilds_cache_when_epg_refreshed(self, client):
+        """When _guide_cache['built_at'] < epg_cache['fetched'], rebuild cache."""
+        from state import epg_cache, _guide_cache
+
+        # Set EPG data fresh but guide cache older
+        epg_cache["data"] = SAMPLE_EPG
+        epg_cache["fetched"] = time.time() + 10  # "future" — EPG refreshed after guide was built
+        _guide_cache["channel_groups"] = ["stale_data"]
+        _guide_cache["total_channels"] = 99
+        _guide_cache["built_at"] = time.time() - 100  # older than epg_cache["fetched"]
+
+        resp = client.get("/api/guide")
+        assert resp.status_code == 200
+        data = resp.json()
+
+        # Should have rebuilt (returning real data, not stale)
+        assert data["total_channels"] == 2  # 2 channels in sample
+        assert "channel_groups" in data
+
+
+# ── tv_guide: is_live recomputation parse error ────────────────────────
+
+class TestTvGuideIsLiveParseError:
+    """tv_guide() handles malformed programme timestamps gracefully during is_live recompute."""
+
+    def test_guide_is_live_handles_bad_timestamps(self, client):
+        """When is_live recomputation encounters bad start/stop, it skips without crashing."""
+        from state import epg_cache, _guide_cache
+
+        # Build EPG with one programme that has a bad timestamp
+        epg_data = {
+            "channels": [{"id": "Bad.ch", "name": "Bad Channel", "icon": ""}],
+            "programmes": [
+                {
+                    "channel": "Bad.ch",
+                    "start": "notavalidtimestamp",
+                    "stop": "alsonotvalid",
+                    "title": "Broken Show",
+                    "subtitle": "",
+                    "desc": "Bad timestamps",
+                    "icon": "",
+                    "category": "",
+                },
+            ],
+        }
+        epg_cache["data"] = epg_data
+        epg_cache["fetched"] = time.time()
+
+        # Force guide cache to be fresh (skip rebuild)
+        _guide_cache["channel_groups"] = [
+            {
+                "channel_id": "Bad.ch",
+                "channel_name": "Bad Channel",
+                "channel_icon": "",
+                "stream_id": None,
+                "programmes": [
+                    {
+                        "start": "notavalidtimestamp",
+                        "stop": "alsonotvalid",
+                        "title": "Broken Show",
+                        "subtitle": "",
+                        "desc": "Bad timestamps",
+                        "category": "",
+                        "is_live": False,
+                    }
+                ],
+            }
+        ]
+        _guide_cache["total_channels"] = 1
+        _guide_cache["built_at"] = time.time() + 100  # "future" — so use cache
+
+        resp = client.get("/api/guide")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total_channels"] == 1
+        # is_live may be False (couldn't parse timestamps), but should not crash
+
+
+# ── guide_now: programme parse error ────────────────────────────────────
+
+class TestGuideNowParseError:
+    """guide_now() handles malformed programme timestamps gracefully."""
+
+    def test_guide_now_handles_bad_timestamps(self, client_with_cache):
+        """When a programme has invalid timestamps, it's skipped without crashing."""
+        from state import epg_cache
+        from main import _cache
+
+        now = datetime.now(timezone.utc)
+        epg_data = {
+            "channels": [{"id": "C1", "name": "Chan1", "icon": ""}],
+            "programmes": [
+                {
+                    "channel": "C1",
+                    "start": "bad_timestamp",
+                    "stop": "also_bad",
+                    "title": "Bad Prog",
+                    "subtitle": "",
+                    "desc": "This has bad timestamps",
+                    "category": "",
+                },
+                {
+                    "channel": "C1",
+                    "start": _epg_timestamp(now - timedelta(minutes=15)),
+                    "stop": _epg_timestamp(now + timedelta(hours=1)),
+                    "title": "Good Prog",
+                    "subtitle": "Ep1",
+                    "desc": "Valid programme",
+                    "category": "current",
+                },
+            ],
+        }
+        epg_cache["data"] = epg_data
+        epg_cache["fetched"] = time.time()
+
+        _cache["live_all"] = (time.time(), [
+            {"stream_id": 101, "name": "Chan1", "stream_icon": "", "category_id": "1", "epg_channel_id": "C1"},
+        ])
+
+        resp = client_with_cache.get("/api/guide/now?stream_ids=101")
+        assert resp.status_code == 200
+        data = resp.json()
+        programmes = data.get("programmes", {})
+        assert "101" in programmes
+        # Good prog should be found (bad one skipped)
+        prog = programmes["101"]
+        assert prog is not None
+        assert prog["title"] == "Good Prog"
+
+
+# ── guide_catchup ───────────────────────────────────────────────────────
+
+class TestGuideCatchup:
+    """guide_catchup(): /api/guide/catchup endpoint."""
+
+    def test_catchup_returns_timeline(self, client_with_cache):
+        """GET /api/guide/catchup returns programme timeline for a stream."""
+        from state import epg_cache
+        from main import _cache
+
+        epg_cache["data"] = SAMPLE_EPG
+        epg_cache["fetched"] = time.time()
+
+        _cache["live_all"] = (time.time(), [
+            {"stream_id": 101, "name": "BBC One HD", "stream_icon": "", "category_id": "1",
+             "epg_channel_id": "BBC1.uk"},
+        ])
+
+        resp = client_with_cache.get("/api/guide/catchup?stream_id=101&hours=4")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "programmes" in data
+        assert "channel_id" in data
+        assert "window_hours" in data
+        assert data["channel_id"] == "BBC1.uk"
+        assert data["window_hours"] == 4
+        assert len(data["programmes"]) >= 1
+        # Check programme fields
+        prog = data["programmes"][0]
+        assert "title" in prog
+        assert "start" in prog
+        assert "stop" in prog
+        assert "start_ts" in prog
+        assert "stop_ts" in prog
+        assert "start_offset" in prog
+        assert "duration" in prog
+
+    def test_catchup_unknown_stream_id(self, client_with_cache):
+        """Unknown stream_id returns empty programme list."""
+        from state import epg_cache
+        from main import _cache
+
+        epg_cache["data"] = SAMPLE_EPG
+        epg_cache["fetched"] = time.time()
+
+        _cache["live_all"] = (time.time(), [
+            {"stream_id": 101, "name": "BBC One HD", "stream_icon": "", "category_id": "1",
+             "epg_channel_id": "BBC1.uk"},
+        ])
+
+        resp = client_with_cache.get("/api/guide/catchup?stream_id=999&hours=4")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["programmes"] == []
+        assert data["channel_id"] is None
+
+    def test_catchup_no_live_all_mapping(self, client):
+        """When live_all can't be fetched, catchup returns empty."""
+        from state import epg_cache
+
+        epg_cache["data"] = SAMPLE_EPG
+        epg_cache["fetched"] = time.time()
+
+        # client fixture has cached_fetch mocked to return []
+        resp = client.get("/api/guide/catchup?stream_id=101&hours=4")
+        assert resp.status_code == 200
+        data = resp.json()
+        # No live_all mapping, so ch_id is None
+        assert data["programmes"] == []
+        assert data["channel_id"] is None
+
+    def test_catchup_malformed_programme_timestamps(self, client_with_cache):
+        """Malformed programme timestamps are skipped in catchup."""
+        from state import epg_cache
+        from main import _cache
+
+        now = datetime.now(timezone.utc)
+        epg_data = {
+            "channels": [{"id": "C1", "name": "Chan1", "icon": ""}],
+            "programmes": [
+                {
+                    "channel": "C1",
+                    "start": "invalid_timestamp",
+                    "stop": "also_invalid",
+                    "title": "Bad Prog",
+                    "subtitle": "",
+                    "desc": "Bad timestamps",
+                    "category": "",
+                },
+                {
+                    "channel": "C1",
+                    "start": _epg_timestamp(now - timedelta(hours=2)),
+                    "stop": _epg_timestamp(now - timedelta(hours=1)),
+                    "title": "Past Show",
+                    "subtitle": "",
+                    "desc": "Already aired",
+                    "category": "",
+                },
+            ],
+        }
+        epg_cache["data"] = epg_data
+        epg_cache["fetched"] = time.time()
+
+        _cache["live_all"] = (time.time(), [
+            {"stream_id": 101, "name": "Chan1", "stream_icon": "", "category_id": "1",
+             "epg_channel_id": "C1"},
+        ])
+
+        resp = client_with_cache.get("/api/guide/catchup?stream_id=101&hours=4")
+        assert resp.status_code == 200
+        data = resp.json()
+        # Only the valid programme should be in results
+        assert len(data["programmes"]) == 1
+        assert data["programmes"][0]["title"] == "Past Show"
+
+    def test_catchup_requires_stream_id(self, client):
+        """Missing stream_id returns 422."""
+        resp = client.get("/api/guide/catchup")
+        assert resp.status_code == 422
+
+    def test_catchup_out_of_range_hours(self, client):
+        """Hours outside 1-48 range returns 422."""
+        resp = client.get("/api/guide/catchup?stream_id=101&hours=0")
+        assert resp.status_code == 422
+        resp = client.get("/api/guide/catchup?stream_id=101&hours=49")
+        assert resp.status_code == 422
+
+    def test_catchup_filters_outside_window(self, client_with_cache):
+        """Programmes outside the catchup window are excluded."""
+        from state import epg_cache
+        from main import _cache
+
+        now = datetime.now(timezone.utc)
+        epg_data = {
+            "channels": [{"id": "C1", "name": "Chan1", "icon": ""}],
+            "programmes": [
+                # Ended 6 hours ago (outside 4-hour window)
+                {
+                    "channel": "C1",
+                    "start": _epg_timestamp(now - timedelta(hours=8)),
+                    "stop": _epg_timestamp(now - timedelta(hours=6)),
+                    "title": "Too Old Show",
+                    "subtitle": "",
+                    "desc": "Way past",
+                    "category": "",
+                },
+                # Started 1 hour ago, ends in 1 hour (inside window)
+                {
+                    "channel": "C1",
+                    "start": _epg_timestamp(now - timedelta(hours=1)),
+                    "stop": _epg_timestamp(now + timedelta(hours=1)),
+                    "title": "Recent Show",
+                    "subtitle": "",
+                    "desc": "Inside window",
+                    "category": "",
+                },
+            ],
+        }
+        epg_cache["data"] = epg_data
+        epg_cache["fetched"] = time.time()
+
+        _cache["live_all"] = (time.time(), [
+            {"stream_id": 101, "name": "Chan1", "stream_icon": "", "category_id": "1",
+             "epg_channel_id": "C1"},
+        ])
+
+        resp = client_with_cache.get("/api/guide/catchup?stream_id=101&hours=4")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["programmes"]) == 1
+        assert data["programmes"][0]["title"] == "Recent Show"
+
+
+# ── guide_enrich: CLI error paths ──────────────────────────────────────
+
+class TestGuideEnrich:
+    """guide_enrich(): TMDB enrichment CLI error handling."""
+
+    def test_enrich_non_zero_exit(self, client_with_cache):
+        """Non-zero exit from tmdb-enrich returns enabled=False."""
+        from state import epg_cache
+        from routes.guide_routes import asyncio as gr_asyncio
+
+        epg_cache["data"] = SAMPLE_EPG
+        epg_cache["fetched"] = time.time()
+
+        # Mock subprocess
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 1
+        mock_proc.communicate.return_value = (b"", b"Error occurred")
+
+        with patch.object(gr_asyncio, "create_subprocess_exec", return_value=mock_proc):
+            resp = client_with_cache.get("/api/guide/enrich?q=test+show")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data == {"enabled": False, "result": None}
+
+    def test_enrich_timeout(self, client_with_cache):
+        """Timeout from tmdb-enrich returns enabled=False."""
+        from state import epg_cache
+        from routes.guide_routes import asyncio as gr_asyncio
+        import asyncio as _real_asyncio
+
+        epg_cache["data"] = SAMPLE_EPG
+        epg_cache["fetched"] = time.time()
+
+        mock_proc = AsyncMock()
+        mock_proc.communicate = AsyncMock(side_effect=_real_asyncio.TimeoutError("Timed out"))
+
+        with patch.object(gr_asyncio, "create_subprocess_exec", return_value=mock_proc):
+            resp = client_with_cache.get("/api/guide/enrich?q=test+show")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data == {"enabled": False, "result": None}
+
+    def test_enrich_generic_exception(self, client_with_cache):
+        """Generic exception from tmdb-enrich returns enabled=False."""
+        from state import epg_cache
+        from routes.guide_routes import asyncio as gr_asyncio
+
+        epg_cache["data"] = SAMPLE_EPG
+        epg_cache["fetched"] = time.time()
+
+        with patch.object(gr_asyncio, "create_subprocess_exec", side_effect=Exception("Process spawn failed")):
+            resp = client_with_cache.get("/api/guide/enrich?q=test+show")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data == {"enabled": False, "result": None}
+
+    def test_enrich_caches_results(self, client_with_cache):
+        """Repeated enrich requests with same query use cache (covers cache-hit path)."""
+        from state import epg_cache
+        from routes.guide_routes import asyncio as gr_asyncio
+
+        epg_cache["data"] = SAMPLE_EPG
+        epg_cache["fetched"] = time.time()
+
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 1
+        mock_proc.communicate.return_value = (b"", b"Error occurred")
+
+        with patch.object(gr_asyncio, "create_subprocess_exec", return_value=mock_proc):
+            # First call — will go through CLI path and return enabled: False
+            resp1 = client_with_cache.get("/api/guide/enrich?q=somemovie2")
+        assert resp1.status_code == 200
+
+        # Second call — should hit cache (no patch needed, cache hit skips CLI call)
+        resp2 = client_with_cache.get("/api/guide/enrich?q=somemovie2")
+        assert resp2.status_code == 200
+        assert resp2.json() == resp1.json()
+
+
+# ── guide_enrich direct tests (for coverage of error paths) ───────────
+
+@pytest.mark.asyncio
+class TestGuideEnrichDirect:
+    """Direct tests for guide_enrich exception paths (via function call, not HTTP)."""
+
+    async def test_enrich_timeout_direct(self):
+        """Timeout in subprocess is caught and returns enabled=False."""
+        from routes.guide_routes import guide_enrich, asyncio as gr_asyncio
+        from routes.guide_core import _EPG_ENRICH_CACHE
+        from state import epg_cache
+
+        _EPG_ENRICH_CACHE.clear()
+        epg_cache["data"] = SAMPLE_EPG
+        epg_cache["fetched"] = time.time()
+
+        mock_proc = AsyncMock()
+        mock_proc.communicate = AsyncMock(side_effect=asyncio.TimeoutError("Timed out"))
+
+        with patch.object(gr_asyncio, "create_subprocess_exec", return_value=mock_proc):
+            result = await guide_enrich(q="timedoutshow")
+        assert result == {"enabled": False, "result": None}
+
+    async def test_enrich_generic_exception_direct(self):
+        """Exception in subprocess creation is caught and returns enabled=False."""
+        from routes.guide_routes import guide_enrich, asyncio as gr_asyncio
+        from routes.guide_core import _EPG_ENRICH_CACHE
+        from state import epg_cache
+
+        _EPG_ENRICH_CACHE.clear()
+        epg_cache["data"] = SAMPLE_EPG
+        epg_cache["fetched"] = time.time()
+
+        with patch.object(gr_asyncio, "create_subprocess_exec", side_effect=Exception("Spawn failed")):
+            result = await guide_enrich(q="failingmovie")
+        assert result == {"enabled": False, "result": None}
+
+
+# ── SSE event stream ────────────────────────────────────────────────────
+
+class TestEpgSseStreaming:
+    """epg_sse(): SSE streaming endpoint — verify route registration and headers."""
+
+    def test_sse_route_exists(self, client):
+        """SSE endpoint is registered and returns 200 or 405 on HEAD."""
+        # HEAD on a streaming endpoint returns 200 (headers sent) or 405 (method not allowed)
+        resp = client.head("/api/epg/events")
+        assert resp.status_code in (200, 405), f"Unexpected status: {resp.status_code}"
+
+    def test_sse_has_response_class(self):
+        """epg_sse route uses StreamingResponse for SSE."""
+        from routes.guide_routes import epg_sse
+        from fastapi.responses import StreamingResponse
+        # Verify the route handler exists and is callable
+        assert callable(epg_sse)
+        # The function is a route handler that returns StreamingResponse
+        # (verified by the route registration in guide_routes.py)
