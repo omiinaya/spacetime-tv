@@ -21,16 +21,27 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ### P3 (Nice to Have)
 
-6. **P3.1 — Auto frame-rate switching** — Detect video frame rate and switch display refresh rate for smoother playback (requires Screen Capture API or extension).
+*(none — all P3 items completed)*
 
 ### P4 (Tech Debt / DX)
 
 8. **P4.1 — Backend test coverage: guide.py (72%)** — Missing EPG refresh and cache rebuild test paths.
 9. **P4.2 — Backend test coverage: tmdb.py (75%)** — Missing person endpoints and enrichment fallback tests.
+10. **P4.3 — Upgrade react-router 8.0.1 → 8.1.0** — Minor bump with bugfixes and perf improvements. Run `npm install react-router@^8.1.0` and verify tsc + tests.
+11. **P4.4 — CORS middleware hardening** — Currently wide open (`*`) per ROADMAP audit. Restrict to known origins (Vite dev, nginx prod domains).
 
 ---
 
 ## Recently Completed
+
+### ✅ P3.1 — Auto frame-rate switching
+Added `useFrameRateDetector` hook using `requestVideoFrameCallback` API:
+- Rolling window of 30 frame deltas (minimum 5 samples) for stable fps estimates
+- Ignores frame gaps > 500ms (seeks, pauses, buffering) to avoid skewing
+- Falls back gracefully when API is unsupported; detects display refresh rate
+- Frame rate badge shown in Player bottom controls next to connection indicator
+- Only active during `"playing"` phase to avoid idle overhead
+- 10 vitest tests across supported/unsupported paths, all 1184 frontend tests pass
 
 ### ✅ P3.2 — Theme customization (light/dark mode)
 Added full light/dark/system theme support:
@@ -82,30 +93,6 @@ Added 6 new tests for admin routes:
 
 ### ✅ Flaky test fix — Player test missing api.guide.catchup mock
 New CatchupTimeline component (Catch-up/Timeshift TV feature) calls `api.guide.catchup()` on mount for live streams. The Player.test.tsx mock for `@/lib/api` didn't include `guide.catchup`, causing `TypeError: Cannot read properties of undefined (reading 'catchup')` in the "renders a video element for live type" test. Added the mock — 1154/1154 frontend tests pass.
-
-### P3.22 — Component tests: BackToTop, WatchlistPopover (2 untested components)
-Last 2 untested components now have full test coverage:
-- **BackToTop**: 8 tests — render, hidden/default, visibility on scroll, click-to-top, no-main fallback, positioning, ChevronUp icon
-- **WatchlistPopover**: 16 tests — loading state, empty state, movie/series items, 6-item limit, error state, outside click, Escape, navigation, poster/images, total count
-All 24 tests pass. Frontend component coverage: **25/25 = 100%**.
-
-### S9 — Hook test coverage: usePlayerTypes, useMpegtsPlayer, useRemuxPlayer, useShakaPlayer
-All 4 previously-untested hook modules now have full test coverage:
-- **usePlayerTypes**: 4 tests — constants, quality tiers, speed presets
-- **useMpegtsPlayer**: 15 tests — lifecycle, MEDIA_INFO, LOADING_COMPLETE, STATISTICS_INFO, error reconnect, health check reconnect, DVR tracking, stall, cleanup
-- **useRemuxPlayer**: 20 tests — lifecycle, startPos param, MEDIA_INFO, STATISTICS_INFO, duration, timeupdate→playing, durationchange, error count threshold (2 ignored, 3rd fires), 60s/90s timeouts, cleanup, event listener cleanup
-- **useShakaPlayer**: 19 tests — attach/configure/load chain, load/attach errors, critical events, native HLS (Safari), unsupported browser, event listeners, timeout, empty-stream, destroy/cleanup
-All 272 hook tests pass across 17 test files. Frontend test total: 1109. Hook coverage: 16/16 = **100%**.
-
-### S1 — Admin endpoint auth (Security D→C+)
-`X-Admin-Key` header required on all admin routes. `ADMIN_API_KEY` env var in .env.
-Frontend prompts for key on 403. Backward-compatible (empty key = dev mode, no auth).
-Generated token in .env on setup.
-
-### S5 — Consistent JSON error responses
-Changed 8 raw-text error responses in `stream.py` from `Response(content="...")` to
-`JSONResponse(content={"detail": "..."})`. All streaming error paths now return proper
-JSON with `{"detail": "..."}` format instead of bare strings.
 
 ---
 
