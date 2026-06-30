@@ -13,13 +13,23 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ### P3 (Nice to Have)
 
-- **P3.1 — Sonner toast coverage for error paths** — Many backend/streaming errors use `console.error` instead of showing a sonner toast notification to the user. Audit all API call sites in the frontend and wrap with toast.error() for better UX.
-
 - **P3.2 — Upgrade Vite 8.1.1 → 8.1.2** — Minor bump available via `npm outdated`.
 
 ### P4 (Tech Debt / DX)
 
 - **P4.1 — Add API versioning prefix** — All routes are bare `/api/...` with no `/v1/` prefix. Add versioning to allow future breaking changes without disrupting clients. Approach: mount all routes under `/api/v1/`, add redirect from bare `/api/...` to `/api/v1/...`.
+
+---
+
+## Recently Completed
+
+### ✅ P3.1 — Sonner toast coverage for error paths
+Replaced 5 `console.error()` calls in `useRecording.ts` with `toast.error()` notifications from sonner. Added `<Toaster>` component to `main.tsx` with richColors, bottom-right positioning, and close button. Error paths covered:
+- Record start (HTTP error + exception)
+- Record stop (exception)
+- Fetch recordings list (exception)
+- Delete recording (exception)
+ErrorBoundary's `console.error` calls retained — they fire `reportRenderError()` to the server and the fallback UI is already shown. Tests: 1208 passed, TypeScript clean, backend 49/49 passed.
 
 ---
 
