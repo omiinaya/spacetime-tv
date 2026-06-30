@@ -555,22 +555,32 @@ describe("SearchPage", () => {
       expect(mockGuideSearch).toHaveBeenCalledWith("news");
     });
 
-    it("renders EPG programme results when EPG tab is selected", async () => {
+    it("renders EPG programme results in EPG tab", async () => {
       renderSearch();
       const input = screen.getByPlaceholderText("Search channels, movies, series...");
       mockGuideSearch.mockResolvedValue({ results: sampleEpgResults, total: 2, query: "news", future_only: true });
       fireEvent.change(input, { target: { value: "news" } });
+      // Small tick for React to process state update, then press Enter
       await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
       fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
-
-      // Wait for results and switch to EPG tab
-      await waitFor(() => { expect(screen.getByText("EPG")).toBeInTheDocument(); });
-      fireEvent.click(screen.getByText("EPG"));
 
       await waitFor(() => {
         expect(screen.getByText("EPG Programmes (2)")).toBeInTheDocument();
         expect(screen.getByText("BBC News at Six")).toBeInTheDocument();
         expect(screen.getByText("Coronation Street")).toBeInTheDocument();
+      });
+      expect(mockGuideSearch).toHaveBeenCalledWith("news");
+
+      // Switch to EPG tab
+      fireEvent.click(screen.getAllByText("EPG")[0]);
+
+      await waitFor(() => {
+        // EPG results still visible
+        expect(screen.getByText("BBC News at Six")).toBeInTheDocument();
+        expect(screen.getByText("Coronation Street")).toBeInTheDocument();
+        // Live/movies/series sections hidden
+        expect(screen.queryByText("Live TV")).not.toBeInTheDocument();
+        expect(screen.queryByText("Movies")).not.toBeInTheDocument();
       });
     });
 
@@ -579,11 +589,9 @@ describe("SearchPage", () => {
       const input = screen.getByPlaceholderText("Search channels, movies, series...");
       mockGuideSearch.mockResolvedValue({ results: sampleEpgResults, total: 2, query: "news", future_only: true });
       fireEvent.change(input, { target: { value: "news" } });
+      // Small tick for React to process state update, then press Enter
       await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
       fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
-
-      await waitFor(() => { expect(screen.getByText("EPG")).toBeInTheDocument(); });
-      fireEvent.click(screen.getByText("EPG"));
 
       await waitFor(() => {
         expect(screen.getByText("BBC One")).toBeInTheDocument();
@@ -596,55 +604,27 @@ describe("SearchPage", () => {
       const input = screen.getByPlaceholderText("Search channels, movies, series...");
       mockGuideSearch.mockResolvedValue({ results: [], total: 0, query: "xyzxyz", future_only: true });
       fireEvent.change(input, { target: { value: "xyzxyz" } });
+      // Small tick for React to process state update, then press Enter
       await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
       fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
-
-      await waitFor(() => { expect(screen.getByText("EPG")).toBeInTheDocument(); });
-      fireEvent.click(screen.getByText("EPG"));
 
       await waitFor(() => {
         expect(screen.getByText(/No EPG programmes found/)).toBeInTheDocument();
       });
     });
 
-    it("handles EPG search API error gracefully when EPG tab selected", async () => {
+    it("handles EPG search API error gracefully", async () => {
       renderSearch();
       const input = screen.getByPlaceholderText("Search channels, movies, series...");
       mockGuideSearch.mockRejectedValue(new Error("EPG search failed"));
       fireEvent.change(input, { target: { value: "news" } });
+      // Small tick for React to process state update, then press Enter
       await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
       fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
-
-      await waitFor(() => { expect(screen.getByText("EPG")).toBeInTheDocument(); });
-      fireEvent.click(screen.getByText("EPG"));
 
       await waitFor(() => {
         // Should show empty results without crashing
         expect(screen.getByText(/No EPG programmes found/)).toBeInTheDocument();
-      });
-    });
-
-    it("shows live/movies/series sections hidden when EPG tab is active", async () => {
-      renderSearch();
-      const input = screen.getByPlaceholderText("Search channels, movies, series...");
-      mockGuideSearch.mockResolvedValue({ results: sampleEpgResults, total: 2, query: "news", future_only: true });
-      fireEvent.change(input, { target: { value: "news" } });
-      await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
-      fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
-
-      // Switch to EPG tab
-      await waitFor(() => { expect(screen.getByText("EPG")).toBeInTheDocument(); });
-      fireEvent.click(screen.getByText("EPG"));
-
-      await waitFor(() => {
-        // EPG results visible
-        expect(screen.getByText("EPG Programmes (2)")).toBeInTheDocument();
-        // The result section headings should not contain live/movies/series filter names
-        const epgSection = screen.getByText(/EPG Programmes/);
-        expect(epgSection).toBeInTheDocument();
-        // The "All" tab should not be active — EPG tab content is rendering
-        // so the standard result sections are not rendered
-        expect(screen.queryByText(/Live TV \(\d+\)/)).not.toBeInTheDocument();
       });
     });
 
@@ -664,11 +644,9 @@ describe("SearchPage", () => {
       });
       mockSearchEnrich.mockResolvedValue({ movies: {}, series: {} });
       fireEvent.change(input, { target: { value: "drama" } });
+      // Small tick for React to process state update, then press Enter
       await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
       fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
-
-      await waitFor(() => { expect(screen.getByText("EPG")).toBeInTheDocument(); });
-      fireEvent.click(screen.getByText("EPG"));
 
       await waitFor(() => {
         // Both titles should be visible
