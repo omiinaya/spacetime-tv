@@ -3,6 +3,7 @@ dist/
 __pycache__/
 *.pyc
 .coverage
+*.py,cover
 # Test
 coverage/
 test-results/
