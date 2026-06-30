@@ -38,6 +38,16 @@ TMDB_ENRICH_PATH = os.getenv(
     "/home/user/.local/share/hermes-cli-tools-venv/bin/tmdb-enrich",
 )
 
+# CORS — restrict to known origins instead of wide-open *
+# Comma-separated list — overridable via env var
+DEFAULT_CORS_ORIGINS = (
+    "http://localhost:5180,http://127.0.0.1:5180,"
+    "http://localhost:8720,http://127.0.0.1:8720,"
+    "http://localhost:8722,http://127.0.0.1:8722,"
+    "http://192.0.2.10:8720,http://192.0.2.10:8722"
+)
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",")
+
 # Rate limiting
 RATE_WINDOW = 60  # 1 minute window
 RATE_SEARCH_LIMIT = 100     # requests per window for search/proxy

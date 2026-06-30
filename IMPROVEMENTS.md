@@ -25,14 +25,23 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ### P4 (Tech Debt / DX)
 
-3. **P4.4 — CORS middleware hardening** — Currently wide open (`*`) per ROADMAP audit. Restrict to known origins (Vite dev, nginx prod domains).
-4. **P4.5 — Upgrade Vite 8.1.0 → 8.1.1** — Minor bump with bugfixes. Run `npm install vite@^8.1.1` and verify tsc + tests.
-5. **P4.6 — Backend test coverage: stream.py (68%→80%)** — Largest backend module (split into 7 files but many error branches still untested). Focus on stream_core, stream_live, stream_vod error paths.
-6. **P4.7 — Backend test coverage: guide.py (72%→85%)** — EPG refresh, cache rebuild, and SSE broadcast paths need coverage.
+3. **P4.5 — Upgrade Vite 8.1.0 → 8.1.1** — Minor bump with bugfixes. Run `npm install vite@^8.1.1` and verify tsc + tests.
+4. **P4.6 — Backend test coverage: stream.py (68%→80%)** — Largest backend module (split into 7 files but many error branches still untested). Focus on stream_core, stream_live, stream_vod error paths.
+5. **P4.7 — Backend test coverage: guide.py (72%→85%)** — EPG refresh, cache rebuild, and SSE broadcast paths need coverage.
 
 ---
 
 ## Recently Completed
+
+### ✅ P4.4 — CORS middleware hardening
+CORS changed from wide-open `allow_origins=["*"]` to a restricted list of known origins:
+- Vite dev: `localhost:5180`, `127.0.0.1:5180`
+- Backend direct: `localhost:8720`, `127.0.0.1:8720`
+- nginx prod: `localhost:8722`, `127.0.0.1:8722`
+- LAN: `192.0.2.10:8720`, `192.0.2.10:8722`
+Configurable via `CORS_ORIGINS` env var (comma-separated). Unknown origins get
+no `access-control-allow-origin` header. Tests: known-origin allow + unknown-origin
+reject. Pushed to master.
 
 ### ✅ P4.3 — Upgrade react-router 8.0.1 → 8.1.0
 `npm install react-router@^8.1.0` — minor bump adding route metadata instrumentation. tsc clean, 1184 frontend tests pass, 491 backend tests pass. Pushed to master.

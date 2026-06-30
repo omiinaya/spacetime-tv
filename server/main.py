@@ -22,6 +22,7 @@ log = logging.getLogger("spacetime-tv")
 from config import (
     IPTV_BASE, IPTV_USER, IPTV_PASS, EPG_CACHE_FILE, EPG_CACHE_TTL,
     ROOT, STATIC_DIR, TMDB_API_KEY, TMDB_BASE, UA_STR,
+    CORS_ORIGINS,
     RATE_WINDOW, RATE_SEARCH_LIMIT, RATE_DEFAULT_LIMIT,
 )
 from state import SERVER_START_TIME, _load_stream_hits
@@ -38,7 +39,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Spacetime-TV", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 
 # ── Route modules ─────────────────────────────────────────────────────────
 from routes.health import router as health_router

@@ -15,7 +15,7 @@
 | **Frontend quality** | A | 93% |
 | **Backend architecture** | B | 75% |
 | **Feature completeness** | B+ | 78% |
-| **Security** | B- | 72% |
+| **Security** | B | 78% |
 | **Developer experience** | B | 77% |
 | **Performance** | B | 75% |
 
@@ -75,7 +75,7 @@
 ### ✅ What's Right
 - **69 API routes** covering Live TV, Movies, Series, Search, EPG Guide, Admin, Watchlist, Health, Streams
 - **Rate limiting** middleware (100 req/min for search/proxy, 1000 for general)
-- **CORS middleware** configured (though wide open — `*`)
+- **CORS middleware** hardened to known origins (Vite dev, nginx prod, LAN)
 - **Environment-configurable** via config.py: IPTV creds, TTLs, cache settings
 - **Docker-ready** — Dockerfiles for both server and web + docker-compose.yml
 - **CI pipeline** — GitHub Actions E2E workflow
@@ -138,7 +138,7 @@
 ---
 - **69 API routes** covering Live TV, Movies, Series, Search, EPG Guide, Admin, Watchlist, Health, Streams
 - **Rate limiting** middleware (100 req/min for search/proxy, 1000 for general)
-- **CORS middleware** configured (though wide open — `*`)
+- **CORS middleware** hardened to known origins (Vite dev, nginx prod, LAN)
 - **Environment-configurable** via config.py: IPTV creds, TTLs, cache settings
 - **Docker-ready** — Dockerfiles for both server and web + docker-compose.yml
 - **CI pipeline** — GitHub Actions E2E workflow

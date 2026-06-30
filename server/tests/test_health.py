@@ -47,10 +47,18 @@ def test_health_with_dict_cache_values(client_with_cache):
     assert "empty_dict" in data["cached_categories"]
 
 
-def test_cors_headers_present(client):
-    """All endpoints should include CORS headers (allow all origins)."""
-    resp = client.get("/api/health", headers={"Origin": "http://localhost:5180"})
-    assert resp.headers.get("access-control-allow-origin") == "*"
+def test_cors_known_origin_allowed(client):
+    """Known origins should get access-control-allow-origin header."""
+    known = "http://localhost:5180"
+    resp = client.get("/api/health", headers={"Origin": known})
+    assert resp.headers.get("access-control-allow-origin") == known
+
+
+def test_cors_unknown_origin_rejected(client):
+    """Unknown origins should NOT get access-control-allow-origin."""
+    resp = client.get("/api/health", headers={"Origin": "https://evil.com"})
+    # No CORS header means the browser blocks it
+    assert "access-control-allow-origin" not in resp.headers
 
 
 # ── /api/error (POST) ─────────────────────────────────────────────────
