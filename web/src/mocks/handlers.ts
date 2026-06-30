@@ -322,7 +322,36 @@ export const handlers = [
     HttpResponse.json({ enabled: false, images: null }),
   ),
 
-  // Fallback for any unhandled API calls
+  // ── Cloud Backup ────────────────────────────────────────────
+  http.post(`${API}/cloud/backup`, async ({ request }) => {
+    const body = await request.json() as Record<string, unknown>;
+    if (body.device_id && body.favorites) {
+      return HttpResponse.json({ status: "ok", timestamp: Date.now() / 1000 });
+    }
+    return HttpResponse.json({ status: "error", detail: "Invalid payload" }, { status: 400 });
+  }),
+
+  http.get(`${API}/cloud/backup`, ({ request }) => {
+    const url = new URL(request.url);
+    const deviceId = url.searchParams.get("device_id");
+    if (deviceId) {
+      return HttpResponse.json({
+        status: "ok",
+        data: { favorites: [101, 202, 303], watchlist: { "1": true, "2": false } },
+      });
+    }
+    return HttpResponse.json({ status: "error", detail: "Missing device_id" }, { status: 400 });
+  }),
+
+  http.post(`${API}/cloud/merge`, async ({ request }) => {
+    const body = await request.json() as Record<string, unknown>;
+    if (body.device_id && body.favorites) {
+      return HttpResponse.json({ status: "ok", favorites: [101, 202, 303, 404] });
+    }
+    return HttpResponse.json({ status: "error", detail: "Merge failed" }, { status: 400 });
+  }),
+
+  // ── Watchlist / Progress ────────────────────────────────────
   http.get(`${API}/:path*`, () =>
     new HttpResponse(null, { status: 404 }),
   ),
