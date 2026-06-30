@@ -15,6 +15,7 @@ import { saveRecentChannel } from "@/lib/recentChannels";
 import { api } from "@/lib/api";
 import { useRecording } from "@/hooks/useRecording";
 import { useDocumentPiP } from "@/hooks/useDocumentPiP";
+import { useFrameRateDetector } from "@/hooks/useFrameRateDetector";
 
 // ── Types ─────────────────────────────────────────────────────
 interface PlayerProps { type: "live" | "movie" | "series"; }
@@ -73,6 +74,9 @@ export default function Player({ type }: PlayerProps) {
 
   // ── Document Picture-in-Picture ──────────────────────────────
   const { isPiPActive, enterPiP, exitPiP } = useDocumentPiP(videoRef, containerRef);
+
+  // ── Frame rate detection ─────────────────────────────────────
+  const frameRate = useFrameRateDetector(videoRef, phase === "playing");
 
   const handleRecordToggle = useCallback(() => {
     if (isRecording) {
@@ -502,6 +506,12 @@ export default function Player({ type }: PlayerProps) {
                   );
                 })}
               </span>
+              {/* Frame rate indicator */}
+              {frameRate.videoFps > 0 && (
+                <span className="text-white/40 text-[10px] ml-1.5 tabular-nums align-middle" title={`Source: ${frameRate.videoFps} fps | Display: ${frameRate.displayHz} Hz`} aria-label={`Video frame rate: ${frameRate.videoFps} fps`}>
+                  {frameRate.label}
+                </span>
+              )}
             </div>
 
             <div className="flex-1" />
