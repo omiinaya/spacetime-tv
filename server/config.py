@@ -28,6 +28,16 @@ TMDB_BASE = "https://api.themoviedb.org/3"
 # User-Agent for requests
 UA_STR = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
+# Admin authentication (set ADMIN_API_KEY in .env)
+ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
+
+# Path to tmdb-enrich CLI (browserless SSR extraction from themoviedb.org)
+# No API key required — uses HTML scraping from TMDB's own pages
+TMDB_ENRICH_PATH = os.getenv(
+    "TMDB_ENRICH_PATH",
+    "/home/user/.local/share/hermes-cli-tools-venv/bin/tmdb-enrich",
+)
+
 # Rate limiting
 RATE_WINDOW = 60  # 1 minute window
 RATE_SEARCH_LIMIT = 100     # requests per window for search/proxy

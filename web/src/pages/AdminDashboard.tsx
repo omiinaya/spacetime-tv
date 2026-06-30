@@ -51,20 +51,38 @@ export default function AdminDashboard() {
   const [cacheMsg, setCacheMsg] = useState<string | null>(null);
   const [epgMsg, setEpgMsg] = useState<string | null>(null);
   const [epgRefreshing, setEpgRefreshing] = useState(false);
+  const [adminKey, setAdminKey] = useState(() => sessionStorage.getItem("adminKey") || "");
+  const [showKeyPrompt, setShowKeyPrompt] = useState(false);
+  const [pendingKey, setPendingKey] = useState("");
+
+  const headers: Record<string, string> = adminKey ? { "X-Admin-Key": adminKey } : {};
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch("/api/admin/stats");
+      const r = await fetch("/api/admin/stats", { headers });
+      if (r.status === 403) {
+        setShowKeyPrompt(true);
+        throw new Error("Admin key required");
+      }
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       setStats(await r.json());
     } catch (e) {
-      setError((e as Error).message);
+      if ((e as Error).message !== "Admin key required") {
+        setError((e as Error).message);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [adminKey]);
+
+  const submitKey = () => {
+    sessionStorage.setItem("adminKey", pendingKey);
+    setAdminKey(pendingKey);
+    setShowKeyPrompt(false);
+    setPendingKey("");
+  };
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -73,6 +91,41 @@ export default function AdminDashboard() {
     const i = setInterval(refresh, 30000);
     return () => clearInterval(i);
   }, [refresh]);
+
+  // Admin key prompt overlay
+  if (showKeyPrompt) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-6">
+        <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
+          <span className="text-2xl">🔐</span>
+        </div>
+        <div className="text-center space-y-1">
+          <h2 className="text-base font-semibold">Admin Key Required</h2>
+          <p className="text-xs text-muted-foreground">
+            Enter the admin key configured in the server's .env file
+          </p>
+        </div>
+        <div className="flex gap-2 w-full max-w-xs">
+          <input
+            type="password"
+            value={pendingKey}
+            onChange={(e) => setPendingKey(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submitKey()}
+            placeholder="Admin key…"
+            autoFocus
+            className="flex-1 px-3 py-2 rounded-lg bg-card border border-border text-sm outline-none focus:border-amber-500/50 transition-colors"
+          />
+          <button
+            onClick={submitKey}
+            disabled={!pendingKey}
+            className="px-4 py-2 rounded-lg bg-amber-500/20 text-amber-400 text-sm font-medium hover:bg-amber-500/30 transition-colors disabled:opacity-50"
+          >
+            Unlock
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading && !stats) {
     return (
@@ -151,7 +204,7 @@ export default function AdminDashboard() {
             onClick={async () => {
               setCacheMsg("Clearing…");
               try {
-                const r = await fetch("/api/admin/cache/clear", { method: "POST" });
+                const r = await fetch("/api/admin/cache/clear", { method: "POST", headers });
                 const d = await r.json();
                 setCacheMsg(d.message || "Cache cleared");
                 refresh();
@@ -167,7 +220,7 @@ export default function AdminDashboard() {
             onClick={async () => {
               setCacheMsg("Warming…");
               try {
-                const r = await fetch("/api/admin/cache/warm", { method: "POST" });
+                const r = await fetch("/api/admin/cache/warm", { method: "POST", headers });
                 const d = await r.json();
                 setCacheMsg(d.message || "Warming started");
                 setTimeout(() => { setCacheMsg(null); }, 3000);
@@ -184,7 +237,7 @@ export default function AdminDashboard() {
             onClick={async () => {
               setCacheMsg("Full re-warm…");
               try {
-                const r = await fetch("/api/admin/cache/warm-full", { method: "POST" });
+                const r = await fetch("/api/admin/cache/warm-full", { method: "POST", headers });
                 const d = await r.json();
                 setCacheMsg(d.message || "Full re-warm started");
                 setTimeout(() => { setCacheMsg(null); }, 3000);
@@ -222,7 +275,7 @@ export default function AdminDashboard() {
                 setEpgRefreshing(true);
                 setEpgMsg(null);
                 try {
-                  const r = await fetch("/api/admin/epg/refresh", { method: "POST" });
+                  const r = await fetch("/api/admin/epg/refresh", { method: "POST", headers });
                   const d = await r.json();
                   setEpgMsg(d.message || "EPG refresh triggered");
                   setTimeout(() => { setEpgMsg(null); }, 3000);
@@ -327,7 +380,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stream Health */}
-      <StreamHealthSection />
+      <StreamHealthSection headers={headers} />
     </div>
   );
 }
@@ -344,18 +397,18 @@ interface StreamHealthData {
   recent: { key: string; age_s: number; codec: string; width: number; height: number; error: string | null }[];
 }
 
-function StreamHealthSection() {
+function StreamHealthSection({ headers }: { headers: Record<string, string> }) {
   const [health, setHealth] = useState<StreamHealthData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchHealth = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch("/api/admin/stream-health");
+      const r = await fetch("/api/admin/stream-health", { headers });
       if (r.ok) setHealth(await r.json());
     } catch { /* ignore */ }
     setLoading(false);
-  }, []);
+  }, [headers]);
 
   useEffect(() => { fetchHealth(); }, [fetchHealth]);
 

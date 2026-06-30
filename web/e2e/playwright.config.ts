@@ -8,7 +8,9 @@ export default defineConfig({
   workers: 1,
   timeout: 60_000,
   use: {
-    baseURL: process.env.E2E_BASE_URL || "http://192.0.2.10:5183",
+    // Backend serves the frontend (built dist) at :8720.
+    // For vite dev mode, use the vite dev server port instead.
+    baseURL: process.env.E2E_BASE_URL || "http://127.0.0.1:8720",
     headless: true,
     screenshot: "only-on-failure",
     video: "retain-on-failure",

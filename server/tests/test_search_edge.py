@@ -86,8 +86,8 @@ def test_search_unicode(client_with_cache):
 
 def test_search_vod_fallback_path(client):
     """When VOD caches aren't warm, search falls back to cached_fetch."""
-    import main as m
-    original = m.cached_fetch
+    from routes import search as search_module
+    original = search_module.cached_fetch
 
     async def mock_vod_fetch(key, action, **params):
         if key == "vod_categories":
@@ -98,7 +98,7 @@ def test_search_vod_fallback_path(client):
             return []
         return []
 
-    m.cached_fetch = mock_vod_fetch
+    search_module.cached_fetch = mock_vod_fetch
 
     try:
         resp = client.get("/api/search?q=die")
@@ -107,13 +107,13 @@ def test_search_vod_fallback_path(client):
         assert len(data["movies"]) >= 1
         assert "Die Hard" in data["movies"][0]["name"]
     finally:
-        m.cached_fetch = original
+        search_module.cached_fetch = original
 
 
 def test_search_vod_fallback_with_exception(client):
     """VOD fallback should handle exceptions gracefully."""
-    import main as m
-    original = m.cached_fetch
+    from routes import search as search_module
+    original = search_module.cached_fetch
 
     async def failing_fetch(key, action, **params):
         if key == "vod_categories":
@@ -122,7 +122,7 @@ def test_search_vod_fallback_with_exception(client):
             raise Exception("IPTV provider unreachable")
         return []
 
-    m.cached_fetch = failing_fetch
+    search_module.cached_fetch = failing_fetch
 
     try:
         resp = client.get("/api/search?q=test")
@@ -130,7 +130,7 @@ def test_search_vod_fallback_with_exception(client):
         data = resp.json()
         assert data["movies"] == []
     finally:
-        m.cached_fetch = original
+        search_module.cached_fetch = original
 
 
 def test_enrich_with_tmdb_cache(client):

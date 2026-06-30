@@ -2,10 +2,24 @@
 import asyncio
 import logging
 import time
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 log = logging.getLogger("spacetime-tv")
-router = APIRouter(tags=["admin"])
+
+
+def require_admin_key(request: Request) -> None:
+    """Dependency: check X-Admin-Key header against configured key.
+    If ADMIN_API_KEY is empty (dev mode), no auth is required.
+    """
+    from config import ADMIN_API_KEY
+    if not ADMIN_API_KEY:
+        return  # Dev mode — no auth
+    key = request.headers.get("X-Admin-Key", "")
+    if key != ADMIN_API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid or missing admin key")
+
+
+router = APIRouter(tags=["admin"], dependencies=[Depends(require_admin_key)])
 
 
 @router.get("/api/admin/stats")

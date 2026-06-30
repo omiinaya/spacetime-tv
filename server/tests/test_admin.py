@@ -192,3 +192,73 @@ def test_admin_epg_refresh_twice_returns_already_running(client: TestClient):
     # but should always return valid status without error
     assert resp2.status_code == 200
     assert "message" in data2
+
+
+# ── Admin Key Auth Tests ─────────────────────────────────────────
+
+
+def _make_app_with_key(key: str):
+    """Create a fresh app with ADMIN_API_KEY set to the given value."""
+    import os
+    import importlib
+    os.environ["ADMIN_API_KEY"] = key
+    # Force re-import of config (clears Python cache)
+    import config as cfg
+    importlib.reload(cfg)
+    from main import app
+    return app
+
+
+def test_admin_key_required_when_set(client: TestClient):
+    """When ADMIN_API_KEY is set, requests without the key get 403."""
+    import os
+    old = os.environ.get("ADMIN_API_KEY", "")
+    try:
+        os.environ["ADMIN_API_KEY"] = "test-admin-key-123"
+        import config as cfg
+        import importlib
+        importlib.reload(cfg)
+        from main import app
+
+        with TestClient(app) as c:
+            # No key
+            r = c.get("/api/admin/stats")
+            assert r.status_code == 403
+            data = r.json()
+            assert "detail" in data
+
+            # Wrong key
+            r = c.get("/api/admin/stats", headers={"X-Admin-Key": "wrong"})
+            assert r.status_code == 403
+
+            # Correct key
+            r = c.get("/api/admin/stats", headers={"X-Admin-Key": "test-admin-key-123"})
+            assert r.status_code == 200
+            data = r.json()
+            assert "uptime" in data
+    finally:
+        os.environ["ADMIN_API_KEY"] = old
+        import importlib
+        import config as cfg
+        importlib.reload(cfg)
+
+
+def test_admin_key_not_required_when_empty(client: TestClient):
+    """When ADMIN_API_KEY is empty (dev mode), admin endpoints work without auth."""
+    import os
+    old = os.environ.get("ADMIN_API_KEY", "")
+    try:
+        os.environ["ADMIN_API_KEY"] = ""
+        import config as cfg
+        import importlib
+        importlib.reload(cfg)
+        from main import app
+
+        with TestClient(app) as c:
+            r = c.get("/api/admin/stats")
+            assert r.status_code == 200
+            assert "uptime" in r.json()
+    finally:
+        os.environ["ADMIN_API_KEY"] = old
+        import config as cfg
+        importlib.reload(cfg)

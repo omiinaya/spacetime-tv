@@ -6,6 +6,7 @@ import logging
 
 from fastapi import APIRouter, Query
 
+from iptv_client import cached_fetch
 from state import CACHE_LIVE_ALL, CACHE_LIVE_CATS
 # live_{category_id} is fetched on-demand (not pre-warmed), so no constant needed for it
 
@@ -16,16 +17,14 @@ router = APIRouter(tags=["live"])
 @router.get("/api/live/categories")
 async def live_categories():
     """All live TV categories."""
-    import main as _main
-    data = await _main.cached_fetch(CACHE_LIVE_CATS, "get_live_categories")
+    data = await cached_fetch(CACHE_LIVE_CATS, "get_live_categories")
     return {"categories": data}
 
 
 @router.get("/api/live/all")
 async def live_all_streams():
     """All live TV streams (cached, for cross-category search)."""
-    import main as _main
-    data = await _main.cached_fetch("live_all", "get_live_streams")
+    data = await cached_fetch("live_all", "get_live_streams")
     return {"streams": data}
 
 
@@ -34,8 +33,7 @@ async def live_all_streams_slim():
     """Slim live TV streams — only fields needed for the channel grid.
     Reduces payload from ~19 MB to ~6 MB for the 48k-channel list view.
     """
-    import main as _main
-    data = await _main.cached_fetch("live_all", "get_live_streams")
+    data = await cached_fetch("live_all", "get_live_streams")
     return {
         "streams": [
             {
@@ -53,8 +51,7 @@ async def live_all_streams_slim():
 @router.get("/api/live/streams")
 async def live_streams(category_id: str = Query(...)):
     """Live streams for a category."""
-    import main as _main
-    data = await _main.cached_fetch(f"live_{category_id}", "get_live_streams", category_id=category_id)
+    data = await cached_fetch(f"live_{category_id}", "get_live_streams", category_id=category_id)
     return {"streams": data}
 
 
@@ -63,8 +60,6 @@ async def live_info(
     ids: str = Query(..., description="Comma-separated stream IDs"),
 ):
     """Batch stream info: name + icon for given IDs. Reads from cached live_all."""
-    import main as _main
-
     requested = set()
     for part in ids.split(","):
         part = part.strip()
@@ -73,7 +68,7 @@ async def live_info(
     if not requested:
         return {"streams": []}
     try:
-        live_all = await _main.cached_fetch("live_all", "get_live_streams")
+        live_all = await cached_fetch("live_all", "get_live_streams")
         results = [{"stream_id": s["stream_id"], "name": s.get("name", ""), "stream_icon": s.get("stream_icon", "")}
                     for s in live_all if s["stream_id"] in requested]
         return {"streams": results}

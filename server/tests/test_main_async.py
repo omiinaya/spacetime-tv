@@ -11,13 +11,13 @@ import pytest
 
 from main import (
     CACHE_DIR,
-    CACHE_TTL_HOURS,
+    CLEANUP_TTL_HOURS,
     _cache,
-    cached_fetch,
     cleanup_stale_cache,
     fetch_iptv,
     start_cleanup_task,
 )
+from iptv_client import cached_fetch
 
 
 # ── cached_fetch edge cases ──────────────────────────────────────────────────
@@ -42,7 +42,7 @@ class TestCachedFetch:
         async def mock_fetch(action, **params):
             return upstream_data
 
-        with patch("main.fetch_iptv", mock_fetch):
+        with patch("iptv_client.fetch_iptv", mock_fetch):
             result = await cached_fetch("miss_key", "test_action")
 
         assert result == upstream_data
@@ -56,7 +56,7 @@ class TestCachedFetch:
         async def mock_fetch(action, **params):
             return []
 
-        with patch("main.fetch_iptv", mock_fetch):
+        with patch("iptv_client.fetch_iptv", mock_fetch):
             result = await cached_fetch("empty_key", "test_action")
 
         assert result == []
@@ -71,7 +71,7 @@ class TestCachedFetch:
         async def mock_fetch(action, **params):
             return []
 
-        with patch("main.fetch_iptv", mock_fetch):
+        with patch("iptv_client.fetch_iptv", mock_fetch):
             result = await cached_fetch("empty_stale_key", "test_action")
 
         assert result == stale_data, "Stale data should be returned when upstream returns empty"
@@ -85,7 +85,7 @@ class TestCachedFetch:
         async def mock_fetch(action, **params):
             raise Exception("Upstream unreachable")
 
-        with patch("main.fetch_iptv", mock_fetch):
+        with patch("iptv_client.fetch_iptv", mock_fetch):
             result = await cached_fetch("fail_stale_key", "test_action")
 
         assert result == stale_data
@@ -97,36 +97,36 @@ class TestCachedFetch:
         async def mock_fetch(action, **params):
             raise Exception("Upstream down")
 
-        with patch("main.fetch_iptv", mock_fetch):
+        with patch("iptv_client.fetch_iptv", mock_fetch):
             with pytest.raises(Exception, match="Upstream down"):
                 await cached_fetch("raise_key", "test_action")
 
     async def test_cache_hit_increments_counter(self):
         """A cache hit increments the global _cache_hits counter."""
-        import main as m
+        import iptv_client as ic
 
         # Record the starting value (which may have been bumped by prior tests)
-        start_hits = m._cache_hits
+        start_hits = ic._cache_hits
         _cache.clear()
         _cache["hit_counter_key"] = (9999999999.0, "data")
 
         await cached_fetch("hit_counter_key", "unused")
-        assert m._cache_hits == start_hits + 1
+        assert ic._cache_hits == start_hits + 1
 
     async def test_cache_miss_increments_miss_counter(self):
         """A cache miss increments the global _cache_misses counter."""
-        import main as m
+        import iptv_client as ic
 
-        start_misses = m._cache_misses
+        start_misses = ic._cache_misses
         _cache.clear()
 
         async def mock_fetch(action, **params):
             return {"id": 1}
 
-        with patch("main.fetch_iptv", mock_fetch):
+        with patch("iptv_client.fetch_iptv", mock_fetch):
             await cached_fetch("miss_counter_key", "test_action")
 
-        assert m._cache_misses == start_misses + 1
+        assert ic._cache_misses == start_misses + 1
 
 
 # ── fetch_iptv error path ────────────────────────────────────────────────────
@@ -189,8 +189,8 @@ class TestCleanupStaleCache:
         return path, stamp
 
     async def test_removes_stale_files(self):
-        """Files older than CACHE_TTL_HOURS get cleaned up."""
-        stale_age = (CACHE_TTL_HOURS * 3600) + 100
+        """Files older than CLEANUP_TTL_HOURS get cleaned up."""
+        stale_age = (CLEANUP_TTL_HOURS * 3600) + 100
         path, stamp = self._create_entry("_test_cleanup_stale_file", stale_age)
         assert path.exists()
 
@@ -222,7 +222,7 @@ class TestCleanupStaleCache:
 
     async def test_removes_stale_directories(self):
         """Directories older than TTL are removed."""
-        stale_age = (CACHE_TTL_HOURS * 3600) + 100
+        stale_age = (CLEANUP_TTL_HOURS * 3600) + 100
         dir_path = CACHE_DIR / "_test_cleanup_stale_dir"
         dir_path.mkdir(exist_ok=True)
         (dir_path / "child.txt").write_text("data")
@@ -254,7 +254,7 @@ class TestCleanupStaleCache:
 
     async def test_delete_error_does_not_crash(self):
         """If a file can't be deleted, the error is logged but cleanup continues."""
-        stale_age = (CACHE_TTL_HOURS * 3600) + 100
+        stale_age = (CLEANUP_TTL_HOURS * 3600) + 100
         path, stamp = self._create_entry("_test_cleanup_error", stale_age)
 
         with patch.object(Path, "unlink", side_effect=PermissionError("permission denied")):

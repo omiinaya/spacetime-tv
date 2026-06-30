@@ -220,8 +220,7 @@ async def tmdb_tv_similar(series_id: int, page: int = Query(1, ge=1, le=10)):
 # ── Person / Cast (CLI-backed, browserless SSR) ─────────────────
 
 # Path to tmdb-enrich CLI tool (browserless SSR extraction)
-# Used by both TMDB person endpoints and search enrichment in main.py
-TMDB_ENRICH_PATH = "/home/user/.local/share/hermes-cli-tools-venv/bin/tmdb-enrich"
+from config import TMDB_ENRICH_PATH
 
 
 async def tmdb_enrich_cli(*args: str) -> dict | None:

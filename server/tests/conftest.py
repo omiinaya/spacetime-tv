@@ -20,6 +20,7 @@ os.environ.setdefault("CACHE_WARM_ENABLED", "false")
 os.environ.setdefault("CACHE_WARM_CATEGORIES", "")
 os.environ.setdefault("CLEANUP_INTERVAL", "3600")
 os.environ.setdefault("CACHE_TTL_HOURS", "0")
+os.environ.setdefault("ADMIN_API_KEY", "")  # Dev mode — no auth required in tests
 
 # Add server dir to Python path so `from main import ...` works
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -28,8 +29,14 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
-# Import AFTER env vars are set
-from main import app, _cache, cached_fetch
+# ══════════════════════════════════════════════════════════════════════════
+# Test configuration and fixtures
+# ══════════════════════════════════════════════════════════════════════════
+
+from unittest.mock import AsyncMock, patch as _cached_fetch_patch
+
+# Import main AFTER env vars are set
+from main import app, _cache
 
 # ── Lifespan override ──────────────────────────────────────────
 # Prevent background tasks (cache warmer, cleanup) from running during tests.
@@ -71,24 +78,42 @@ def clear_cache():
 
 @pytest.fixture
 def client():
-    """App TestClient — upstream IPTV calls are mocked to return empty data."""
-    original = cached_fetch
-
+    """App TestClient — upstream IPTV calls are mocked to return empty data.
+    
+    Patches cached_fetch in iptv_client so ALL route modules see the mock.
+    """
     async def mock_cached_fetch(key, action, **params):
-        """Default stub: return empty list for any upstream call."""
+        """Default stub: return empty list for any upstream call.
+        Respects pre-populated cache so cache-hit tests still work.
+        """
+        from state import _cache, CACHE_TTL
+        import time
+        now = time.time()
+        if key in _cache and (now - _cache[key][0]) < CACHE_TTL:
+            return _cache[key][1]
         return []
 
-    import main as m
-    m.cached_fetch = mock_cached_fetch
+    # Patch all route modules that import cached_fetch from iptv_client
+    routes = ["live", "vod", "search", "guide"]
+    patchers = []
+    for r in routes:
+        p = _cached_fetch_patch(f"routes.{r}.cached_fetch", mock_cached_fetch)
+        p.start()
+        patchers.append(p)
+    # Also patch in iptv_client itself (for main.py cache warmer etc.)
+    p = _cached_fetch_patch("iptv_client.cached_fetch", mock_cached_fetch)
+    p.start()
+    patchers.append(p)
 
     with TestClient(app) as c:
         yield c
 
-    m.cached_fetch = original
+    for p in patchers:
+        p.stop()
 
 
 @pytest.fixture
 def client_with_cache():
-    """App TestClient with cached_fetch restored — for tests that pre-populate _cache."""
+    """App TestClient with real cached_fetch — for tests that pre-populate _cache."""
     with TestClient(app) as c:
         yield c

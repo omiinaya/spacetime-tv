@@ -11,11 +11,51 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-(none — all caught up!)
+(see ROADMAP.md for the full improvement backlog)
 
 ---
 
 ## Recently Completed
+
+### S1 — Admin endpoint auth (Security D→C+)
+`X-Admin-Key` header required on all admin routes. `ADMIN_API_KEY` env var in .env.
+Frontend prompts for key on 403. Backward-compatible (empty key = dev mode, no auth).
+Generated token in .env on setup.
+
+### S2 — Centralise tmdb-enrich path
+All 3 hardcoded paths to `/home/user/.local/share/hermes-cli-tools-venv/bin/tmdb-enrich`
+consolidated into `config.py` as `TMDB_ENRICH_PATH`. Imported by tmdb.py, guide.py, and
+search.py (the latter via os.getenv). Now configurable via `TMDB_ENRICH_PATH` env var.
+
+### S3 — CACHE_TTL_HOURS → CLEANUP_TTL_HOURS
+Renamed to eliminate confusion with `CACHE_TTL = 300` in state.py (API data cache TTL).
+`CLEANUP_TTL_HOURS` is the disk-cache cleanup daemon TTL, not API caching. Tests updated.
+
+### S4 — Admin auth test coverage
+Added 2 tests for `require_admin_key` — verifies 403 with wrong/missing key, 200 with
+correct key, and dev-mode bypass (empty key = no auth). 395 backend tests pass.
+
+### S5 — Consistent JSON error responses
+Changed 8 raw-text error responses in `stream.py` from `Response(content="...")` to
+`JSONResponse(content={"detail": "..."})`. All streaming error paths now return proper
+JSON with `{"detail": "..."}` format instead of bare strings.
+
+### S6 — Extract cached_fetch → iptv_client (circular imports fixed)
+Created `server/iptv_client.py` containing `client`, `iptv_url`, `fetch_iptv`, `cached_fetch`.
+All 6 route modules (live.py, vod.py, search.py, guide.py, misc.py, admin.py) now import
+from `iptv_client` instead of doing `import main as _main`. Eliminates the primary circular
+import anti-pattern. Main.py re-exports for backward compat. 395 tests pass.
+
+---
+
+## Recently Completed (archive)
+
+### Cache warmer optimisation — parallel VOD+Series, retry, concurrency 50
+Warm time significantly reduced: VOD and series category fetches now run
+concurrently (were sequential). Each failed category gets one automatic
+retry after 1s (previously silently skipped). Default concurrency bumped
+from 20 to 50. Cuts wall time from VOD_time + series_time to
+max(VOD_time, series_time).
 
 ### P4.2 — Fix pre-existing flaky test in test_misc.py
 `test_image_proxy_with_localhost_referer_allows_access` returned 429

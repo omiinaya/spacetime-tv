@@ -8,11 +8,9 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
-from urllib.parse import urlencode
 
-import httpx
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -97,68 +95,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(RateLimitMiddleware)
 
-# ── HTTP Client ─────────────────────────────────────────────────────────────
-client = httpx.AsyncClient(
-    timeout=30.0,
-    headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
-)
+# ── HTTP Client & IPTV API ──────────────────────────────────────────────────
+from iptv_client import client, cached_fetch, fetch_iptv, iptv_url
 
-
-def iptv_url(action: str, **params) -> str:
-    """Build IPTV API URL with credentials."""
-    params.setdefault("username", IPTV_USER)
-    params.setdefault("password", IPTV_PASS)
-    params["action"] = action
-    return f"{IPTV_BASE}/player_api.php?{urlencode(params)}"
-
-
-async def fetch_iptv(action: str, **params) -> dict | list:
-    """Fetch from IPTV API and parse JSON."""
-    url = iptv_url(action, **params)
-    try:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        return resp.json()
-    except Exception as e:
-        log.error(f"IPTV API error ({action}): {e}")
-        raise HTTPException(502, f"IPTV provider error: {e}")
-
-
-# ── Cache helpers ───────────────────────────────────────────────────────────
-from state import _cache, _cache_hits, _cache_misses, CACHE_TTL
 from state import (
     CACHE_LIVE_ALL, CACHE_VOD_CATEGORIES, CACHE_SERIES_CATEGORIES,
     CACHE_VOD_CAT, CACHE_SERIES_CAT,
-    CACHE_KEY_PATTERNS,
+    CACHE_KEY_PATTERNS, _cache,
 )
-
-async def cached_fetch(key: str, action: str, **params) -> list | dict:
-    global _cache_hits, _cache_misses
-    now = time.time()
-    if key in _cache and (now - _cache[key][0]) < CACHE_TTL:
-        _cache_hits += 1
-        return _cache[key][1]
-    _cache_misses += 1
-    try:
-        data = await fetch_iptv(action, **params)
-    except Exception as e:
-        log.warning(f"cached_fetch: {key} fetch failed ({e})", extra={"action": action, "params": params})
-        if key in _cache:
-            stale_data = _cache[key][1]
-            log.warning(f"cached_fetch: falling back to stale cache for {key} ({type(stale_data).__name__})")
-            return stale_data
-        raise
-    if isinstance(data, list) and len(data) == 0:
-        log.warning(f"cached_fetch: {key} returned empty list, not caching")
-        if key in _cache:
-            stale_data = _cache[key][1]
-            log.warning(f"cached_fetch: falling back to stale cache for {key} ({len(stale_data)} entries)")
-            return stale_data
-        return data
-    _cache[key] = (now, data)
-    return data
-
-
 from state import track_hit, log_error, record_search, _stream_hits, _error_log, _search_queries
 
 # ── ADMIN (routes in routes/admin.py) ────────────────────────────────────────
@@ -311,7 +255,7 @@ CACHE_DIR = Path("/tmp/stv_cache")
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Cache TTL / Auto-cleanup ────────────────────────────────────────────────
-CACHE_TTL_HOURS = 2
+CLEANUP_TTL_HOURS = 2  # Delete stale cache entries older than this (env: CACHE_TTL_HOURS for backward compat)
 CLEANUP_INTERVAL = 600
 _cleanup_task: Optional[asyncio.Task] = None
 
@@ -331,7 +275,7 @@ def get_last_access(cache_key: str) -> Optional[float]:
 
 async def cleanup_stale_cache():
     """Delete cache entries not accessed in CACHE_TTL_HOURS."""
-    cutoff = time.time() - (CACHE_TTL_HOURS * 3600)
+    cutoff = time.time() - (CLEANUP_TTL_HOURS * 3600)
     deleted_total = 0
     for entry in list(CACHE_DIR.iterdir()):
         if entry.name.startswith("."):
@@ -375,7 +319,7 @@ def start_cleanup_task():
     global _cleanup_task
     if _cleanup_task is None or _cleanup_task.done():
         _cleanup_task = asyncio.create_task(cleanup_loop())
-        log.info(f"[CLEANUP] Started — TTL={CACHE_TTL_HOURS}h, interval={CLEANUP_INTERVAL}s")
+        log.info(f"[CLEANUP] Started — TTL={CLEANUP_TTL_HOURS}h, interval={CLEANUP_INTERVAL}s")
 
 
 

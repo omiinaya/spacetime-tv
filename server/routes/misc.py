@@ -12,6 +12,8 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, Response
 
+from iptv_client import client
+
 from config import IPTV_BASE, IPTV_PASS, IPTV_USER, STATIC_DIR
 from state import _img_cache
 
@@ -77,11 +79,10 @@ def _img_read_disk(cache_key: str):
 @router.get("/api/iptv/{path:path}")
 async def iptv_raw(path: str):
     """Raw proxy for any IPTV API call (images, etc.)."""
-    import main as _main
     params = {"username": IPTV_USER, "password": IPTV_PASS}
     full = f"{IPTV_BASE}/{path}?{urlencode(params)}"
     try:
-        resp = await _main.client.get(full)
+        resp = await client.get(full)
         return Response(content=resp.content, media_type=resp.headers.get("content-type", "application/octet-stream"))
     except Exception as e:
         raise HTTPException(502, str(e))
@@ -92,8 +93,6 @@ async def iptv_raw(path: str):
 async def image_proxy(request: Request, url: str = Query(...)):
     """Proxy images from blocked CDNs through our server."""
     from urllib.parse import urlparse
-
-    import main as _main  # noqa: E402
 
     referer = request.headers.get("referer", "")
     origin = request.headers.get("origin", "")
@@ -137,7 +136,7 @@ async def image_proxy(request: Request, url: str = Query(...)):
         return Response(content=content, media_type=ct,
                         headers={"Cache-Control": "public, max-age=86400"})
 
-    resp = await _main.client.get(url, follow_redirects=True)
+    resp = await client.get(url, follow_redirects=True)
     resp.raise_for_status()
     content = resp.content
     content_type = resp.headers.get("content-type", "image/jpeg")

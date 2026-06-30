@@ -13,13 +13,15 @@ from typing import Optional
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import StreamingResponse
 
+from iptv_client import cached_fetch, client
+
 from config import EPG_CACHE_FILE, EPG_CACHE_TTL, IPTV_BASE, IPTV_PASS, IPTV_USER, UA_STR
 from state import _epg_clients, epg_cache, _epg_refresh_task, _guide_cache, CACHE_LIVE_ALL
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["guide"])
 
-_TMDB_ENRICH = "/home/user/.local/share/hermes-cli-tools-venv/bin/tmdb-enrich"
+from config import TMDB_ENRICH_PATH as _TMDB_ENRICH
 
 # ── EPG Enrichment cache ─────────────────────────────────────────────
 _EPG_ENRICH_CACHE: dict[str, tuple[float, dict | None]] = {}
@@ -71,8 +73,6 @@ def parse_xmltv(xml_text: str) -> dict:
 # ── EPG Loading ───────────────────────────────────────────────────────
 async def load_epg() -> dict:
     """Load EPG from cache or fetch XMLTV."""
-    import main as _main  # noqa: E402
-
     now = time.time()
     if epg_cache["data"] and (now - epg_cache["fetched"]) < EPG_CACHE_TTL:
         return epg_cache["data"]
@@ -84,7 +84,6 @@ async def load_epg() -> dict:
             if (now - cached.get("fetched", 0)) < EPG_CACHE_TTL:
                 epg_cache["data"] = cached["data"]
                 epg_cache["fetched"] = cached["fetched"]
-                # Invalidate guide cache since EPG was reloaded from disk
                 _guide_cache["channel_groups"] = None
                 return cached["data"]
         except Exception as e:
@@ -93,7 +92,7 @@ async def load_epg() -> dict:
     log.info("Fetching EPG XMLTV ...")
     url = f"{IPTV_BASE}/xmltv.php?username={IPTV_USER}&password={IPTV_PASS}"
     try:
-        resp = await _main.client.get(url, timeout=120.0)
+        resp = await client.get(url, timeout=120.0)
         resp.raise_for_status()
         data = parse_xmltv(resp.text)
         epg_cache["data"] = data
@@ -162,8 +161,6 @@ async def _build_guide_cache() -> tuple[list[dict], int]:
     _guide_cache so paginated requests don't re-parse every programme.
     Invalidated automatically when EPG data is refreshed.
     """
-    import main as _main  # noqa: E402
-
     epg = await load_epg_background()
     programmes = epg.get("programmes", [])
     channels = epg.get("channels", [])
@@ -174,7 +171,7 @@ async def _build_guide_cache() -> tuple[list[dict], int]:
     # Stream ID mapping (48K live channels → EPG channel IDs)
     ch_to_stream: dict[str, int] = {}
     try:
-        live_all = await _main.cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
+        live_all = await cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
         for s in live_all:
             epg_id = s.get("epg_channel_id")
             if epg_id and epg_id not in ch_to_stream:
@@ -326,8 +323,6 @@ async def guide_now(
     stream_ids: str = Query(..., description="Comma-separated stream IDs"),
 ):
     """Batch lookup: returns currently-airing programme for each stream_id."""
-    import main as _main  # noqa: E402
-
     ids = []
     for part in stream_ids.split(","):
         part = part.strip()
@@ -344,7 +339,7 @@ async def guide_now(
 
     stream_to_ch: dict[int, str] = {}
     try:
-        live_all = await _main.cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
+        live_all = await cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
         for s in live_all:
             sid = s["stream_id"]
             epg_id = s.get("epg_channel_id")

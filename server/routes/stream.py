@@ -13,7 +13,7 @@ from typing import Optional
 import httpx
 import curl_cffi.requests as CurlReq
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 
 from config import IPTV_BASE, IPTV_PASS, IPTV_USER, UA_STR
 from state import track_hit
@@ -310,7 +310,7 @@ async def stream_proxy(url: str, content_type: str):
         )
     except Exception as e:
         log.error(f"Stream proxy error ({url}): {e}")
-        return Response(status_code=502, content="Stream unavailable")
+        return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
 
 
 async def stream_bytes_transcode(url: str, target_height: Optional[int] = None):
@@ -370,7 +370,7 @@ async def stream_live(stream_id: int, request: Request):
         )
     except Exception as e:
         log.error(f"Stream proxy error ({url}): {e}")
-        return Response(status_code=502, content="Stream unavailable")
+        return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
 
 
 @router.get("/api/stream/live/{stream_id}/transcode")
@@ -388,7 +388,7 @@ async def stream_live_transcode(stream_id: int):
         )
     except Exception as e:
         log.error(f"Transcode setup error ({url}): {e}")
-        return Response(status_code=502, content="Transcode failed")
+        return JSONResponse(status_code=502, content={"detail": "Transcode failed"})
 
 
 @router.get("/api/stream/live/{stream_id}/quality/{height}")
@@ -406,7 +406,7 @@ async def stream_live_quality(stream_id: int, height: int):
         )
     except Exception as e:
         log.error(f"Quality transcode error ({url}): {e}")
-        return Response(status_code=502, content="Transcode failed")
+        return JSONResponse(status_code=502, content={"detail": "Transcode failed"})
 
 
 # ── VOD stream helpers ──────────────────────────────────────────────────────
@@ -517,7 +517,7 @@ async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
         )
     except Exception as e:
         log.error(f"Movie remux error ({stream_id}): {e}")
-        return Response(status_code=502, content="Remux failed")
+        return JSONResponse(status_code=502, content={"detail": "Remux failed"})
 
 
 @router.get("/api/stream/series/{series_id}/{episode_id}/remux")
@@ -532,7 +532,7 @@ async def stream_series_remux(series_id: int, episode_id: int, start: Optional[f
         )
     except Exception as e:
         log.error(f"Series remux error ({episode_id}): {e}")
-        return Response(status_code=502, content="Remux failed")
+        return JSONResponse(status_code=502, content={"detail": "Remux failed"})
 
 
 @router.get("/api/stream/movie/{stream_id}/transcode")
@@ -547,7 +547,7 @@ async def stream_movie_transcode(stream_id: int):
         )
     except Exception as e:
         log.error(f"VOD transcode error (movie {stream_id}): {e}")
-        return Response(status_code=502, content="Transcode failed")
+        return JSONResponse(status_code=502, content={"detail": "Transcode failed"})
 
 
 @router.get("/api/stream/series/{series_id}/{episode_id}/transcode")
@@ -562,7 +562,7 @@ async def stream_series_transcode(series_id: int, episode_id: int):
         )
     except Exception as e:
         log.error(f"VOD transcode error (series {episode_id}): {e}")
-        return Response(status_code=502, content="Transcode failed")
+        return JSONResponse(status_code=502, content={"detail": "Transcode failed"})
 
 
 @router.get("/api/stream/movie/{stream_id}")
