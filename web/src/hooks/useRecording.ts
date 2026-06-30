@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { toast } from "sonner";
 
 interface Recording {
   id: string;
@@ -30,7 +31,7 @@ export function useRecording(): UseRecordingReturn {
       if (name) params.set("stream_name", name);
       const r = await fetch(`/api/record/start?${params}`, { method: "POST" });
       if (!r.ok) {
-        console.error("Failed to start recording:", r.status);
+        toast.error("Failed to start recording", { description: `Server responded with ${r.status}` });
         return null;
       }
       const data = await r.json();
@@ -38,7 +39,7 @@ export function useRecording(): UseRecordingReturn {
       setActiveRecordingId(data.recording_id);
       return data.recording_id;
     } catch (e) {
-      console.error("Record start error:", e);
+      toast.error("Record start error");
       return null;
     }
   }, []);
@@ -53,7 +54,7 @@ export function useRecording(): UseRecordingReturn {
         setActiveRecordingId(null);
       }
     } catch (e) {
-      console.error("Record stop error:", e);
+      toast.error("Record stop error");
     }
   }, []);
 
@@ -87,7 +88,7 @@ export function useRecordings() {
         setRecordings(data.recordings || []);
       }
     } catch (e) {
-      console.error("Failed to fetch recordings:", e);
+      toast.error("Failed to fetch recordings");
     } finally {
       setLoading(false);
     }
@@ -104,7 +105,7 @@ export function useRecordings() {
         setRecordings(prev => prev.filter(rec => rec.id !== id));
       }
     } catch (e) {
-      console.error("Failed to delete recording:", e);
+      toast.error("Failed to delete recording");
     }
   }, []);
 
