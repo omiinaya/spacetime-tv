@@ -10,6 +10,7 @@ import {
   History,
   Menu,
   Settings,
+  Radio,
 } from "lucide-react";
 import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
@@ -34,7 +35,9 @@ const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
 const WatchlistPage = lazy(() => import("@/pages/WatchlistPage"));
 const HistoryPage = lazy(() => import("@/pages/HistoryPage"));
 const PersonPage = lazy(() => import("@/pages/PersonPage"));
+const RecordingsPage = lazy(() => import("@/pages/RecordingsPage"));
 const Player = lazy(() => import("@/components/Player"));
+const WatchRecording = lazy(() => import("@/components/WatchRecording"));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
@@ -83,6 +86,7 @@ const NAV_ITEMS = [
   { id: "/series", label: "Series", icon: Tv2 },
   { id: "/watchlist", label: "Watchlist", icon: Heart },
   { id: "/history", label: "History", icon: History },
+  { id: "/recordings", label: "Recordings", icon: Radio },
   { id: "/search", label: "Search", icon: Search },
 ];
 
@@ -311,11 +315,13 @@ function AppLayout() {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/watchlist" element={<WatchlistPage />} />
             <Route path="/history" element={<HistoryPage />} />
+            <Route path="/recordings" element={<RecordingsPage />} />
             <Route path="/person/:encodedName" element={<PersonPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/watch/live/:id" element={<Player type="live" />} />
             <Route path="/watch/movie/:id" element={<Player type="movie" />} />
+            <Route path="/watch/recording/:id" element={<WatchRecording />} />
             <Route
               path="/watch/series/:seriesId/:epId"
               element={<Player type="series" />}

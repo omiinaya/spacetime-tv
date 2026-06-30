@@ -2,7 +2,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router";
 import {
   Loader2, AlertCircle, ArrowLeft, Play, Pause, Maximize, Minimize,
-  Volume2, VolumeX, SkipBack, SkipForward, Settings, PictureInPicture2, Download, Tv, RadioTower,
+  Volume2, VolumeX, SkipBack, SkipForward, Settings, PictureInPicture2, Download, Tv, RadioTower, Circle,
 } from "lucide-react";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useKeyboard } from "@/hooks/useKeyboard";
@@ -13,6 +13,7 @@ import { SleepTimer } from "@/components/SleepTimer";
 import { CatchupTimeline } from "@/components/CatchupTimeline";
 import { saveRecentChannel } from "@/lib/recentChannels";
 import { api } from "@/lib/api";
+import { useRecording } from "@/hooks/useRecording";
 
 // ── Types ─────────────────────────────────────────────────────
 interface PlayerProps { type: "live" | "movie" | "series"; }
@@ -65,6 +66,17 @@ export default function Player({ type }: PlayerProps) {
 
   // ── UI State ─────────────────────────────────────────────────
   const { isFullscreen, setIsFullscreen } = useFullscreen();
+
+  // ── Recording ────────────────────────────────────────────────
+  const { isRecording, startRecording, stopRecording } = useRecording();
+
+  const handleRecordToggle = useCallback(() => {
+    if (isRecording) {
+      stopRecording();
+    } else if (type === "live" && id) {
+      startRecording(parseInt(id, 10));
+    }
+  }, [isRecording, stopRecording, startRecording, type, id]);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showQualityMenu, setShowQualityMenu] = useState(false);
@@ -600,6 +612,18 @@ export default function Player({ type }: PlayerProps) {
                       <Download className="w-4 h-4" /> Download
                     </a>
                   )}
+                  {/* Record (live only) */}
+                  {type === "live" && (
+                    <button
+                      onClick={() => { handleRecordToggle(); setShowMoreMenu(false); }}
+                      className={`flex items-center gap-2 w-full text-left px-4 py-2.5 text-sm transition-colors ${
+                        isRecording ? "text-red-400 hover:bg-red-500/10" : "text-white/70 hover:bg-white/10"
+                      }`}
+                    >
+                      <Circle className={`w-4 h-4 ${isRecording ? "animate-pulse fill-current" : ""}`} />
+                      {isRecording ? "Stop Recording" : "Record"}
+                    </button>
+                  )}
                   {/* Sleep Timer */}
                   <div className="px-2">
                     <SleepTimer
@@ -661,6 +685,18 @@ export default function Player({ type }: PlayerProps) {
                   if (v && !v.paused) { v.pause(); }
                 }}
               />
+              {/* Record (live only) */}
+              {type === "live" && (
+                <button
+                  onClick={handleRecordToggle}
+                  className={`p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center transition-colors ${
+                    isRecording ? "text-red-500" : "text-white/60 hover:text-white/80"
+                  }`}
+                  aria-label={isRecording ? "Stop recording" : "Start recording"}
+                >
+                  <Circle className={`w-4 h-4 ${isRecording ? "animate-pulse fill-current" : ""}`} aria-hidden="true" />
+                </button>
+              )}
               {isVod && (
                 <a
                   href={`/api/download/${type === "series" ? "series" : "movie"}/${epId || id}`}
