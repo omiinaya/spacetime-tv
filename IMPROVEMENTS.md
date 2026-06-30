@@ -58,6 +58,14 @@ Decomposed the monolithic 1105-line stream.py into focused modules:
   `stream.py` remains the umbrella — re-exports all symbols, aggregates sub-routers.
   Zero test changes needed. 395 tests pass. Backend architecture grade C+→B-.
 
+### S8 — Split guide.py (429 lines) → 3 focused modules
+Decomposed guide.py (EPG parsing, TMDB enrichment, channel groups, SSE, 4 routes):
+  - `guide_core.py` (~55 lines) — parse_xmltv() + EPG enrichment cache
+  - `guide_epg.py` (~170 lines) — EPG loading, background refresh, broadcast loop, guide cache builder
+  - `guide_routes.py` (~185 lines) — all 4 routes: tv_guide, epg_sse, guide_now, guide_enrich
+  `guide.py` remains the umbrella — re-exports all symbols, aggregates the router.
+  Zero test changes needed. 395 tests pass. Backend architecture grade B-→B.
+
 ---
 
 ## Recently Completed (archive)
