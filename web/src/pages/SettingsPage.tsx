@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { Settings, Globe, EyeOff, Film, Tv2, Tv, RotateCcw, Check, Search } from "lucide-react";
+import { Settings, Globe, EyeOff, Film, Tv2, Tv, RotateCcw, Check, Search, Lock } from "lucide-react";
 import { api, Category } from "@/lib/api";
 import { useSettings } from "@/context/SettingsContext";
 import {
@@ -8,9 +8,11 @@ import {
   filterCategories,
 } from "@/lib/settings";
 import { Skeleton } from "@/components/Skeleton";
+import { PinPrompt } from "@/components/PinPrompt";
+import { isPinConfigured } from "@/lib/settings";
 
 export default function SettingsPage() {
-  const { settings, update, reset } = useSettings();
+  const { settings, update, reset, adultUnlocked, setAdultPin, clearAdultPin, lockAdult } = useSettings();
 
   const [liveCats, setLiveCats] = useState<Category[]>([]);
   const [movieCats, setMovieCats] = useState<Category[]>([]);
@@ -19,6 +21,34 @@ export default function SettingsPage() {
 
   // Hidden category search
   const [hiddenSearch, setHiddenSearch] = useState("");
+
+  // PIN state
+  const [showPinPrompt, setShowPinPrompt] = useState(false);
+  const [showPinPromptChange, setShowPinPromptChange] = useState(false);
+
+  const pinConfigured = isPinConfigured(settings);
+
+  const handleSetPin = async (pin: string) => {
+    await setAdultPin(pin);
+  };
+
+  const handleChangePin = () => {
+    setShowPinPromptChange(true);
+  };
+
+  const handleAdultToggle = () => {
+    if (settings.showAdult) {
+      // Turning off — no PIN needed
+      update({ showAdult: false });
+      lockAdult();
+    } else if (pinConfigured && !adultUnlocked) {
+      // Turning on — PIN required
+      setShowPinPrompt(true);
+    } else {
+      // No PIN set or already unlocked
+      update({ showAdult: true });
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -246,15 +276,22 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* ── Adult Content ───────────────────────────────────────── */}
-      <section className="space-y-3">
+      {/* ── Parental Controls ────────────────────────────────────── */}
+      <section className="space-y-4">
         <div className="flex items-center gap-2">
-          <EyeOff className="h-4 w-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold">Adult Content</h2>
+          <Lock className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">Parental Controls</h2>
+          {pinConfigured && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+              PIN set
+            </span>
+          )}
         </div>
+
+        {/* Adult toggle — always visible */}
         <label className="flex items-center gap-3 cursor-pointer">
           <button
-            onClick={() => update({ showAdult: !settings.showAdult })}
+            onClick={handleAdultToggle}
             className={`relative w-9 h-5 rounded-full transition-colors ${
               settings.showAdult ? "bg-primary" : "bg-muted border border-border"
             }`}
@@ -268,7 +305,50 @@ export default function SettingsPage() {
           <span className="text-xs text-muted-foreground">
             {settings.showAdult ? "Adult content is visible" : "Adult content is hidden"}
           </span>
+          {adultUnlocked && (
+            <button
+              onClick={(e) => { e.stopPropagation(); lockAdult(); }}
+              className="text-[10px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/30 transition-colors"
+            >
+              Lock again
+            </button>
+          )}
         </label>
+
+        {/* PIN Management */}
+        {!pinConfigured ? (
+          <PinSetup onSet={handleSetPin} />
+        ) : (
+          <PinManager
+            onChangePin={handleChangePin}
+            onRemovePin={clearAdultPin}
+          />
+        )}
+
+        {/* PIN Prompt Modal */}
+        {showPinPrompt && (
+          <PinPrompt
+            title="Unlock Adult Content"
+            description="Enter your PIN to show adult content."
+            onSuccess={() => {
+              setShowPinPrompt(false);
+              update({ showAdult: true });
+            }}
+            onCancel={() => setShowPinPrompt(false)}
+          />
+        )}
+        {showPinPromptChange && (
+          <PinPrompt
+            title="Change PIN"
+            description="Enter your current PIN to continue."
+            onSuccess={() => {
+              setShowPinPromptChange(false);
+              // Show the PIN setup form to set a new PIN
+              clearAdultPin();
+            }}
+            onCancel={() => setShowPinPromptChange(false)}
+          />
+        )}
       </section>
 
       {/* ── Hidden Categories ───────────────────────────────────── */}
@@ -336,6 +416,91 @@ export default function SettingsPage() {
           )}
         </div>
       </section>
+    </div>
+  );
+}
+
+// ── PIN sub-components ──────────────────────────────────────────────────────
+
+function PinSetup({ onSet }: { onSet: (pin: string) => Promise<void> }) {
+  const [pin, setPin] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async () => {
+    if (pin.length < 4) { setError("PIN must be at least 4 digits"); return; }
+    if (!/^\d+$/.test(pin)) { setError("PIN must be digits only"); return; }
+    if (pin !== confirm) { setError("PINs do not match"); return; }
+    setError("");
+    await onSet(pin);
+    setSuccess(true);
+  };
+
+  if (success) {
+    return (
+      <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-sm text-green-600">
+        ✓ PIN has been set
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 p-3 rounded-lg border border-border bg-card">
+      <p className="text-xs text-muted-foreground">
+        Set a PIN to protect adult content. You&apos;ll need to enter it each session to view adult channels.
+      </p>
+      <div className="flex gap-2">
+        <input
+          type="password"
+          maxLength={8}
+          placeholder="New PIN (4+ digits)"
+          value={pin}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+          className="flex-1 h-8 px-2.5 rounded border border-border bg-muted text-xs placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        <input
+          type="password"
+          maxLength={8}
+          placeholder="Confirm PIN"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value.replace(/\D/g, ""))}
+          className="flex-1 h-8 px-2.5 rounded border border-border bg-muted text-xs placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+      </div>
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      <button
+        onClick={handleSubmit}
+        disabled={pin.length < 4 || confirm.length < 4}
+        className="px-3 py-1.5 rounded bg-primary text-primary-foreground text-xs font-medium disabled:opacity-40 transition-opacity"
+      >
+        Set PIN
+      </button>
+    </div>
+  );
+}
+
+function PinManager({
+  onChangePin,
+  onRemovePin,
+}: {
+  onChangePin: () => void;
+  onRemovePin: () => void;
+}) {
+  return (
+    <div className="flex gap-2">
+      <button
+        onClick={onChangePin}
+        className="px-3 py-1.5 rounded border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+      >
+        Change PIN
+      </button>
+      <button
+        onClick={() => { if (confirm("Remove your PIN? Adult content will be unprotected.")) onRemovePin(); }}
+        className="px-3 py-1.5 rounded border border-red-500/30 text-xs text-red-500 hover:bg-red-500/10 transition-colors"
+      >
+        Remove PIN
+      </button>
     </div>
   );
 }

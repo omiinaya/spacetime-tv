@@ -9,6 +9,8 @@ export interface AppSettings {
   showAdult: boolean;
   /** Service prefixes to show for movies/series (empty = show all). E.g. ["NETFLIX", "DISNEY+"] */
   services: string[];
+  /** Hashed PIN for parental controls (empty = no PIN set) */
+  adultPin: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -16,6 +18,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   hiddenCategories: [],
   showAdult: false,
   services: [],
+  adultPin: "",
 };
 
 const KEY = "stv_settings";
@@ -76,13 +79,15 @@ export function filterCategories<T extends { category_id: string; category_name:
   categories: T[],
   settings: AppSettings,
   isLiveTV: boolean = false,
+  adultUnlocked: boolean = false,
 ): T[] {
+  const pinBlocksAdult = isPinConfigured(settings) && !adultUnlocked;
   return categories.filter((cat) => {
     const name = cat.category_name;
     // const nameUpper unused
 
-    // Adult filter
-    if (!settings.showAdult && isAdultCategory(name)) return false;
+    // Adult filter — blocked if showAdult is off OR PIN is configured but not unlocked
+    if (isAdultCategory(name) && (!settings.showAdult || pinBlocksAdult)) return false;
 
     // Hidden categories
     if (settings.hiddenCategories.includes(cat.category_id)) return false;
@@ -139,7 +144,16 @@ export function collectAllPrefixes(
   return Array.from(seen).sort();
 }
 
-/** Collect all unique service prefixes from movie/series categories */
+// ── PIN helpers ─────────────────────────────────────────────────────────────
+
+/** Hash a PIN using SHA-256 via Web Crypto API. */
+export async function hashPin(pin: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode("stv_pin:" + pin);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 export function collectAllServices(
   movieCats: { category_name: string }[],
   seriesCats: { category_name: string }[],
@@ -152,4 +166,16 @@ export function collectAllServices(
     }
   }
   return Array.from(seen).sort();
+}
+
+/** Verify a PIN against a stored hash. */
+export async function verifyPin(pin: string, storedHash: string): Promise<boolean> {
+  if (!storedHash || !pin) return false;
+  const hash = await hashPin(pin);
+  return hash === storedHash;
+}
+
+/** Check if a PIN has been set (non-empty hash). */
+export function isPinConfigured(settings: AppSettings): boolean {
+  return settings?.adultPin?.length > 0;
 }

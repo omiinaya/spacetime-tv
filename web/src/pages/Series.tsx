@@ -137,12 +137,12 @@ export default function SeriesPage() {
     }
   }, [location.state, searchParams, rows, setSearchParams]);
 
-  const { settings } = useSettings();
+  const { settings, adultUnlocked } = useSettings();
 
   // Filter categories by settings
   const filteredCatsBySettings = useMemo(
-    () => filterCategories(categories, settings, false),
-    [categories, settings]
+    () => filterCategories(categories, settings, false, adultUnlocked),
+    [categories, settings, adultUnlocked]
   );
 
   // Load categories (with 15-min sessionStorage cache)

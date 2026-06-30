@@ -92,7 +92,7 @@ export default function LiveTV() {
   const { visibleItems, sentinelRef, hasMore } = useInfiniteScroll(
     q ? allStreams : (isAllMode ? allStreams : streams), BATCH
   );
-  const { settings } = useSettings();
+  const { settings, adultUnlocked } = useSettings();
   const { favorites, toggleFavorite } = useChannelFavorites();
   const [favoritesOnly, setFavoritesOnly] = useState(false);
 
@@ -104,8 +104,8 @@ export default function LiveTV() {
   const { getNowPlaying } = useNowPlaying(nowPlayingStreamIds);
 
   const filteredCategories = useMemo(
-    () => filterCategories(categories, settings, true),
-    [categories, settings]
+    () => filterCategories(categories, settings, true, adultUnlocked),
+    [categories, settings, adultUnlocked]
   );
 
   // Pre-compute full search matches so we can show the total count

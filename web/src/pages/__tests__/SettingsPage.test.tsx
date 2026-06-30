@@ -42,15 +42,22 @@ let mockSettings = {
   hiddenCategories: [] as string[],
   showAdult: false,
   services: [] as string[],
+  adultPin: "",
 };
 const mockUpdate = vi.fn();
 const mockReset = vi.fn();
+const mockAdultUnlocked = false;
 
 vi.mock("@/context/SettingsContext", () => ({
   useSettings: () => ({
     settings: mockSettings,
     update: (...args: unknown[]) => (mockUpdate as (...a: unknown[]) => void)(...args),
     reset: (...args: unknown[]) => (mockReset as (...a: unknown[]) => void)(...args),
+    adultUnlocked: false,
+    setAdultPin: vi.fn(),
+    clearAdultPin: vi.fn(),
+    unlockAdult: vi.fn(),
+    lockAdult: vi.fn(),
   }),
   SettingsProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -337,7 +344,7 @@ describe("adult content toggle", () => {
   it("renders section heading", async () => {
     renderSettingsPage();
     await waitFor(() => {
-      expect(screen.getByText("Adult Content")).toBeInTheDocument();
+      expect(screen.getByText("Parental Controls")).toBeInTheDocument();
     });
   });
 

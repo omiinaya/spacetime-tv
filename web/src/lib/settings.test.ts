@@ -29,6 +29,7 @@ describe("loadSettings / saveSettings", () => {
       hiddenCategories: ["cat_1"],
       showAdult: true,
       services: ["NETFLIX"],
+      adultPin: "",
     };
     saveSettings(custom);
     expect(loadSettings()).toEqual(custom);
@@ -40,6 +41,7 @@ describe("loadSettings / saveSettings", () => {
       hiddenCategories: [],
       showAdult: false,
       services: [],
+      adultPin: "",
     };
     localStorage.setItem(KEY_OLD, JSON.stringify(old));
     expect(loadSettings()).toEqual(old);
@@ -47,7 +49,7 @@ describe("loadSettings / saveSettings", () => {
 
   it("new key takes precedence over old key", () => {
     localStorage.setItem(KEY_OLD, JSON.stringify({ languages: ["FR"], hiddenCategories: [], showAdult: false, services: [] }));
-    const custom = { languages: ["EN"], hiddenCategories: [], showAdult: false, services: [] };
+    const custom = { languages: ["EN"], hiddenCategories: [], showAdult: false, services: [], adultPin: "" };
     saveSettings(custom);
     expect(loadSettings()).toEqual(custom);
   });
