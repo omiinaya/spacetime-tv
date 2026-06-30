@@ -168,6 +168,10 @@ export const api = {
       get<CatchupTimelineResponse>(
         `/guide/catchup?stream_id=${streamId}&hours=${hours}`, signal
       ),
+    search: (q: string, signal?: AbortSignal, futureOnly = true) =>
+      get<GuideSearchResponse>(
+        `/guide/search?q=${encodeURIComponent(q)}&future_only=${futureOnly}&limit=50`, signal
+      ),
   },
   search: (q: string, signal?: AbortSignal, limit = 20, offset = 0, section?: string) =>
     get<{ live: LiveStream[]; movies: Movie[]; series: Series[]; totals: { live: number; movies: number; series: number } }>(
@@ -442,6 +446,27 @@ export interface CatchupTimelineResponse {
   programmes: CatchupProgramme[];
   channel_id: string | null;
   window_hours: number;
+}
+
+/** Single result from EPG search */
+export interface GuideSearchResult {
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  channel_id: string;
+  channel_name: string;
+  start: string;
+  stop: string;
+  start_ts: number;
+  stop_ts: number;
+  duration: number;
+}
+
+export interface GuideSearchResponse {
+  results: GuideSearchResult[];
+  total: number;
+  query: string;
+  future_only: boolean;
 }
 
 // ── TMDB v3 API Proxy types ─────────────────────────────────────────────

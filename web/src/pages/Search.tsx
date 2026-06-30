@@ -12,12 +12,13 @@ import {
   ArrowUpAZ,
   TrendingUp,
   ChevronDown,
+  Radio,
 } from "lucide-react";
-import { api, LiveStream, Movie, Series, imageUrl, TmdbEnrichData, tmdbSrcset, tmdbImageUrl } from "@/lib/api";
+import { api, LiveStream, Movie, Series, imageUrl, TmdbEnrichData, tmdbSrcset, tmdbImageUrl, GuideSearchResult } from "@/lib/api";
 import { SearchHistory, addSearchHistory } from "@/components/SearchHistory";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 
-type FilterTab = "all" | "live" | "movies" | "series";
+type FilterTab = "all" | "live" | "movies" | "series" | "epg";
 type SortBy = "relevance" | "name" | "rating";
 
 interface SearchResults {
@@ -49,6 +50,8 @@ export default function SearchPage() {
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<SearchResults | null>(null);
   const [enrichData, setEnrichData] = useState<Record<string, TmdbEnrichData> | null>(null);
+  const [epgResults, setEpgResults] = useState<GuideSearchResult[] | null>(null);
+  const [epgLoading, setEpgLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [filter, setFilter] = useState<FilterTab>("all");
   const [sortBy, setSortBy] = useState<SortBy>("relevance");
@@ -140,6 +143,24 @@ export default function SearchPage() {
     }
   }, [cancelPending]);
 
+  // ── EPG search ────────────────────────────────────────────────
+  const runEpgSearch = useCallback(async (q: string) => {
+    const trimmed = q.trim();
+    if (trimmed.length < 2) {
+      setEpgResults(null);
+      return;
+    }
+    setEpgLoading(true);
+    try {
+      const r = await api.guide.search(trimmed);
+      setEpgResults(r.results ?? []);
+    } catch {
+      setEpgResults([]);
+    } finally {
+      setEpgLoading(false);
+    }
+  }, []);
+
   // ── Load more results for a specific section ────────────────
   const loadMore = useCallback(async (section: "live" | "movies" | "series") => {
     if (!results || loadingMore) return;
@@ -206,11 +227,14 @@ export default function SearchPage() {
         bgRefreshRef.current = true;
         runSearch(trimmed).finally(() => { bgRefreshRef.current = false; });
       }
+      // Also trigger EPG search in background
+      runEpgSearch(trimmed);
     } else {
       // No cache — full load with spinner
       runSearch(trimmed);
+      runEpgSearch(trimmed);
     }
-  }, [urlQuery, runSearch]);
+  }, [urlQuery, runSearch, runEpgSearch]);
 
   // ── TMDB enrichment of search results ──────────────────────────
   // After results arrive, call the batch enrich endpoint to get
@@ -275,7 +299,8 @@ export default function SearchPage() {
     setShowHistory(false);
     setSearchParams({ q: query }, { replace: true });
     runSearch(query);
-  }, [query, setSearchParams, runSearch]);
+    runEpgSearch(query);
+  }, [query, setSearchParams, runSearch, runEpgSearch]);
 
   // ── Derived ───────────────────────────────────────────────────
   const total =
@@ -447,6 +472,7 @@ export default function SearchPage() {
             { key: "live" as FilterTab, label: "Live", count: liveCount, icon: Tv },
             { key: "movies" as FilterTab, label: "Movies", count: movieCount, icon: Film },
             { key: "series" as FilterTab, label: "Series", count: seriesCount, icon: Tv2 },
+            { key: "epg" as FilterTab, label: "EPG", count: epgResults?.length ?? 0, icon: Radio },
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -461,7 +487,7 @@ export default function SearchPage() {
               >
                 {Icon && <Icon className="h-3.5 w-3.5" />}
                 {tab.label}
-                {tab.count > 0 && (
+                {tab.count != null && tab.count > 0 && (
                   <span className="text-[10px] opacity-60">{tab.count.toLocaleString()}</span>
                 )}
               </button>
@@ -504,7 +530,61 @@ export default function SearchPage() {
       )}
 
       {/* Results */}
-      {filteredResults && (
+      {filter === "epg" ? (
+        /* ── EPG Search Results ────────────────────────────── */
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Radio className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold">
+              EPG Programmes ({epgResults?.length ?? 0})
+            </h2>
+            {epgLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+          </div>
+          {epgLoading && epgResults === null && (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+          {!epgLoading && (!epgResults || epgResults.length === 0) && query.trim().length >= 2 && (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Radio className="h-8 w-8 text-muted-foreground/20 mb-2" />
+              <p className="text-sm text-muted-foreground">No EPG programmes found for &quot;{query}&quot;</p>
+            </div>
+          )}
+          {epgResults && epgResults.length > 0 && (
+            <div className="space-y-1.5">
+              {epgResults.map((prog, i) => {
+                const startTime = new Date(prog.start_ts * 1000);
+                const stopTime = new Date(prog.stop_ts * 1000);
+                const fmtTime = (d: Date) =>
+                  d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                const mins = Math.round(prog.duration / 60);
+                return (
+                  <div
+                    key={`${prog.channel_id}-${prog.start_ts}-${i}`}
+                    className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card hover:border-primary/30 transition-colors"
+                  >
+                    <div className="shrink-0 w-20 text-right">
+                      <p className="text-xs font-medium tabular-nums">{fmtTime(startTime)}</p>
+                      <p className="text-[10px] text-muted-foreground tabular-nums">{fmtTime(stopTime)}</p>
+                      <p className="text-[9px] text-muted-foreground/50 tabular-nums">{mins}m</p>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium leading-tight truncate">{prog.title}</p>
+                      {prog.subtitle && (
+                        <p className="text-[10px] text-muted-foreground italic truncate">{prog.subtitle}</p>
+                      )}
+                      <p className="text-[10px] text-muted-foreground/60 mt-0.5 truncate">
+                        {prog.channel_name}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : filteredResults && (
         <div className="space-y-8">
           {/* Live */}
           {filteredResults.live.length > 0 && (
