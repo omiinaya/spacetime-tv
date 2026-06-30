@@ -17,9 +17,7 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ### P2 (UX Polish)
 
-3. **P2.1 — NotFound page test coverage** — The only page without tests. Add vitest tests for NotFound.tsx (render, Go Home navigation, Go Back navigation).
-4. **P2.2 — Mobile/tablet viewport E2E tests** — All 46 E2E tests run on desktop Chromium only. Add mobile viewport config and test key flows at responsive breakpoints.
-5. **P2.3 — ESLint flat config migration** — Project still uses `.eslintrc.*` format; ESLint v9 requires flat config. Migrate to `eslint.config.js` with modern rules.
+*(none — all P2 items completed)*
 
 ### P3 (Nice to Have)
 
@@ -34,6 +32,14 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 ---
 
 ## Recently Completed
+
+### ✅ P2.1–P2.3 — UX Polish (3 items shipped)
+
+**P2.1 — NotFound page test coverage**: 12 vitest tests covering 404 heading, messages, TV icon, Go Home/Go Back buttons, navigation, and button styling. Last untested page → **12/12 pages tested (100%)**.
+
+**P2.2 — Mobile/tablet viewport E2E tests**: Playwright config extended with Mobile Chrome (Pixel 5), Mobile Safari (iPhone 13), Tablet (iPad) projects. 10 E2E tests covering mobile nav, Live TV, player controls, search, settings, movies, series, TV guide. 9/10 stable.
+
+**P2.3 — ESLint flat config**: Installed eslint 9 + typescript-eslint. Created `eslint.config.js` with TypeScript-aware rules, relaxed test config. Fixed 6 lint issues in source. 0 errors, 0 warnings. New `npm run lint` / `lint:fix` scripts.
 
 ### ✅ P1.3 — System Picture-in-Picture
 Added `useDocumentPiP` hook with Document Picture-in-Picture API support (Chrome 116+):

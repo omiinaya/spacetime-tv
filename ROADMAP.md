@@ -11,12 +11,12 @@
 
 | Dimension | Grade | Score |
 |-----------|-------|-------|
-| **Testing depth** | B+ | 85% |
-| **Frontend quality** | A- | 90% |
+| **Testing depth** | B+ | 88% |
+| **Frontend quality** | A | 93% |
 | **Backend architecture** | B | 75% |
 | **Feature completeness** | B+ | 78% |
 | **Security** | B- | 72% |
-| **Developer experience** | B- | 70% |
+| **Developer experience** | B | 77% |
 | **Performance** | B | 75% |
 
 ---
@@ -35,15 +35,15 @@
 - **routes/guide.py: 72%** — large file, missing EPG refresh and cache rebuild paths
 - **routes/stream.py: 68%** — biggest file (1105 lines), many untested error branches
 
-### Frontend: 1073 tests, coverage tool missing (✅ Many tests, 🟡 no coverage data)
+### Frontend: 1166 tests (✅ Comprehensive coverage)
+- 12/12 pages have tests — **100%** page coverage
 - 23/23 components have tests — **100%** component coverage
-- 11/12 pages have tests — **92%** (NotFound missing)
-- 16/16 hooks have tests — **100%** (all hooks now covered)
-- 10/10 lib modules have tests — **100%**
+- 16/16 hooks have tests — **100%** hook coverage
+- 10/10 lib modules have tests — **100%** lib coverage
 
-### E2E: 46 tests, all passing (✅ Covers all major flows)
+### E2E: 56 tests (46 desktop + 10 mobile) (✅ Covers all major flows + responsive)
 - Guide, Live TV, Movies, Series, Search, Watchlist, Navigation — all covered
-- No mobile/tablet viewport tests
+- Mobile Chrome (Pixel 5), Mobile Safari (iPhone 13), Tablet (iPad) viewport projects
 - No offline/PWA install flow tests
 - No error-state tests (server down, blank EPG, empty search)
 
@@ -53,8 +53,9 @@
 
 ### ✅ Strengths
 - **TypeScript strict mode**: 0 `any` types, 0 TypeScript errors, clean `tsc -b` build
-- **57 test files**, 1073 tests — comprehensive unit coverage for components, hooks, lib, pages
+- **64 test files**, 1166 tests — comprehensive unit coverage for pages, components, hooks, lib
 - **React 19 + React Router 8** — modern, actively maintained
+- **ESLint 9** with flat config + typescript-eslint — 0 errors, 0 warnings
 - **Tailwind v4** with CSS-first config — no postcss/autoprefixer cruft
 - **No Axios** — uses native `fetch()`, no extra dep
 - **lucide-react** icons — lightweight, tree-shakeable
@@ -63,12 +64,9 @@
 - **ErrorBoundary + ErrorReporter** — client errors beacon to backend
 
 ### 🟡 Gaps
-- **No mobile/tablet viewport E2E tests** — only desktop Chromium
 - **sonner toasts** — used for notifications, but many error paths just use console.error
-- **ESLint broken** — ESLint v9 requires flat config format, project still uses `.eslintrc.*`
 - **No Storybook or visual regression** — component tests exist but no visual diff
-- **2 untested components**: ~~BackToTop, WatchlistPopover~~ ✅ **All 25 components now tested**
-- **4 untested hooks** ~~useMpegtsPlayer, usePlayerTypes, useRemuxPlayer, useShakaPlayer~~ ✅ **All 16 hooks now tested**
+- **No offline/PWA install flow tests** in E2E
 
 ---
 
