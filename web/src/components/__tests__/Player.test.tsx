@@ -82,6 +82,9 @@ vi.mock("@/lib/api", () => ({
     series: {
       info: vi.fn(() => Promise.resolve({})),
     },
+    guide: {
+      catchup: vi.fn(() => Promise.resolve({ programmes: [] })),
+    },
   },
   imageUrl: (url: string) => url,
 }));
