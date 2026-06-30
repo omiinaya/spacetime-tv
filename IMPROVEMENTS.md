@@ -22,7 +22,6 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 ### P3 (Nice to Have)
 
 6. **P3.1 — Auto frame-rate switching** — Detect video frame rate and switch display refresh rate for smoother playback (requires Screen Capture API or extension).
-7. **P3.2 — Theme customization (light/dark mode)** — Currently dark-only. Add CSS variables for light theme, settings toggle, system preference detection.
 
 ### P4 (Tech Debt / DX)
 
@@ -32,6 +31,17 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 ---
 
 ## Recently Completed
+
+### ✅ P3.2 — Theme customization (light/dark mode)
+Added full light/dark/system theme support:
+- `AppSettings.theme` field with `"dark" | "light" | "system"` values (default: `"dark"`)
+- Light theme CSS variables in `.light` class — all 10 design tokens inverted for a clean light appearance
+- Theme application effect in `SettingsContext` — toggles `.dark` / `.light` on `<html>` element
+- System preference detection via `matchMedia('prefers-color-scheme: light')` with live listener for `"system"` mode
+- Dark/Light/System toggle buttons in SettingsPage with Sun/Moon/Monitor icons and active state highlighting
+- Sonner Toaster respects resolved theme for proper toast colors
+- 8 new tests (5 SettingsPage theme tests + 3 SettingsContext theme application tests), all 1174 pass
+- Zero breaking changes — frontend test count: 1174 (+8), backend: 388 pass
 
 ### ✅ P2.1–P2.3 — UX Polish (3 items shipped)
 
