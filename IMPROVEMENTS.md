@@ -11,13 +11,25 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-### P3 (Nice to Have)
-
-- **P3.2 — useCloudBackup hook tests** — New `useCloudBackup` hook (uploadBackup, downloadBackup, mergeFavorites, backupStatus). Needs 12+ tests covering: upload success/failure, download success/failure, merge success/failure, loading state, error state, lastUpload/lastDownload timestamps.
-
 ### P4 (Tech Debt / DX)
 
 - **P4.1 — Clean up 26 RuntimeWarnings in test suite** — Various async mock coroutines never awaited (`proc.kill()`, `mock_stream_bytes`, etc.). Each is a real (if benign) async leak. Fix by either awaiting in implementation or silencing in tests.
+
+---
+
+## Recently Completed
+
+### ✅ P3.2 — useCloudBackup hook tests (+17 tests)
+`useCloudBackup` hook (uploadBackup, downloadBackup, mergeFavorites, backupStatus). Added 17 tests covering:
+- Initial state: no timestamps, not loading, no error
+- **uploadBackup**: success (sets lastUpload), server error (returns false), loading state during request, empty favorites
+- **downloadBackup**: success (returns favorites/watchlist), server error (returns null), loading state
+- **mergeFavorites**: success (returns merged array), server error, request payload verification, loading state
+- Error state resets on subsequent successful upload
+- Timestamps update on repeated uploads
+- Network failure handling for upload and download
+- Added MSW handlers: `POST /api/cloud/backup`, `GET /api/cloud/backup`, `POST /api/cloud/merge`
+- Frontend tests: 17 new. TypeScript clean.
 
 ---
 
