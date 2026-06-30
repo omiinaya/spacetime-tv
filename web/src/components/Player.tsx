@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, useSearchParams } from "react-router";
 import {
   Loader2, AlertCircle, ArrowLeft, Play, Pause, Maximize, Minimize,
   Volume2, VolumeX, SkipBack, SkipForward, Settings, PictureInPicture2, Download, Tv, RadioTower,
@@ -10,6 +10,7 @@ import { useVideoPlayer, fmtTime, QUALITIES, SPEEDS } from "@/hooks/useVideoPlay
 import { SubtitleSelector } from "@/components/SubtitleSelector";
 import { AudioSelector } from "@/components/AudioSelector";
 import { SleepTimer } from "@/components/SleepTimer";
+import { CatchupTimeline } from "@/components/CatchupTimeline";
 import { saveRecentChannel } from "@/lib/recentChannels";
 import { api } from "@/lib/api";
 
@@ -31,6 +32,21 @@ interface VideoElementWithWebkit extends HTMLVideoElement {
 export default function Player({ type }: PlayerProps) {
   const { id, seriesId, epId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // ── Timeshift / catch-up mode ──────────────────────────────
+  const tsParam = searchParams.get("ts");
+  const timeshiftDuration = tsParam ? parseInt(tsParam, 10) : undefined;
+  const isTimeshiftMode = timeshiftDuration !== undefined && timeshiftDuration > 0;
+
+  const setTimeshift = useCallback((durationSeconds: number) => {
+    setSearchParams({ ts: String(durationSeconds) });
+  }, [setSearchParams]);
+
+  const goLive = useCallback(() => {
+    setSearchParams({});
+  }, [setSearchParams]);
+
   const {
     videoRef, containerRef, phase, errorMsg, errorType, loadingStep, transcoding,
     volume, muted, playbackRate, qualityIdx, currentTime, duration, buffered,
@@ -41,7 +57,7 @@ export default function Player({ type }: PlayerProps) {
     liveSeekableStart, liveSeekableEnd, switchAudioTrack,
     connectionQuality, stallCount, suggestLowerQuality, downloadSpeed,
   } = useVideoPlayer({
-    type, id, seriesId, epId,
+    type, id, seriesId, epId, timeshiftDuration,
     onAutoAdvance: useCallback((url: string) => {
       navigate(url);
     }, [navigate]),
@@ -687,6 +703,15 @@ export default function Player({ type }: PlayerProps) {
           </div>
         </div>
       </div>
+      {/* ── Catch-up timeline (live only) ─────────────────────── */}
+      {isLive && id && (
+        <CatchupTimeline
+          streamId={parseInt(id, 10)}
+          onSelectProgramme={(startOffset) => setTimeshift(startOffset)}
+          onGoLive={goLive}
+          isTimeshiftMode={isTimeshiftMode}
+        />
+      )}
     </div>
   );
 }

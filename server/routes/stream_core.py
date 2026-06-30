@@ -86,6 +86,18 @@ async def build_stream_url(stream_id: int, stream_type: str) -> str:
     return f"{IPTV_BASE}/{prefix}/{IPTV_USER}/{IPTV_PASS}/{stream_id}.{ext}"
 
 
+def build_timeshift_url(stream_id: int, duration_seconds: int) -> str:
+    """Build timeshift URL for catch-up TV playback.
+
+    Xtream Codes API format:
+      {base}/live/{user}/{pass}/{stream_id}/timeshift/{duration}.ts
+
+    Duration is how far back in seconds (e.g. 3600 = 1 hour ago).
+    Returns the raw provider URL; the caller proxies it through the server.
+    """
+    return f"{IPTV_BASE}/live/{IPTV_USER}/{IPTV_PASS}/{stream_id}/timeshift/{duration_seconds}.ts"
+
+
 async def get_content_length(url: str) -> Optional[int]:
     """Discover Content-Length via Range request (HEAD returns 0 for this CDN)."""
     try:

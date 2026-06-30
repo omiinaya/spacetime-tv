@@ -4,11 +4,11 @@ Extracted from stream.py during decomposition of the 1105-line monolithic file.
 """
 import logging
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from state import track_hit
-from .stream_core import build_stream_url, stream_bytes, stream_bytes_transcode
+from .stream_core import build_stream_url, build_timeshift_url, stream_bytes, stream_bytes_transcode
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["stream"])
@@ -63,6 +63,43 @@ async def stream_live_transcode(stream_id: int):
     except Exception as e:
         log.error(f"Transcode setup error ({url}): {e}")
         return JSONResponse(status_code=502, content={"detail": "Transcode failed"})
+
+
+@router.get("/api/stream/live/{stream_id}/timeshift")
+async def stream_live_timeshift(request: Request, stream_id: int, duration: int = Query(3600, description="Seconds to go back (default 1h)")):
+    """Proxy a catch-up/timeshift stream for the given channel.
+
+    Duration specifies how far back in seconds (e.g. 3600 = 1 hour ago).
+    Returns raw MPEG-TS proxied from the provider's timeshift endpoint.
+    """
+    track_hit("live", stream_id)
+    url = build_timeshift_url(stream_id, duration)
+    log.info(f"STREAM TIMESHIFT id={stream_id} duration={duration}s")
+
+    try:
+        async def monitored_stream():
+            try:
+                async for chunk in stream_bytes(url):
+                    if await request.is_disconnected():
+                        log.info(f"STREAM TIMESHIFT DISCONNECT id={stream_id}")
+                        break
+                    yield chunk
+            except Exception as e:
+                log.warning(f"STREAM TIMESHIFT ERROR id={stream_id}: {e}")
+            finally:
+                log.info(f"STREAM TIMESHIFT END id={stream_id}")
+
+        return StreamingResponse(
+            monitored_stream(),
+            media_type="video/mp2t",
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "no-cache",
+            },
+        )
+    except Exception as e:
+        log.error(f"Timeshift proxy error (id={stream_id}, dur={duration}): {e}")
+        return JSONResponse(status_code=502, content={"detail": "Timeshift stream unavailable"})
 
 
 @router.get("/api/stream/live/{stream_id}/quality/{height}")

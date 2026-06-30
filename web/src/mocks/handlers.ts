@@ -115,8 +115,8 @@ export const sampleMovies: import("@/lib/api").UnifiedMovie[] = [
 ];
 
 export const sampleLiveStreams: import("@/lib/api").LiveStream[] = [
-  { num: 1, name: "CNN", stream_type: "live", stream_id: 301, stream_icon: "https://example.com/cnn.png", epg_channel_id: "CNN.us", category_id: "1" },
-  { num: 2, name: "BBC World", stream_type: "live", stream_id: 302, stream_icon: "", epg_channel_id: "BBCW.us", category_id: "2" },
+  { num: 1, name: "CNN", stream_type: "live", stream_id: 301, stream_icon: "https://example.com/cnn.png", epg_channel_id: "CNN.us", category_id: "1", tv_archive: 1, tv_archive_duration: 168 },
+  { num: 2, name: "BBC World", stream_type: "live", stream_id: 302, stream_icon: "", epg_channel_id: "BBCW.us", category_id: "2", tv_archive: 0, tv_archive_duration: 0 },
 ];
 
 export const sampleChannelGroups: import("@/lib/api").ChannelGroup[] = [

@@ -392,6 +392,12 @@ export default function LiveTV() {
                           {s.num}
                         </span>
                       )}
+                      {/* Catch-up badge */}
+                      {(s as LiveStream).tv_archive === 1 && (
+                        <span className="absolute top-2 right-8 z-10 text-[8px] font-semibold text-blue-300 bg-blue-500/20 px-1 py-0.5 rounded uppercase tracking-wider">
+                          ARCH
+                        </span>
+                      )}
                       {s.stream_icon ? (
                         <img
                           src={`/api/iptv/${s.stream_icon.replace("http://", "").replace("https://", "")}`}
@@ -456,6 +462,12 @@ export default function LiveTV() {
                     {s.num > 0 && (
                       <span className="absolute top-2 left-2 z-10 text-[9px] font-mono font-semibold text-muted-foreground/40 bg-black/40 px-1 py-0.5 rounded">
                         {s.num}
+                      </span>
+                    )}
+                    {/* Catch-up badge */}
+                    {(s as LiveStream).tv_archive === 1 && (
+                      <span className="absolute top-2 right-8 z-10 text-[8px] font-semibold text-blue-300 bg-blue-500/20 px-1 py-0.5 rounded uppercase tracking-wider">
+                        ARCH
                       </span>
                     )}
                     {s.stream_icon ? (

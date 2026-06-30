@@ -24,7 +24,7 @@ import { useShakaPlayer, type ShakaPlayerCallbacks } from "./useShakaPlayer";
 // ── Constants for LIVE quality levels ─────────────────────────
 
 // ── Hook ──────────────────────────────────────────────────────
-export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseVideoPlayerParams): UseVideoPlayerReturn {
+export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance, timeshiftDuration }: UseVideoPlayerParams): UseVideoPlayerReturn {
   const videoRef = useRef<HTMLVideoElement>(null!);
   const containerRef = useRef<HTMLDivElement>(null!);
   const phaseRef = useRef<PlayPhase>("loading");
@@ -103,7 +103,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
   const {
     isLive, isVod, watchKey, streamId,
     dashUrl, streamPath, transcodePath, remuxUrl,
-    vodTranscodeUrl, probeUrl,
+    vodTranscodeUrl, probeUrl, timeshiftUrl,
   } = useStreamUrls({ type, id, seriesId, epId, qualityIdx });
 
   // ── Sub-hooks: mpegts.js player (live TV) ─────────────────────
@@ -413,6 +413,12 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance }: UseV
       if (needsTranscode && isLive && probeHeight >= 2160 && qualityIdx === 0) { setQualityIdx(1); }
 
       if (isLive) {
+        // Timeshift mode: skip probe, use timeshift URL directly
+        if (timeshiftDuration && timeshiftDuration > 0) {
+          const tsu = timeshiftUrl(timeshiftDuration);
+          playMPEGTS(tsu, false, false);
+          return;
+        }
         const url = needsTranscode ? (transcodePath || streamPath) : streamPath;
         playMPEGTS(url, true, needsTranscode);
         return;

@@ -51,6 +51,8 @@ export interface UseVideoPlayerParams {
   seriesId: string | undefined;
   epId: string | undefined;
   onAutoAdvance?: (nextUrl: string) => void;
+  /** When set and type is "live", use the timeshift stream URL instead of live */
+  timeshiftDuration?: number;
 }
 
 export interface UseVideoPlayerReturn {

@@ -164,6 +164,10 @@ export const api = {
       get<GuideNowResponse>(
         `/guide/now?stream_ids=${streamIds.join(",")}`, signal
       ),
+    catchup: (streamId: number, hours = 4, signal?: AbortSignal) =>
+      get<CatchupTimelineResponse>(
+        `/guide/catchup?stream_id=${streamId}&hours=${hours}`, signal
+      ),
   },
   search: (q: string, signal?: AbortSignal, limit = 20, offset = 0, section?: string) =>
     get<{ live: LiveStream[]; movies: Movie[]; series: Series[]; totals: { live: number; movies: number; series: number } }>(
@@ -240,6 +244,8 @@ export interface LiveStream {
   stream_icon: string;
   epg_channel_id: string;
   category_id: string;
+  tv_archive: number;
+  tv_archive_duration: number;
 }
 
 export interface MovieLanguage {
@@ -418,6 +424,24 @@ export interface GuideNowResult {
 
 export interface GuideNowResponse {
   programmes: Record<string, GuideNowResult | null>;
+}
+
+/** Single programme entry in a catch-up timeline */
+export interface CatchupProgramme {
+  title: string;
+  subtitle: string;
+  start: string;
+  stop: string;
+  start_ts: number;
+  stop_ts: number;
+  start_offset: number;
+  duration: number;
+}
+
+export interface CatchupTimelineResponse {
+  programmes: CatchupProgramme[];
+  channel_id: string | null;
+  window_hours: number;
 }
 
 // ── TMDB v3 API Proxy types ─────────────────────────────────────────────

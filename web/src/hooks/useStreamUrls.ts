@@ -31,6 +31,8 @@ export interface UseStreamUrlsReturn {
   streamPath: string;
   /** Transcode/quality override path (live only) */
   transcodePath: string | null;
+  /** Timeshift URL for catch-up: /api/stream/live/{id}/timeshift?duration={s} */
+  timeshiftUrl: (durationSeconds: number) => string;
   /** VOD remux stream URL */
   remuxUrl: string | null;
   /** VOD transcode URL (HEVC → H.264 fallback) */
@@ -114,6 +116,10 @@ export function useStreamUrls({
     dashUrl,
     streamPath,
     transcodePath,
+    timeshiftUrl: (durationSeconds: number) =>
+      isLive && id
+        ? `/api/stream/live/${id}/timeshift?duration=${durationSeconds}`
+        : "",
     remuxUrl,
     vodTranscodeUrl,
     hlsInitUrl,

@@ -42,6 +42,8 @@ async def live_all_streams_slim():
                 "stream_icon": s.get("stream_icon", ""),
                 "category_id": s["category_id"],
                 "num": s.get("num", 0),
+                "tv_archive": s.get("tv_archive", 0),
+                "tv_archive_duration": s.get("tv_archive_duration", 0),
             }
             for s in data
         ]

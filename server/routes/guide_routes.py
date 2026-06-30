@@ -213,3 +213,68 @@ async def guide_enrich(
 
     _EPG_ENRICH_CACHE[cache_key] = (now, None)
     return {"enabled": False, "result": None}
+
+
+# ── Route: Guide Catchup Timeline ───────────────────────────────────────
+@router.get("/api/guide/catchup")
+async def guide_catchup(
+    stream_id: int = Query(..., description="Live stream ID"),
+    hours: int = Query(4, ge=1, le=48, description="Hours of EPG to return"),
+):
+    """Return EPG programme timeline for a channel's catch-up window.
+
+    Maps the stream_id to an EPG channel ID, then returns programmes
+    covering the last N hours so the frontend can build a timeshift
+    timeline with programme markers.
+    """
+    epg = await load_epg_background()
+    programmes = epg.get("programmes", [])
+    channels = epg.get("channels", [])
+
+    # Map stream_id → epg_channel_id
+    ch_id = None
+    try:
+        live_all = await cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
+        for s in live_all:
+            if s["stream_id"] == stream_id:
+                ch_id = s.get("epg_channel_id")
+                break
+    except Exception as e:
+        log.warning(f"[GUIDE/CATCHUP] Failed to load live_all: {e}")
+
+    if not ch_id:
+        return {"programmes": [], "channel_id": None}
+
+    # Find channel programmes within the time window
+    now = datetime.now(timezone.utc)
+    window_start = now - timedelta(hours=hours)
+
+    results = []
+    for p in programmes:
+        if p["channel"] != ch_id:
+            continue
+        try:
+            start = _parse_ts(p["start"])
+            stop = _parse_ts(p["stop"])
+        except (ValueError, IndexError):
+            continue
+        # Include programmes that end after window_start and start before now
+        if stop > window_start and start < now:
+            results.append({
+                "title": p.get("title", ""),
+                "subtitle": p.get("subtitle", ""),
+                "start": start.isoformat(),
+                "stop": stop.isoformat(),
+                "start_ts": int(start.timestamp()),
+                "stop_ts": int(stop.timestamp()),
+                "start_offset": int((now - start).total_seconds()),
+                "duration": int((stop - start).total_seconds()),
+            })
+
+    results.sort(key=lambda r: r["start_ts"])
+
+    return {
+        "programmes": results,
+        "channel_id": ch_id,
+        "window_hours": hours,
+    }
