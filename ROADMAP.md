@@ -2,7 +2,7 @@
 
 > **Audit date:** 2026-06-29
 > **Architecture:** FastAPI monolith + React/Vite SPA | 69 API routes | 12 pages | 23 components
-> **Test counts:** 395 backend + 1073 frontend unit + 46 E2E | TypeScript 0 errors
+> **Test counts:** 395 backend + 1154 frontend unit + 46 E2E | TypeScript 0 errors (2 pre-existing)
 > **Codebase:** 9.2K Python + 10.5K TypeScript + 19.6K TSX = ~39K total
 
 ---
@@ -14,7 +14,7 @@
 | **Testing depth** | B+ | 85% |
 | **Frontend quality** | A- | 90% |
 | **Backend architecture** | B | 75% |
-| **Feature completeness** | C | 55% |
+|| **Feature completeness** | C+ | 67% ||
 | **Security** | C+ | 65% |
 | **Developer experience** | B- | 70% |
 | **Performance** | B | 75% |
@@ -119,7 +119,7 @@
 
 | Feature | TiviMate | IPTV Smarters | Ours | Priority |
 |---------|----------|--------------|------|----------|
-| **Catch-up / Timeshift TV** | ✅ | ✅ | ❌ | **High** |
+| **Catch-up / Timeshift TV** | ✅ | ✅ | ✅ | **High** |
 | **DVR / Recording** | ✅ | ✅ | ❌ | Medium |
 | **Parental Controls (PIN)** | ✅ | ✅ | ❌ | Medium |
 | **EPG Search** | ✅ | ✅ | ❌ | Medium |
@@ -225,7 +225,8 @@
 || **Consistent JSON error responses** | 8 raw-text 502 errors in `stream.py` → `JSONResponse({"detail": "..."})`. |
 || **Extract iptv_client — circular imports fixed** | Created `server/iptv_client.py`. All 6 route modules import from there instead of `import main as _main`. Removes 25+ lazy imports from `main`. `main.py` size reduced by ~60 lines. |
 || **Split stream.py (1105 lines) → 7 focused modules** | stream_core, stream_live, stream_vod, stream_convert, stream_hls, stream_dash, stream_probe. Umbrella stream.py re-exports everything. Zero test changes. Backend architecture C+→B-. |
-|| **Split guide.py (429 lines) → 3 focused modules** | guide_core, guide_epg, guide_routes. Umbrella guide.py re-exports everything. Zero test changes. Backend architecture B-→B. |
+||| **Split guide.py (429 lines) → 3 focused modules** | guide_core, guide_epg, guide_routes. Umbrella guide.py re-exports everything. Zero test changes. Backend architecture B-→B. |
+||| **Catch-up / Timeshift TV** | Full backend (timeshift route + EPG timeline endpoint + tv_archive fields) + frontend (CatchupTimeline with programme timeline bar, click-to-seek, Live button, query-param timeshift mode, ARCH badge on channel cards). 366 lines, 1154 tests pass. |
 
 ## Completed (previous sessions)
 
