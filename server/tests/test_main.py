@@ -182,8 +182,7 @@ class TestWarmCache:
                 return []
 
             with patch("main.cached_fetch", mock_cached_fetch):
-                with patch("routes.guide.load_epg", new_callable=AsyncMock) as mock_epg:
-                    mock_epg.return_value = {"channels": [{"id": "c1"}], "programmes": []}
+                with patch("routes.guide.load_epg", return_value={"channels": [{"id": "c1"}], "programmes": []}) as mock_epg:
                     await warm_cache()
 
             mock_epg.assert_called_once()
@@ -218,7 +217,7 @@ class TestWarmCache:
                 return []
 
             with patch("main.cached_fetch", mock_cached_fetch):
-                with patch("routes.guide.load_epg", new_callable=AsyncMock):
+                with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     await warm_cache()
 
             assert set(fetched_vod_cats) == {1, 3}, f"Expected {{1,3}}, got {set(fetched_vod_cats)}"
@@ -248,7 +247,7 @@ class TestWarmCache:
                 return []
 
             with patch("main.cached_fetch", mock_cached_fetch):
-                with patch("routes.guide.load_epg", new_callable=AsyncMock):
+                with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     await warm_cache()  # Should not raise
         finally:
             m.CACHE_WARM_ENABLED = old_enabled
@@ -276,7 +275,7 @@ class TestWarmCache:
                 return []
 
             with patch("main.cached_fetch", mock_cached_fetch):
-                with patch("routes.guide.load_epg", new_callable=AsyncMock):
+                with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     await warm_cache()
         finally:
             m.CACHE_WARM_ENABLED = old_enabled
@@ -310,7 +309,7 @@ class TestWarmCache:
                 return []
 
             with patch("main.cached_fetch", mock_cached_fetch):
-                with patch("routes.guide.load_epg", new_callable=AsyncMock):
+                with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     with patch("asyncio.sleep", new_callable=AsyncMock):
                         await warm_cache()
 
@@ -341,7 +340,7 @@ class TestWarmCache:
                 return []
 
             with patch("main.cached_fetch", mock_cached_fetch):
-                with patch("routes.guide.load_epg", new_callable=AsyncMock):
+                with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     await warm_cache()
         finally:
             m.CACHE_WARM_ENABLED = old_enabled
@@ -764,7 +763,7 @@ class TestWarmCacheSeries:
                 return []
 
             with patch("main.cached_fetch", mock_cached_fetch):
-                with patch("routes.guide.load_epg", new_callable=AsyncMock):
+                with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     with patch("asyncio.sleep", new_callable=AsyncMock):
                         await warm_cache()
 
@@ -795,7 +794,7 @@ class TestWarmCacheSeries:
                 return []
 
             with patch("main.cached_fetch", mock_cached_fetch):
-                with patch("routes.guide.load_epg", new_callable=AsyncMock):
+                with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     await warm_cache()
         finally:
             m.CACHE_WARM_ENABLED = old_enabled
@@ -825,7 +824,7 @@ class TestWarmCacheSeries:
                 return []
 
             with patch("main.cached_fetch", mock_cached_fetch):
-                with patch("routes.guide.load_epg", new_callable=AsyncMock):
+                with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     with patch("asyncio.sleep", new_callable=AsyncMock):
                         await warm_cache()  # Should not raise
 

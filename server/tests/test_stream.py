@@ -394,16 +394,11 @@ def test_stream_proxy_returns_502_on_error():
     from unittest.mock import patch
     from routes.stream import stream_proxy
 
-    async def mock_stream_bytes(*args, **kwargs):
-        raise RuntimeError("CDN error")
-
-    with patch("routes.stream_core.stream_bytes", mock_stream_bytes):
+    with patch("routes.stream_core.stream_bytes", side_effect=RuntimeError("CDN error")):
         resp = asyncio.run(stream_proxy("http://test.url/stream", "video/mp4"))
-    # StreamingResponse wraps the generator — error surfaces on body iteration
-    # So we can't assert status_code==502 from this call alone; the 502 path
-    # is hit when the StreamingResponse is being consumed downstream.
-    # Instead, verify the normal path returns a StreamingResponse.
-    assert hasattr(resp, "body_iterator") or callable(getattr(resp, "body_iterator", None))
+    # With side_effect, the error surfaces during StreamingResponse construction,
+    # so stream_proxy returns a JSONResponse(502) immediately.
+    assert resp.status_code == 502
 
 
 # ── probe_stream tests ─────────────────────────────────────────────
@@ -1045,6 +1040,8 @@ def test_ffmpeg_pipe_kills_on_generator_exit():
     proc.stdout.read.side_effect = [b"data", b""]
     proc.stderr.readline.side_effect = [b"", b""]
     proc.stdin = MagicMock()
+    proc.kill = MagicMock()
+    proc.wait = AsyncMock()
 
     async def fake_feed(p):
         await asyncio.sleep(0.1)

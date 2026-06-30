@@ -1,6 +1,6 @@
 """Tests for media routes — subtitle and audio probing/streaming."""
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -10,7 +10,7 @@ import pytest
 def _make_mock_process(returncode: int = 0, stdout: bytes = b"", stderr: bytes = b""):
     proc = AsyncMock()
     proc.returncode = returncode
-    proc.communicate = AsyncMock(return_value=(stdout, stderr))
+    proc.communicate = MagicMock(return_value=(stdout, stderr))
     proc.stdout = None
     proc.stderr = None
     return proc
@@ -301,7 +301,7 @@ class TestStreamAudio:
         proc.returncode = None
         proc.stdout = AsyncMock()
         proc.stdout.read = AsyncMock(side_effect=[b"chunk1", b"chunk2", b""])
-        proc.kill = AsyncMock()
+        proc.kill = MagicMock()
         mock_create_subprocess.return_value = proc
 
         resp = client.get("/api/audio/stream/movie/123/0")

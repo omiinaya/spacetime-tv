@@ -33,8 +33,6 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ---
 
-## Recently Completed
-
 ### ✅ P3.1 — EPG Search tab tests
 SearchPage gained an "EPG" filter tab (guide.search API). Added 7 tests:
 - **EPG tab shows** after search with results
