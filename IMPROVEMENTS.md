@@ -25,13 +25,32 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ### P4 (Tech Debt / DX)
 
-8. **P4.1 — Backend test coverage: guide_epg.py (60%), guide_routes.py (64%)** — guide.py was split into guide_core.py (100%), guide_epg.py (60%), guide_routes.py (64%). Missing EPG file cache corruption handling, HTTP XMLTV fetch path, background broadcast loop, stream ID mapping failures, guide_enrich CLI error paths, and catchup timeline edge cases.
 10. **P4.3 — Upgrade react-router 8.0.1 → 8.1.0** — Minor bump with bugfixes and perf improvements. Run `npm install react-router@^8.1.0` and verify tsc + tests.
 11. **P4.4 — CORS middleware hardening** — Currently wide open (`*`) per ROADMAP audit. Restrict to known origins (Vite dev, nginx prod domains).
 
 ---
 
 ## Recently Completed
+
+### ✅ P4.1 — Backend test coverage: guide_epg.py (60%→100%), guide_routes.py (64%→90%)
+Added 44 new tests across two new test files:
+
+**test_guide_epg.py** (27 tests):
+- `_parse_ts`: valid timestamps, midnight edge case
+- `load_epg`: fresh memory cache, stale→disk cache, disk corruption→HTTP refetch, HTTP success with XMLTV parse/save to disk, HTTP failure with/without stale fallback
+- `load_epg_background`: fresh data, stale→triggers background refresh task, no-data synchronous fallback
+- `_refresh_epg_background`: success path, exception caught+logged
+- `_build_guide_cache`: stream mapping success/duplicate/failure, past/future programme filtering, malformed timestamps, empty EPG, multi-channel alphabetical sort
+- `_epg_broadcast_loop`: client notification via Queue, queue-full client removal, exception resilience
+
+**test_guide_routes.py** (18 tests):
+- `tv_guide`: cache rebuild when EPG refreshed, is_live parse-error resilience (malformed timestamps)
+- `guide_now`: malformed programme timestamp resilience
+- `guide_catchup`: full timeline response, unknown stream_id, missing live_all mapping, malformed timestamps, parameter validation (422), window boundary filtering
+- `guide_enrich`: non-zero CLI exit, `asyncio.TimeoutError` (direct + HTTP), generic exception (direct + HTTP), cache-hit dedup
+- `epg_sse`: route registration, HEAD proxy verification
+
+Total backend tests: 491 (+44), tsc --noEmit: clean, all existing suites pass.
 
 ### ✅ P4.2 — Backend test coverage: tmdb.py (75%→100%)
 Added 9 new tests covering:
