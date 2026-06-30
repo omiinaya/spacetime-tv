@@ -119,8 +119,8 @@
 |---------|----------|--------------|------|----------|
 | **Catch-up / Timeshift TV** | ✅ | ✅ | ✅ | **High** |
 | **DVR / Recording** | ✅ | ✅ | ✅ | **High** |
-| **Parental Controls (PIN)** | ✅ | ✅ | ✅ | **High** |
-| **EPG Search** | ✅ | ✅ | ❌ | Medium |
+|| **Parental Controls (PIN)** | ✅ | ✅ | ✅ | **High** |
+|| **EPG Search** | ✅ | ✅ | ✅ | **Medium** |
 | **Multi-provider** | ❌ | ✅ | ❌ | Low (architectural) |
 | **Cloud favorites/backup** | ❌ | ✅ | ❌ | Medium |
 | **Picture-in-Picture** | ✅ | ❌ | Partial (button, no system PiP) | Low |

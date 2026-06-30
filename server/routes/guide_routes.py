@@ -278,3 +278,70 @@ async def guide_catchup(
         "channel_id": ch_id,
         "window_hours": hours,
     }
+
+
+# ── Route: EPG Search ────────────────────────────────────────────────────
+@router.get("/api/guide/search")
+async def guide_search(
+    q: str = Query(..., min_length=2, max_length=100, description="Programme title search"),
+    future_only: bool = Query(True, description="Only return upcoming programmes (default: true)"),
+    limit: int = Query(20, ge=1, le=100, description="Max results"),
+):
+    """Search EPG programmes by title across all channels.
+
+    Searches programme titles (case-insensitive substring match) in the
+    current EPG data. Returns upcoming programmes by default, sorted by
+    start time ascending so the nearest airing comes first.
+
+    Useful for finding when a specific show or movie is airing.
+    Returns channel name, start/stop times as ISO strings, and the
+    programme duration.
+    """
+    epg = await load_epg_background()
+    programmes = epg.get("programmes", [])
+    channels = epg.get("channels", [])
+    ch_map = {c["id"]: c.get("name", c["id"]) for c in channels}
+
+    query = q.lower().strip()
+    now = datetime.now(timezone.utc)
+
+    results = []
+    for p in programmes:
+        title = p.get("title", "")
+        subtitle = p.get("subtitle", "")
+        desc = p.get("desc", "")
+
+        if query not in title.lower() and query not in subtitle.lower() and query not in desc.lower():
+            continue
+
+        try:
+            start = _parse_ts(p["start"])
+            stop = _parse_ts(p["stop"])
+        except (ValueError, IndexError):
+            continue
+
+        if future_only and stop <= now:
+            continue
+
+        results.append({
+            "title": title,
+            "subtitle": subtitle or None,
+            "description": desc or None,
+            "channel_id": p["channel"],
+            "channel_name": ch_map.get(p["channel"], p["channel"]),
+            "start": start.isoformat(),
+            "stop": stop.isoformat(),
+            "start_ts": int(start.timestamp()),
+            "stop_ts": int(stop.timestamp()),
+            "duration": int((stop - start).total_seconds()),
+        })
+
+    results.sort(key=lambda r: r["start_ts"])
+    results = results[:limit]
+
+    return {
+        "results": results,
+        "total": len(results),
+        "query": q,
+        "future_only": future_only,
+    }

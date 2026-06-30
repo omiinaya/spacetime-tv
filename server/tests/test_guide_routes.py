@@ -634,3 +634,300 @@ class TestGuideEnrichCacheHit:
         assert data == {"enabled": True, "result": cached_result}
         # Also verify the cache is still there (not replaced)
         assert _EPG_ENRICH_CACHE["cached_movie"][1] == cached_result
+
+
+# ── guide_search: EPG Search ────────────────────────────────────────────
+
+class TestGuideSearch:
+    """EPG search endpoint — /api/guide/search."""
+
+    def test_search_matches_title(self, client):
+        """Search matches programme titles (case-insensitive)."""
+        from routes.guide_epg import load_epg_background
+
+        async def mock_load():
+            return SAMPLE_EPG
+
+        with patch("routes.guide_routes.load_epg_background", mock_load):
+            resp = client.get("/api/guide/search?q=breakfast")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["total"] >= 1
+            titles = [r["title"] for r in data["results"]]
+            assert "Breakfast News" in titles
+
+    def test_search_case_insensitive(self, client):
+        """Search is case-insensitive."""
+        from routes.guide_epg import load_epg_background
+
+        async def mock_load():
+            return SAMPLE_EPG
+
+        with patch("routes.guide_routes.load_epg_background", mock_load):
+            resp = client.get("/api/guide/search?q=GARDENERS")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["total"] >= 1
+            assert "Gardeners' World" in [r["title"] for r in data["results"]]
+
+    def test_search_matches_subtitle(self, client):
+        """Search matches programme subtitles."""
+        from routes.guide_epg import load_epg_background
+
+        async def mock_load():
+            return SAMPLE_EPG
+
+        with patch("routes.guide_routes.load_epg_background", mock_load):
+            resp = client.get("/api/guide/search?q=morning")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["total"] >= 1
+
+    def test_search_matches_description(self, client):
+        """Search matches programme descriptions."""
+        from routes.guide_epg import load_epg_background
+
+        async def mock_load():
+            return SAMPLE_EPG
+
+        with patch("routes.guide_routes.load_epg_background", mock_load):
+            resp = client.get("/api/guide/search?q=gardening")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["total"] >= 1
+
+    def test_search_no_match(self, client):
+        """Search with no matches returns empty results."""
+        from routes.guide_epg import load_epg_background
+
+        async def mock_load():
+            return SAMPLE_EPG
+
+        with patch("routes.guide_routes.load_epg_background", mock_load):
+            resp = client.get("/api/guide/search?q=xyznonexistent")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["total"] == 0
+            assert data["results"] == []
+
+    def test_search_short_query_returns_422(self, client):
+        """Search with < 2 chars returns 422."""
+        resp = client.get("/api/guide/search?q=a")
+        assert resp.status_code == 422
+
+    def test_search_missing_query_returns_422(self, client):
+        """Search without query returns 422."""
+        resp = client.get("/api/guide/search")
+        assert resp.status_code == 422
+
+    def test_search_includes_channel_name(self, client):
+        """Search results include channel_name."""
+        from routes.guide_epg import load_epg_background
+
+        async def mock_load():
+            return SAMPLE_EPG
+
+        with patch("routes.guide_routes.load_epg_background", mock_load):
+            resp = client.get("/api/guide/search?q=breakfast")
+            data = resp.json()
+            result = data["results"][0]
+            assert "channel_name" in result
+            assert result["channel_name"] == "BBC One"
+
+    def test_search_results_sorted_by_start(self, client):
+        """Search results are sorted by start time ascending."""
+        from routes.guide_epg import load_epg_background
+        import time
+
+        now = datetime.now(timezone.utc)
+        multi_epg = {
+            "channels": [{"id": "CH1", "name": "Channel One"}],
+            "programmes": [
+                {
+                    "channel": "CH1",
+                    "start": _epg_timestamp(now + timedelta(hours=3)),
+                    "stop": _epg_timestamp(now + timedelta(hours=4)),
+                    "title": "Late Show",
+                    "subtitle": "",
+                    "desc": "",
+                },
+                {
+                    "channel": "CH1",
+                    "start": _epg_timestamp(now + timedelta(hours=1)),
+                    "stop": _epg_timestamp(now + timedelta(hours=2)),
+                    "title": "Early Show",
+                    "subtitle": "",
+                    "desc": "",
+                },
+                {
+                    "channel": "CH1",
+                    "start": _epg_timestamp(now + timedelta(hours=2)),
+                    "stop": _epg_timestamp(now + timedelta(hours=3)),
+                    "title": "Mid Show",
+                    "subtitle": "",
+                    "desc": "",
+                },
+            ],
+        }
+
+        async def mock_load():
+            return multi_epg
+
+        with patch("routes.guide_routes.load_epg_background", mock_load):
+            resp = client.get("/api/guide/search?q=show")
+            data = resp.json()
+            titles = [r["title"] for r in data["results"]]
+            assert titles == ["Early Show", "Mid Show", "Late Show"]
+
+    def test_search_future_only_excludes_past(self, client):
+        """future_only=True excludes programmes that ended in the past."""
+        from routes.guide_epg import load_epg_background
+        import time
+
+        now = datetime.now(timezone.utc)
+        past_epg = {
+            "channels": [{"id": "CH1", "name": "Channel One"}],
+            "programmes": [
+                {
+                    "channel": "CH1",
+                    "start": _epg_timestamp(now - timedelta(hours=4)),
+                    "stop": _epg_timestamp(now - timedelta(hours=3)),
+                    "title": "Old Show",
+                    "subtitle": "",
+                    "desc": "",
+                },
+                {
+                    "channel": "CH1",
+                    "start": _epg_timestamp(now + timedelta(hours=1)),
+                    "stop": _epg_timestamp(now + timedelta(hours=2)),
+                    "title": "Future Show",
+                    "subtitle": "",
+                    "desc": "",
+                },
+            ],
+        }
+
+        async def mock_load():
+            return past_epg
+
+        with patch("routes.guide_routes.load_epg_background", mock_load):
+            resp = client.get("/api/guide/search?q=show&future_only=true")
+            data = resp.json()
+            titles = [r["title"] for r in data["results"]]
+            assert "Future Show" in titles
+            assert "Old Show" not in titles
+
+    def test_search_future_only_false_includes_past(self, client):
+        """future_only=False includes past programmes."""
+        from routes.guide_epg import load_epg_background
+        import time
+
+        now = datetime.now(timezone.utc)
+        mixed_epg = {
+            "channels": [{"id": "CH1", "name": "Channel One"}],
+            "programmes": [
+                {
+                    "channel": "CH1",
+                    "start": _epg_timestamp(now - timedelta(hours=2)),
+                    "stop": _epg_timestamp(now - timedelta(hours=1)),
+                    "title": "Past Programme",
+                    "subtitle": "",
+                    "desc": "",
+                },
+            ],
+        }
+
+        async def mock_load():
+            return mixed_epg
+
+        with patch("routes.guide_routes.load_epg_background", mock_load):
+            resp = client.get("/api/guide/search?q=past&future_only=false")
+            data = resp.json()
+            assert data["total"] >= 1
+            assert "Past Programme" in [r["title"] for r in data["results"]]
+
+    def test_search_handles_bad_timestamp_gracefully(self, client):
+        """Search skips programmes with unparseable timestamps."""
+        from routes.guide_epg import load_epg_background
+
+        bad_epg = {
+            "channels": [{"id": "CH1", "name": "Channel One"}],
+            "programmes": [
+                {
+                    "channel": "CH1",
+                    "start": "not_a_timestamp",
+                    "stop": "also_bad",
+                    "title": "Bad Timing",
+                    "subtitle": "",
+                    "desc": "",
+                },
+                {
+                    "channel": "CH1",
+                    "start": _epg_timestamp(datetime.now(timezone.utc) + timedelta(hours=1)),
+                    "stop": _epg_timestamp(datetime.now(timezone.utc) + timedelta(hours=2)),
+                    "title": "Good Show",
+                    "subtitle": "",
+                    "desc": "",
+                },
+            ],
+        }
+
+        async def mock_load():
+            return bad_epg
+
+        with patch("routes.guide_routes.load_epg_background", mock_load):
+            resp = client.get("/api/guide/search?q=show")
+            data = resp.json()
+            # Bad timestamp entry should be skipped
+            assert any(r["title"] == "Good Show" for r in data["results"])
+
+    def test_search_empty_epg_returns_empty(self, client):
+        """Search returns empty when EPG has no programmes."""
+        from routes.guide_epg import load_epg_background
+
+        empty_epg = {"channels": [], "programmes": []}
+
+        async def mock_load():
+            return empty_epg
+
+        with patch("routes.guide_routes.load_epg_background", mock_load):
+            resp = client.get("/api/guide/search?q=test")
+            data = resp.json()
+            assert data["total"] == 0
+            assert data["results"] == []
+
+    def test_search_response_structure(self, client):
+        """Search response has expected shape."""
+        from routes.guide_epg import load_epg_background
+
+        async def mock_load():
+            return SAMPLE_EPG
+
+        with patch("routes.guide_routes.load_epg_background", mock_load):
+            resp = client.get("/api/guide/search?q=breakfast")
+            data = resp.json()
+            assert "results" in data
+            assert "total" in data
+            assert "query" in data
+            assert "future_only" in data
+            assert data["query"] == "breakfast"
+
+    def test_search_result_structure(self, client):
+        """Each search result has expected fields."""
+        from routes.guide_epg import load_epg_background
+
+        async def mock_load():
+            return SAMPLE_EPG
+
+        with patch("routes.guide_routes.load_epg_background", mock_load):
+            resp = client.get("/api/guide/search?q=breakfast")
+            data = resp.json()
+            result = data["results"][0]
+            assert "title" in result
+            assert "channel_id" in result
+            assert "channel_name" in result
+            assert "start" in result
+            assert "stop" in result
+            assert "start_ts" in result
+            assert "stop_ts" in result
+            assert "duration" in result
