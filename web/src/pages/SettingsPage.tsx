@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { Settings, Globe, EyeOff, Film, Tv2, Tv, RotateCcw, Check, Search, Lock, Sun, Moon, Monitor } from "lucide-react";
+import { Settings, Globe, EyeOff, Film, Tv2, Tv, RotateCcw, Check, Search, Lock, Sun, Moon, Monitor, Cloud, Upload, Download, Merge } from "lucide-react";
 import { api, Category } from "@/lib/api";
 import { useSettings } from "@/context/SettingsContext";
 import {
@@ -10,6 +10,7 @@ import {
 import { Skeleton } from "@/components/Skeleton";
 import { PinPrompt } from "@/components/PinPrompt";
 import { isPinConfigured } from "@/lib/settings";
+import { useCloudBackup } from "@/hooks/useCloudBackup";
 
 export default function SettingsPage() {
   const { settings, update, reset, adultUnlocked, setAdultPin, clearAdultPin, lockAdult } = useSettings();
@@ -27,6 +28,10 @@ export default function SettingsPage() {
   const [showPinPromptChange, setShowPinPromptChange] = useState(false);
 
   const pinConfigured = isPinConfigured(settings);
+  const {
+    uploadBackup, downloadBackup, mergeFavorites,
+    backupStatus: { lastUpload, lastDownload, loading: cloudLoading, error: cloudError },
+  } = useCloudBackup();
 
   const handleSetPin = async (pin: string) => {
     await setAdultPin(pin);
@@ -382,6 +387,69 @@ export default function SettingsPage() {
             onCancel={() => setShowPinPromptChange(false)}
           />
         )}
+      </section>
+
+      {/* ── Cloud Backup ────────────────────────────────────────── */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Cloud className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">Cloud Backup</h2>
+          {(lastUpload || lastDownload) && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-500">
+              synced
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Sync your channel favorites and watchlist across devices. Data is stored on the
+          server and keyed to this browser's device ID.
+        </p>
+        {cloudError && (
+          <p className="text-xs text-red-500">{cloudError}</p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={async () => {
+              await uploadBackup();
+            }}
+            disabled={cloudLoading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            {cloudLoading ? "Uploading..." : "Upload Backup"}
+          </button>
+          <button
+            onClick={async () => {
+              const data = await downloadBackup();
+              if (data) {
+                // Apply downloaded favorites to localStorage
+                try {
+                  localStorage.setItem("stv_channel_favorites", JSON.stringify(data.favorites));
+                  window.location.reload();
+                } catch {}
+              }
+            }}
+            disabled={cloudLoading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+          >
+            <Download className="h-3.5 w-3.5" />
+            {cloudLoading ? "Downloading..." : "Download & Restore"}
+          </button>
+          <button
+            onClick={async () => {
+              const merged = await mergeFavorites();
+              if (merged) {
+                localStorage.setItem("stv_channel_favorites", JSON.stringify(merged));
+                window.location.reload();
+              }
+            }}
+            disabled={cloudLoading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+          >
+            <Merge className="h-3.5 w-3.5" />
+            {cloudLoading ? "Merging..." : "Merge Favorites"}
+          </button>
+        </div>
       </section>
 
       {/* ── Hidden Categories ───────────────────────────────────── */}

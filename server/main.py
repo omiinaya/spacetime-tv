@@ -53,6 +53,7 @@ from routes.live import router as live_router
 from routes.vod import router as vod_router
 from routes.media import router as media_router
 from routes.record import router as record_router
+from routes.cloud_sync import router as cloud_sync_router
 from routes.misc import router as misc_router
 app.include_router(health_router)
 app.include_router(admin_router)
@@ -65,6 +66,7 @@ app.include_router(live_router)
 app.include_router(vod_router)
 app.include_router(media_router)
 app.include_router(record_router)
+app.include_router(cloud_sync_router)
 # Static files mount MUST come before catch-all misc router
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")

@@ -1,0 +1,134 @@
+import { useState, useCallback } from "react";
+
+const API = "/api/cloud";
+const DEVICE_KEY = "stv_device_id";
+const FAV_KEY = "stv_channel_favorites";
+const WATCHLIST_KEY = "stv_watchlist";
+
+function getDeviceId(): string {
+  let id = localStorage.getItem(DEVICE_KEY);
+  if (!id) {
+    // Generate a device ID once per browser
+    const segments: string[] = [];
+    for (let i = 0; i < 4; i++) {
+      segments.push(Math.random().toString(36).substring(2, 10));
+    }
+    id = segments.join("-");
+    localStorage.setItem(DEVICE_KEY, id);
+  }
+  return id;
+}
+
+function readLocalFavorites(): number[] {
+  try {
+    const raw = localStorage.getItem(FAV_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return [];
+}
+
+function readLocalWatchlist(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(WATCHLIST_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return {};
+}
+
+/**
+ * Hook for cloud backup/restore of channel favorites and watchlist.
+ *
+ * Provides:
+ *  - uploadBackup: saves current local state to the server
+ *  - downloadBackup: fetches the most recent backup from the server
+ *  - mergeFavorites: additively merges server favorites with local
+ *  - backupStatus: { lastUpload, lastDownload } timestamps
+ */
+export function useCloudBackup() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpload, setLastUpload] = useState<number | null>(null);
+  const [lastDownload, setLastDownload] = useState<number | null>(null);
+
+  const uploadBackup = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const payload = {
+        device_id: getDeviceId(),
+        favorites: readLocalFavorites(),
+        watchlist: readLocalWatchlist(),
+        timestamp: Date.now() / 1000,
+      };
+      const resp = await fetch(`${API}/backup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json();
+      if (data.status !== "ok") throw new Error(data.detail || "Upload failed");
+      setLastUpload(Date.now() / 1000);
+      return true;
+    } catch (e: any) {
+      setError(e.message || "Upload failed");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const downloadBackup = useCallback(async (): Promise<{
+    favorites: number[];
+    watchlist: Record<string, boolean>;
+  } | null> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const resp = await fetch(`${API}/backup?device_id=${getDeviceId()}`);
+      const data = await resp.json();
+      if (data.status !== "ok") throw new Error(data.detail || "Download failed");
+      setLastDownload(Date.now() / 1000);
+      return {
+        favorites: data.data?.favorites ?? [],
+        watchlist: data.data?.watchlist ?? {},
+      };
+    } catch (e: any) {
+      setError(e.message || "Download failed");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const mergeFavorites = useCallback(async (): Promise<number[] | null> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const localFavs = readLocalFavorites();
+      const resp = await fetch(`${API}/merge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          device_id: getDeviceId(),
+          favorites: localFavs,
+        }),
+      });
+      const data = await resp.json();
+      if (data.status !== "ok") throw new Error(data.detail || "Merge failed");
+      setLastDownload(Date.now() / 1000);
+      return data.favorites;
+    } catch (e: any) {
+      setError(e.message || "Merge failed");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return {
+    uploadBackup,
+    downloadBackup,
+    mergeFavorites,
+    backupStatus: { lastUpload, lastDownload, loading, error },
+  };
+}
