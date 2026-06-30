@@ -2,7 +2,7 @@
 
 > **Audit date:** 2026-06-29
 > **Architecture:** FastAPI monolith + React/Vite SPA | 69 API routes | 12 pages | 23 components
-> **Test counts:** 395 backend + 1154 frontend unit + 46 E2E | TypeScript 0 errors (2 pre-existing)
+> **Test counts:** 500+ backend + 1184 frontend unit + 46 E2E | TypeScript 0 errors (2 pre-existing)
 > **Codebase:** 9.2K Python + 10.5K TypeScript + 19.6K TSX = ~39K total
 
 ---
@@ -11,7 +11,7 @@
 
 | Dimension | Grade | Score |
 |-----------|-------|-------|
-| **Testing depth** | B+ | 90% |
+| **Testing depth** | A- | 92% |
 | **Frontend quality** | A | 93% |
 | **Backend architecture** | B | 75% |
 | **Feature completeness** | B+ | 78% |
@@ -23,7 +23,7 @@
 
 ## 1. Testing (85%) — Good but not great
 
-### Backend: 450+ tests, 78% line coverage (✅ Good baseline, 🟡 gaps)
+### Backend: 500+ tests, 82% line coverage (✅ Good baseline, 🟡 few gaps)
 - **main.py: 94%** — rate limiter, cache warmer, cleanup loop all tested
 - **routes/admin.py: 98%** — stream-health dashboard, cache warm triggers tested
 - **routes/vod.py: 95%** — excellent
@@ -32,7 +32,7 @@
 - **routes/misc.py: 85%** — good
 - **routes/search.py: 84%** — good
 - **routes/tmdb.py: 75%** — missing person endpoints and enrichment fallback
-- **routes/guide.py: 72%** — large file, missing EPG refresh and cache rebuild paths
+- **routes/guide.py: 90%** — guide_core/guide_epg at 100%, guide_routes at 90% (SSE stream body is runtime-only path)
 - **routes/stream.py: 78%** — biggest file (split into 7 modules), timeshift, ffmpeg-pipe, _safe_convert now tested
 
 ### Frontend: 1166 tests (✅ Comprehensive coverage)

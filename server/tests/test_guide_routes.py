@@ -497,3 +497,140 @@ class TestEpgSseStreaming:
         assert callable(epg_sse)
         # The function is a route handler that returns StreamingResponse
         # (verified by the route registration in guide_routes.py)
+
+
+# ── guide_now: live_all fetch error ─────────────────────────────────────
+
+class TestGuideNowLiveAllError:
+    """guide_now() handles cached_fetch failure gracefully."""
+
+    def test_guide_now_live_all_fetch_error_returns_programmes(self, client):
+        """When live_all fetch fails, guide_now still returns programmes dict."""
+        from state import epg_cache
+        from unittest.mock import patch
+
+        # Set up EPG data so the endpoint doesn't need live_all for this
+        epg_cache["data"] = {
+            "channels": [{"id": "C1", "name": "Chan1", "icon": ""}],
+            "programmes": [],
+        }
+        epg_cache["fetched"] = 9999999999.0
+
+        # Patch cached_fetch TO raise an exception
+        with patch("routes.guide_routes.cached_fetch", side_effect=Exception("API down")):
+            resp = client.get("/api/guide/now?stream_ids=101")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "programmes" in data
+        # Without live_all mapping, the stream_id returns None
+        assert data["programmes"].get("101") is None
+
+
+# ── guide_now: past programme skip ──────────────────────────────────────
+
+class TestGuideNowPastProgramme:
+    """guide_now() skips programmes that ended before cutoff_past."""
+
+    def test_guide_now_skips_past_programme(self, client_with_cache):
+        """Programme ending before cutoff_past is skipped, current one returned."""
+        from state import epg_cache
+        from main import _cache
+        from datetime import datetime, timedelta, timezone
+
+        now = datetime.now(timezone.utc)
+
+        def ts(dt):
+            return dt.strftime("%Y%m%d%H%M%S") + " +0000"
+
+        epg_cache["data"] = {
+            "channels": [{"id": "C1", "name": "Chan1", "icon": ""}],
+            "programmes": [
+                # Ended 2 hours ago (before 30-min cutoff_past)
+                {
+                    "channel": "C1",
+                    "start": ts(now - timedelta(hours=4)),
+                    "stop": ts(now - timedelta(hours=2)),
+                    "title": "Old Show",
+                    "subtitle": "",
+                    "desc": "Finished long ago",
+                    "icon": "",
+                    "category": "past",
+                },
+                # Currently airing
+                {
+                    "channel": "C1",
+                    "start": ts(now - timedelta(minutes=15)),
+                    "stop": ts(now + timedelta(hours=1)),
+                    "title": "Current Show",
+                    "subtitle": "",
+                    "desc": "Now playing",
+                    "icon": "",
+                    "category": "current",
+                },
+            ],
+        }
+        epg_cache["fetched"] = time.time()
+
+        _cache["live_all"] = (time.time(), [
+            {"stream_id": 101, "name": "Chan1", "stream_icon": "", "category_id": "1",
+             "epg_channel_id": "C1"},
+        ])
+
+        resp = client_with_cache.get("/api/guide/now?stream_ids=101")
+        assert resp.status_code == 200
+        data = resp.json()
+        prog = data["programmes"].get("101")
+        # Should find the current show, not the old one
+        assert prog is not None
+        assert prog["title"] == "Current Show"
+
+
+# ── guide_catchup: live_all fetch error ─────────────────────────────────
+
+class TestGuideCatchupLiveAllError:
+    """guide_catchup() handles cached_fetch failure gracefully."""
+
+    def test_catchup_live_all_fetch_error_returns_empty(self, client):
+        """When live_all fetch fails, catchup returns empty programme list."""
+        from state import epg_cache
+        from unittest.mock import patch
+
+        epg_cache["data"] = {
+            "channels": [{"id": "C1", "name": "Chan1", "icon": ""}],
+            "programmes": [],
+        }
+        epg_cache["fetched"] = 9999999999.0
+
+        with patch("routes.guide_routes.cached_fetch", side_effect=Exception("API down")):
+            resp = client.get("/api/guide/catchup?stream_id=101&hours=4")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["programmes"] == []
+        assert data["channel_id"] is None
+
+
+# ── guide_enrich: cache hit with non-None data ──────────────────────────
+
+class TestGuideEnrichCacheHit:
+    """guide_enrich() returns cached data when cache is fresh."""
+
+    def test_enrich_cache_hit_with_valid_data(self, client_with_cache):
+        """When _EPG_ENRICH_CACHE has fresh non-None data, return it directly."""
+        from routes.guide_core import _EPG_ENRICH_CACHE, _EPG_ENRICH_TTL
+        from routes.guide_routes import guide_enrich
+        import asyncio
+
+        # Pre-populate cache with valid data
+        cached_result = {
+            "poster": "http://example.com/poster.jpg",
+            "rating": 8.5,
+            "overview": "A great movie",
+        }
+        _EPG_ENRICH_CACHE["cached_movie"] = (time.time(), cached_result)
+
+        resp = client_with_cache.get("/api/guide/enrich?q=cached_movie")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data == {"enabled": True, "result": cached_result}
+        # Also verify the cache is still there (not replaced)
+        assert _EPG_ENRICH_CACHE["cached_movie"][1] == cached_result

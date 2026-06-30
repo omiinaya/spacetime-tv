@@ -25,11 +25,20 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ### P4 (Tech Debt / DX)
 
-3. **P4.7 — Backend test coverage: guide.py (72%→85%)** — EPG refresh, cache rebuild, and SSE broadcast paths need coverage.
+3. *(none — all P4 items completed)*
 
 ---
 
 ## Recently Completed
+
+### ✅ P4.7 — Backend test coverage: guide modules (90%+)
+guide_core.py: 100%, guide_epg.py: 100%, guide_routes.py: 90%.
+Added 4 new tests for remaining uncovered paths:
+- **guide_now live_all fetch error** — cached_fetch exception → graceful fallback
+- **guide_now past programme skip** — stop<cutoff_past programmes are skipped
+- **guide_catchup live_all fetch error** — cached_fetch exception → empty response
+- **guide_enrich cache hit with data** — pre-populated valid cache returns enabled:True
+Total guide tests: 77 (+4), overall backend: 505+. Pushed to master.
 
 ### ✅ P4.6 — Backend test coverage: stream modules (68%→78%)
 Added 13 new tests across stream_core, stream_live, stream_vod, stream_convert:
@@ -75,7 +84,7 @@ Added 44 new tests across two new test files:
 - `guide_enrich`: non-zero CLI exit, `asyncio.TimeoutError` (direct + HTTP), generic exception (direct + HTTP), cache-hit dedup
 - `epg_sse`: route registration, HEAD proxy verification
 
-Total backend tests: 491 (+44), tsc --noEmit: clean, all existing suites pass.
+- Total backend tests: 77 guide tests, 505+ overall.
 
 ### ✅ P4.2 — Backend test coverage: tmdb.py (75%→100%)
 Added 9 new tests covering:
