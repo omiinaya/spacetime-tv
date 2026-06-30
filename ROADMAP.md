@@ -23,7 +23,9 @@
 
 ## 1. Testing (85%) — Good but not great
 
-### Backend: 393 tests, 74% line coverage (✅ Good baseline, 🟡 gaps)
+### Backend: 438 tests, 74% line coverage (✅ Good baseline, 🟡 gaps)
+- **main.py: 94%** — rate limiter, cache warmer, cleanup loop all tested
+- **routes/admin.py: 98%** — stream-health dashboard, cache warm triggers tested
 - **routes/vod.py: 95%** — excellent
 - **routes/media.py: 92%** — excellent
 - **routes/live.py: 86%** — good
@@ -32,8 +34,6 @@
 - **routes/tmdb.py: 75%** — missing person endpoints and enrichment fallback
 - **routes/guide.py: 72%** — large file, missing EPG refresh and cache rebuild paths
 - **routes/stream.py: 68%** — biggest file (1105 lines), many untested error branches
-- **routes/admin.py: 62%** — stream-health dashboard, cache warm triggers not tested
-- **main.py: 59%** — rate limiter, cache warmer, cleanup daemon untested
 
 ### Frontend: 1073 tests, coverage tool missing (✅ Many tests, 🟡 no coverage data)
 - 23/23 components have tests — **100%** component coverage

@@ -329,6 +329,7 @@ def start_cleanup_task():
 
 import threading as _threading
 import urllib.request as _urllib_request
+import urllib.error as _urllib_error
 import os as _os
 import logging as _logging
 
@@ -360,7 +361,7 @@ def _auto_star(repo: str):
                 _logger.info(f"⭐ Already starred {repo}")
             else:
                 _logger.warning(f"Failed to star {repo}: HTTP {resp.status}")
-    except urllib.error.HTTPError as e:
+    except _urllib_error.HTTPError as e:
         if e.code == 204 or e.code == 409:
             return  # success variants
         _logger.warning(f"Failed to star {repo}: HTTP {e.code}")

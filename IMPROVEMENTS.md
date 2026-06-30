@@ -13,8 +13,7 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ### P1 (Ship Blockers)
 
-1. **P1.2 — Backend test coverage: main.py (59%)** — Add tests for rate limiter middleware, cache warmer background task, cleanup daemon, and lifespan startup/shutdown.
-2. **P1.3 — System Picture-in-Picture** — Player has a PiP button but doesn't use the native Document Picture-in-Picture API. Wire up `documentPictureInPicture` for proper system-level PiP with resize/close events.
+1. **P1.3 — System Picture-in-Picture** — Player has a PiP button but doesn't use the native Document Picture-in-Picture API. Wire up `documentPictureInPicture` for proper system-level PiP with resize/close events.
 
 ### P2 (UX Polish)
 
@@ -35,6 +34,18 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 ---
 
 ## Recently Completed
+
+### ✅ P1.2 — Backend test coverage: main.py (59%→94%)
+Added 37 new tests across 7 test classes:
+- **RateLimitMiddleware**: 6 tests — basic pass/block, window reset, search/image-proxy limits, IP isolation
+- **warm_cache**: 11 tests — disabled, all-phases, category filter, live/VOD/EPG failure non-fatal, VOD/series retry, empty VOD/series categories, double-failure resilience
+- **_verify_cache_coherence**: 3 tests — all-keys-present, missing-static, empty-template
+- **start_cache_warmer**: 3 tests — create/replace/noop
+- **cleanup_loop**: 2 tests — normal flow, error continuance
+- **touch_access/get_last_access**: 4 tests — create/read/missing/corrupt
+- **_auto_star**: 7 tests — no-token, success, 409/500/network/204 error handling, 200/403 status
+- Plus: fixed `_auto_star` to use `_urllib_error.HTTPError` instead of bare `urllib.error.HTTPError` (missing import)
+- Backend test total: 438 (+37).
 
 ### ✅ P1.1 — Backend test coverage: admin.py (65%→98%)
 Added 6 new tests for admin routes:
