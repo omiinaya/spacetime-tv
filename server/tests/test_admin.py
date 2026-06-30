@@ -5,6 +5,7 @@ mocked upstream IPTV provider, cleared cache before each test).
 """
 
 import time
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 
@@ -192,6 +193,205 @@ def test_admin_epg_refresh_twice_returns_already_running(client: TestClient):
     # but should always return valid status without error
     assert resp2.status_code == 200
     assert "message" in data2
+
+
+# ── Stream Health Dashboard Tests ──────────────────────────────
+
+
+def test_admin_stream_health_returns_structure(client: TestClient):
+    """GET /api/admin/stream-health should return probe cache stats structure."""
+    from routes.stream import _probe_cache
+    import time
+
+    now = time.time()
+    # Populate with a variety of probe entries
+    _probe_cache["live_100"] = (now, {
+        "codec": "h264",
+        "width": 1920,
+        "height": 1080,
+        "error": "",
+    })
+    _probe_cache["vod_200"] = (now - 1800, {
+        "codec": "h265",
+        "width": 3840,
+        "height": 2160,
+        "error": "",
+    })
+    _probe_cache["series_300"] = (now - 7200, {
+        "codec": "h264",
+        "width": 1280,
+        "height": 720,
+        "error": "timeout",
+    })
+    _probe_cache["unknown_400"] = (now - 100, {
+        "codec": "av1",
+        "width": 0,
+        "height": 0,
+        "error": "",
+    })
+
+    from main import app
+    with TestClient(app) as c:
+        resp = c.get("/api/admin/stream-health")
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["enabled"] is True
+    assert data["total_probed"] == 4
+
+    # by_codec should aggregate counts
+    assert "h264" in data["by_codec"]
+    assert data["by_codec"]["h264"] == 2
+    assert data["by_codec"]["h265"] == 1
+
+    # by_resolution: 1080p, 4K, 720p, unknown
+    assert data["by_resolution"]["1080p"] == 1
+    assert data["by_resolution"]["4K"] == 1
+    assert data["by_resolution"]["720p"] == 1
+    assert data["by_resolution"]["unknown"] == 1
+
+    # by_type: live_, vod_, series_, unknown_
+    assert data["by_type"]["live"] == 1
+    assert data["by_type"]["vod"] == 1
+    assert data["by_type"]["series"] == 1
+    assert data["by_type"]["unknown"] == 1
+
+    # stale_count: entries older than 3600s
+    assert data["stale_count"] == 1  # series_300 is 7200s old
+
+    # recent should include up to 20 entries
+    assert len(data["recent"]) == 4
+    recent_keys = [e["key"] for e in data["recent"]]
+    assert "live_100" in recent_keys
+    assert "unknown_400" in recent_keys
+
+
+def test_admin_stream_health_stale_marker(client: TestClient):
+    """Entries exactly at the stale boundary (3600s) should not be stale."""
+    from routes.stream import _probe_cache
+    import time
+
+    now = time.time()
+    _probe_cache["live_500"] = (now - 3600, {
+        "codec": "h264",
+        "width": 640,
+        "height": 480,
+        "error": "",
+    })
+    _probe_cache["live_501"] = (now - 3601, {
+        "codec": "h264",
+        "width": 640,
+        "height": 480,
+        "error": "",
+    })
+
+    from main import app
+    with TestClient(app) as c:
+        resp = c.get("/api/admin/stream-health")
+    data = resp.json()
+    # age > 3600 (strictly greater), so 3600 is NOT stale, 3601 IS stale
+    assert data["stale_count"] == 1
+    assert data["total_probed"] == 2
+
+
+def test_admin_stream_health_empty_cache(client: TestClient):
+    """GET /api/admin/stream-health should handle empty probe cache."""
+    from routes.stream import _probe_cache
+    _probe_cache.clear()
+
+    from main import app
+    with TestClient(app) as c:
+        resp = c.get("/api/admin/stream-health")
+    data = resp.json()
+    assert data["enabled"] is True
+    assert data["total_probed"] == 0
+    assert data["stale_count"] == 0
+    assert data["by_codec"] == {}
+    assert data["by_resolution"] == {}
+    assert data["by_type"] == {}
+    assert data["recent"] == []
+
+
+def test_admin_stream_health_error_field_in_recent(client: TestClient):
+    """Error field should be None for empty-string errors."""
+    from routes.stream import _probe_cache
+    import time
+
+    _probe_cache["live_600"] = (time.time(), {
+        "codec": "h264",
+        "width": 1920,
+        "height": 1080,
+        "error": "",
+    })
+    _probe_cache["live_601"] = (time.time(), {
+        "codec": "h264",
+        "width": 1920,
+        "height": 1080,
+        "error": "connection refused",
+    })
+
+    from main import app
+    with TestClient(app) as c:
+        resp = c.get("/api/admin/stream-health")
+    data = resp.json()
+    recent = data["recent"]
+    live_600 = [e for e in recent if e["key"] == "live_600"][0]
+    live_601 = [e for e in recent if e["key"] == "live_601"][0]
+    assert live_600["error"] is None
+    assert live_601["error"] == "connection refused"
+
+
+def test_admin_stream_health_nonstandard_resolution(client: TestClient):
+    """Non-standard heights below 480 should get 'NNNp' label (e.g. 400p)."""
+    from routes.stream import _probe_cache
+    import time
+
+    _probe_cache["live_700"] = (time.time(), {
+        "codec": "h264",
+        "width": 960,
+        "height": 540,
+        "error": "",
+    })
+    _probe_cache["live_701"] = (time.time(), {
+        "codec": "h264",
+        "width": 720,
+        "height": 400,
+        "error": "",
+    })
+
+    from main import app
+    with TestClient(app) as c:
+        resp = c.get("/api/admin/stream-health")
+    data = resp.json()
+    # 540 ≥ 480, so it maps to 480p
+    assert data["by_resolution"]["480p"] == 1
+    # 400 < 480, so it hits the else branch → "400p"
+    assert data["by_resolution"]["400p"] == 1
+
+
+# ── Warm Cache "Already in Progress" Branch ────────────────────
+
+
+def test_admin_warm_cache_already_in_progress(client: TestClient):
+    """POST /api/admin/cache/warm when already warming should indicate in progress."""
+    import asyncio
+    import main as m
+    old = m._warm_task
+
+    # Create a not-done task (an incomplete asyncio future)
+    pending = asyncio.Future()
+    try:
+        m._warm_task = pending  # not None and not done()
+
+        from main import app
+        with TestClient(app) as c:
+            resp = c.post("/api/admin/cache/warm")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "in progress" in data["message"].lower() or "already" in data["message"].lower()
+    finally:
+        m._warm_task = old
+        pending.cancel()
 
 
 # ── Admin Key Auth Tests ─────────────────────────────────────────
