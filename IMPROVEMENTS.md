@@ -46,6 +46,18 @@ All 6 route modules (live.py, vod.py, search.py, guide.py, misc.py, admin.py) no
 from `iptv_client` instead of doing `import main as _main`. Eliminates the primary circular
 import anti-pattern. Main.py re-exports for backward compat. 395 tests pass.
 
+### S7 — Split stream.py (1105 lines) → 7 focused modules
+Decomposed the monolithic 1105-line stream.py into focused modules:
+  - `stream_core.py` (~280 lines) — shared helpers: generators, pipes, URL builders, MIME, probe cache
+  - `stream_live.py` (~70 lines) — live TV proxy, transcode, quality-limited transcoding (3 routes)
+  - `stream_vod.py` (~170 lines) — VOD remux, transcode, direct playback with Range support (8 routes)
+  - `stream_convert.py` (~170 lines) — MKV→fMP4 conversion + cached MP4 serving (6 routes)
+  - `stream_hls.py` (~140 lines) — HLS segmentation and segment serving (3 routes)
+  - `stream_dash.py` (~100 lines) — DASH MPD manifest generation (3 routes)
+  - `stream_probe.py` (~120 lines) — ffprobe-based codec detection (3 routes)
+  `stream.py` remains the umbrella — re-exports all symbols, aggregates sub-routers.
+  Zero test changes needed. 395 tests pass. Backend architecture grade C+→B-.
+
 ---
 
 ## Recently Completed (archive)

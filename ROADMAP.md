@@ -13,7 +13,7 @@
 |-----------|-------|-------|
 | **Testing depth** | B+ | 85% |
 | **Frontend quality** | A- | 90% |
-| **Backend architecture** | C+ | 65% |
+| **Backend architecture** | B- | 70% |
 | **Feature completeness** | C | 55% |
 | **Security** | C+ | 65% |
 | **Developer experience** | B- | 70% |
@@ -85,8 +85,8 @@
 
 ### 🔴 Anti-Patterns
 - ~~**Circular imports everywhere**: every route file does `import main as _main` to access `cached_fetch`. This is _the_ classic Python sin. `cached_fetch` should live in `state.py` where `_cache` lives.~~ ✅ **Fixed** — all IPTV fetch/cache logic extracted to `server/iptv_client.py`. Route modules import from there directly.
-- **Monolith-in-disguise**: routes are in separate files but still coupled to `main.py` via lazy imports. No DI, no service layer.
-- **stream.py is 1105 lines** — violates single-responsibility. Should be split into streaming + remux + transcode modules.
+- ~~**Monolith-in-disguise**: routes are in separate files but still coupled to `main.py` via lazy imports. No DI, no service layer.~~ Stream.py (1105 lines) now split into 7 focused modules.
+- ~~**stream.py is 1105 lines** — violates single-responsibility. Should be split into streaming + remux + transcode modules.~~ ✅ **Fixed** — Split into 7 focused modules. Max module size: ~280 lines.
 - **guide.py is 434 lines** — EPG parsing, TMDB enrichment, channel groups all in one file.
 - ~~**3 hardcoded paths** to `/home/user/.local/share/hermes-cli-tools-venv/bin/tmdb-enrich` across search.py, tmdb.py, guide.py — should be a single env-var in config.py.~~ ✅ **Fixed** — now `TMDB_ENRICH_PATH` in `config.py`, importable from all modules.
 - **No API versioning** — all routes are bare `/api/...`. No `/v1/` prefix, making future breaking changes painful.
@@ -148,8 +148,8 @@
 
 ### 🔴 Anti-Patterns
 - ~~**Circular imports everywhere**: every route file does `import main as _main` to access `cached_fetch`. This is _the_ classic Python sin. `cached_fetch` should live in `state.py` where `_cache` lives.~~ ✅ **Fixed** — all IPTV fetch/cache logic extracted to `server/iptv_client.py`. Route modules import from there directly.
-- **Monolith-in-disguise**: routes are in separate files but still coupled to `main.py` via lazy imports. No DI, no service layer.
-- **stream.py is 1105 lines** — violates single-responsibility. Should be split into streaming + remux + transcode modules.
+- ~~**Monolith-in-disguise**: routes are in separate files but still coupled to `main.py` via lazy imports. No DI, no service layer.~~ Stream.py (1105 lines) now split into 7 focused modules.
+- ~~**stream.py is 1105 lines** — violates single-responsibility. Should be split into streaming + remux + transcode modules.~~ ✅ **Fixed** — Split into 7 focused modules. Max module size: ~280 lines.
 - **guide.py is 434 lines** — EPG parsing, TMDB enrichment, channel groups all in one file.
 - ~~**3 hardcoded paths** to `/home/user/.local/share/hermes-cli-tools-venv/bin/tmdb-enrich` across search.py, tmdb.py, guide.py — should be a single env-var in config.py.~~ ✅ **Fixed** — now `TMDB_ENRICH_PATH` in `config.py`, importable from all modules.
 - **No API versioning** — all routes are bare `/api/...`. No `/v1/` prefix, making future breaking changes painful.
@@ -223,7 +223,8 @@
 || **CACHE_TTL_HOURS → CLEANUP_TTL_HOURS** | Renamed to eliminate confusion with API data cache `CACHE_TTL = 300` in state.py. |
 || **Admin auth test coverage** | 2 new tests for `require_admin_key` — 403/200 with key, dev-mode bypass. 395 backend tests pass. |
 || **Consistent JSON error responses** | 8 raw-text 502 errors in `stream.py` → `JSONResponse({"detail": "..."})`. |
-|| **Extract iptv_client — circular imports fixed** | Created `server/iptv_client.py`. All 6 route modules import from there instead of `import main as _main`. Removes 25+ lazy imports from `main`. `main.py` size reduced by ~60 lines. |
+||| **Extract iptv_client — circular imports fixed** | Created `server/iptv_client.py`. All 6 route modules import from there instead of `import main as _main`. Removes 25+ lazy imports from `main`. `main.py` size reduced by ~60 lines. |
+||| **Split stream.py (1105 lines) → 7 focused modules** | stream_core, stream_live, stream_vod, stream_convert, stream_hls, stream_dash, stream_probe. Umbrella stream.py re-exports everything. Zero test changes. Backend architecture C+→B-. |
 
 ## Completed (previous sessions)
 
