@@ -79,7 +79,7 @@ export function useMpegtsPlayer(
             url: streamUrl,
           },
           {
-            enableWorkerForMSE: false,
+            enableWorkerForMSE: true,
             liveBufferLatencyChasing: false,
             autoCleanupSourceBuffer: true,
             autoCleanupMaxBackwardDuration: 360,
