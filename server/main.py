@@ -40,6 +40,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Spacetime-TV", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
+# GZip compression for API responses — JSON payloads compress 5-10x
+from fastapi.middleware.gzip import GZipMiddleware
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # ── Route modules ─────────────────────────────────────────────────────────
 from routes.health import router as health_router
