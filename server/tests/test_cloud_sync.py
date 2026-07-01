@@ -5,8 +5,10 @@ Covers:
   - GET  /api/cloud/backup — retrieve, no backup, invalid device_id
   - POST /api/cloud/merge  — additive merge, deduplication
   - Response structure
+  - Auth enforcement when ADMIN_API_KEY is set
 """
 
+import os
 from pathlib import Path
 
 BACKUP_FILE = Path("/tmp/stv_cloud_backup.json")
@@ -224,3 +226,109 @@ class TestMergeFavorites:
             "favorites": [1],
         })
         assert resp.json()["status"] == "error"
+
+
+# ── Auth Enforcement ─────────────────────────────────────────────────────
+
+
+class TestCloudAuthEnforcement:
+    """When ADMIN_API_KEY is set, unauthenticated requests get 403."""
+
+    def _make_client_with_key(self, key: str):
+        """Create a TestClient with ADMIN_API_KEY set to the given value."""
+        import os
+        import importlib
+        os.environ["ADMIN_API_KEY"] = key
+        import config as cfg
+        importlib.reload(cfg)
+        from main import app
+        from fastapi.testclient import TestClient
+        return TestClient(app)
+
+    def test_upload_requires_auth_when_key_set(self):
+        """POST /cloud/backup returns 403 without X-Admin-Key when key is set."""
+        old = os.environ.get("ADMIN_API_KEY", "")
+        try:
+            c = self._make_client_with_key("test-cloud-key-000")
+            resp = c.post("/api/v1/cloud/backup", json={
+                "device_id": "auth-test-device",
+                "favorites": [1],
+            })
+            assert resp.status_code == 403
+            assert "admin key" in resp.json()["detail"].lower()
+        finally:
+            os.environ["ADMIN_API_KEY"] = old
+            import importlib
+            import config as cfg
+            importlib.reload(cfg)
+
+    def test_get_requires_auth_when_key_set(self):
+        """GET /cloud/backup returns 403 without X-Admin-Key when key is set."""
+        old = os.environ.get("ADMIN_API_KEY", "")
+        try:
+            c = self._make_client_with_key("test-cloud-key-001")
+            resp = c.get("/api/v1/cloud/backup?device_id=auth-test-device")
+            assert resp.status_code == 403
+        finally:
+            os.environ["ADMIN_API_KEY"] = old
+            import importlib
+            import config as cfg
+            importlib.reload(cfg)
+
+    def test_merge_requires_auth_when_key_set(self):
+        """POST /cloud/merge returns 403 without X-Admin-Key when key is set."""
+        old = os.environ.get("ADMIN_API_KEY", "")
+        try:
+            c = self._make_client_with_key("test-cloud-key-002")
+            resp = c.post("/api/v1/cloud/merge", json={
+                "device_id": "auth-test-device",
+                "favorites": [1],
+            })
+            assert resp.status_code == 403
+        finally:
+            os.environ["ADMIN_API_KEY"] = old
+            import importlib
+            import config as cfg
+            importlib.reload(cfg)
+
+    def test_upload_succeeds_with_valid_key(self):
+        """POST /cloud/backup succeeds with correct X-Admin-Key."""
+        old = os.environ.get("ADMIN_API_KEY", "")
+        try:
+            c = self._make_client_with_key("test-cloud-key-003")
+            resp = c.post(
+                "/api/v1/cloud/backup",
+                json={"device_id": "auth-ok-device", "favorites": [1]},
+                headers={"X-Admin-Key": "test-cloud-key-003"},
+            )
+            assert resp.status_code == 200
+            assert resp.json()["status"] == "ok"
+        finally:
+            os.environ["ADMIN_API_KEY"] = old
+            import importlib
+            import config as cfg
+            importlib.reload(cfg)
+
+    def test_get_succeeds_with_valid_key(self):
+        """GET /cloud/backup succeeds with correct X-Admin-Key."""
+        old = os.environ.get("ADMIN_API_KEY", "")
+        try:
+            c = self._make_client_with_key("test-cloud-key-004")
+            # First upload with key
+            c.post(
+                "/api/v1/cloud/backup",
+                json={"device_id": "auth-get-device", "favorites": [99]},
+                headers={"X-Admin-Key": "test-cloud-key-004"},
+            )
+            # Then get with key
+            resp = c.get(
+                "/api/v1/cloud/backup?device_id=auth-get-device",
+                headers={"X-Admin-Key": "test-cloud-key-004"},
+            )
+            assert resp.status_code == 200
+            assert resp.json()["data"]["favorites"] == [99]
+        finally:
+            os.environ["ADMIN_API_KEY"] = old
+            import importlib
+            import config as cfg
+            importlib.reload(cfg)

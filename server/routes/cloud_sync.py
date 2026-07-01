@@ -3,6 +3,11 @@
 Persisted to /tmp/stv_cloud_backup.json so data survives server restarts.
 Each backup is keyed by a simple device_id (UUID generated on first use).
 
+Security:
+  - In production (ADMIN_API_KEY set), all endpoints require X-Admin-Key header.
+  - In dev mode (ADMIN_API_KEY empty), endpoints are open for local development.
+  - Use the same require_admin_key dependency pattern as admin routes.
+
 Endpoints:
   POST /api/cloud/backup — Upload a backup blob (favorites, watchlist, settings)
   GET  /api/cloud/backup — Retrieve the most recent backup for this device
@@ -15,12 +20,17 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from fastapi import Request as _unused
 
 from config import TMDB_ENRICH_PATH as _ignored
 
+# Reuse the admin auth dependency — same X-Admin-Key pattern.
+# In dev mode (ADMIN_API_KEY empty), no auth is required.
+from routes.admin import require_admin_key
+
 log = logging.getLogger("spacetime-tv")
-router = APIRouter(tags=["cloud"])
+router = APIRouter(tags=["cloud"], dependencies=[Depends(require_admin_key)])
 
 BACKUP_FILE = Path("/tmp/stv_cloud_backup.json")
 
