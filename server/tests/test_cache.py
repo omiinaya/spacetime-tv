@@ -59,7 +59,7 @@ def test_cache_key_producer_consumer_match(client):
 
 def test_cold_cache_triggers_upstream(client):
     """When cache is cold, cached_fetch calls upstream (returns [] via mock)."""
-    resp = client.get("/api/live/categories")
+    resp = client.get("/api/v1/live/categories")
     assert resp.status_code == 200
     data = resp.json()
     assert data["categories"] == []
@@ -72,7 +72,7 @@ def test_warm_cache_returns_cached(client_with_cache):
     test_data = [{"category_id": 1, "category_name": "News"}]
     _cache["live_cats"] = (9999999999.0, test_data)
 
-    resp = client_with_cache.get("/api/live/categories")
+    resp = client_with_cache.get("/api/v1/live/categories")
     assert resp.status_code == 200
     data = resp.json()
     assert data["categories"][0]["category_name"] == "News"
@@ -87,7 +87,7 @@ def test_stale_cache_served_on_upstream_failure(client_with_cache):
     _cache["live_cats"] = (stale_time, [{"category_id": 1, "category_name": "StaleNews"}])
 
     # Upstream call will fail (no real server), so cached_fetch falls back to stale
-    resp = client_with_cache.get("/api/live/categories")
+    resp = client_with_cache.get("/api/v1/live/categories")
     assert resp.status_code == 200
     data = resp.json()
     # Stale fallback should return the expired data
@@ -96,7 +96,7 @@ def test_stale_cache_served_on_upstream_failure(client_with_cache):
 
 def test_cache_miss_returns_error(client_with_cache):
     """Cold cache + upstream failure should return 502."""
-    resp = client_with_cache.get("/api/movies/categories?category_id=nonexistent")
+    resp = client_with_cache.get("/api/v1/movies/categories?category_id=nonexistent")
     pass
 
 

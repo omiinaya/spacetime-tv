@@ -64,7 +64,7 @@ def generate_vod_mpd(stream_id: int, stream_type: str, stream_url: str) -> str:
 </MPD>'''
 
 
-@router.get("/api/stream/live/{stream_id}/manifest.mpd")
+@router.get("/stream/live/{stream_id}/manifest.mpd")
 async def live_dash_manifest(stream_id: int):
     """DASH MPD manifest for live TV stream playback via shaka-player."""
     url = await build_stream_url(stream_id, "live")
@@ -76,7 +76,7 @@ async def live_dash_manifest(stream_id: int):
     )
 
 
-@router.get("/api/stream/movie/{stream_id}/manifest.mpd")
+@router.get("/stream/movie/{stream_id}/manifest.mpd")
 async def movie_dash_manifest(stream_id: int):
     """DASH MPD manifest for movie playback via shaka-player."""
     url = await build_stream_url(stream_id, "movie")
@@ -88,7 +88,7 @@ async def movie_dash_manifest(stream_id: int):
     )
 
 
-@router.get("/api/stream/series/{series_id}/{episode_id}/manifest.mpd")
+@router.get("/stream/series/{series_id}/{episode_id}/manifest.mpd")
 async def series_dash_manifest(series_id: int, episode_id: int):
     """DASH MPD manifest for series episode playback via shaka-player."""
     url = await build_stream_url(episode_id, "series")

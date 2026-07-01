@@ -26,14 +26,14 @@ def get_stream_url(stream_id: int, media_type: str = "movie") -> str:
 
 
 # ── Movies ───────────────────────────────────────────────────────────
-@router.get("/api/movies/categories")
+@router.get("/movies/categories")
 async def movies_categories():
     """All VOD categories."""
     data = await cached_fetch(CACHE_VOD_CATEGORIES, "get_vod_categories")
     return {"categories": data}
 
 
-@router.get("/api/movies")
+@router.get("/movies")
 async def movies(
     category_id: str = Query(...),
     limit: int = Query(20, ge=1, le=100),
@@ -48,7 +48,7 @@ async def movies(
     return {"movies": data}
 
 
-@router.get("/api/movies/unified")
+@router.get("/movies/unified")
 async def movies_unified(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
@@ -110,7 +110,7 @@ async def movies_unified(
     return {"movies": unified, "total": total, "offset": offset, "limit": limit}
 
 
-@router.get("/api/movies/{stream_id}")
+@router.get("/movies/{stream_id}")
 async def movie_details(stream_id: int):
     """Movie details — plot, cast, director, genre, backdrop, etc."""
     data = await cached_fetch(CACHE_VOD_INFO.format(id=stream_id), "get_vod_info", vod_id=stream_id)
@@ -121,14 +121,14 @@ async def movie_details(stream_id: int):
 
 
 # ── Series ───────────────────────────────────────────────────────────
-@router.get("/api/series/categories")
+@router.get("/series/categories")
 async def series_categories():
     """All series categories."""
     data = await cached_fetch(CACHE_SERIES_CATEGORIES, "get_series_categories")
     return {"categories": data}
 
 
-@router.get("/api/series")
+@router.get("/series")
 async def series_list(
     category_id: str = Query(...),
     limit: int = Query(20, ge=1, le=100),
@@ -143,7 +143,7 @@ async def series_list(
     return {"series": data}
 
 
-@router.get("/api/series/{series_id}")
+@router.get("/series/{series_id}")
 async def series_details(series_id: int):
     """Series details with episodes."""
     data = await cached_fetch(CACHE_SERIES_INFO.format(id=series_id), "get_series_info", series_id=series_id)
@@ -153,7 +153,7 @@ async def series_details(series_id: int):
 
 
 # ── Download ─────────────────────────────────────────────────────────
-@router.get("/api/download/{media_type}/{stream_id}")
+@router.get("/download/{media_type}/{stream_id}")
 async def download_stream(media_type: str, stream_id: int):
     """Download a VOD stream as MKV for offline playback."""
     url = get_stream_url(stream_id, media_type)

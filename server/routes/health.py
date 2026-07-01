@@ -10,7 +10,7 @@ log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["health"])
 
 
-@router.get("/api/health")
+@router.get("/health")
 async def health_check():
     """Server health: status, uptime, cache stats."""
     uptime = time.time() - SERVER_START_TIME
@@ -28,7 +28,7 @@ async def health_check():
     }
 
 
-@router.post("/api/error")
+@router.post("/error")
 async def report_error(request: Request):
     """Frontend error beacon: log client-side errors server-side."""
     try:

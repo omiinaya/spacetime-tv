@@ -50,7 +50,7 @@ async def test_tmdb_fetch_no_api_key_returns_none():
 def test_tmdb_trending_no_key_returns_disabled(client):
     """GET /api/tmdb/trending without API key returns enabled=False."""
     _clear_tmdb_cache()
-    resp = client.get("/api/tmdb/trending")
+    resp = client.get("/api/v1/tmdb/trending")
     assert resp.status_code == 200
     data = resp.json()
     assert data["enabled"] is False
@@ -62,7 +62,7 @@ def test_tmdb_trending_no_key_returns_disabled(client):
 def test_tmdb_trending_day_window(client):
     """GET /api/tmdb/trending?time_window=day uses day window."""
     _clear_tmdb_cache()
-    resp = client.get("/api/tmdb/trending?time_window=day")
+    resp = client.get("/api/v1/tmdb/trending?time_window=day")
     assert resp.status_code == 200
     data = resp.json()
     assert data["enabled"] is False  # No API key
@@ -70,25 +70,25 @@ def test_tmdb_trending_day_window(client):
 
 def test_tmdb_trending_invalid_window(client):
     """GET /api/tmdb/trending with invalid window returns 422."""
-    resp = client.get("/api/tmdb/trending?time_window=month")
+    resp = client.get("/api/v1/tmdb/trending?time_window=month")
     assert resp.status_code == 422
 
 
 def test_tmdb_trending_page_param(client):
     """GET /api/tmdb/trending with valid page param."""
-    resp = client.get("/api/tmdb/trending?page=5")
+    resp = client.get("/api/v1/tmdb/trending?page=5")
     assert resp.status_code == 200
 
 
 def test_tmdb_trending_page_out_of_range(client):
     """GET /api/tmdb/trending with page > 20 returns 422."""
-    resp = client.get("/api/tmdb/trending?page=21")
+    resp = client.get("/api/v1/tmdb/trending?page=21")
     assert resp.status_code == 422
 
 
 def test_tmdb_trending_page_zero(client):
     """GET /api/tmdb/trending with page < 1 returns 422."""
-    resp = client.get("/api/tmdb/trending?page=0")
+    resp = client.get("/api/v1/tmdb/trending?page=0")
     assert resp.status_code == 422
 
 
@@ -98,7 +98,7 @@ def test_tmdb_trending_page_zero(client):
 def test_tmdb_search_no_key_returns_disabled(client):
     """GET /api/tmdb/search without API key returns enabled=False."""
     _clear_tmdb_cache()
-    resp = client.get("/api/tmdb/search?q=inception")
+    resp = client.get("/api/v1/tmdb/search?q=inception")
     assert resp.status_code == 200
     data = resp.json()
     assert data["enabled"] is False
@@ -107,13 +107,13 @@ def test_tmdb_search_no_key_returns_disabled(client):
 
 def test_tmdb_search_short_query(client):
     """GET /api/tmdb/search with too-short query returns 422."""
-    resp = client.get("/api/tmdb/search?q=a")
+    resp = client.get("/api/v1/tmdb/search?q=a")
     assert resp.status_code == 422
 
 
 def test_tmdb_search_missing_query(client):
     """GET /api/tmdb/search without query returns 422."""
-    resp = client.get("/api/tmdb/search")
+    resp = client.get("/api/v1/tmdb/search")
     assert resp.status_code == 422
 
 
@@ -123,7 +123,7 @@ def test_tmdb_search_missing_query(client):
 def test_tmdb_movie_details_no_key(client):
     """GET /api/tmdb/movie/550 without API key returns enabled=False."""
     _clear_tmdb_cache()
-    resp = client.get("/api/tmdb/movie/550")
+    resp = client.get("/api/v1/tmdb/movie/550")
     assert resp.status_code == 200
     data = resp.json()
     assert data["enabled"] is False
@@ -132,7 +132,7 @@ def test_tmdb_movie_details_no_key(client):
 
 def test_tmdb_movie_details_invalid_id(client):
     """GET /api/tmdb/movie/abc returns 422 (int validation)."""
-    resp = client.get("/api/tmdb/movie/abc")
+    resp = client.get("/api/v1/tmdb/movie/abc")
     assert resp.status_code == 422
 
 
@@ -142,7 +142,7 @@ def test_tmdb_movie_details_invalid_id(client):
 def test_tmdb_movie_similar_no_key(client):
     """GET /api/tmdb/movie/550/similar without API key returns enabled=False."""
     _clear_tmdb_cache()
-    resp = client.get("/api/tmdb/movie/550/similar")
+    resp = client.get("/api/v1/tmdb/movie/550/similar")
     assert resp.status_code == 200
     data = resp.json()
     assert data["enabled"] is False
@@ -150,13 +150,13 @@ def test_tmdb_movie_similar_no_key(client):
 
 def test_tmdb_movie_similar_page_param(client):
     """GET /api/tmdb/movie/550/similar with valid page."""
-    resp = client.get("/api/tmdb/movie/550/similar?page=3")
+    resp = client.get("/api/v1/tmdb/movie/550/similar?page=3")
     assert resp.status_code == 200
 
 
 def test_tmdb_movie_similar_page_out_of_range(client):
     """GET /api/tmdb/movie/550/similar with page > 10 returns 422."""
-    resp = client.get("/api/tmdb/movie/550/similar?page=11")
+    resp = client.get("/api/v1/tmdb/movie/550/similar?page=11")
     assert resp.status_code == 422
 
 
@@ -166,7 +166,7 @@ def test_tmdb_movie_similar_page_out_of_range(client):
 def test_tmdb_configuration_no_key(client):
     """GET /api/tmdb/configuration without API key returns enabled=False."""
     _clear_tmdb_cache()
-    resp = client.get("/api/tmdb/configuration")
+    resp = client.get("/api/v1/tmdb/configuration")
     assert resp.status_code == 200
     data = resp.json()
     assert data["enabled"] is False
@@ -179,7 +179,7 @@ def test_tmdb_configuration_no_key(client):
 def test_tmdb_tv_trending_no_key(client):
     """GET /api/tmdb/tv/trending without API key returns enabled=False."""
     _clear_tmdb_cache()
-    resp = client.get("/api/tmdb/tv/trending")
+    resp = client.get("/api/v1/tmdb/tv/trending")
     assert resp.status_code == 200
     data = resp.json()
     assert data["enabled"] is False
@@ -187,7 +187,7 @@ def test_tmdb_tv_trending_no_key(client):
 
 def test_tmdb_tv_trending_day_window(client):
     """GET /api/tmdb/tv/trending?time_window=day."""
-    resp = client.get("/api/tmdb/tv/trending?time_window=day")
+    resp = client.get("/api/v1/tmdb/tv/trending?time_window=day")
     assert resp.status_code == 200
 
 
@@ -197,7 +197,7 @@ def test_tmdb_tv_trending_day_window(client):
 def test_tmdb_tv_search_no_key(client):
     """GET /api/tmdb/tv/search without API key returns enabled=False."""
     _clear_tmdb_cache()
-    resp = client.get("/api/tmdb/tv/search?q=game+of+thrones")
+    resp = client.get("/api/v1/tmdb/tv/search?q=game+of+thrones")
     assert resp.status_code == 200
     data = resp.json()
     assert data["enabled"] is False
@@ -205,7 +205,7 @@ def test_tmdb_tv_search_no_key(client):
 
 def test_tmdb_tv_search_short_query(client):
     """GET /api/tmdb/tv/search with too-short query returns 422."""
-    resp = client.get("/api/tmdb/tv/search?q=a")
+    resp = client.get("/api/v1/tmdb/tv/search?q=a")
     assert resp.status_code == 422
 
 
@@ -215,7 +215,7 @@ def test_tmdb_tv_search_short_query(client):
 def test_tmdb_tv_details_no_key(client):
     """GET /api/tmdb/tv/1399 without API key returns enabled=False."""
     _clear_tmdb_cache()
-    resp = client.get("/api/tmdb/tv/1399")
+    resp = client.get("/api/v1/tmdb/tv/1399")
     assert resp.status_code == 200
     data = resp.json()
     assert data["enabled"] is False
@@ -228,7 +228,7 @@ def test_tmdb_tv_details_no_key(client):
 def test_tmdb_tv_similar_no_key(client):
     """GET /api/tmdb/tv/1399/similar without API key returns enabled=False."""
     _clear_tmdb_cache()
-    resp = client.get("/api/tmdb/tv/1399/similar")
+    resp = client.get("/api/v1/tmdb/tv/1399/similar")
     assert resp.status_code == 200
     data = resp.json()
     assert data["enabled"] is False
@@ -243,7 +243,7 @@ def test_tmdb_tv_similar_no_key(client):
 def test_tmdb_person_search_no_cli(client):
     """GET /api/tmdb/person/search returns person data when CLI available."""
     _clear_tmdb_cache()
-    resp = client.get("/api/tmdb/person/search?q=tom+hanks")
+    resp = client.get("/api/v1/tmdb/person/search?q=tom+hanks")
     assert resp.status_code == 200
     data = resp.json()
     # If tmdb-enrich CLI is available, enabled should be True
@@ -253,14 +253,14 @@ def test_tmdb_person_search_no_cli(client):
 
 def test_tmdb_person_search_short_query(client):
     """GET /api/tmdb/person/search with too-short query returns 422."""
-    resp = client.get("/api/tmdb/person/search?q=a")
+    resp = client.get("/api/v1/tmdb/person/search?q=a")
     assert resp.status_code == 422
 
 
 def test_tmdb_person_details_no_cli(client):
     """GET /api/tmdb/person/123 returns person details when CLI available."""
     _clear_tmdb_cache()
-    resp = client.get("/api/tmdb/person/123")
+    resp = client.get("/api/v1/tmdb/person/123")
     assert resp.status_code == 200
     data = resp.json()
     assert "enabled" in data
@@ -282,7 +282,7 @@ def test_tmdb_trending_with_data(client):
         return {"results": [{"id": 550, "title": "Fight Club"}], "total_pages": 1}
 
     with patch("routes.tmdb.tmdb_fetch", mock_fetch):
-        resp = client.get("/api/tmdb/trending")
+        resp = client.get("/api/v1/tmdb/trending")
         assert resp.status_code == 200
         data = resp.json()
         assert data["enabled"] is True
@@ -301,7 +301,7 @@ def test_tmdb_trending_no_results(client):
         return {"results": [], "total_pages": 0, "total_results": 0}
 
     with patch("routes.tmdb.tmdb_fetch", mock_fetch):
-        resp = client.get("/api/tmdb/trending")
+        resp = client.get("/api/v1/tmdb/trending")
         data = resp.json()
         assert data["enabled"] is True
         assert data["trending"] == []
@@ -319,7 +319,7 @@ def test_tmdb_search_with_data(client):
         return {"results": [{"id": 550, "title": "Fight Club"}], "total_pages": 1}
 
     with patch("routes.tmdb.tmdb_fetch", mock_fetch):
-        resp = client.get("/api/tmdb/search?q=club")
+        resp = client.get("/api/v1/tmdb/search?q=club")
         data = resp.json()
         assert data["enabled"] is True
         assert len(data["results"]) == 1
@@ -336,7 +336,7 @@ def test_tmdb_movie_details_with_data(client):
         return {"id": 550, "title": "Fight Club", "overview": "A movie."}
 
     with patch("routes.tmdb.tmdb_fetch", mock_fetch):
-        resp = client.get("/api/tmdb/movie/550")
+        resp = client.get("/api/v1/tmdb/movie/550")
         data = resp.json()
         assert data["enabled"] is True
         assert data["info"]["id"] == 550
@@ -353,7 +353,7 @@ def test_tmdb_movie_similar_with_data(client):
         return {"results": [{"id": 680, "title": "Pulp Fiction"}], "total_pages": 1}
 
     with patch("routes.tmdb.tmdb_fetch", mock_fetch):
-        resp = client.get("/api/tmdb/movie/550/similar")
+        resp = client.get("/api/v1/tmdb/movie/550/similar")
         data = resp.json()
         assert data["enabled"] is True
         assert len(data["results"]) == 1
@@ -370,7 +370,7 @@ def test_tmdb_configuration_with_data(client):
         return {"images": {"base_url": "http://image.tmdb.org/t/p/"}}
 
     with patch("routes.tmdb.tmdb_fetch", mock_fetch):
-        resp = client.get("/api/tmdb/configuration")
+        resp = client.get("/api/v1/tmdb/configuration")
         data = resp.json()
         assert data["enabled"] is True
         assert "base_url" in data["images"]
@@ -387,7 +387,7 @@ def test_tmdb_tv_trending_with_data(client):
         return {"results": [{"id": 1399, "name": "Game of Thrones"}], "total_pages": 1}
 
     with patch("routes.tmdb.tmdb_fetch", mock_fetch):
-        resp = client.get("/api/tmdb/tv/trending")
+        resp = client.get("/api/v1/tmdb/tv/trending")
         data = resp.json()
         assert data["enabled"] is True
         assert len(data["trending"]) == 1
@@ -404,7 +404,7 @@ def test_tmdb_tv_search_with_data(client):
         return {"results": [{"id": 1399, "name": "Game of Thrones"}], "total_pages": 1}
 
     with patch("routes.tmdb.tmdb_fetch", mock_fetch):
-        resp = client.get("/api/tmdb/tv/search?q=thrones")
+        resp = client.get("/api/v1/tmdb/tv/search?q=thrones")
         data = resp.json()
         assert data["enabled"] is True
         assert len(data["results"]) == 1
@@ -421,7 +421,7 @@ def test_tmdb_tv_details_with_data(client):
         return {"id": 1399, "name": "Game of Thrones", "seasons": []}
 
     with patch("routes.tmdb.tmdb_fetch", mock_fetch):
-        resp = client.get("/api/tmdb/tv/1399")
+        resp = client.get("/api/v1/tmdb/tv/1399")
         data = resp.json()
         assert data["enabled"] is True
         assert data["info"]["id"] == 1399
@@ -438,7 +438,7 @@ def test_tmdb_tv_similar_with_data(client):
         return {"results": [{"id": 1429, "name": "Breaking Bad"}], "total_pages": 1}
 
     with patch("routes.tmdb.tmdb_fetch", mock_fetch):
-        resp = client.get("/api/tmdb/tv/1399/similar")
+        resp = client.get("/api/v1/tmdb/tv/1399/similar")
         data = resp.json()
         assert data["enabled"] is True
         assert len(data["results"]) == 1
@@ -487,7 +487,7 @@ def test_tmdb_cache_stale_expiry():
 
 def test_tmdb_trending_response_structure(client):
     """Trending response should have expected shape."""
-    resp = client.get("/api/tmdb/trending")
+    resp = client.get("/api/v1/tmdb/trending")
     data = resp.json()
     assert "trending" in data
     assert "total_pages" in data
@@ -497,7 +497,7 @@ def test_tmdb_trending_response_structure(client):
 
 def test_tmdb_search_response_structure(client):
     """Search response should have expected shape."""
-    resp = client.get("/api/tmdb/search?q=test")
+    resp = client.get("/api/v1/tmdb/search?q=test")
     data = resp.json()
     assert "results" in data
     assert "total_pages" in data
@@ -507,7 +507,7 @@ def test_tmdb_search_response_structure(client):
 
 def test_tmdb_movie_details_response_structure(client):
     """Movie details response should have expected shape."""
-    resp = client.get("/api/tmdb/movie/550")
+    resp = client.get("/api/v1/tmdb/movie/550")
     data = resp.json()
     assert "info" in data
     assert "enabled" in data
@@ -515,7 +515,7 @@ def test_tmdb_movie_details_response_structure(client):
 
 def test_tmdb_configuration_response_structure(client):
     """Configuration response should have expected shape."""
-    resp = client.get("/api/tmdb/configuration")
+    resp = client.get("/api/v1/tmdb/configuration")
     data = resp.json()
     assert "images" in data
     assert "enabled" in data
@@ -523,7 +523,7 @@ def test_tmdb_configuration_response_structure(client):
 
 def test_tmdb_person_search_response_structure(client):
     """Person search response should have expected shape."""
-    resp = client.get("/api/tmdb/person/search?q=tom+hanks")
+    resp = client.get("/api/v1/tmdb/person/search?q=tom+hanks")
     data = resp.json()
     assert "info" in data
     assert "enabled" in data
@@ -531,7 +531,7 @@ def test_tmdb_person_search_response_structure(client):
 
 def test_tmdb_person_details_response_structure(client):
     """Person details response should have expected shape."""
-    resp = client.get("/api/tmdb/person/123")
+    resp = client.get("/api/v1/tmdb/person/123")
     data = resp.json()
     assert "info" in data
     assert "enabled" in data
@@ -686,7 +686,7 @@ def test_tmdb_person_search_cli_returns_none(client):
         return None
 
     with patch("routes.tmdb.tmdb_enrich_cli", mock_cli):
-        resp = client.get("/api/tmdb/person/search?q=tom+hanks")
+        resp = client.get("/api/v1/tmdb/person/search?q=tom+hanks")
         assert resp.status_code == 200
         data = resp.json()
         assert data["enabled"] is False
@@ -704,7 +704,7 @@ def test_tmdb_person_details_cli_returns_none(client):
         return None
 
     with patch("routes.tmdb.tmdb_enrich_cli", mock_cli):
-        resp = client.get("/api/tmdb/person/123")
+        resp = client.get("/api/v1/tmdb/person/123")
         assert resp.status_code == 200
         data = resp.json()
         assert data["enabled"] is False

@@ -13,7 +13,7 @@ log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["watchlist"])
 
 
-@router.post("/api/watchlist/sync-progress")
+@router.post("/watchlist/sync-progress")
 async def sync_progress(entry: dict):
     """Accept a queued progress update from the PWA background sync.
 
@@ -49,7 +49,7 @@ async def sync_progress(entry: dict):
     return {"status": "ok", "synced": True}
 
 
-@router.get("/api/watchlist/progress")
+@router.get("/watchlist/progress")
 async def get_progress():
     """Retrieve all stored watch progress entries.
 

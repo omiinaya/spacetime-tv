@@ -19,7 +19,7 @@ def test_live_dash_manifest_returns_mpd(client_with_cache):
          "tv_archive_duration": 0},
     ])
 
-    resp = client_with_cache.get("/api/stream/live/999/manifest.mpd")
+    resp = client_with_cache.get("/api/v1/stream/live/999/manifest.mpd")
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "application/dash+xml"
     assert "<MPD" in resp.text
@@ -35,13 +35,13 @@ def test_live_dash_manifest_has_cors_headers(client_with_cache):
          "tv_archive_duration": 0},
     ])
 
-    resp = client_with_cache.get("/api/stream/live/999/manifest.mpd")
+    resp = client_with_cache.get("/api/v1/stream/live/999/manifest.mpd")
     assert resp.headers.get("access-control-allow-origin") == "*"
 
 
 def test_live_dash_manifest_nonexistent_stream(client_with_cache):
     """Request for non-existent stream ID should still return MPD (no cache lookup for live)."""
-    resp = client_with_cache.get("/api/stream/live/98765/manifest.mpd")
+    resp = client_with_cache.get("/api/v1/stream/live/98765/manifest.mpd")
     # Live DASH manifest doesn't require cache lookup — just formats URL
     assert resp.status_code == 200
     assert "<MPD" in resp.text
@@ -57,7 +57,7 @@ def test_movie_dash_manifest_with_cache(client_with_cache):
          "direct_source": "", "rating": ""},
     ])
 
-    resp = client_with_cache.get("/api/stream/movie/500/manifest.mpd")
+    resp = client_with_cache.get("/api/v1/stream/movie/500/manifest.mpd")
     assert resp.status_code == 200
     assert "<MPD" in resp.text
     assert "video/" in resp.text or "dash" in resp.text
@@ -73,7 +73,7 @@ def test_series_dash_manifest_with_cache(client_with_cache):
          "series_episodes": [], "release_date": ""},
     ])
 
-    resp = client_with_cache.get("/api/stream/series/300/42/manifest.mpd")
+    resp = client_with_cache.get("/api/v1/stream/series/300/42/manifest.mpd")
     assert resp.status_code == 200
     assert "<MPD" in resp.text
 
@@ -86,7 +86,7 @@ def test_probe_live_with_prepopulated_cache(client_with_cache):
         {"codec": "h264", "width": 1920, "height": 1080, "duration": None},
     )
 
-    resp = client_with_cache.get("/api/live/probe/888")
+    resp = client_with_cache.get("/api/v1/live/probe/888")
     assert resp.status_code == 200
     data = resp.json()
     assert data["codec"] == "h264"
@@ -102,7 +102,7 @@ def test_probe_movie_with_prepopulated_cache(client_with_cache):
         {"codec": "hevc", "width": 3840, "height": 2160, "duration": 5432.1},
     )
 
-    resp = client_with_cache.get("/api/movie/probe/777")
+    resp = client_with_cache.get("/api/v1/movie/probe/777")
     assert resp.status_code == 200
     data = resp.json()
     assert data["codec"] == "hevc"
@@ -117,7 +117,7 @@ def test_probe_series_with_prepopulated_cache(client_with_cache):
         {"codec": "h264", "width": 1280, "height": 720, "duration": 1800.0},
     )
 
-    resp = client_with_cache.get("/api/series/probe/666")
+    resp = client_with_cache.get("/api/v1/series/probe/666")
     assert resp.status_code == 200
     data = resp.json()
     assert data["codec"] == "h264"
@@ -125,7 +125,7 @@ def test_probe_series_with_prepopulated_cache(client_with_cache):
 
 def test_probe_nonexistent_stream_returns_unknown(client):
     """Probe for a stream that has no cache entry should return codec: unknown."""
-    resp = client.get("/api/live/probe/99999")
+    resp = client.get("/api/v1/live/probe/99999")
     assert resp.status_code == 200
     data = resp.json()
     assert data.get("codec") in (None, "unknown")
@@ -133,7 +133,7 @@ def test_probe_nonexistent_stream_returns_unknown(client):
 
 def test_stream_info_missing_live(client):
     """GET /api/stream/live/{id} for non-existent stream returns an error."""
-    resp = client.get("/api/stream/live/1")
+    resp = client.get("/api/v1/stream/live/1")
     # Without cache data, the stream proxy will try to stream from IPTV
     # With mocked cached_fetch returning empty, it should fail gracefully
     assert resp.status_code in (200, 404, 500)
@@ -599,7 +599,7 @@ def test_convert_movie_ready(client_with_cache):
     output_path = CACHE_DIR / f"{cache_key}.mp4"
     try:
         output_path.write_text("fake content")
-        resp = client_with_cache.get(f"/api/movie/convert/999999")
+        resp = client_with_cache.get(f"/api/v1/movie/convert/999999")
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ready"
@@ -615,7 +615,7 @@ def test_convert_movie_converting_lock(client_with_cache):
     lock_path = CACHE_DIR / f"{cache_key}.converting"
     try:
         lock_path.write_text("lock")
-        resp = client_with_cache.get(f"/api/movie/convert/999998")
+        resp = client_with_cache.get(f"/api/v1/movie/convert/999998")
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "converting"
@@ -635,7 +635,7 @@ def test_convert_movie_new_conversion(client_with_cache):
     if lock_path.exists(): lock_path.unlink()
     _converting.pop(cache_key, None)
 
-    resp = client_with_cache.get(f"/api/movie/convert/999997")
+    resp = client_with_cache.get(f"/api/v1/movie/convert/999997")
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "converting"
@@ -648,7 +648,7 @@ def test_convert_series_ep_ready(client_with_cache):
     output_path = CACHE_DIR / f"{cache_key}.mp4"
     try:
         output_path.write_text("fake content")
-        resp = client_with_cache.get(f"/api/series/convert/1/777777")
+        resp = client_with_cache.get(f"/api/v1/series/convert/1/777777")
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ready"
@@ -665,7 +665,7 @@ def test_convert_series_ep_with_retry(client_with_cache):
     try:
         output_path.write_text("stale")
         _converting.pop(cache_key, None)
-        resp = client_with_cache.get(f"/api/series/convert/1/666666?retry=true")
+        resp = client_with_cache.get(f"/api/v1/series/convert/1/666666?retry=true")
         assert resp.status_code == 200
         # stale file should be removed by retry
         assert not output_path.exists()
@@ -676,7 +676,7 @@ def test_convert_series_ep_with_retry(client_with_cache):
 
 def test_serve_mp4_not_found_returns_404(client_with_cache):
     """serve_movie_mp4 returns 404 when MP4 not yet converted."""
-    resp = client_with_cache.get("/api/stream/movie/0/mp4")
+    resp = client_with_cache.get("/api/v1/stream/movie/0/mp4")
     assert resp.status_code == 404
     assert "not yet converted" in resp.text.lower()
 
@@ -702,7 +702,7 @@ def test_hls_path_traversal_returns_400():
 
 def test_hls_segment_not_found_returns_404(client_with_cache):
     """serve_hls_file returns 404 for non-existent segments."""
-    resp = client_with_cache.get("/api/hls/movie/99999/nonexistent.ts")
+    resp = client_with_cache.get("/api/v1/hls/movie/99999/nonexistent.ts")
     assert resp.status_code == 404
 
 
@@ -710,7 +710,7 @@ def test_hls_segment_not_found_returns_404(client_with_cache):
 
 def test_stream_live_returns_streaming_response(client_with_cache):
     """stream_live returns a StreamingResponse (not error) for valid live stream."""
-    resp = client_with_cache.get("/api/stream/live/2")
+    resp = client_with_cache.get("/api/v1/stream/live/2")
     # With client_with_cache, cached_fetch returns empty data but the
     # route should still construct a StreamingResponse (actual error at stream time)
     assert resp.status_code in (200, 502)
@@ -718,57 +718,57 @@ def test_stream_live_returns_streaming_response(client_with_cache):
 
 def test_live_transcode_returns_proper_type(client_with_cache):
     """stream_live_transcode returns MPEG-TS content type."""
-    resp = client_with_cache.get("/api/stream/live/3/transcode")
+    resp = client_with_cache.get("/api/v1/stream/live/3/transcode")
     assert resp.status_code in (200, 502)
 
 
 def test_live_quality_returns_proper_type(client_with_cache):
     """stream_live_quality returns MPEG-TS content type."""
-    resp = client_with_cache.get("/api/stream/live/4/quality/720")
+    resp = client_with_cache.get("/api/v1/stream/live/4/quality/720")
     assert resp.status_code in (200, 502)
 
 
 def test_movie_remux_route(client_with_cache):
     """stream_movie_remux returns proper type for valid movie remux."""
-    resp = client_with_cache.get("/api/stream/movie/999/remux")
+    resp = client_with_cache.get("/api/v1/stream/movie/999/remux")
     assert resp.status_code in (200, 502)
 
 
 def test_series_remux_route(client_with_cache):
     """stream_series_remux returns proper type for valid series remux."""
-    resp = client_with_cache.get("/api/stream/series/888/42/remux")
+    resp = client_with_cache.get("/api/v1/stream/series/888/42/remux")
     assert resp.status_code in (200, 502)
 
 
 def test_movie_transcode_route(client_with_cache):
     """stream_movie_transcode returns proper type for valid movie transcode."""
-    resp = client_with_cache.get("/api/stream/movie/777/transcode")
+    resp = client_with_cache.get("/api/v1/stream/movie/777/transcode")
     assert resp.status_code in (200, 502)
 
 
 def test_series_transcode_route(client_with_cache):
     """stream_series_transcode returns proper type for valid series transcode."""
-    resp = client_with_cache.get("/api/stream/series/666/12/transcode")
+    resp = client_with_cache.get("/api/v1/stream/series/666/12/transcode")
     assert resp.status_code in (200, 502)
 
 
 @pytest.mark.xfail(reason="curl_cffi makes real network calls that fail in test", strict=False)
 def test_movie_proxy_routes(client_with_cache):
     """stream_movie returns proper status for non-existent movie."""
-    resp = client_with_cache.get("/api/stream/movie/1")
+    resp = client_with_cache.get("/api/v1/stream/movie/1")
     assert resp.status_code in (200, 502)
 
 
 @pytest.mark.xfail(reason="curl_cffi makes real network calls that fail in test", strict=False)
 def test_series_proxy_routes(client_with_cache):
     """stream_series_ep returns proper status for non-existent episode."""
-    resp = client_with_cache.get("/api/stream/series/1/1")
+    resp = client_with_cache.get("/api/v1/stream/series/1/1")
     assert resp.status_code in (200, 502)
 
 
 def test_vod_dash_manifest_nonexistent(client_with_cache):
     """VOD DASH manifest for missing stream still returns valid MPD."""
-    resp = client_with_cache.get("/api/stream/movie/99999/manifest.mpd")
+    resp = client_with_cache.get("/api/v1/stream/movie/99999/manifest.mpd")
     # Without cache, it uses _lookup_extension which defaults to mkv
     assert resp.status_code == 200
     assert "<MPD" in resp.text
@@ -776,7 +776,7 @@ def test_vod_dash_manifest_nonexistent(client_with_cache):
 
 def test_series_dash_manifest_nonexistent(client_with_cache):
     """Series DASH manifest for missing series returns valid MPD."""
-    resp = client_with_cache.get("/api/stream/series/99999/1/manifest.mpd")
+    resp = client_with_cache.get("/api/v1/stream/series/99999/1/manifest.mpd")
     assert resp.status_code == 200
     assert "<MPD" in resp.text
 
@@ -894,19 +894,19 @@ def test_ffmpeg_pipe_yields_stdout():
 
 def test_stream_live_timeshift_route(client_with_cache):
     """stream_live_timeshift returns StreamingResponse or 502."""
-    resp = client_with_cache.get("/api/stream/live/5/timeshift", params={"duration": 3600})
+    resp = client_with_cache.get("/api/v1/stream/live/5/timeshift", params={"duration": 3600})
     assert resp.status_code in (200, 502)
 
 
 def test_stream_live_timeshift_default_duration(client_with_cache):
     """stream_live_timeshift uses 3600s default."""
-    resp = client_with_cache.get("/api/stream/live/6/timeshift")
+    resp = client_with_cache.get("/api/v1/stream/live/6/timeshift")
     assert resp.status_code in (200, 502)
 
 
 def test_stream_live_timeshift_non_existent(client_with_cache):
     """stream_live_timeshift handles non-existent stream."""
-    resp = client_with_cache.get("/api/stream/live/999999/timeshift")
+    resp = client_with_cache.get("/api/v1/stream/live/999999/timeshift")
     assert resp.status_code in (200, 502)
 
 
@@ -972,7 +972,7 @@ def test_vod_movie_route_accessible(client_with_cache):
          "category_ids": ["1"], "direct_source": ""},
     ])
     try:
-        resp = client_with_cache.get("/api/stream/movie/1")
+        resp = client_with_cache.get("/api/v1/stream/movie/1")
         assert resp.status_code != 404
     except RuntimeError:
         # Route exists (would return 500 in production, not 404)
@@ -988,7 +988,7 @@ def test_vod_movie_route_with_range(client_with_cache):
          "category_ids": ["1"], "direct_source": ""},
     ])
     try:
-        resp = client_with_cache.get("/api/stream/movie/99", headers={"Range": "bytes=0-"})
+        resp = client_with_cache.get("/api/v1/stream/movie/99", headers={"Range": "bytes=0-"})
         assert resp.status_code != 404
     except RuntimeError:
         pass
@@ -1003,7 +1003,7 @@ def test_vod_series_route_accessible(client_with_cache):
          "category_ids": ["1"], "direct_source": ""},
     ])
     try:
-        resp = client_with_cache.get("/api/stream/series/3/42")
+        resp = client_with_cache.get("/api/v1/stream/series/3/42")
         assert resp.status_code != 404
     except RuntimeError:
         pass
@@ -1065,7 +1065,7 @@ def test_stream_live_handles_inner_stream_error(client_with_cache):
         yield  # pragma: no cover
 
     with patch("routes.stream_live.stream_bytes", mock_fail):
-        resp = client_with_cache.get("/api/stream/live/1")
+        resp = client_with_cache.get("/api/v1/stream/live/1")
         # The inner except catches this — monitored_stream completes normally,
         # StreamingResponse wraps it successfully, so we get 200
         assert resp.status_code == 200
@@ -1073,19 +1073,19 @@ def test_stream_live_handles_inner_stream_error(client_with_cache):
 
 def test_stream_live_timeshift_route_exists(client_with_cache):
     """stream_live_timeshift route is accessible."""
-    resp = client_with_cache.get("/api/stream/live/1/timeshift?duration=3600")
+    resp = client_with_cache.get("/api/v1/stream/live/1/timeshift?duration=3600")
     assert resp.status_code in (200, 502)
 
 
 def test_stream_live_transcode_route_exists(client_with_cache):
     """stream_live_transcode route is accessible."""
-    resp = client_with_cache.get("/api/stream/live/1/transcode")
+    resp = client_with_cache.get("/api/v1/stream/live/1/transcode")
     assert resp.status_code in (200, 502)
 
 
 def test_stream_live_quality_route_exists(client_with_cache):
     """stream_live_quality route is accessible."""
-    resp = client_with_cache.get("/api/stream/live/1/quality/720")
+    resp = client_with_cache.get("/api/v1/stream/live/1/quality/720")
     assert resp.status_code in (200, 502)
 
 
@@ -1132,25 +1132,25 @@ def test_stream_live_quality_has_error_handler():
 
 def test_stream_movie_remux_route_exists(client_with_cache):
     """Movie remux route is accessible."""
-    resp = client_with_cache.get("/api/stream/movie/1/remux")
+    resp = client_with_cache.get("/api/v1/stream/movie/1/remux")
     assert resp.status_code != 404
 
 
 def test_stream_series_remux_route_exists(client_with_cache):
     """Series remux route is accessible."""
-    resp = client_with_cache.get("/api/stream/series/1/42/remux")
+    resp = client_with_cache.get("/api/v1/stream/series/1/42/remux")
     assert resp.status_code != 404
 
 
 def test_stream_movie_transcode_route_exists(client_with_cache):
     """Movie transcode route is accessible."""
-    resp = client_with_cache.get("/api/stream/movie/1/transcode")
+    resp = client_with_cache.get("/api/v1/stream/movie/1/transcode")
     assert resp.status_code != 404
 
 
 def test_stream_series_transcode_route_exists(client_with_cache):
     """Series transcode route is accessible."""
-    resp = client_with_cache.get("/api/stream/series/1/42/transcode")
+    resp = client_with_cache.get("/api/v1/stream/series/1/42/transcode")
     assert resp.status_code != 404
 
 
@@ -1194,14 +1194,14 @@ def test_stream_vod_mpegts_with_start_time_uses_seek():
 @pytest.mark.xfail(reason="curl_cffi makes real network calls that fail in test", strict=False)
 def test_movie_proxy_routes(client_with_cache):
     """stream_movie returns proper status for non-existent movie."""
-    resp = client_with_cache.get("/api/stream/movie/1")
+    resp = client_with_cache.get("/api/v1/stream/movie/1")
     assert resp.status_code in (200, 502)
 
 
 @pytest.mark.xfail(reason="curl_cffi makes real network calls that fail in test", strict=False)
 def test_movie_proxy_routes_with_range(client_with_cache):
     """stream_movie proxy with range header works."""
-    resp = client_with_cache.get("/api/stream/movie/1", headers={"range": "bytes=0-100"})
+    resp = client_with_cache.get("/api/v1/stream/movie/1", headers={"range": "bytes=0-100"})
     assert resp.status_code in (200, 206, 502)
 
 

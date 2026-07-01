@@ -116,19 +116,19 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
         return {"codec": "unknown"}
 
 
-@router.get("/api/live/probe/{stream_id}")
+@router.get("/live/probe/{stream_id}")
 async def probe_endpoint(stream_id: int):
     """Probe a live stream to detect video codec before playback."""
     return await probe_stream(stream_id, "live")
 
 
-@router.get("/api/movie/probe/{stream_id}")
+@router.get("/movie/probe/{stream_id}")
 async def probe_movie(stream_id: int):
     """Probe a movie stream to detect video codec."""
     return await probe_stream(stream_id, "movie")
 
 
-@router.get("/api/series/probe/{stream_id}")
+@router.get("/series/probe/{stream_id}")
 async def probe_series(stream_id: int):
     """Probe a series stream to detect video codec."""
     return await probe_stream(stream_id, "series")

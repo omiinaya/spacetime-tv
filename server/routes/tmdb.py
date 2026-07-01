@@ -53,7 +53,7 @@ async def tmdb_fetch(path: str) -> dict | None:
 
 # ── Movies ───────────────────────────────────────────────────────
 
-@router.get("/api/tmdb/trending")
+@router.get("/tmdb/trending")
 async def tmdb_trending(
     time_window: str = Query("week", pattern="^(day|week)$"),
     page: int = Query(1, ge=1, le=20),
@@ -74,7 +74,7 @@ async def tmdb_trending(
     }
 
 
-@router.get("/api/tmdb/search")
+@router.get("/tmdb/search")
 async def tmdb_search(
     q: str = Query(..., min_length=2),
     page: int = Query(1, ge=1, le=20),
@@ -95,7 +95,7 @@ async def tmdb_search(
     }
 
 
-@router.get("/api/tmdb/movie/{tmdb_id}")
+@router.get("/tmdb/movie/{tmdb_id}")
 async def tmdb_movie_details(tmdb_id: int):
     """Full movie details from TMDB v3 API by TMDB ID.
 
@@ -109,7 +109,7 @@ async def tmdb_movie_details(tmdb_id: int):
     return {"enabled": True, "info": data}
 
 
-@router.get("/api/tmdb/movie/{tmdb_id}/similar")
+@router.get("/tmdb/movie/{tmdb_id}/similar")
 async def tmdb_movie_similar(tmdb_id: int, page: int = Query(1, ge=1, le=10)):
     """Similar movies from TMDB by TMDB ID.
 
@@ -127,7 +127,7 @@ async def tmdb_movie_similar(tmdb_id: int, page: int = Query(1, ge=1, le=10)):
     }
 
 
-@router.get("/api/tmdb/configuration")
+@router.get("/tmdb/configuration")
 async def tmdb_configuration():
     """TMDB API configuration (image base URLs, sizes, etc.).
 
@@ -142,7 +142,7 @@ async def tmdb_configuration():
 
 # ── TV / Series ──────────────────────────────────────────────────
 
-@router.get("/api/tmdb/tv/trending")
+@router.get("/tmdb/tv/trending")
 async def tmdb_tv_trending(
     time_window: str = Query("week", pattern="^(day|week)$"),
     page: int = Query(1, ge=1, le=20),
@@ -164,7 +164,7 @@ async def tmdb_tv_trending(
     }
 
 
-@router.get("/api/tmdb/tv/search")
+@router.get("/tmdb/tv/search")
 async def tmdb_tv_search(
     q: str = Query(..., min_length=2),
     page: int = Query(1, ge=1, le=20),
@@ -185,7 +185,7 @@ async def tmdb_tv_search(
     }
 
 
-@router.get("/api/tmdb/tv/{series_id}")
+@router.get("/tmdb/tv/{series_id}")
 async def tmdb_tv_details(series_id: int):
     """Full TV series details from TMDB v3 API by TMDB series ID.
 
@@ -199,7 +199,7 @@ async def tmdb_tv_details(series_id: int):
     return {"enabled": True, "info": data}
 
 
-@router.get("/api/tmdb/tv/{series_id}/similar")
+@router.get("/tmdb/tv/{series_id}/similar")
 async def tmdb_tv_similar(series_id: int, page: int = Query(1, ge=1, le=10)):
     """Similar TV shows from TMDB by TMDB series ID.
 
@@ -245,7 +245,7 @@ async def tmdb_enrich_cli(*args: str) -> dict | None:
         return None
 
 
-@router.get("/api/tmdb/person/search")
+@router.get("/tmdb/person/search")
 async def tmdb_person_search(
     q: str = Query(..., min_length=2),
 ):
@@ -260,7 +260,7 @@ async def tmdb_person_search(
     return {"enabled": True, "info": data}
 
 
-@router.get("/api/tmdb/person/{person_id}")
+@router.get("/tmdb/person/{person_id}")
 async def tmdb_person_details(person_id: int):
     """Full person details + filmography via tmdb-enrich CLI.
 

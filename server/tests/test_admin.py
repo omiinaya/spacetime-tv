@@ -14,7 +14,7 @@ def test_admin_stats_returns_structure(client: TestClient):
     from main import app
 
     with TestClient(app) as c:
-        resp = c.get("/api/admin/stats")
+        resp = c.get("/api/v1/admin/stats")
     assert resp.status_code == 200
     data = resp.json()
 
@@ -63,7 +63,7 @@ def test_admin_stats_cache_empty_on_fresh_start(client: TestClient):
     from main import app
 
     with TestClient(app) as c:
-        resp = c.get("/api/admin/stats")
+        resp = c.get("/api/v1/admin/stats")
     data = resp.json()
 
     assert data["cache"]["total_entries"] == 0
@@ -88,7 +88,7 @@ def test_admin_stats_reflects_populated_cache(client_with_cache: TestClient):
     _cache["series_5"] = (time.time(), [{"series_id": 1}])
 
     with TestClient(app) as c:
-        resp = c.get("/api/admin/stats")
+        resp = c.get("/api/v1/admin/stats")
     data = resp.json()
 
     assert data["cache"]["total_entries"] >= 3
@@ -104,7 +104,7 @@ def test_admin_clear_cache_returns_count(client_with_cache: TestClient):
     _cache["another_key"] = (time.time(), "another_value")
 
     with TestClient(app) as c:
-        resp = c.post("/api/admin/cache/clear")
+        resp = c.post("/api/v1/admin/cache/clear")
     assert resp.status_code == 200
     data = resp.json()
     assert data["cleared"] >= 2
@@ -118,8 +118,8 @@ def test_admin_clear_cache_empties_cache(client_with_cache: TestClient):
     _cache["test_key"] = (time.time(), "test_value")
 
     with TestClient(app) as c:
-        c.post("/api/admin/cache/clear")
-        resp = c.get("/api/admin/stats")
+        c.post("/api/v1/admin/cache/clear")
+        resp = c.get("/api/v1/admin/stats")
     data = resp.json()
     assert data["cache"]["total_entries"] == 0
 
@@ -133,7 +133,7 @@ def test_admin_clear_cache_resets_epg(client_with_cache: TestClient):
     epg_cache["fetched"] = time.time()
 
     with TestClient(app) as c:
-        c.post("/api/admin/cache/clear")
+        c.post("/api/v1/admin/cache/clear")
     assert epg_cache["data"] is None
     assert epg_cache["fetched"] == 0
 
@@ -143,7 +143,7 @@ def test_admin_warm_cache_returns_message(client: TestClient):
     from main import app
 
     with TestClient(app) as c:
-        resp = c.post("/api/admin/cache/warm")
+        resp = c.post("/api/v1/admin/cache/warm")
     assert resp.status_code == 200
     data = resp.json()
     assert "message" in data
@@ -157,7 +157,7 @@ def test_admin_warm_full_cache_clears_and_warms(client_with_cache: TestClient):
     _cache["stale_key"] = (time.time(), "stale_value")
 
     with TestClient(app) as c:
-        resp = c.post("/api/admin/cache/warm-full")
+        resp = c.post("/api/v1/admin/cache/warm-full")
     assert resp.status_code == 200
     data = resp.json()
     assert "Cleared" in data["message"]
@@ -169,7 +169,7 @@ def test_admin_epg_refresh_returns_status(client: TestClient):
     from main import app
 
     with TestClient(app) as c:
-        resp = c.post("/api/admin/epg/refresh")
+        resp = c.post("/api/v1/admin/epg/refresh")
     assert resp.status_code == 200
     data = resp.json()
     assert "refresh_started" in data
@@ -186,8 +186,8 @@ def test_admin_epg_refresh_twice_returns_already_running(client: TestClient):
     from main import app
 
     with TestClient(app) as c:
-        resp1 = c.post("/api/admin/epg/refresh")
-        resp2 = c.post("/api/admin/epg/refresh")
+        resp1 = c.post("/api/v1/admin/epg/refresh")
+        resp2 = c.post("/api/v1/admin/epg/refresh")
     data2 = resp2.json()
     # Second call may show running or just started depending on timing
     # but should always return valid status without error
@@ -232,7 +232,7 @@ def test_admin_stream_health_returns_structure(client: TestClient):
 
     from main import app
     with TestClient(app) as c:
-        resp = c.get("/api/admin/stream-health")
+        resp = c.get("/api/v1/admin/stream-health")
     assert resp.status_code == 200
     data = resp.json()
 
@@ -287,7 +287,7 @@ def test_admin_stream_health_stale_marker(client: TestClient):
 
     from main import app
     with TestClient(app) as c:
-        resp = c.get("/api/admin/stream-health")
+        resp = c.get("/api/v1/admin/stream-health")
     data = resp.json()
     # age > 3600 (strictly greater), so 3600 is NOT stale, 3601 IS stale
     assert data["stale_count"] == 1
@@ -301,7 +301,7 @@ def test_admin_stream_health_empty_cache(client: TestClient):
 
     from main import app
     with TestClient(app) as c:
-        resp = c.get("/api/admin/stream-health")
+        resp = c.get("/api/v1/admin/stream-health")
     data = resp.json()
     assert data["enabled"] is True
     assert data["total_probed"] == 0
@@ -332,7 +332,7 @@ def test_admin_stream_health_error_field_in_recent(client: TestClient):
 
     from main import app
     with TestClient(app) as c:
-        resp = c.get("/api/admin/stream-health")
+        resp = c.get("/api/v1/admin/stream-health")
     data = resp.json()
     recent = data["recent"]
     live_600 = [e for e in recent if e["key"] == "live_600"][0]
@@ -361,7 +361,7 @@ def test_admin_stream_health_nonstandard_resolution(client: TestClient):
 
     from main import app
     with TestClient(app) as c:
-        resp = c.get("/api/admin/stream-health")
+        resp = c.get("/api/v1/admin/stream-health")
     data = resp.json()
     # 540 ≥ 480, so it maps to 480p
     assert data["by_resolution"]["480p"] == 1
@@ -385,7 +385,7 @@ def test_admin_warm_cache_already_in_progress(client: TestClient):
 
         from main import app
         with TestClient(app) as c:
-            resp = c.post("/api/admin/cache/warm")
+            resp = c.post("/api/v1/admin/cache/warm")
         assert resp.status_code == 200
         data = resp.json()
         assert "in progress" in data["message"].lower() or "already" in data["message"].lower()
@@ -422,17 +422,17 @@ def test_admin_key_required_when_set(client: TestClient):
 
         with TestClient(app) as c:
             # No key
-            r = c.get("/api/admin/stats")
+            r = c.get("/api/v1/admin/stats")
             assert r.status_code == 403
             data = r.json()
             assert "detail" in data
 
             # Wrong key
-            r = c.get("/api/admin/stats", headers={"X-Admin-Key": "wrong"})
+            r = c.get("/api/v1/admin/stats", headers={"X-Admin-Key": "wrong"})
             assert r.status_code == 403
 
             # Correct key
-            r = c.get("/api/admin/stats", headers={"X-Admin-Key": "test-admin-key-123"})
+            r = c.get("/api/v1/admin/stats", headers={"X-Admin-Key": "test-admin-key-123"})
             assert r.status_code == 200
             data = r.json()
             assert "uptime" in data
@@ -455,7 +455,7 @@ def test_admin_key_not_required_when_empty(client: TestClient):
         from main import app
 
         with TestClient(app) as c:
-            r = c.get("/api/admin/stats")
+            r = c.get("/api/v1/admin/stats")
             assert r.status_code == 200
             assert "uptime" in r.json()
     finally:

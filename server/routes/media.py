@@ -29,7 +29,7 @@ def _get_stream_url(stream_id: int, media_type: str = "movie") -> str:
 
 
 # ── Subtitles ───────────────────────────────────────────────────────
-@router.get("/api/subtitles/probe/{media_type}/{stream_id}")
+@router.get("/subtitles/probe/{media_type}/{stream_id}")
 async def probe_subtitles(media_type: str, stream_id: int):
     """Probe a stream for embedded subtitle tracks."""
     cache_key = f"{media_type}:{stream_id}"
@@ -65,7 +65,7 @@ async def probe_subtitles(media_type: str, stream_id: int):
         return {"tracks": [], "error": str(e)}
 
 
-@router.get("/api/subtitles/{media_type}/{stream_id}/{track_index}")
+@router.get("/subtitles/{media_type}/{stream_id}/{track_index}")
 async def get_subtitles(media_type: str, stream_id: int, track_index: int):
     """Extract a subtitle track to WebVTT and serve it."""
     cache_key = f"{media_type}:{stream_id}:{track_index}"
@@ -105,7 +105,7 @@ async def get_subtitles(media_type: str, stream_id: int, track_index: int):
 
 
 # ── Audio ───────────────────────────────────────────────────────────
-@router.get("/api/audio/probe/{media_type}/{stream_id}")
+@router.get("/audio/probe/{media_type}/{stream_id}")
 async def probe_audio(media_type: str, stream_id: int):
     """Probe a stream for audio tracks."""
     cache_key = f"{media_type}:{stream_id}"
@@ -142,7 +142,7 @@ async def probe_audio(media_type: str, stream_id: int):
         return {"tracks": [], "error": str(e)}
 
 
-@router.get("/api/audio/stream/{media_type}/{stream_id}/{audio_index}")
+@router.get("/audio/stream/{media_type}/{stream_id}/{audio_index}")
 async def stream_audio_track(media_type: str, stream_id: int, audio_index: int):
     """Stream a VOD with only the selected audio track via ffmpeg remux."""
     url = _get_stream_url(stream_id, media_type)

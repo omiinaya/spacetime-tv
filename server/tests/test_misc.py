@@ -59,7 +59,7 @@ def test_img_cache_path_and_meta_path(client):
 def test_image_proxy_rejects_direct_access(client):
     """Image proxy should reject requests with external referer."""
     resp = client.get(
-        "/api/image-proxy?url=http://image.tmdb.org/t/p/original/test.jpg",
+        "/api/v1/image-proxy?url=http://image.tmdb.org/t/p/original/test.jpg",
         headers={"Referer": "http://evil.com/steal"},
     )
     assert resp.status_code == 403
@@ -69,7 +69,7 @@ def test_image_proxy_rejects_direct_access(client):
 def test_image_proxy_rejects_unauthorized_host(client):
     """Image proxy should reject URLs from non-allowed hosts."""
     resp = client.get(
-        "/api/image-proxy?url=http://evil.com/hack.jpg",
+        "/api/v1/image-proxy?url=http://evil.com/hack.jpg",
         headers={"Referer": "http://localhost:5180/movies"},
     )
     assert resp.status_code == 400
@@ -79,7 +79,7 @@ def test_image_proxy_rejects_unauthorized_host(client):
 def test_image_proxy_rejects_invalid_url(client):
     """Image proxy should reject invalid URLs."""
     resp = client.get(
-        "/api/image-proxy?url=not-a-url",
+        "/api/v1/image-proxy?url=not-a-url",
         headers={"Referer": "http://localhost:5180/movies"},
     )
     assert resp.status_code == 400
@@ -98,7 +98,7 @@ def test_image_proxy_allows_tmdb_host(client):
     """Image proxy should allow image.tmdb.org URLs with proper referer."""
     with _mock_http_image(b"tmdb-image", "image/jpeg"):
         resp = client.get(
-            "/api/image-proxy?url=http://image.tmdb.org/t/p/original/test.jpg",
+            "/api/v1/image-proxy?url=http://image.tmdb.org/t/p/original/test.jpg",
             headers={"Referer": "http://localhost:5180/movies"},
         )
     assert resp.status_code == 200
@@ -110,7 +110,7 @@ def test_image_proxy_allows_cmc_exchange_cdn(client):
     """Image proxy should allow cmc.exchange-cdn.com URLs."""
     with _mock_http_image(b"cdn-image", "image/png"):
         resp = client.get(
-            "/api/image-proxy?url=http://cmc.exchange-cdn.com/images/logo.png",
+            "/api/v1/image-proxy?url=http://cmc.exchange-cdn.com/images/logo.png",
             headers={"Referer": "http://localhost:5180/"},
         )
     assert resp.status_code == 200
@@ -121,7 +121,7 @@ def test_image_proxy_subdomain_allowed(client):
     """Image proxy should allow subdomains of allowed hosts."""
     with _mock_http_image(b"subdomain-image", "image/webp"):
         resp = client.get(
-            "/api/image-proxy?url=http://sub.cmc.exchange-cdn.com/img.webp",
+            "/api/v1/image-proxy?url=http://sub.cmc.exchange-cdn.com/img.webp",
             headers={"Referer": "http://localhost:5180/"},
         )
     assert resp.status_code == 200
@@ -137,7 +137,7 @@ def test_image_proxy_uses_in_memory_cache(client):
         with _mock_http_image(b"cached-image", "image/jpeg") as mock_get:
             # First request — should hit the network
             resp1 = client.get(
-                "/api/image-proxy?url=http://image.tmdb.org/t/p/original/cached-test.jpg",
+                "/api/v1/image-proxy?url=http://image.tmdb.org/t/p/original/cached-test.jpg",
                 headers={"Referer": "http://localhost:5180/"},
             )
             assert resp1.status_code == 200
@@ -145,7 +145,7 @@ def test_image_proxy_uses_in_memory_cache(client):
 
             # Second request — should use in-memory cache
             resp2 = client.get(
-                "/api/image-proxy?url=http://image.tmdb.org/t/p/original/cached-test.jpg",
+                "/api/v1/image-proxy?url=http://image.tmdb.org/t/p/original/cached-test.jpg",
                 headers={"Referer": "http://localhost:5180/"},
             )
             assert resp2.status_code == 200
@@ -156,7 +156,7 @@ def test_image_proxy_with_localhost_referer_allows_access(client):
     """Localhost referer should be accepted."""
     with _mock_http_image(b"local-image", "image/jpeg"):
         resp = client.get(
-            "/api/image-proxy?url=http://image.tmdb.org/t/p/original/local-test.jpg",
+            "/api/v1/image-proxy?url=http://image.tmdb.org/t/p/original/local-test.jpg",
             headers={"Referer": "http://127.0.0.1:5180/"},
         )
     assert resp.status_code == 200
@@ -172,7 +172,7 @@ def test_iptv_raw_proxy_proxies_request(client):
         mock_resp.headers = {"content-type": "text/plain"}
         mock_get.return_value = mock_resp
 
-        resp = client.get("/api/iptv/some/path")
+        resp = client.get("/api/v1/iptv/some/path")
         assert resp.status_code == 200
         assert resp.content == b"upstream response content"
         assert "text/plain" in resp.headers.get("content-type", "")
@@ -181,5 +181,5 @@ def test_iptv_raw_proxy_proxies_request(client):
 def test_iptv_raw_proxy_failure_returns_502(client):
     """IPTV raw proxy should return 502 when upstream fails."""
     with patch("main.client.get", side_effect=Exception("Connection refused")):
-        resp = client.get("/api/iptv/some/path")
+        resp = client.get("/api/v1/iptv/some/path")
         assert resp.status_code == 502

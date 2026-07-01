@@ -80,7 +80,7 @@ async def _enrich_tmdb_item(item_type: str, tmdb_id: str) -> dict | None:
     return enriched
 
 
-@router.post("/api/search/enrich")
+@router.post("/search/enrich")
 async def search_enrich(body: dict):
     """Batch enrich search results with TMDB metadata (genres, rating, poster).
 
@@ -132,7 +132,7 @@ async def search_enrich(body: dict):
     return result
 
 
-@router.get("/api/search")
+@router.get("/search")
 async def search(
     q: str = Query(..., min_length=2),
     limit: int = Query(20, ge=1, le=50),

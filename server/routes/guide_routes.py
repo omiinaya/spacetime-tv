@@ -23,7 +23,7 @@ router = APIRouter(tags=["guide"])
 
 
 # ── Route: TV Guide ─────────────────────────────────────────────────────
-@router.get("/api/guide")
+@router.get("/guide")
 async def tv_guide(
     channel: Optional[str] = None,
     offset: int = Query(0, ge=0),
@@ -75,7 +75,7 @@ async def tv_guide(
 
 
 # ── Route: EPG SSE ──────────────────────────────────────────────────────
-@router.get("/api/epg/events")
+@router.get("/epg/events")
 async def epg_sse(request: Request):
     """SSE endpoint: notifies clients when EPG data has been refreshed."""
     async def event_stream():
@@ -108,7 +108,7 @@ async def epg_sse(request: Request):
 
 
 # ── Route: Guide Now ────────────────────────────────────────────────────
-@router.get("/api/guide/now")
+@router.get("/guide/now")
 async def guide_now(
     stream_ids: str = Query(..., description="Comma-separated stream IDs"),
 ):
@@ -172,7 +172,7 @@ async def guide_now(
 
 
 # ── Route: Guide Enrich ─────────────────────────────────────────────────
-@router.get("/api/guide/enrich")
+@router.get("/guide/enrich")
 async def guide_enrich(
     q: str = Query(..., min_length=2, max_length=200),
 ):
@@ -216,7 +216,7 @@ async def guide_enrich(
 
 
 # ── Route: Guide Catchup Timeline ───────────────────────────────────────
-@router.get("/api/guide/catchup")
+@router.get("/guide/catchup")
 async def guide_catchup(
     stream_id: int = Query(..., description="Live stream ID"),
     hours: int = Query(4, ge=1, le=48, description="Hours of EPG to return"),
@@ -281,7 +281,7 @@ async def guide_catchup(
 
 
 # ── Route: EPG Search ────────────────────────────────────────────────────
-@router.get("/api/guide/search")
+@router.get("/guide/search")
 async def guide_search(
     q: str = Query(..., min_length=2, max_length=100, description="Programme title search"),
     future_only: bool = Query(True, description="Only return upcoming programmes (default: true)"),

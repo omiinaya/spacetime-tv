@@ -14,7 +14,7 @@ import pytest
 
 def test_epg_sse_returns_event_stream(client):
     """GET /api/epg/events returns text/event-stream — verify via HEAD."""
-    resp = client.head("/api/epg/events")
+    resp = client.head("/api/v1/epg/events")
     # HEAD on a GET-only streaming route may return 405 (Starlette generated)
     # or 200 (if framework sent headers). Either means the route exists.
     assert resp.status_code in (200, 405), f"Unexpected status: {resp.status_code}"
@@ -22,7 +22,7 @@ def test_epg_sse_returns_event_stream(client):
 
 def test_epg_sse_has_cors_headers(client):
     """SSE endpoint uses no-cache and no-buffering headers."""
-    resp = client.head("/api/epg/events")
+    resp = client.head("/api/v1/epg/events")
     if resp.status_code == 200:
         assert resp.headers.get("cache-control") == "no-cache" or True
         assert resp.headers.get("x-accel-buffering") == "no" or True
@@ -41,13 +41,13 @@ def test_epg_sse_emits_connected_event(client):
 
 def test_guide_enrich_requires_query(client):
     """GET /api/guide/enrich requires 'q' parameter."""
-    resp = client.get("/api/guide/enrich")
+    resp = client.get("/api/v1/guide/enrich")
     assert resp.status_code == 422  # FastAPI validation
 
 
 def test_guide_enrich_returns_structured_response(client):
     """GET /api/guide/enrich returns {enabled, result}."""
-    resp = client.get("/api/guide/enrich?q=test+movie")
+    resp = client.get("/api/v1/guide/enrich?q=test+movie")
     assert resp.status_code == 200
     data = resp.json()
     assert "enabled" in data
@@ -59,24 +59,24 @@ def test_guide_enrich_returns_structured_response(client):
 def test_guide_enrich_caches_results(client):
     """Repeated enrich requests with same query use cache."""
     # First call
-    resp1 = client.get("/api/guide/enrich?q=inception")
+    resp1 = client.get("/api/v1/guide/enrich?q=inception")
     assert resp1.status_code == 200
 
     # Second call — should hit cache
-    resp2 = client.get("/api/guide/enrich?q=inception")
+    resp2 = client.get("/api/v1/guide/enrich?q=inception")
     assert resp2.status_code == 200
     assert resp2.json() == resp1.json()
 
 
 def test_guide_enrich_min_length_query(client):
     """'q' must be at least 2 chars."""
-    resp = client.get("/api/guide/enrich?q=a")
+    resp = client.get("/api/v1/guide/enrich?q=a")
     assert resp.status_code == 422
 
 
 def test_guide_enrich_max_length_query(client):
     """'q' must be at most 200 chars."""
-    resp = client.get("/api/guide/enrich?q=" + "x" * 201)
+    resp = client.get("/api/v1/guide/enrich?q=" + "x" * 201)
     assert resp.status_code == 422
 
 

@@ -194,14 +194,14 @@ def test_serve_cached_mp4_range_open_ended(tmp_path):
 
 def test_serve_movie_mp4_not_found(client):
     """serve_movie_mp4 returns 404 for unconverted movie."""
-    resp = client.get("/api/stream/movie/999999/mp4")
+    resp = client.get("/api/v1/stream/movie/999999/mp4")
     assert resp.status_code == 404
     assert "not yet converted" in resp.text.lower()
 
 
 def test_serve_series_mp4_not_found(client):
     """serve_series_mp4 returns 404 for unconverted series episode."""
-    resp = client.get("/api/stream/series/99999/88888/mp4")
+    resp = client.get("/api/v1/stream/series/99999/88888/mp4")
     assert resp.status_code == 404
     assert "not yet converted" in resp.text.lower()
 
@@ -211,7 +211,7 @@ def test_serve_series_mp4_not_found(client):
 
 def test_live_dash_manifest_returns_mpd(client):
     """GET /api/stream/live/{id}/manifest.mpd returns application/dash+xml."""
-    resp = client.get("/api/stream/live/1/manifest.mpd")
+    resp = client.get("/api/v1/stream/live/1/manifest.mpd")
     assert resp.status_code == 200
     assert resp.headers.get("content-type", "").startswith("application/dash+xml")
     assert b"<MPD" in resp.content
@@ -219,7 +219,7 @@ def test_live_dash_manifest_returns_mpd(client):
 
 def test_movie_dash_manifest_returns_mpd(client):
     """GET /api/stream/movie/{id}/manifest.mpd returns valid MPD."""
-    resp = client.get("/api/stream/movie/1/manifest.mpd")
+    resp = client.get("/api/v1/stream/movie/1/manifest.mpd")
     assert resp.status_code == 200
     assert resp.headers.get("content-type", "").startswith("application/dash+xml")
     assert b"<MPD" in resp.content
@@ -229,7 +229,7 @@ def test_movie_dash_manifest_returns_mpd(client):
 
 def test_series_dash_manifest_returns_mpd(client):
     """GET /api/stream/series/{id}/{ep}/manifest.mpd returns valid MPD."""
-    resp = client.get("/api/stream/series/1/2/manifest.mpd")
+    resp = client.get("/api/v1/stream/series/1/2/manifest.mpd")
     assert resp.status_code == 200
     assert resp.headers.get("content-type", "").startswith("application/dash+xml")
     assert b"<MPD" in resp.content
@@ -240,7 +240,7 @@ def test_series_dash_manifest_returns_mpd(client):
 
 def test_convert_movie_no_cache(client):
     """GET /api/movie/convert/{id} returns converting status for uncached movie."""
-    resp = client.get("/api/movie/convert/99999")
+    resp = client.get("/api/v1/movie/convert/99999")
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] in ("converting", "ready")
@@ -249,7 +249,7 @@ def test_convert_movie_no_cache(client):
 
 def test_convert_series_no_cache(client):
     """GET /api/series/convert/{id}/{ep} returns status for uncached episode."""
-    resp = client.get("/api/series/convert/99999/88888")
+    resp = client.get("/api/v1/series/convert/99999/88888")
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] in ("converting", "ready")

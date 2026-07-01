@@ -35,13 +35,13 @@ def test_serve_hls_file_rejects_dotdot_in_filename(client_with_cache):
 
 def test_serve_hls_file_returns_404_for_missing_segment(client_with_cache):
     """serve_hls_file returns 404 when segment file doesn't exist."""
-    resp = client_with_cache.get("/api/hls/movie/1/nonexistent.ts")
+    resp = client_with_cache.get("/api/v1/hls/movie/1/nonexistent.ts")
     assert resp.status_code == 404
 
 
 def test_serve_hls_file_accepts_m3u8_playlist(client_with_cache):
     """serve_hls_file accepts .m3u8 playlist filenames."""
-    resp = client_with_cache.get("/api/hls/movie/1/nonexistent.m3u8")
+    resp = client_with_cache.get("/api/v1/hls/movie/1/nonexistent.m3u8")
     assert resp.status_code == 404  # File doesn't exist, but no 400 error
 
 
@@ -50,13 +50,13 @@ def test_serve_hls_file_accepts_m3u8_playlist(client_with_cache):
 
 def test_movie_hls_start_route_exists(client_with_cache):
     """GET /api/movie/hls/1 returns a valid response (not 404)."""
-    resp = client_with_cache.get("/api/movie/hls/1")
+    resp = client_with_cache.get("/api/v1/movie/hls/1")
     assert resp.status_code != 404
 
 
 def test_series_hls_start_route_exists(client_with_cache):
     """GET /api/series/hls/1/1 returns a valid response (not 404)."""
-    resp = client_with_cache.get("/api/series/hls/1/1")
+    resp = client_with_cache.get("/api/v1/series/hls/1/1")
     assert resp.status_code != 404
 
 

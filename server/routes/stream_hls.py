@@ -115,7 +115,7 @@ async def ensure_hls(stream_id: str, stream_type: str, seek_seconds: float = 0) 
     return False
 
 
-@router.get("/api/movie/hls/{stream_id}")
+@router.get("/movie/hls/{stream_id}")
 async def movie_hls_start(stream_id: int, start: float = 0):
     """Start HLS streaming for a movie."""
     ready = await ensure_hls(str(stream_id), "movie", start)
@@ -126,7 +126,7 @@ async def movie_hls_start(stream_id: int, start: float = 0):
     return {"status": "preparing", "message": "Downloading and segmenting..."}
 
 
-@router.get("/api/series/hls/{series_id}/{episode_id}")
+@router.get("/series/hls/{series_id}/{episode_id}")
 async def series_hls_start(series_id: int, episode_id: int, start: float = 0):
     """Start HLS streaming for a series episode."""
     ready = await ensure_hls(str(episode_id), "series", start)
@@ -137,7 +137,7 @@ async def series_hls_start(series_id: int, episode_id: int, start: float = 0):
     return {"status": "preparing", "message": "Downloading and segmenting..."}
 
 
-@router.get("/api/hls/{stream_type}/{stream_id}/{filename}")
+@router.get("/hls/{stream_type}/{stream_id}/{filename}")
 async def serve_hls_file(stream_type: str, stream_id: str, filename: str):
     """Serve .m3u8 playlist or .ts segment for HLS playback."""
     if ".." in filename or "/" in filename:

@@ -22,7 +22,7 @@ def require_admin_key(request: Request) -> None:
 router = APIRouter(tags=["admin"], dependencies=[Depends(require_admin_key)])
 
 
-@router.get("/api/admin/stats")
+@router.get("/admin/stats")
 async def admin_stats():
     """Admin dashboard: cache stats, popular content, error trends."""
     # Lazy import to avoid circular dependency with main.py
@@ -70,7 +70,7 @@ async def admin_stats():
     }
 
 
-@router.get("/api/admin/stream-health")
+@router.get("/admin/stream-health")
 async def admin_stream_health():
     """Stream health dashboard: probe cache stats and sampled results."""
     try:
@@ -132,7 +132,7 @@ async def admin_stream_health():
     }
 
 
-@router.post("/api/admin/cache/clear")
+@router.post("/admin/cache/clear")
 async def admin_clear_cache():
     """Clear all in-memory cache entries. Triggers a fresh warm."""
     import main as m
@@ -146,7 +146,7 @@ async def admin_clear_cache():
     return {"cleared": count, "message": f"Cleared {count} cache entries. Warming started."}
 
 
-@router.post("/api/admin/cache/warm")
+@router.post("/admin/cache/warm")
 async def admin_warm_cache():
     """Force a cache warm cycle (no-op if already warming)."""
     import main as m
@@ -157,7 +157,7 @@ async def admin_warm_cache():
     return {"message": "Cache warming started."}
 
 
-@router.post("/api/admin/cache/warm-full")
+@router.post("/admin/cache/warm-full")
 async def admin_warm_full_cache():
     """Clear THEN warm the full cache."""
     import main as m
@@ -171,7 +171,7 @@ async def admin_warm_full_cache():
     return {"message": f"Full re-warm started. Cleared {count} stale entries."}
 
 
-@router.post("/api/admin/epg/refresh")
+@router.post("/admin/epg/refresh")
 async def admin_epg_refresh():
     """Trigger an immediate EPG refresh in the background."""
     import main as m

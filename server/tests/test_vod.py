@@ -11,8 +11,8 @@ import time
 
 
 def test_movies_categories_empty_when_cache_empty(client):
-    """/api/movies/categories should return empty list when cache is cold."""
-    resp = client.get("/api/movies/categories")
+    """/api/v1/movies/categories should return empty list when cache is cold."""
+    resp = client.get("/api/v1/movies/categories")
     assert resp.status_code == 200
     data = resp.json()
     assert "categories" in data
@@ -29,7 +29,7 @@ def test_movies_categories_with_cache(client_with_cache):
     ]
     _cache["vod_categories"] = (time.time() + 3600, test_cats)
 
-    resp = client_with_cache.get("/api/movies/categories")
+    resp = client_with_cache.get("/api/v1/movies/categories")
     assert resp.status_code == 200
     data = resp.json()["categories"]
     assert len(data) == 2
@@ -43,7 +43,7 @@ def test_movies_categories_with_cache(client_with_cache):
 
 def test_movie_details_empty_when_cache_cold(client):
     """Movie details should return empty info when no cache."""
-    resp = client.get("/api/movies/99999")
+    resp = client.get("/api/v1/movies/99999")
     assert resp.status_code == 200
     data = resp.json()
     assert "info" in data
@@ -64,7 +64,7 @@ def test_movie_details_with_cache(client_with_cache):
     }
     _cache["vod_info_42"] = (time.time() + 3600, fake_info)
 
-    resp = client_with_cache.get("/api/movies/42")
+    resp = client_with_cache.get("/api/v1/movies/42")
     assert resp.status_code == 200
     data = resp.json()
     # Endpoint unwraps: data.get("info", data) → inner "info" dict
@@ -78,7 +78,7 @@ def test_movie_details_with_cache(client_with_cache):
 
 def test_movies_unified_empty_when_no_vod_cache(client):
     """Unified movies should return empty when no VOD caches exist."""
-    resp = client.get("/api/movies/unified")
+    resp = client.get("/api/v1/movies/unified")
     assert resp.status_code == 200
     data = resp.json()
     assert "movies" in data
@@ -99,7 +99,7 @@ def test_movies_unified_uses_cached_vod_data(client_with_cache):
          "container_extension": "mp4"},
     ])
 
-    resp = client_with_cache.get("/api/movies/unified?limit=50")
+    resp = client_with_cache.get("/api/v1/movies/unified?limit=50")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 2
@@ -119,7 +119,7 @@ def test_movies_unified_filters_by_query(client_with_cache):
          "container_extension": "mp4"},
     ])
 
-    resp = client_with_cache.get("/api/movies/unified?q=matrix")
+    resp = client_with_cache.get("/api/v1/movies/unified?q=matrix")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 1
@@ -137,7 +137,7 @@ def test_movies_unified_groups_languages(client_with_cache):
          "container_extension": "mkv"},
     ])
 
-    resp = client_with_cache.get("/api/movies/unified")
+    resp = client_with_cache.get("/api/v1/movies/unified")
     assert resp.status_code == 200
     data = resp.json()
     assert data["total"] == 1
@@ -152,8 +152,8 @@ def test_movies_unified_groups_languages(client_with_cache):
 
 
 def test_series_categories_empty_when_cache_empty(client):
-    """/api/series/categories should return empty list when cache is cold."""
-    resp = client.get("/api/series/categories")
+    """/api/v1/series/categories should return empty list when cache is cold."""
+    resp = client.get("/api/v1/series/categories")
     assert resp.status_code == 200
     data = resp.json()
     assert "categories" in data
@@ -168,7 +168,7 @@ def test_series_categories_with_cache(client_with_cache):
     ]
     _cache["series_categories"] = (time.time() + 3600, test_cats)
 
-    resp = client_with_cache.get("/api/series/categories")
+    resp = client_with_cache.get("/api/v1/series/categories")
     assert resp.status_code == 200
     data = resp.json()["categories"]
     assert len(data) == 1
@@ -179,14 +179,14 @@ def test_series_categories_with_cache(client_with_cache):
 
 
 def test_series_requires_category(client):
-    """/api/series requires category_id param."""
-    resp = client.get("/api/series")
+    """/api/v1/series requires category_id param."""
+    resp = client.get("/api/v1/series")
     assert resp.status_code == 422
 
 
 def test_series_returns_paginated(client):
     """Series endpoint should return paginated results."""
-    resp = client.get("/api/series?category_id=30")
+    resp = client.get("/api/v1/series?category_id=30")
     assert resp.status_code == 200
     data = resp.json()
     assert "series" in data
@@ -202,7 +202,7 @@ def test_series_with_cached_data(client_with_cache):
     series_list = [{"id": i, "name": f"Series {i}"} for i in range(1, 11)]
     _cache["series_30"] = (time.time() + 3600, series_list)
 
-    resp = client_with_cache.get("/api/series?category_id=30&limit=3")
+    resp = client_with_cache.get("/api/v1/series?category_id=30&limit=3")
     assert resp.status_code == 200
     data = resp.json()
     assert len(data["series"]) == 3
@@ -214,7 +214,7 @@ def test_series_with_cached_data(client_with_cache):
 
 def test_series_details_empty_when_cache_cold(client):
     """Series details should return structure even when cache cold."""
-    resp = client.get("/api/series/999")
+    resp = client.get("/api/v1/series/999")
     assert resp.status_code == 200
     data = resp.json()
     assert "info" in data or isinstance(data, dict)
@@ -232,7 +232,7 @@ def test_series_details_with_cache(client_with_cache):
     }
     _cache["series_info_42"] = (time.time() + 3600, fake_info)
 
-    resp = client_with_cache.get("/api/series/42")
+    resp = client_with_cache.get("/api/v1/series/42")
     assert resp.status_code == 200
     data = resp.json()
     assert data["name"] == "Breaking Bad"
@@ -244,7 +244,7 @@ def test_series_details_with_cache(client_with_cache):
 
 def test_download_movie_redirects(client):
     """Movie download should redirect to provider URL."""
-    resp = client.get("/api/download/movie/123", follow_redirects=False)
+    resp = client.get("/api/v1/download/movie/123", follow_redirects=False)
     assert resp.status_code == 302  # Redirect
     assert "movie" in resp.headers["location"]
     assert "123" in resp.headers["location"]
@@ -253,7 +253,7 @@ def test_download_movie_redirects(client):
 
 def test_download_series_redirects(client):
     """Series download should redirect with series path."""
-    resp = client.get("/api/download/series/456", follow_redirects=False)
+    resp = client.get("/api/v1/download/series/456", follow_redirects=False)
     assert resp.status_code == 302
     assert "series" in resp.headers["location"]
     assert "456" in resp.headers["location"]

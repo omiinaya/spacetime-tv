@@ -69,7 +69,7 @@ class TestTvGuideCache:
         _guide_cache["total_channels"] = 99
         _guide_cache["built_at"] = time.time() - 100  # older than epg_cache["fetched"]
 
-        resp = client.get("/api/guide")
+        resp = client.get("/api/v1/guide")
         assert resp.status_code == 200
         data = resp.json()
 
@@ -129,7 +129,7 @@ class TestTvGuideIsLiveParseError:
         _guide_cache["total_channels"] = 1
         _guide_cache["built_at"] = time.time() + 100  # "future" — so use cache
 
-        resp = client.get("/api/guide")
+        resp = client.get("/api/v1/guide")
         assert resp.status_code == 200
         data = resp.json()
         assert data["total_channels"] == 1
@@ -177,7 +177,7 @@ class TestGuideNowParseError:
             {"stream_id": 101, "name": "Chan1", "stream_icon": "", "category_id": "1", "epg_channel_id": "C1"},
         ])
 
-        resp = client_with_cache.get("/api/guide/now?stream_ids=101")
+        resp = client_with_cache.get("/api/v1/guide/now?stream_ids=101")
         assert resp.status_code == 200
         data = resp.json()
         programmes = data.get("programmes", {})
@@ -206,7 +206,7 @@ class TestGuideCatchup:
              "epg_channel_id": "BBC1.uk"},
         ])
 
-        resp = client_with_cache.get("/api/guide/catchup?stream_id=101&hours=4")
+        resp = client_with_cache.get("/api/v1/guide/catchup?stream_id=101&hours=4")
         assert resp.status_code == 200
         data = resp.json()
         assert "programmes" in data
@@ -238,7 +238,7 @@ class TestGuideCatchup:
              "epg_channel_id": "BBC1.uk"},
         ])
 
-        resp = client_with_cache.get("/api/guide/catchup?stream_id=999&hours=4")
+        resp = client_with_cache.get("/api/v1/guide/catchup?stream_id=999&hours=4")
         assert resp.status_code == 200
         data = resp.json()
         assert data["programmes"] == []
@@ -252,7 +252,7 @@ class TestGuideCatchup:
         epg_cache["fetched"] = time.time()
 
         # client fixture has cached_fetch mocked to return []
-        resp = client.get("/api/guide/catchup?stream_id=101&hours=4")
+        resp = client.get("/api/v1/guide/catchup?stream_id=101&hours=4")
         assert resp.status_code == 200
         data = resp.json()
         # No live_all mapping, so ch_id is None
@@ -296,7 +296,7 @@ class TestGuideCatchup:
              "epg_channel_id": "C1"},
         ])
 
-        resp = client_with_cache.get("/api/guide/catchup?stream_id=101&hours=4")
+        resp = client_with_cache.get("/api/v1/guide/catchup?stream_id=101&hours=4")
         assert resp.status_code == 200
         data = resp.json()
         # Only the valid programme should be in results
@@ -305,14 +305,14 @@ class TestGuideCatchup:
 
     def test_catchup_requires_stream_id(self, client):
         """Missing stream_id returns 422."""
-        resp = client.get("/api/guide/catchup")
+        resp = client.get("/api/v1/guide/catchup")
         assert resp.status_code == 422
 
     def test_catchup_out_of_range_hours(self, client):
         """Hours outside 1-48 range returns 422."""
-        resp = client.get("/api/guide/catchup?stream_id=101&hours=0")
+        resp = client.get("/api/v1/guide/catchup?stream_id=101&hours=0")
         assert resp.status_code == 422
-        resp = client.get("/api/guide/catchup?stream_id=101&hours=49")
+        resp = client.get("/api/v1/guide/catchup?stream_id=101&hours=49")
         assert resp.status_code == 422
 
     def test_catchup_filters_outside_window(self, client_with_cache):
@@ -354,7 +354,7 @@ class TestGuideCatchup:
              "epg_channel_id": "C1"},
         ])
 
-        resp = client_with_cache.get("/api/guide/catchup?stream_id=101&hours=4")
+        resp = client_with_cache.get("/api/v1/guide/catchup?stream_id=101&hours=4")
         assert resp.status_code == 200
         data = resp.json()
         assert len(data["programmes"]) == 1
@@ -380,7 +380,7 @@ class TestGuideEnrich:
         mock_proc.communicate.return_value = (b"", b"Error occurred")
 
         with patch.object(gr_asyncio, "create_subprocess_exec", return_value=mock_proc):
-            resp = client_with_cache.get("/api/guide/enrich?q=test+show")
+            resp = client_with_cache.get("/api/v1/guide/enrich?q=test+show")
         assert resp.status_code == 200
         data = resp.json()
         assert data == {"enabled": False, "result": None}
@@ -398,7 +398,7 @@ class TestGuideEnrich:
         mock_proc.communicate = AsyncMock(side_effect=_real_asyncio.TimeoutError("Timed out"))
 
         with patch.object(gr_asyncio, "create_subprocess_exec", return_value=mock_proc):
-            resp = client_with_cache.get("/api/guide/enrich?q=test+show")
+            resp = client_with_cache.get("/api/v1/guide/enrich?q=test+show")
         assert resp.status_code == 200
         data = resp.json()
         assert data == {"enabled": False, "result": None}
@@ -412,7 +412,7 @@ class TestGuideEnrich:
         epg_cache["fetched"] = time.time()
 
         with patch.object(gr_asyncio, "create_subprocess_exec", side_effect=Exception("Process spawn failed")):
-            resp = client_with_cache.get("/api/guide/enrich?q=test+show")
+            resp = client_with_cache.get("/api/v1/guide/enrich?q=test+show")
         assert resp.status_code == 200
         data = resp.json()
         assert data == {"enabled": False, "result": None}
@@ -431,11 +431,11 @@ class TestGuideEnrich:
 
         with patch.object(gr_asyncio, "create_subprocess_exec", return_value=mock_proc):
             # First call — will go through CLI path and return enabled: False
-            resp1 = client_with_cache.get("/api/guide/enrich?q=somemovie2")
+            resp1 = client_with_cache.get("/api/v1/guide/enrich?q=somemovie2")
         assert resp1.status_code == 200
 
         # Second call — should hit cache (no patch needed, cache hit skips CLI call)
-        resp2 = client_with_cache.get("/api/guide/enrich?q=somemovie2")
+        resp2 = client_with_cache.get("/api/v1/guide/enrich?q=somemovie2")
         assert resp2.status_code == 200
         assert resp2.json() == resp1.json()
 
@@ -486,7 +486,7 @@ class TestEpgSseStreaming:
     def test_sse_route_exists(self, client):
         """SSE endpoint is registered and returns 200 or 405 on HEAD."""
         # HEAD on a streaming endpoint returns 200 (headers sent) or 405 (method not allowed)
-        resp = client.head("/api/epg/events")
+        resp = client.head("/api/v1/epg/events")
         assert resp.status_code in (200, 405), f"Unexpected status: {resp.status_code}"
 
     def test_sse_has_response_class(self):
@@ -518,7 +518,7 @@ class TestGuideNowLiveAllError:
 
         # Patch cached_fetch TO raise an exception
         with patch("routes.guide_routes.cached_fetch", side_effect=Exception("API down")):
-            resp = client.get("/api/guide/now?stream_ids=101")
+            resp = client.get("/api/v1/guide/now?stream_ids=101")
         assert resp.status_code == 200
         data = resp.json()
         assert "programmes" in data
@@ -576,7 +576,7 @@ class TestGuideNowPastProgramme:
              "epg_channel_id": "C1"},
         ])
 
-        resp = client_with_cache.get("/api/guide/now?stream_ids=101")
+        resp = client_with_cache.get("/api/v1/guide/now?stream_ids=101")
         assert resp.status_code == 200
         data = resp.json()
         prog = data["programmes"].get("101")
@@ -602,7 +602,7 @@ class TestGuideCatchupLiveAllError:
         epg_cache["fetched"] = 9999999999.0
 
         with patch("routes.guide_routes.cached_fetch", side_effect=Exception("API down")):
-            resp = client.get("/api/guide/catchup?stream_id=101&hours=4")
+            resp = client.get("/api/v1/guide/catchup?stream_id=101&hours=4")
         assert resp.status_code == 200
         data = resp.json()
         assert data["programmes"] == []
@@ -628,7 +628,7 @@ class TestGuideEnrichCacheHit:
         }
         _EPG_ENRICH_CACHE["cached_movie"] = (time.time(), cached_result)
 
-        resp = client_with_cache.get("/api/guide/enrich?q=cached_movie")
+        resp = client_with_cache.get("/api/v1/guide/enrich?q=cached_movie")
         assert resp.status_code == 200
         data = resp.json()
         assert data == {"enabled": True, "result": cached_result}
@@ -649,7 +649,7 @@ class TestGuideSearch:
             return SAMPLE_EPG
 
         with patch("routes.guide_routes.load_epg_background", mock_load):
-            resp = client.get("/api/guide/search?q=breakfast")
+            resp = client.get("/api/v1/guide/search?q=breakfast")
             assert resp.status_code == 200
             data = resp.json()
             assert data["total"] >= 1
@@ -664,7 +664,7 @@ class TestGuideSearch:
             return SAMPLE_EPG
 
         with patch("routes.guide_routes.load_epg_background", mock_load):
-            resp = client.get("/api/guide/search?q=GARDENERS")
+            resp = client.get("/api/v1/guide/search?q=GARDENERS")
             assert resp.status_code == 200
             data = resp.json()
             assert data["total"] >= 1
@@ -678,7 +678,7 @@ class TestGuideSearch:
             return SAMPLE_EPG
 
         with patch("routes.guide_routes.load_epg_background", mock_load):
-            resp = client.get("/api/guide/search?q=morning")
+            resp = client.get("/api/v1/guide/search?q=morning")
             assert resp.status_code == 200
             data = resp.json()
             assert data["total"] >= 1
@@ -691,7 +691,7 @@ class TestGuideSearch:
             return SAMPLE_EPG
 
         with patch("routes.guide_routes.load_epg_background", mock_load):
-            resp = client.get("/api/guide/search?q=gardening")
+            resp = client.get("/api/v1/guide/search?q=gardening")
             assert resp.status_code == 200
             data = resp.json()
             assert data["total"] >= 1
@@ -704,7 +704,7 @@ class TestGuideSearch:
             return SAMPLE_EPG
 
         with patch("routes.guide_routes.load_epg_background", mock_load):
-            resp = client.get("/api/guide/search?q=xyznonexistent")
+            resp = client.get("/api/v1/guide/search?q=xyznonexistent")
             assert resp.status_code == 200
             data = resp.json()
             assert data["total"] == 0
@@ -712,12 +712,12 @@ class TestGuideSearch:
 
     def test_search_short_query_returns_422(self, client):
         """Search with < 2 chars returns 422."""
-        resp = client.get("/api/guide/search?q=a")
+        resp = client.get("/api/v1/guide/search?q=a")
         assert resp.status_code == 422
 
     def test_search_missing_query_returns_422(self, client):
         """Search without query returns 422."""
-        resp = client.get("/api/guide/search")
+        resp = client.get("/api/v1/guide/search")
         assert resp.status_code == 422
 
     def test_search_includes_channel_name(self, client):
@@ -728,7 +728,7 @@ class TestGuideSearch:
             return SAMPLE_EPG
 
         with patch("routes.guide_routes.load_epg_background", mock_load):
-            resp = client.get("/api/guide/search?q=breakfast")
+            resp = client.get("/api/v1/guide/search?q=breakfast")
             data = resp.json()
             result = data["results"][0]
             assert "channel_name" in result
@@ -774,7 +774,7 @@ class TestGuideSearch:
             return multi_epg
 
         with patch("routes.guide_routes.load_epg_background", mock_load):
-            resp = client.get("/api/guide/search?q=show")
+            resp = client.get("/api/v1/guide/search?q=show")
             data = resp.json()
             titles = [r["title"] for r in data["results"]]
             assert titles == ["Early Show", "Mid Show", "Late Show"]
@@ -811,7 +811,7 @@ class TestGuideSearch:
             return past_epg
 
         with patch("routes.guide_routes.load_epg_background", mock_load):
-            resp = client.get("/api/guide/search?q=show&future_only=true")
+            resp = client.get("/api/v1/guide/search?q=show&future_only=true")
             data = resp.json()
             titles = [r["title"] for r in data["results"]]
             assert "Future Show" in titles
@@ -841,7 +841,7 @@ class TestGuideSearch:
             return mixed_epg
 
         with patch("routes.guide_routes.load_epg_background", mock_load):
-            resp = client.get("/api/guide/search?q=past&future_only=false")
+            resp = client.get("/api/v1/guide/search?q=past&future_only=false")
             data = resp.json()
             assert data["total"] >= 1
             assert "Past Programme" in [r["title"] for r in data["results"]]
@@ -876,7 +876,7 @@ class TestGuideSearch:
             return bad_epg
 
         with patch("routes.guide_routes.load_epg_background", mock_load):
-            resp = client.get("/api/guide/search?q=show")
+            resp = client.get("/api/v1/guide/search?q=show")
             data = resp.json()
             # Bad timestamp entry should be skipped
             assert any(r["title"] == "Good Show" for r in data["results"])
@@ -891,7 +891,7 @@ class TestGuideSearch:
             return empty_epg
 
         with patch("routes.guide_routes.load_epg_background", mock_load):
-            resp = client.get("/api/guide/search?q=test")
+            resp = client.get("/api/v1/guide/search?q=test")
             data = resp.json()
             assert data["total"] == 0
             assert data["results"] == []
@@ -904,7 +904,7 @@ class TestGuideSearch:
             return SAMPLE_EPG
 
         with patch("routes.guide_routes.load_epg_background", mock_load):
-            resp = client.get("/api/guide/search?q=breakfast")
+            resp = client.get("/api/v1/guide/search?q=breakfast")
             data = resp.json()
             assert "results" in data
             assert "total" in data
@@ -920,7 +920,7 @@ class TestGuideSearch:
             return SAMPLE_EPG
 
         with patch("routes.guide_routes.load_epg_background", mock_load):
-            resp = client.get("/api/guide/search?q=breakfast")
+            resp = client.get("/api/v1/guide/search?q=breakfast")
             data = resp.json()
             result = data["results"][0]
             assert "title" in result

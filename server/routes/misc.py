@@ -76,7 +76,7 @@ def _img_read_disk(cache_key: str):
 
 
 # ── IPTV Raw Proxy ──────────────────────────────────────────────────
-@router.get("/api/iptv/{path:path}")
+@router.get("/api/v1/iptv/{path:path}")
 async def iptv_raw(path: str):
     """Raw proxy for any IPTV API call (images, etc.)."""
     params = {"username": IPTV_USER, "password": IPTV_PASS}
@@ -89,7 +89,7 @@ async def iptv_raw(path: str):
 
 
 # ── Image Proxy ─────────────────────────────────────────────────────
-@router.get("/api/image-proxy")
+@router.get("/api/v1/image-proxy")
 async def image_proxy(request: Request, url: str = Query(...)):
     """Proxy images from blocked CDNs through our server."""
     from urllib.parse import urlparse

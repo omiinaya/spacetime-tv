@@ -116,7 +116,7 @@ async def stream_vod_transcode(url: str):
 
 # ── VOD stream routes ───────────────────────────────────────────────────────
 
-@router.get("/api/stream/movie/{stream_id}/remux")
+@router.get("/stream/movie/{stream_id}/remux")
 async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
     """Remux movie MKV→MPEG-TS for browser playback (mpegts.js)."""
     url = await build_stream_url(stream_id, "movie")
@@ -131,7 +131,7 @@ async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
         return JSONResponse(status_code=502, content={"detail": "Remux failed"})
 
 
-@router.get("/api/stream/series/{series_id}/{episode_id}/remux")
+@router.get("/stream/series/{series_id}/{episode_id}/remux")
 async def stream_series_remux(series_id: int, episode_id: int, start: Optional[float] = None):
     """Remux series episode MKV→MPEG-TS for browser playback (mpegts.js)."""
     url = await build_stream_url(episode_id, "series")
@@ -146,7 +146,7 @@ async def stream_series_remux(series_id: int, episode_id: int, start: Optional[f
         return JSONResponse(status_code=502, content={"detail": "Remux failed"})
 
 
-@router.get("/api/stream/movie/{stream_id}/transcode")
+@router.get("/stream/movie/{stream_id}/transcode")
 async def stream_movie_transcode(stream_id: int):
     """Transcode a HEVC movie to H.264 on-the-fly."""
     url = await build_stream_url(stream_id, "movie")
@@ -161,7 +161,7 @@ async def stream_movie_transcode(stream_id: int):
         return JSONResponse(status_code=502, content={"detail": "Transcode failed"})
 
 
-@router.get("/api/stream/series/{series_id}/{episode_id}/transcode")
+@router.get("/stream/series/{series_id}/{episode_id}/transcode")
 async def stream_series_transcode(series_id: int, episode_id: int):
     """Transcode a HEVC series episode to H.264 on-the-fly."""
     url = await build_stream_url(episode_id, "series")
@@ -176,13 +176,13 @@ async def stream_series_transcode(series_id: int, episode_id: int):
         return JSONResponse(status_code=502, content={"detail": "Transcode failed"})
 
 
-@router.get("/api/stream/movie/{stream_id}")
+@router.get("/stream/movie/{stream_id}")
 async def stream_movie(req: Request, stream_id: int):
     """Proxy movie stream (MKV) with Range support for seeking."""
     return await handle_vod_request(req, stream_id, "movie")
 
 
-@router.get("/api/stream/series/{series_id}/{episode_id}")
+@router.get("/stream/series/{series_id}/{episode_id}")
 async def stream_series_ep(req: Request, series_id: int, episode_id: int):
     """Proxy series episode stream (MKV) with Range support for seeking."""
     return await handle_vod_request(req, episode_id, "series")

@@ -82,7 +82,7 @@ def test_guide_returns_structure(client):
     from state import epg_cache
     _setup_epg_cache(epg_cache)
 
-    resp = client.get("/api/guide")
+    resp = client.get("/api/v1/guide")
     assert resp.status_code == 200
     data = resp.json()
 
@@ -102,7 +102,7 @@ def test_guide_channel_group_shape(client):
     from state import epg_cache
     _setup_epg_cache(epg_cache)
 
-    resp = client.get("/api/guide")
+    resp = client.get("/api/v1/guide")
     data = resp.json()
     assert len(data["channel_groups"]) > 0
     group = data["channel_groups"][0]
@@ -120,7 +120,7 @@ def test_guide_channel_filter(client):
     from state import epg_cache
     _setup_epg_cache(epg_cache)
 
-    resp = client.get("/api/guide?channel=BBC1.uk")
+    resp = client.get("/api/v1/guide?channel=BBC1.uk")
     assert resp.status_code == 200
     data = resp.json()
 
@@ -136,11 +136,11 @@ def test_guide_pagination(client):
     from state import epg_cache
     _setup_epg_cache(epg_cache)
 
-    resp_all = client.get("/api/guide")
+    resp_all = client.get("/api/v1/guide")
     total = resp_all.json()["total_channels"]
 
     # limit=1 should return single group
-    resp = client.get("/api/guide?limit=1&offset=0")
+    resp = client.get("/api/v1/guide?limit=1&offset=0")
     assert resp.status_code == 200
     data = resp.json()
     assert len(data["channel_groups"]) == 1
@@ -149,7 +149,7 @@ def test_guide_pagination(client):
 
     # offset=1 should skip first group (if total > 1)
     if total > 1:
-        resp2 = client.get("/api/guide?limit=1&offset=1")
+        resp2 = client.get("/api/v1/guide?limit=1&offset=1")
         data2 = resp2.json()
         assert len(data2["channel_groups"]) == 1
         assert data2["channel_groups"][0]["channel_id"] != data["channel_groups"][0]["channel_id"]
@@ -160,7 +160,7 @@ def test_guide_programme_fields(client):
     from state import epg_cache
     _setup_epg_cache(epg_cache)
 
-    resp = client.get("/api/guide")
+    resp = client.get("/api/v1/guide")
     data = resp.json()
     group = data["channel_groups"][0]
     prog = group["programmes"][0]
@@ -182,7 +182,7 @@ def test_guide_empty_epg_recovers_gracefully(client):
     epg_cache["data"] = {"channels": [], "programmes": []}
     epg_cache["fetched"] = time.time()
 
-    resp = client.get("/api/guide")
+    resp = client.get("/api/v1/guide")
     assert resp.status_code == 200
     data = resp.json()
     assert "channel_groups" in data
@@ -196,7 +196,7 @@ def test_guide_now_returns_structure(client):
     from state import epg_cache
     _setup_epg_cache(epg_cache)
 
-    resp = client.get("/api/guide/now?stream_ids=1,2,3")
+    resp = client.get("/api/v1/guide/now?stream_ids=1,2,3")
     assert resp.status_code == 200
     data = resp.json()
     assert "programmes" in data
@@ -205,7 +205,7 @@ def test_guide_now_returns_structure(client):
 
 def test_guide_now_no_stream_ids(client):
     """GET /api/guide/now with empty stream_ids returns no programmes."""
-    resp = client.get("/api/guide/now?stream_ids=")
+    resp = client.get("/api/v1/guide/now?stream_ids=")
     assert resp.status_code == 200
     data = resp.json()
     assert data == {"programmes": {}}
@@ -216,7 +216,7 @@ def test_guide_now_invalid_ids_ignored(client):
     from state import epg_cache
     _setup_epg_cache(epg_cache)
 
-    resp = client.get("/api/guide/now?stream_ids=abc,def,xyz")
+    resp = client.get("/api/v1/guide/now?stream_ids=abc,def,xyz")
     assert resp.status_code == 200
     data = resp.json()
     assert data == {"programmes": {}}
@@ -234,7 +234,7 @@ def test_guide_now_with_cache_mapping(client_with_cache):
         {"stream_id": 201, "name": "BBC Two HD", "epg_channel_id": "BBC2.uk", "stream_icon": "", "category_id": "1"},
     ])
 
-    resp = client_with_cache.get("/api/guide/now?stream_ids=101,201")
+    resp = client_with_cache.get("/api/v1/guide/now?stream_ids=101,201")
     assert resp.status_code == 200
     data = resp.json()
     programmes = data["programmes"]
@@ -247,7 +247,7 @@ def test_guide_now_unknown_stream_id_returns_null(client_with_cache):
     from state import epg_cache
     _setup_epg_cache(epg_cache)
 
-    resp = client_with_cache.get("/api/guide/now?stream_ids=999")
+    resp = client_with_cache.get("/api/v1/guide/now?stream_ids=999")
     assert resp.status_code == 200
     data = resp.json()
     # 999 doesn't map to any EPG channel, so it should be None or empty
@@ -258,7 +258,7 @@ def test_guide_now_unknown_stream_id_returns_null(client_with_cache):
 def test_guide_now_with_empty_epg_returns_unknown(client):
     """Even with empty EPG, /api/guide/now should return keys for queried IDs."""
     # EPG cache is empty by default from conftest clear_cache
-    resp = client.get("/api/guide/now?stream_ids=101,201")
+    resp = client.get("/api/v1/guide/now?stream_ids=101,201")
     assert resp.status_code == 200
     data = resp.json()
     programmes = data["programmes"]

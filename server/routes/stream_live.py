@@ -14,7 +14,7 @@ log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["stream"])
 
 
-@router.get("/api/stream/live/{stream_id}")
+@router.get("/stream/live/{stream_id}")
 async def stream_live(stream_id: int, request: Request):
     """Proxy live TV stream (raw MPEG-TS). Closes upstream fast on disconnect."""
     track_hit("live", stream_id)
@@ -47,7 +47,7 @@ async def stream_live(stream_id: int, request: Request):
         return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
 
 
-@router.get("/api/stream/live/{stream_id}/transcode")
+@router.get("/stream/live/{stream_id}/transcode")
 async def stream_live_transcode(stream_id: int):
     """Proxy live TV stream with HEVC→H.264 transcoding via ffmpeg."""
     url = await build_stream_url(stream_id, "live")
@@ -65,7 +65,7 @@ async def stream_live_transcode(stream_id: int):
         return JSONResponse(status_code=502, content={"detail": "Transcode failed"})
 
 
-@router.get("/api/stream/live/{stream_id}/timeshift")
+@router.get("/stream/live/{stream_id}/timeshift")
 async def stream_live_timeshift(request: Request, stream_id: int, duration: int = Query(3600, description="Seconds to go back (default 1h)")):
     """Proxy a catch-up/timeshift stream for the given channel.
 
@@ -102,7 +102,7 @@ async def stream_live_timeshift(request: Request, stream_id: int, duration: int 
         return JSONResponse(status_code=502, content={"detail": "Timeshift stream unavailable"})
 
 
-@router.get("/api/stream/live/{stream_id}/quality/{height}")
+@router.get("/stream/live/{stream_id}/quality/{height}")
 async def stream_live_quality(stream_id: int, height: int):
     """Proxy live TV stream transcoded to a specific height (360, 720, 1080)."""
     url = await build_stream_url(stream_id, "live")

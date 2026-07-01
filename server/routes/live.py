@@ -14,21 +14,21 @@ log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["live"])
 
 
-@router.get("/api/live/categories")
+@router.get("/live/categories")
 async def live_categories():
     """All live TV categories."""
     data = await cached_fetch(CACHE_LIVE_CATS, "get_live_categories")
     return {"categories": data}
 
 
-@router.get("/api/live/all")
+@router.get("/live/all")
 async def live_all_streams():
     """All live TV streams (cached, for cross-category search)."""
     data = await cached_fetch("live_all", "get_live_streams")
     return {"streams": data}
 
 
-@router.get("/api/live/all-slim")
+@router.get("/live/all-slim")
 async def live_all_streams_slim():
     """Slim live TV streams — only fields needed for the channel grid.
     Reduces payload from ~19 MB to ~6 MB for the 48k-channel list view.
@@ -50,14 +50,14 @@ async def live_all_streams_slim():
     }
 
 
-@router.get("/api/live/streams")
+@router.get("/live/streams")
 async def live_streams(category_id: str = Query(...)):
     """Live streams for a category."""
     data = await cached_fetch(f"live_{category_id}", "get_live_streams", category_id=category_id)
     return {"streams": data}
 
 
-@router.get("/api/live/info")
+@router.get("/live/info")
 async def live_info(
     ids: str = Query(..., description="Comma-separated stream IDs"),
 ):

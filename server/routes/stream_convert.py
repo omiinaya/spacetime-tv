@@ -91,7 +91,7 @@ async def _safe_convert(stream_id: str, stream_type: str, cache_key: str):
         _converting.pop(cache_key, None)
 
 
-@router.get("/api/movie/convert/{stream_id}")
+@router.get("/movie/convert/{stream_id}")
 async def convert_movie(stream_id: int, retry: bool = False):
     """Trigger MKV→MP4 conversion for a movie."""
     cache_key = f"movie_{stream_id}"
@@ -111,7 +111,7 @@ async def convert_movie(stream_id: int, retry: bool = False):
     return {"status": "converting", "message": "Conversion started"}
 
 
-@router.get("/api/series/convert/{series_id}/{episode_id}")
+@router.get("/series/convert/{series_id}/{episode_id}")
 async def convert_series_ep(series_id: int, episode_id: int, retry: bool = False):
     """Trigger MKV→MP4 conversion for a series episode."""
     cache_key = f"series_{episode_id}"
@@ -169,7 +169,7 @@ def serve_cached_mp4(path: Path, request: Request):
     )
 
 
-@router.get("/api/stream/movie/{stream_id}/mp4")
+@router.get("/stream/movie/{stream_id}/mp4")
 async def serve_movie_mp4(stream_id: int, request: Request):
     """Serve a cached MP4 movie with byte-range support."""
     cache_key = f"movie_{stream_id}"
@@ -179,7 +179,7 @@ async def serve_movie_mp4(stream_id: int, request: Request):
     return serve_cached_mp4(output_path, request)
 
 
-@router.get("/api/stream/series/{series_id}/{episode_id}/mp4")
+@router.get("/stream/series/{series_id}/{episode_id}/mp4")
 async def serve_series_mp4(series_id: int, episode_id: int, request: Request):
     """Serve a cached MP4 series episode with byte-range support."""
     cache_key = f"series_{episode_id}"

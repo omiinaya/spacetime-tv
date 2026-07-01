@@ -21,7 +21,7 @@ from config import IPTV_BASE, IPTV_PASS, IPTV_USER, UA_STR
 from state import _cache
 
 log = logging.getLogger("spacetime-tv")
-router = APIRouter(prefix="/api", tags=["recordings"])
+router = APIRouter(tags=["recordings"])
 
 RECORDINGS_DIR = Path("/tmp/stv_recordings")
 RECORDINGS_DIR.mkdir(parents=True, exist_ok=True)

@@ -19,6 +19,9 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Recently Completed
 
+### ✅ P3.3 — Update hls.js canary to latest
+`npm update hls.js` bumped lockfile from canary.11864 to canary.11872. TypeScript clean.
+
 ### ✅ P3.2 — Upgrade Vite 8.1.1 → 8.1.2
 Minor bump via `npm install vite@8.1.2`. Tests: 575 passed, 3 xfailed, TypeScript clean.
 

@@ -55,22 +55,42 @@ from routes.media import router as media_router
 from routes.record import router as record_router
 from routes.cloud_sync import router as cloud_sync_router
 from routes.misc import router as misc_router
-app.include_router(health_router)
-app.include_router(admin_router)
-app.include_router(tmdb_router)
-app.include_router(stream_router)
-app.include_router(search_router)
-app.include_router(guide_router)
-app.include_router(watchlist_router)
-app.include_router(live_router)
-app.include_router(vod_router)
-app.include_router(media_router)
-app.include_router(record_router)
-app.include_router(cloud_sync_router)
+app.include_router(health_router, prefix="/api/v1")
+app.include_router(admin_router, prefix="/api/v1")
+app.include_router(tmdb_router, prefix="/api/v1")
+app.include_router(stream_router, prefix="/api/v1")
+app.include_router(search_router, prefix="/api/v1")
+app.include_router(guide_router, prefix="/api/v1")
+app.include_router(watchlist_router, prefix="/api/v1")
+app.include_router(live_router, prefix="/api/v1")
+app.include_router(vod_router, prefix="/api/v1")
+app.include_router(media_router, prefix="/api/v1")
+app.include_router(record_router, prefix="/api/v1")
+app.include_router(cloud_sync_router, prefix="/api/v1")
 # Static files mount MUST come before catch-all misc router
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
 app.include_router(misc_router)
+
+# ── Backward compatibility redirect: /api/... → /api/v1/... ─────────────
+# NOTE: This is done as a middleware rather than a catch-all route because
+# Starlette matches catch-all patterns before included-router partial matches,
+# which would shadow all /api/v1/... routes. A middleware runs after route
+# resolution — it only triggers for paths that hit 404 at /api/... but exist
+# under /api/v1/... (or any /api/... path that needs redirecting).
+from fastapi.responses import RedirectResponse
+
+@app.middleware("http")
+async def api_redirect_middleware(request: Request, call_next):
+    path = request.url.path
+    # Only intercept paths starting with /api/ but not /api/v1/
+    if path.startswith("/api/") and not path.startswith("/api/v1/"):
+        query = request.url.query
+        url = f"/api/v1/{path.removeprefix('/api/')}"
+        if query:
+            url += f"?{query}"
+        return RedirectResponse(url=url)
+    return await call_next(request)
 
 # ── Rate Limiting (in-memory fixed window) ──────────────────────────────────
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -83,7 +103,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         ip = request.client.host if request.client else "unknown"
         now = time.time()
         path = request.url.path
-        limit = RATE_SEARCH_LIMIT if "/api/search" in path or "/api/image-proxy" in path else RATE_DEFAULT_LIMIT
+        limit = RATE_SEARCH_LIMIT if "/api/v1/search" in path or "/api/v1/image-proxy" in path else RATE_DEFAULT_LIMIT
         window_start, count = _rate_limits.get(ip, (0, 0))
         if now - window_start > RATE_WINDOW:
             window_start = now

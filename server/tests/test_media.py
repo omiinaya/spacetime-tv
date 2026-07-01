@@ -58,7 +58,7 @@ class TestProbeSubtitles:
         mock_create_subprocess.return_value = proc
         mock_wait_for.return_value = (_ffprobe_output(streams), b"")
 
-        resp = client.get("/api/subtitles/probe/movie/123")
+        resp = client.get("/api/v1/subtitles/probe/movie/123")
         assert resp.status_code == 200
         data = resp.json()
         assert data["cached"] is False
@@ -75,11 +75,11 @@ class TestProbeSubtitles:
         mock_create_subprocess.return_value = proc
         mock_wait_for.return_value = (_ffprobe_output(streams), b"")
 
-        resp1 = client.get("/api/subtitles/probe/movie/456")
+        resp1 = client.get("/api/v1/subtitles/probe/movie/456")
         assert resp1.status_code == 200
         assert resp1.json()["cached"] is False
 
-        resp2 = client.get("/api/subtitles/probe/movie/456")
+        resp2 = client.get("/api/v1/subtitles/probe/movie/456")
         assert resp2.status_code == 200
         data = resp2.json()
         assert data["cached"] is True
@@ -98,7 +98,7 @@ class TestProbeSubtitles:
         mock_create_subprocess.return_value = proc
         mock_wait_for.return_value = (_ffprobe_output(streams), b"")
 
-        resp = client.get("/api/subtitles/probe/movie/789")
+        resp = client.get("/api/v1/subtitles/probe/movie/789")
         assert resp.status_code == 200
         data = resp.json()
         assert data["tracks"] == []
@@ -112,7 +112,7 @@ class TestProbeSubtitles:
         mock_create_subprocess.return_value = proc
         mock_wait_for.return_value = (b"", b"")
 
-        resp = client.get("/api/subtitles/probe/movie/999")
+        resp = client.get("/api/v1/subtitles/probe/movie/999")
         assert resp.status_code == 200
         data = resp.json()
         assert data["tracks"] == []
@@ -126,7 +126,7 @@ class TestProbeSubtitles:
         proc = _make_mock_process(0, b"")
         mock_create_subprocess.return_value = proc
 
-        resp = client.get("/api/subtitles/probe/movie/111")
+        resp = client.get("/api/v1/subtitles/probe/movie/111")
         assert resp.status_code == 200
         data = resp.json()
         assert data["tracks"] == []
@@ -138,7 +138,7 @@ class TestProbeSubtitles:
         """Should handle unexpected exceptions gracefully."""
         mock_create_subprocess.side_effect = RuntimeError("Something went wrong")
 
-        resp = client.get("/api/subtitles/probe/movie/222")
+        resp = client.get("/api/v1/subtitles/probe/movie/222")
         assert resp.status_code == 200
         data = resp.json()
         assert data["tracks"] == []
@@ -163,7 +163,7 @@ class TestProbeAudio:
         mock_create_subprocess.return_value = proc
         mock_wait_for.return_value = (_ffprobe_output(streams), b"")
 
-        resp = client.get("/api/audio/probe/movie/123")
+        resp = client.get("/api/v1/audio/probe/movie/123")
         assert resp.status_code == 200
         data = resp.json()
         assert data["cached"] is False
@@ -181,10 +181,10 @@ class TestProbeAudio:
         mock_create_subprocess.return_value = proc
         mock_wait_for.return_value = (_ffprobe_output(streams), b"")
 
-        resp1 = client.get("/api/audio/probe/movie/456")
+        resp1 = client.get("/api/v1/audio/probe/movie/456")
         assert resp1.json()["cached"] is False
 
-        resp2 = client.get("/api/audio/probe/movie/456")
+        resp2 = client.get("/api/v1/audio/probe/movie/456")
         data = resp2.json()
         assert data["cached"] is True
         assert mock_create_subprocess.call_count == 1
@@ -198,7 +198,7 @@ class TestProbeAudio:
         mock_create_subprocess.return_value = proc
         mock_wait_for.return_value = (_ffprobe_output(streams), b"")
 
-        resp = client.get("/api/audio/probe/movie/789")
+        resp = client.get("/api/v1/audio/probe/movie/789")
         data = resp.json()
         assert data["tracks"] == []
 
@@ -210,7 +210,7 @@ class TestProbeAudio:
         mock_create_subprocess.return_value = proc
         mock_wait_for.return_value = (b"", b"")
 
-        resp = client.get("/api/audio/probe/movie/999")
+        resp = client.get("/api/v1/audio/probe/movie/999")
         data = resp.json()
         assert data["tracks"] == []
         assert data["error"] == "Probe failed"
@@ -223,7 +223,7 @@ class TestProbeAudio:
         proc = _make_mock_process(0, b"")
         mock_create_subprocess.return_value = proc
 
-        resp = client.get("/api/audio/probe/movie/111")
+        resp = client.get("/api/v1/audio/probe/movie/111")
         data = resp.json()
         assert data["tracks"] == []
         assert data["error"] == "Probe timed out"
@@ -243,7 +243,7 @@ class TestGetSubtitles:
         mock_create_subprocess.return_value = proc
         mock_wait_for.return_value = (vtt_content.encode(), b"")
 
-        resp = client.get("/api/subtitles/movie/123/1")
+        resp = client.get("/api/v1/subtitles/movie/123/1")
         assert resp.status_code == 200
         assert "text/vtt" in resp.headers["content-type"]
         assert "WEBVTT" in resp.text
@@ -258,9 +258,9 @@ class TestGetSubtitles:
         mock_create_subprocess.return_value = proc
         mock_wait_for.return_value = (vtt_content.encode(), b"")
 
-        resp1 = client.get("/api/subtitles/movie/456/2")
+        resp1 = client.get("/api/v1/subtitles/movie/456/2")
         assert resp1.status_code == 200
-        resp2 = client.get("/api/subtitles/movie/456/2")
+        resp2 = client.get("/api/v1/subtitles/movie/456/2")
         assert resp2.status_code == 200
         assert mock_create_subprocess.call_count == 1
 
@@ -272,7 +272,7 @@ class TestGetSubtitles:
         mock_create_subprocess.return_value = proc
         mock_wait_for.return_value = (b"", b"error")
 
-        resp = client.get("/api/subtitles/movie/999/0")
+        resp = client.get("/api/v1/subtitles/movie/999/0")
         assert resp.status_code == 500
         assert "Subtitle extraction failed" in resp.text
 
@@ -284,7 +284,7 @@ class TestGetSubtitles:
         proc = _make_mock_process(0, b"")
         mock_create_subprocess.return_value = proc
 
-        resp = client.get("/api/subtitles/movie/111/0")
+        resp = client.get("/api/v1/subtitles/movie/111/0")
         assert resp.status_code == 504
         assert "timed out" in resp.text.lower()
 
@@ -304,7 +304,7 @@ class TestStreamAudio:
         proc.kill = MagicMock()
         mock_create_subprocess.return_value = proc
 
-        resp = client.get("/api/audio/stream/movie/123/0")
+        resp = client.get("/api/v1/audio/stream/movie/123/0")
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "video/mp2t"
         assert "Cache-Control" in resp.headers
@@ -316,5 +316,5 @@ class TestStreamAudio:
         proc.stdout = None
         mock_create_subprocess.return_value = proc
 
-        resp = client.get("/api/audio/stream/movie/999/0")
+        resp = client.get("/api/v1/audio/stream/movie/999/0")
         assert resp.status_code == 500

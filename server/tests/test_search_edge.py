@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock, AsyncMock
 
 def test_search_special_chars(client_with_cache):
     """Search with special characters should not crash."""
-    resp = client_with_cache.get("/api/search?q=star+%26+wars")
+    resp = client_with_cache.get("/api/v1/search?q=star+%26+wars")
     assert resp.status_code == 200
     data = resp.json()
     assert "live" in data
@@ -23,7 +23,7 @@ def test_search_section_filter_movies(client_with_cache):
         {"stream_id": 100, "name": "The Dark Knight", "stream_icon": "", "container_extension": "mkv"},
     ])
 
-    resp = client_with_cache.get("/api/search?q=knight&section=movies")
+    resp = client_with_cache.get("/api/v1/search?q=knight&section=movies")
     assert resp.status_code == 200
     data = resp.json()
     assert len(data["movies"]) >= 1
@@ -40,7 +40,7 @@ def test_search_section_filter_series(client_with_cache):
         {"series_id": 50, "name": "Breaking Bad", "cover": "", "plot": ""},
     ])
 
-    resp = client_with_cache.get("/api/search?q=breaking&section=series")
+    resp = client_with_cache.get("/api/v1/search?q=breaking&section=series")
     assert resp.status_code == 200
     data = resp.json()
     assert len(data["series"]) >= 1
@@ -56,7 +56,7 @@ def test_search_series_plot_match(client_with_cache):
         {"series_id": 50, "name": "BB", "cover": "", "plot": "A chemistry teacher turns to cooking methamphetamine"},
     ])
 
-    resp = client_with_cache.get("/api/search?q=chemistry")
+    resp = client_with_cache.get("/api/v1/search?q=chemistry")
     assert resp.status_code == 200
     data = resp.json()
     names = [s["name"] for s in data["series"]]
@@ -71,13 +71,13 @@ def test_search_unicode(client_with_cache):
         {"stream_id": 2, "name": "日本語チャンネル", "stream_icon": "", "category_id": "1"},
     ])
 
-    resp = client_with_cache.get("/api/search?q=caf%C3%A9")
+    resp = client_with_cache.get("/api/v1/search?q=caf%C3%A9")
     assert resp.status_code == 200
     data = resp.json()
     names = [s["name"] for s in data["live"]]
     assert "Café Français" in names
 
-    resp2 = client_with_cache.get("/api/search?q=%E6%97%A5%E6%9C%AC%E8%AA%9E")
+    resp2 = client_with_cache.get("/api/v1/search?q=%E6%97%A5%E6%9C%AC%E8%AA%9E")
     assert resp2.status_code == 200
     data2 = resp2.json()
     names2 = [s["name"] for s in data2["live"]]
@@ -101,7 +101,7 @@ def test_search_vod_fallback_path(client):
     search_module.cached_fetch = mock_vod_fetch
 
     try:
-        resp = client.get("/api/search?q=die")
+        resp = client.get("/api/v1/search?q=die")
         assert resp.status_code == 200
         data = resp.json()
         assert len(data["movies"]) >= 1
@@ -125,7 +125,7 @@ def test_search_vod_fallback_with_exception(client):
     search_module.cached_fetch = failing_fetch
 
     try:
-        resp = client.get("/api/search?q=test")
+        resp = client.get("/api/v1/search?q=test")
         assert resp.status_code == 200
         data = resp.json()
         assert data["movies"] == []
@@ -135,7 +135,7 @@ def test_search_vod_fallback_with_exception(client):
 
 def test_enrich_with_tmdb_cache(client):
     """Enrichment endpoint should cache results."""
-    resp = client.post("/api/search/enrich", json={
+    resp = client.post("/api/v1/search/enrich", json={
         "movies": [{"stream_id": 1, "tmdb_id": "550"}],
         "series": [{"series_id": 2, "tmdb_id": "1399"}],
     })

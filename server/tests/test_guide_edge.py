@@ -39,7 +39,7 @@ def test_guide_single_channel_filter(client_with_cache):
     epg_cache["data"] = SAMPLE_EPG_DATA
     epg_cache["fetched"] = time.time()
 
-    resp = client_with_cache.get("/api/guide?channel=BBC1.uk")
+    resp = client_with_cache.get("/api/v1/guide?channel=BBC1.uk")
     assert resp.status_code == 200
     data = resp.json()
     for group in data.get("channel_groups", []):
@@ -52,7 +52,7 @@ def test_guide_channel_filter_no_match(client_with_cache):
     epg_cache["data"] = SAMPLE_EPG_DATA
     epg_cache["fetched"] = time.time()
 
-    resp = client_with_cache.get("/api/guide?channel=NONEXISTENT")
+    resp = client_with_cache.get("/api/v1/guide?channel=NONEXISTENT")
     assert resp.status_code == 200
     data = resp.json()
     assert len(data.get("channel_groups", [])) == 0
@@ -60,7 +60,7 @@ def test_guide_channel_filter_no_match(client_with_cache):
 
 def test_guide_empty_epg(client):
     """With no EPG data, guide should return empty groups, not crash."""
-    resp = client.get("/api/guide")
+    resp = client.get("/api/v1/guide")
     assert resp.status_code == 200
     data = resp.json()
     assert "channel_groups" in data
@@ -68,7 +68,7 @@ def test_guide_empty_epg(client):
 
 
 def test_guide_now_with_partial_ids(client_with_cache):
-    """/api/guide/now should handle partial stream ID matches."""
+    """/api/v1/guide/now should handle partial stream ID matches."""
     from state import epg_cache
     from main import _cache
     epg_cache["data"] = SAMPLE_EPG_DATA
@@ -78,7 +78,7 @@ def test_guide_now_with_partial_ids(client_with_cache):
     ])
 
     # Ask for stream_id=1 (exists) and stream_id=999 (doesn't exist)
-    resp = client_with_cache.get("/api/guide/now?stream_ids=1,999")
+    resp = client_with_cache.get("/api/v1/guide/now?stream_ids=1,999")
     assert resp.status_code == 200
     data = resp.json()
     prog = data.get("programmes", {})
@@ -90,32 +90,32 @@ def test_guide_now_with_partial_ids(client_with_cache):
 
 
 def test_guide_now_empty_ids(client):
-    """/api/guide/now without stream_ids returns 422 (required param)."""
-    resp = client.get("/api/guide/now")
+    """/api/v1/guide/now without stream_ids returns 422 (required param)."""
+    resp = client.get("/api/v1/guide/now")
     assert resp.status_code == 422
 
 
 def test_guide_now_no_epg_data(client_with_cache):
-    """/api/guide/now should return empty when EPG cache is empty."""
+    """/api/v1/guide/now should return empty when EPG cache is empty."""
     from main import _cache
     _cache["live_all"] = (1000.0, [
         {"stream_id": 1, "name": "BBC One", "stream_icon": "", "category_id": "1", "epg_channel_id": "BBC1.uk"},
     ])
 
     # EPG is explicitly None
-    resp = client_with_cache.get("/api/guide/now?stream_ids=1")
+    resp = client_with_cache.get("/api/v1/guide/now?stream_ids=1")
     assert resp.status_code == 200
     data = resp.json()
     assert "programmes" in data
 
 
 def test_guide_enrich_not_found(client_with_cache):
-    """/api/guide/enrich with no-match query returns empty."""
+    """/api/v1/guide/enrich with no-match query returns empty."""
     from state import epg_cache
     epg_cache["data"] = SAMPLE_EPG_DATA
     epg_cache["fetched"] = time.time()
 
-    resp = client_with_cache.get("/api/guide/enrich?q=zzzzzznonexistent")
+    resp = client_with_cache.get("/api/v1/guide/enrich?q=zzzzzznonexistent")
     assert resp.status_code == 200
     data = resp.json()
     assert data == {"enabled": False, "result": None}

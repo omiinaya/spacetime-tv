@@ -50,7 +50,7 @@ def _write_backups(data: dict):
 # ── Routes ─────────────────────────────────────────────────────────────────
 
 
-@router.post("/api/cloud/backup")
+@router.post("/cloud/backup")
 async def upload_backup(payload: dict):
     """Upload a backup blob for a device.
 
@@ -86,7 +86,7 @@ async def upload_backup(payload: dict):
     return {"status": "ok", "device_id": device_id}
 
 
-@router.get("/api/cloud/backup")
+@router.get("/cloud/backup")
 async def get_backup(device_id: str):
     """Retrieve the most recent backup for a device.
 
@@ -114,7 +114,7 @@ async def get_backup(device_id: str):
     }
 
 
-@router.post("/api/cloud/merge")
+@router.post("/cloud/merge")
 async def merge_favorites(payload: dict):
     """Upload favorites and merge them additively with any existing backup.
 

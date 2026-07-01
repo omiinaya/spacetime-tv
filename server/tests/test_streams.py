@@ -2,28 +2,28 @@
 
 
 def test_live_streams_requires_category(client):
-    """/api/live/streams requires category_id param."""
-    resp = client.get("/api/live/streams")
+    """/api/v1/live/streams requires category_id param."""
+    resp = client.get("/api/v1/live/streams")
     assert resp.status_code == 422  # FastAPI validation error
 
 
 def test_live_streams_returns_streams(client):
     """Live streams for a category should return a streams list."""
-    resp = client.get("/api/live/streams?category_id=1")
+    resp = client.get("/api/v1/live/streams?category_id=1")
     assert resp.status_code == 200
     data = resp.json()
     assert "streams" in data
 
 
 def test_movies_requires_category(client):
-    """/api/movies requires category_id param."""
-    resp = client.get("/api/movies")
+    """/api/v1/movies requires category_id param."""
+    resp = client.get("/api/v1/movies")
     assert resp.status_code == 422
 
 
 def test_movies_returns_paginated(client):
     """Movies endpoint should return paginated results with total."""
-    resp = client.get("/api/movies?category_id=10")
+    resp = client.get("/api/v1/movies?category_id=10")
     assert resp.status_code == 200
     data = resp.json()
     assert "movies" in data
@@ -34,7 +34,7 @@ def test_movies_returns_paginated(client):
 
 def test_movies_pagination_params(client):
     """Pagination params (limit/offset) should be respected."""
-    resp = client.get("/api/movies?category_id=10&limit=5&offset=10")
+    resp = client.get("/api/v1/movies?category_id=10&limit=5&offset=10")
     assert resp.status_code == 200
     data = resp.json()
     assert data["limit"] == 5
@@ -48,7 +48,7 @@ def test_movies_with_cached_data(client_with_cache):
     movies = [{"stream_id": i, "name": f"EN - Movie {i}"} for i in range(1, 21)]
     _cache["vod_10"] = (1000.0, movies)
 
-    resp = client_with_cache.get("/api/movies?category_id=10&limit=5")
+    resp = client_with_cache.get("/api/v1/movies?category_id=10&limit=5")
     assert resp.status_code == 200
     data = resp.json()
     assert len(data["movies"]) == 5

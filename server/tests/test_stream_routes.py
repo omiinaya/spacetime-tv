@@ -17,7 +17,7 @@ Probe endpoints tested:
 
 def test_live_probe_returns_json(client):
     """Probe endpoint returns JSON with codec field."""
-    resp = client.get("/api/live/probe/99999")
+    resp = client.get("/api/v1/live/probe/99999")
     assert resp.status_code == 200
     data = resp.json()
     assert "codec" in data
@@ -26,7 +26,7 @@ def test_live_probe_returns_json(client):
 
 def test_movie_probe_returns_json(client):
     """Movie probe endpoint returns JSON with codec field."""
-    resp = client.get("/api/movie/probe/99999")
+    resp = client.get("/api/v1/movie/probe/99999")
     assert resp.status_code == 200
     data = resp.json()
     assert "codec" in data
@@ -35,7 +35,7 @@ def test_movie_probe_returns_json(client):
 
 def test_series_probe_returns_json(client):
     """Series probe endpoint returns JSON with codec field."""
-    resp = client.get("/api/series/probe/99999")
+    resp = client.get("/api/v1/series/probe/99999")
     assert resp.status_code == 200
     data = resp.json()
     assert "codec" in data
@@ -44,8 +44,8 @@ def test_series_probe_returns_json(client):
 
 def test_probe_different_streams_return_independent_results(client):
     """Different stream IDs produce separate probe results (not shared cache)."""
-    resp1 = client.get("/api/live/probe/1")
-    resp2 = client.get("/api/live/probe/2")
+    resp1 = client.get("/api/v1/live/probe/1")
+    resp2 = client.get("/api/v1/live/probe/2")
     assert resp1.status_code == 200
     assert resp2.status_code == 200
     # Each should have a codec field (even if unknown/unavailable)
@@ -55,7 +55,7 @@ def test_probe_different_streams_return_independent_results(client):
 
 def test_probe_for_nonexistent_stream(client):
     """Probe for a non-existent stream returns error gracefully."""
-    resp = client.get("/api/live/probe/0")
+    resp = client.get("/api/v1/live/probe/0")
     assert resp.status_code == 200
     data = resp.json()
     assert "codec" in data
