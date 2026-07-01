@@ -11,13 +11,24 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
+### P2 (UX Polish)
+
+- **P2.1 — Sonner toast for remaining console.* calls** — useDocumentPiP.ts has 3 console.warn calls for PiP failures, LiveTV.tsx has 1 console.warn for fetch failure. Convert to sonner toasts for unified UX. ErrorBoundary's console.error calls OK — they already fire reportRenderError() to server.
+
+- **P2.2 — Fix (window as any).screen type hack** — useFrameRateDetector.ts line 34 uses `(window as any).screen`. Add proper TypeScript type augmentation for the Screen API's `refreshRate` property.
+
+- **P2.3 — Fix catch (e: any) in useCloudBackup** — useCloudBackup.ts lines 72/95/120 use `catch (e: any)`. Replace with typed `catch (e: unknown)` + proper narrowing.
+
 ### P4 (Tech Debt / DX)
 
-- **P4.1 — Add API versioning prefix** — All routes are bare `/api/...` with no `/v1/` prefix. Add versioning to allow future breaking changes without disrupting clients. Approach: mount all routes under `/api/v1/`, add redirect from bare `/api/...` to `/api/v1/...`.
+- **P4.2 — Integration test suite for real IPTV** — The ROADMAP notes that all tests mock upstream IPTV. Add a small integration test suite (pytest -m integration) that runs against real IPTV endpoints when .env credentials are available, marked as `integration` to skip in CI.
 
 ---
 
 ## Recently Completed
+
+### ✅ P4.1 — Add API versioning prefix
+All 12 route modules mounted under `/api/v1/` prefix instead of bare `/api/`. Vite dev proxy rewrites `/api/` → `/api/v1/`. Middleware-based redirect: `/api/...` → `/api/v1/...` (avoids route shadowing bug where a catch-all APIRoute would intercept requests before included routers). Rate limiter paths updated. Backend tests: 575 pass, 3 xfailed. Frontend tests: 1208 pass. TypeScript clean.
 
 ### ✅ P3.3 — Update hls.js canary to latest
 `npm update hls.js` bumped lockfile from canary.11864 to canary.11872. TypeScript clean.
@@ -33,8 +44,6 @@ Replaced 5 `console.error()` calls in `useRecording.ts` with `toast.error()` not
 - Delete recording (exception)
 ErrorBoundary's `console.error` calls retained — they fire `reportRenderError()` to the server and the fallback UI is already shown. Tests: 1208 passed, TypeScript clean, backend 49/49 passed.
 
----
-
 ### ✅ P4.1 — Eliminate all 13 RuntimeWarnings from test suite
 Root causes and fixes:
 - **test_main.py**: `patch('routes.guide.load_epg', new_callable=AsyncMock)` without return_value left AsyncMock coroutines dangling during warm_cache cleanup. Changed all 10 instances to `return_value={'channels': [], 'programmes': []}`.
@@ -43,32 +52,6 @@ Root causes and fixes:
 - **test_media.py**: `proc.kill=AsyncMock()` in `test_stream_audio_success` caused unawaited coroutine — changed to `MagicMock()`.
 - **test_media.py**: `_make_mock_process` used `proc.communicate=AsyncMock` — when `wait_for` side_effect raised `TimeoutError`, the communicate coroutine was never awaited. Changed to `MagicMock()`.
 - **Result**: 0 RuntimeWarnings, 575 tests pass, 3 xfailed, TypeScript clean. Remaining 12 warnings are `CurlCffiWarning` from the `curl_cffi` library.
-
-### ✅ P3.2 — useCloudBackup hook tests (+17 tests)
-`useCloudBackup` hook (uploadBackup, downloadBackup, mergeFavorites, backupStatus). Added 17 tests covering:
-- Initial state: no timestamps, not loading, no error
-- **uploadBackup**: success (sets lastUpload), server error (returns false), loading state during request, empty favorites
-- **downloadBackup**: success (returns favorites/watchlist), server error (returns null), loading state
-- **mergeFavorites**: success (returns merged array), server error, request payload verification, loading state
-- Error state resets on subsequent successful upload
-- Timestamps update on repeated uploads
-- Network failure handling for upload and download
-- Added MSW handlers: `POST /api/cloud/backup`, `GET /api/cloud/backup`, `POST /api/cloud/merge`
-- Frontend tests: 17 new. TypeScript clean.
-
----
-
-### ✅ P3.1 — EPG Search tab tests
-SearchPage gained an "EPG" filter tab (guide.search API). Added 7 tests:
-- **EPG tab shows** after search with results
-- **EPG programme results render** when EPG tab selected
-- **Channel names** appear on EPG programme cards
-- **Empty state** when EPG search returns no results
-- **API error resilience** — shows empty state without crashing
-- **Live/movies/series sections hidden** when EPG tab is active
-- **Subtitle display** on programme cards when available
-- Updated mock to include `guide.search` in the API mock
-- Frontend tests: 1184→1191 (+7). TypeScript clean. Backend 571 pass.
 
 ---
 

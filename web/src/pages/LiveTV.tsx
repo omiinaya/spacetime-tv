@@ -6,6 +6,7 @@ import { Skeleton, ChannelCardSkeleton, TabSkeleton } from "@/components/Skeleto
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useSettings } from "@/context/SettingsContext";
 import { filterCategories } from "@/lib/settings";
+import { toast } from "sonner";
 import { useChannelFavorites } from "@/hooks/useChannelFavorites";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 
@@ -189,7 +190,7 @@ export default function LiveTV() {
             } catch {}
           }
         })
-        .catch((e) => console.warn("LiveTV: failed to fetch all streams", e))
+        .catch(() => toast.error("Failed to load all streams"))
         .finally(() => setAllLoading(false));
     }
   }, []);

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { toast } from "sonner";
 
 // Types for the Document Picture-in-Picture API (Chrome 116+)
 // Not yet in standard TS DOM types
@@ -123,7 +124,7 @@ export function useDocumentPiP(
 
         return;
       } catch (err) {
-        console.warn("Document PiP failed, falling back to video PiP:", err);
+        toast.error("Picture-in-Picture failed — falling back to video PiP");
       }
     }
 
@@ -132,7 +133,7 @@ export function useDocumentPiP(
       await video.requestPictureInPicture();
       setIsPiPActive(true);
     } catch (err) {
-      console.warn("Video PiP failed:", err);
+      toast.error("Video Picture-in-Picture failed");
     }
   }, [videoRef, containerRef]);
 
@@ -163,7 +164,7 @@ export function useDocumentPiP(
         await document.exitPictureInPicture();
         setIsPiPActive(false);
       } catch (err) {
-        console.warn("Exit video PiP failed:", err);
+        toast.error("Failed to exit Picture-in-Picture");
       }
     }
   }, [returnVideoToContainer]);
