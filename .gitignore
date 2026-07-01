@@ -16,3 +16,8 @@ epg_cache.json
 web/[0-9]*/
 server/[0-9]*/
 .hermes-tmp*
+# Stale repo artifacts
+*.service
+*.html
+.cursorrules
+.gitmessage

@@ -11,12 +11,6 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-### P2 (UX Polish)
-
-- **P2.2 — Fix (window as any).screen type hack** — useFrameRateDetector.ts line 34 uses `(window as any).screen`. Add proper TypeScript type augmentation for the Screen API's `refreshRate` property.
-
-- **P2.3 — Fix catch (e: any) in useCloudBackup** — useCloudBackup.ts lines 72/95/120 use `catch (e: any)`. Replace with typed `catch (e: unknown)` + proper narrowing.
-
 ### P4 (Tech Debt / DX)
 
 - **P4.2 — Integration test suite for real IPTV** — The ROADMAP notes that all tests mock upstream IPTV. Add a small integration test suite (pytest -m integration) that runs against real IPTV endpoints when .env credentials are available, marked as `integration` to skip in CI.
@@ -24,6 +18,12 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 ---
 
 ## Recently Completed
+
+### ✅ P2.2 — Fix `(window as any).screen` type hack
+useFrameRateDetector.ts: Added global Screen interface augmentation for `refreshRate?: number`. Replaced `(window as any).screen` with typed `window.screen`. TypeScript cleaner.
+
+### ✅ P2.3 — Fix `catch (e: any)` in useCloudBackup
+3 catch blocks in useCloudBackup.ts changed from `catch (e: any)` → `catch (e: unknown)` with `e instanceof Error` narrowing. TypeScript clean.
 
 ### ✅ P2.1 — Sonner toast for remaining console.warn calls (PiP, LiveTV)
 useDocumentPiP.ts: 3 console.warn calls → toast.error() for PiP failures (Document PiP fallback, video PiP, exit PiP). LiveTV.tsx: 1 console.warn → toast.error() for stream fetch failure. ErrorBoundary's console.error retained (fires reportRenderError() to server). TypeScript clean. 1208 frontend tests pass.

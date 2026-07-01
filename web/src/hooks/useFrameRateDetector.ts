@@ -27,12 +27,19 @@ const MIN_SAMPLES = 5;
 /** Idle threshold (ms) — if the gap between frames exceeds this, reset the window */
 const MAX_FRAME_GAP_MS = 500;
 
+// ── Type augmentation for Screen API (Chrome 100+: screen.refreshRate) ──
+declare global {
+  interface Screen {
+    refreshRate?: number;
+  }
+}
+
 // ── Helper: estimate display refresh rate ─────────────────────
 function estimateDisplayHz(): number {
   if (typeof window === "undefined") return 0;
   // Use screen refresh rate if available (Chrome 100+ / modern browsers)
-  const screen = (window as any).screen;
-  if (screen && typeof screen.refreshRate === "number") {
+  const screen = window.screen;
+  if (typeof screen.refreshRate === "number") {
     return Math.round(screen.refreshRate);
   }
   // Fallback: common default

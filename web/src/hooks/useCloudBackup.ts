@@ -69,8 +69,8 @@ export function useCloudBackup() {
       if (data.status !== "ok") throw new Error(data.detail || "Upload failed");
       setLastUpload(Date.now() / 1000);
       return true;
-    } catch (e: any) {
-      setError(e.message || "Upload failed");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Upload failed");
       return false;
     } finally {
       setLoading(false);
@@ -92,8 +92,8 @@ export function useCloudBackup() {
         favorites: data.data?.favorites ?? [],
         watchlist: data.data?.watchlist ?? {},
       };
-    } catch (e: any) {
-      setError(e.message || "Download failed");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Download failed");
       return null;
     } finally {
       setLoading(false);
@@ -117,8 +117,8 @@ export function useCloudBackup() {
       if (data.status !== "ok") throw new Error(data.detail || "Merge failed");
       setLastDownload(Date.now() / 1000);
       return data.favorites;
-    } catch (e: any) {
-      setError(e.message || "Merge failed");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Merge failed");
       return null;
     } finally {
       setLoading(false);

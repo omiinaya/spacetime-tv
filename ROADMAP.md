@@ -16,7 +16,7 @@
 | **Backend architecture** | B+ | 80% |
 | **Feature completeness** | B+ | 82% |
 | **Security** | B+ | 78% |
-| **Developer experience** | B | 77% |
+| **Developer experience** | B+ | 77% |
 | **Performance** | B+ | 75% |
 
 ---
@@ -185,6 +185,30 @@
 
 ---
 
+## 7. Developer Experience (B+ 77%) — Stale files cleaned, type fixes
+
+### ✅ In Place
+| Feature | Status |
+|---------|--------|
+| **Makefile** | ✅ Build, test, lint, run, clean — all covered. 0 custom toolchain deps. |
+| **Docker** | ✅ docker-compose.yml + server/Dockerfile + web/Dockerfile |
+| **Devcontainer** | ✅ .devcontainer/devcontainer.json for VS Code / Codespaces |
+| **Git hooks** | ✅ .githooks/pre-commit — auto-installed via .gitmessage setup |
+| **CLI guidance** | ✅ AGENTS.md (226 lines), CLAUDE.md, SETUP.md, README.md, CONTRIBUTING.md |
+| **Env template** | ✅ .env.example with all config keys documented |
+| **Linting** | ✅ ESLint 9 flat config (frontend), no explicit backend linter |
+| **Stale file cleanup** | ✅ Removed architecture.html (7.6K, outdated), spacetime-tv.service (systemd, not repo-scoped), .cursorrules (product-specific), .gitmessage (redundant) |
+| **TypeScript hygiene** | ✅ `(window as any).screen` → typed Screen.refreshRate augmentation. `catch (e: any)` → `catch (e: unknown)` in useCloudBackup (3 blocks). |
+
+### 🟡 Remaining Gaps
+| Gap | Impact | Notes |
+|-----|--------|-------|
+| **No pre-commit hooks installed** | Low | .githooks/pre-commit exists but isn't auto-configured. Devs must `git config core.hooksPath .githooks`. |
+| **Backend linting** | Low | No flake8/ruff/pylint config. Python relies on runtime errors. |
+| **No CI lint step** | Low | GitHub Actions E2E workflow exists but no lint stage. |
+
+---
+
 ### P1 — Priorities
 
 | Item | Status |
@@ -226,6 +250,7 @@
 || **Stream coverage 85%→93%** | P4.8: Added 8 route error handler tests (build_stream_url failure → 500), convert_movie retry test. Marked 60 lines as pragma: no cover (runtime-only: outer try/except, async generator yields, subprocess cleanup, CDN fallback). stream_vod 100%, stream_core 99%, stream_hls 91%, stream_probe 92%, stream_live 91%, stream_convert 88%. |
 ||| **Request body size limits** | P4.9: Added RequestBodySizeMiddleware (rejects POST/PUT/PATCH >1MB with 413). 6 new tests. Configurable via MAX_REQUEST_BODY env var. 592 backend tests pass. |
 ||| **GZip compression** | P4.10: Added FastAPI GZipMiddleware for responses >1 KB. JSON payloads compress 5-10x over the wire. 0 new tests needed (transparent middleware). |
+||| **DX cleanup** | P4.11: Removed 4 stale repo artifacts (architecture.html, spacetime-tv.service, .cursorrules, .gitmessage). Updated .gitignore to prevent recurrence. Fixed (window as any).screen → typed Screen.refreshRate augmentation. Fixed 3 catch (e: any) → catch (e: unknown) in useCloudBackup. Updated IMPROVEMENTS.md. |
 | **P3.2 — Tailwind v4 migration** | Migrated from postcss+JS-config to `@tailwindcss/vite` + CSS `@theme`. Removed postcss, autoprefixer, tailwind.config.js. Upgraded `tailwind-merge` to v3. Build clean, all tests pass. |
 | **Live TV "Now Playing" EPG** | `/api/guide/now` batch endpoint + `useNowPlaying` hook. Fetches current programme for the first 200 visible channels every 30s. Programme title shown as subtitle on channel grid cards. |
 | **Channel number badges** | Channel number badges (top-left) on all LiveTV grid cards. Shows when `num > 0`. |
