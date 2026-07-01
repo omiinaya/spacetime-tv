@@ -20,7 +20,7 @@ os.environ.setdefault("CACHE_WARM_ENABLED", "false")
 os.environ.setdefault("CACHE_WARM_CATEGORIES", "")
 os.environ.setdefault("CLEANUP_INTERVAL", "3600")
 os.environ.setdefault("CACHE_TTL_HOURS", "0")
-os.environ.setdefault("ADMIN_API_KEY", "")  # Dev mode — no auth required in tests
+os.environ.setdefault("ADMIN_API_KEY", "test-admin-key-insecure")
 
 # Add server dir to Python path so `from main import ...` works
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -106,6 +106,8 @@ def client():
     patchers.append(p)
 
     with TestClient(app) as c:
+        # Auth is always enforced (admin key always set in tests)
+        c.headers.setdefault("X-Admin-Key", "test-admin-key-insecure")
         yield c
 
     for p in patchers:
@@ -116,4 +118,5 @@ def client():
 def client_with_cache():
     """App TestClient with real cached_fetch — for tests that pre-populate _cache."""
     with TestClient(app) as c:
+        c.headers.setdefault("X-Admin-Key", "test-admin-key-insecure")
         yield c

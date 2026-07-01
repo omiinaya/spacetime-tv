@@ -9,11 +9,9 @@ log = logging.getLogger("spacetime-tv")
 
 def require_admin_key(request: Request) -> None:
     """Dependency: check X-Admin-Key header against configured key.
-    If ADMIN_API_KEY is empty (dev mode), no auth is required.
+    Key is set from ADMIN_API_KEY env var, or auto-generated on first startup.
     """
     from config import ADMIN_API_KEY
-    if not ADMIN_API_KEY:
-        return  # Dev mode — no auth
     key = request.headers.get("X-Admin-Key", "")
     if key != ADMIN_API_KEY:
         raise HTTPException(status_code=403, detail="Invalid or missing admin key")

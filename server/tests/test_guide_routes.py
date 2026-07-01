@@ -484,10 +484,13 @@ class TestEpgSseStreaming:
     """epg_sse(): SSE streaming endpoint — verify route registration and headers."""
 
     def test_sse_route_exists(self, client):
-        """SSE endpoint is registered and returns 200 or 405 on HEAD."""
-        # HEAD on a streaming endpoint returns 200 (headers sent) or 405 (method not allowed)
-        resp = client.head("/api/v1/epg/events")
-        assert resp.status_code in (200, 405), f"Unexpected status: {resp.status_code}"
+        """SSE endpoint is registered — verify via app.url_path_for."""
+        from main import app
+        try:
+            path = app.url_path_for("epg_sse")
+            assert path == "/api/v1/epg/events"
+        except Exception:
+            pytest.fail("Route 'epg_sse' not found in app")
 
     def test_sse_has_response_class(self):
         """epg_sse route uses StreamingResponse for SSE."""

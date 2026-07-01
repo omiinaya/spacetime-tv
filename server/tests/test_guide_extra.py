@@ -13,20 +13,23 @@ import pytest
 # ── SSE Events (streaming endpoint — verify without consuming body) ──
 
 def test_epg_sse_returns_event_stream(client):
-    """GET /api/epg/events returns text/event-stream — verify via HEAD."""
-    resp = client.head("/api/v1/epg/events")
-    # HEAD on a GET-only streaming route may return 405 (Starlette generated)
-    # or 200 (if framework sent headers). Either means the route exists.
-    assert resp.status_code in (200, 405), f"Unexpected status: {resp.status_code}"
+    """GET /api/epg/events is registered — verify via app.url_path_for."""
+    from main import app
+    try:
+        path = app.url_path_for("epg_sse")
+        assert path == "/api/v1/epg/events"
+    except Exception:
+        pytest.fail("Route 'epg_sse' not found in app")
 
 
 def test_epg_sse_has_cors_headers(client):
-    """SSE endpoint uses no-cache and no-buffering headers."""
-    resp = client.head("/api/v1/epg/events")
-    if resp.status_code == 200:
-        assert resp.headers.get("cache-control") == "no-cache" or True
-        assert resp.headers.get("x-accel-buffering") == "no" or True
-    # 405 is expected for HEAD on a GET-only streaming route — skip header check
+    """SSE endpoint route is registered — verified via app.url_path_for."""
+    from main import app
+    try:
+        path = app.url_path_for("epg_sse")
+        assert path == "/api/v1/epg/events"
+    except Exception:
+        pytest.fail("Route 'epg_sse' not found in app")
 
 
 def test_epg_sse_emits_connected_event(client):

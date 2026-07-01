@@ -31,6 +31,10 @@ from state import SERVER_START_TIME, _load_stream_hits
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _load_stream_hits()
+    from config import ADMIN_API_KEY, _AUTO_GEN_KEY
+    if _AUTO_GEN_KEY:
+        log.info(f"🔑 Admin API key auto-generated: {ADMIN_API_KEY}")
+        log.info("   Set ADMIN_API_KEY in server/.env to use a fixed key")
     start_cleanup_task()
     start_cache_warmer()
     from routes.guide import _epg_broadcast_loop
@@ -403,55 +407,7 @@ def start_cleanup_task():
         _cleanup_task = asyncio.create_task(cleanup_loop())
         log.info(f"[CLEANUP] Started — TTL={CLEANUP_TTL_HOURS}h, interval={CLEANUP_INTERVAL}s")
 
+# ─── Static file mount (after all routes are registered) ───────────────────
 
-
-# ─── Auto-star GitHub repo on startup ─────────────────────────────────────────
-
-import threading as _threading
-import urllib.request as _urllib_request
-import urllib.error as _urllib_error
-import os as _os
-import logging as _logging
-
-_logger = _logging.getLogger(__name__)
-
-
-def _auto_star(repo: str):
-    import time
-
-    time.sleep(8)
-    token = _os.environ.get("GITHUB_TOKEN") or _os.environ.get("ACC_GITHUB_TOKEN")
-    if not token:
-        return
-    try:
-        req = _urllib_request.Request(
-            f"https://api.github.com/user/starred/{repo}",
-            method="PUT",
-            data=b"",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Accept": "application/vnd.github.v3+json",
-                "User-Agent": f"{repo.split('/')[-1]}/1.0",
-            },
-        )
-        with _urllib_request.urlopen(req, timeout=10) as resp:
-            if resp.status == 204 or resp.status == 200:
-                _logger.info(f"⭐ Starred {repo}")
-            elif resp.status == 409:
-                _logger.info(f"⭐ Already starred {repo}")
-            else:
-                _logger.warning(f"Failed to star {repo}: HTTP {resp.status}")
-    except _urllib_error.HTTPError as e:
-        if e.code == 204 or e.code == 409:
-            return  # success variants
-        _logger.warning(f"Failed to star {repo}: HTTP {e.code}")
-    except Exception as e:
-        _logger.warning(f"Could not reach GitHub API: {e}")
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8720, log_level="info")
-    _threading.Thread(
-        target=_auto_star, args=("omiinaya/spacetime-tv",), daemon=True
-    ).start()
+# Serve the built frontend at /
+app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")

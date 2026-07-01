@@ -8,12 +8,22 @@ import time
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 
+TEST_ADMIN_KEY = "test-admin-key-insecure"
+
+
+def _admin_client():
+    """Create TestClient with admin key header."""
+    from main import app
+    c = TestClient(app)
+    c.headers.setdefault("X-Admin-Key", TEST_ADMIN_KEY)
+    return c
+
 
 def test_admin_stats_returns_structure(client: TestClient):
     """GET /api/admin/stats should return the expected stats shape."""
     from main import app
 
-    with TestClient(app) as c:
+    with _admin_client() as c:
         resp = c.get("/api/v1/admin/stats")
     assert resp.status_code == 200
     data = resp.json()
@@ -62,7 +72,7 @@ def test_admin_stats_cache_empty_on_fresh_start(client: TestClient):
     """Fresh start should show 0 cache entries and 0 hits/misses."""
     from main import app
 
-    with TestClient(app) as c:
+    with _admin_client() as c:
         resp = c.get("/api/v1/admin/stats")
     data = resp.json()
 
@@ -87,7 +97,7 @@ def test_admin_stats_reflects_populated_cache(client_with_cache: TestClient):
     _cache["vod_categories"] = (time.time(), [{"category_id": 10}])
     _cache["series_5"] = (time.time(), [{"series_id": 1}])
 
-    with TestClient(app) as c:
+    with _admin_client() as c:
         resp = c.get("/api/v1/admin/stats")
     data = resp.json()
 
@@ -103,7 +113,7 @@ def test_admin_clear_cache_returns_count(client_with_cache: TestClient):
     _cache["test_key"] = (time.time(), "test_value")
     _cache["another_key"] = (time.time(), "another_value")
 
-    with TestClient(app) as c:
+    with _admin_client() as c:
         resp = c.post("/api/v1/admin/cache/clear")
     assert resp.status_code == 200
     data = resp.json()
@@ -117,7 +127,7 @@ def test_admin_clear_cache_empties_cache(client_with_cache: TestClient):
 
     _cache["test_key"] = (time.time(), "test_value")
 
-    with TestClient(app) as c:
+    with _admin_client() as c:
         c.post("/api/v1/admin/cache/clear")
         resp = c.get("/api/v1/admin/stats")
     data = resp.json()
@@ -132,7 +142,7 @@ def test_admin_clear_cache_resets_epg(client_with_cache: TestClient):
     epg_cache["data"] = {"some": "data"}
     epg_cache["fetched"] = time.time()
 
-    with TestClient(app) as c:
+    with _admin_client() as c:
         c.post("/api/v1/admin/cache/clear")
     assert epg_cache["data"] is None
     assert epg_cache["fetched"] == 0
@@ -142,7 +152,7 @@ def test_admin_warm_cache_returns_message(client: TestClient):
     """POST /api/admin/cache/warm should return a confirmation message."""
     from main import app
 
-    with TestClient(app) as c:
+    with _admin_client() as c:
         resp = c.post("/api/v1/admin/cache/warm")
     assert resp.status_code == 200
     data = resp.json()
@@ -156,7 +166,7 @@ def test_admin_warm_full_cache_clears_and_warms(client_with_cache: TestClient):
 
     _cache["stale_key"] = (time.time(), "stale_value")
 
-    with TestClient(app) as c:
+    with _admin_client() as c:
         resp = c.post("/api/v1/admin/cache/warm-full")
     assert resp.status_code == 200
     data = resp.json()
@@ -168,7 +178,7 @@ def test_admin_epg_refresh_returns_status(client: TestClient):
     """POST /api/admin/epg/refresh should return EPG status."""
     from main import app
 
-    with TestClient(app) as c:
+    with _admin_client() as c:
         resp = c.post("/api/v1/admin/epg/refresh")
     assert resp.status_code == 200
     data = resp.json()
@@ -185,7 +195,7 @@ def test_admin_epg_refresh_twice_returns_already_running(client: TestClient):
     """Calling EPG refresh twice should indicate already_running."""
     from main import app
 
-    with TestClient(app) as c:
+    with _admin_client() as c:
         resp1 = c.post("/api/v1/admin/epg/refresh")
         resp2 = c.post("/api/v1/admin/epg/refresh")
     data2 = resp2.json()
@@ -231,7 +241,7 @@ def test_admin_stream_health_returns_structure(client: TestClient):
     })
 
     from main import app
-    with TestClient(app) as c:
+    with _admin_client() as c:
         resp = c.get("/api/v1/admin/stream-health")
     assert resp.status_code == 200
     data = resp.json()
@@ -286,7 +296,7 @@ def test_admin_stream_health_stale_marker(client: TestClient):
     })
 
     from main import app
-    with TestClient(app) as c:
+    with _admin_client() as c:
         resp = c.get("/api/v1/admin/stream-health")
     data = resp.json()
     # age > 3600 (strictly greater), so 3600 is NOT stale, 3601 IS stale
@@ -300,7 +310,7 @@ def test_admin_stream_health_empty_cache(client: TestClient):
     _probe_cache.clear()
 
     from main import app
-    with TestClient(app) as c:
+    with _admin_client() as c:
         resp = c.get("/api/v1/admin/stream-health")
     data = resp.json()
     assert data["enabled"] is True
@@ -331,7 +341,7 @@ def test_admin_stream_health_error_field_in_recent(client: TestClient):
     })
 
     from main import app
-    with TestClient(app) as c:
+    with _admin_client() as c:
         resp = c.get("/api/v1/admin/stream-health")
     data = resp.json()
     recent = data["recent"]
@@ -360,7 +370,7 @@ def test_admin_stream_health_nonstandard_resolution(client: TestClient):
     })
 
     from main import app
-    with TestClient(app) as c:
+    with _admin_client() as c:
         resp = c.get("/api/v1/admin/stream-health")
     data = resp.json()
     # 540 ≥ 480, so it maps to 480p
@@ -384,7 +394,7 @@ def test_admin_warm_cache_already_in_progress(client: TestClient):
         m._warm_task = pending  # not None and not done()
 
         from main import app
-        with TestClient(app) as c:
+        with _admin_client() as c:
             resp = c.post("/api/v1/admin/cache/warm")
         assert resp.status_code == 200
         data = resp.json()
@@ -420,7 +430,7 @@ def test_admin_key_required_when_set(client: TestClient):
         importlib.reload(cfg)
         from main import app
 
-        with TestClient(app) as c:
+        with _admin_client() as c:
             # No key
             r = c.get("/api/v1/admin/stats")
             assert r.status_code == 403
@@ -443,8 +453,10 @@ def test_admin_key_required_when_set(client: TestClient):
         importlib.reload(cfg)
 
 
-def test_admin_key_not_required_when_empty(client: TestClient):
-    """When ADMIN_API_KEY is empty (dev mode), admin endpoints work without auth."""
+def test_admin_key_auto_generates_when_empty(client: TestClient):
+    """When ADMIN_API_KEY is empty (dev mode), a random key is auto-generated.
+    Admin endpoints are always protected, even on first run.
+    """
     import os
     old = os.environ.get("ADMIN_API_KEY", "")
     try:
@@ -454,11 +466,13 @@ def test_admin_key_not_required_when_empty(client: TestClient):
         importlib.reload(cfg)
         from main import app
 
-        with TestClient(app) as c:
-            r = c.get("/api/v1/admin/stats")
-            assert r.status_code == 200
-            assert "uptime" in r.json()
+        # Auto-gen means a random key is set — test key won't match
+        c = TestClient(app)
+        r = c.get("/api/v1/admin/stats")
+        assert r.status_code == 403
+        assert "detail" in r.json()
     finally:
         os.environ["ADMIN_API_KEY"] = old
+        import importlib
         import config as cfg
         importlib.reload(cfg)

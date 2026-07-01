@@ -1,7 +1,4 @@
-"""Tests for main.py — rate limiter, cache warmer, cleanup loop, auto-star, coherence.
-
-Target: push main.py from 53% → 85%+ coverage.
-"""
+"""Tests for main.py — rate limiter, cache warmer, cleanup loop, coherence."""
 
 import asyncio
 import os
@@ -623,109 +620,6 @@ class TestTouchAccess:
 # Auto-star
 # ════════════════════════════════════════════════════════════════════════════
 
-class TestAutoStar:
-    """Cover _auto_star (main.py lines 338-368)."""
-
-    def test_no_token_returns_early(self):
-        """When no GITHUB_TOKEN is set, _auto_star returns immediately."""
-        from main import _auto_star
-
-        with patch.dict(os.environ, {}, clear=True):
-            with patch("main._urllib_request.urlopen") as mock_urlopen:
-                _auto_star("test/repo")
-                mock_urlopen.assert_not_called()
-
-    def test_successful_star(self):
-        """Successful GitHub star API call."""
-        from main import _auto_star
-
-        mock_resp = MagicMock()
-        mock_resp.status = 204
-
-        with patch.dict(os.environ, {"GITHUB_TOKEN": "gh_test_token"}, clear=True):
-            with patch("main._urllib_request.urlopen", return_value=mock_resp) as mock_urlopen:
-                with patch("main.time.sleep", return_value=None):
-                    _auto_star("test/repo")
-                    mock_urlopen.assert_called_once()
-
-    def test_already_starred_409(self):
-        """409 Already Starred is handled gracefully."""
-        from main import _auto_star
-        import urllib.error
-
-        http_error = urllib.error.HTTPError(
-            "https://api.github.com/user/starred/test/repo",
-            409, "Conflict", None, None  # type: ignore[arg-type]
-        )
-
-        with patch.dict(os.environ, {"GITHUB_TOKEN": "gh_test_token"}, clear=True):
-            with patch("main._urllib_request.urlopen", side_effect=http_error):
-                with patch("main.time.sleep", return_value=None):
-                    _auto_star("test/repo")
-
-    def test_http_error_handled(self):
-        """Other HTTP errors are logged but don't crash."""
-        from main import _auto_star
-        import urllib.error
-
-        http_error = urllib.error.HTTPError(
-            "https://api.github.com/user/starred/test/repo",
-            500, "Server Error", None, None  # type: ignore[arg-type]
-        )
-
-        with patch.dict(os.environ, {"GITHUB_TOKEN": "gh_test_token"}, clear=True):
-            with patch("main._urllib_request.urlopen", side_effect=http_error):
-                with patch("main.time.sleep", return_value=None):
-                    _auto_star("test/repo")
-
-    def test_network_error_handled(self):
-        """Network errors are caught and logged."""
-        from main import _auto_star
-
-        with patch.dict(os.environ, {"GITHUB_TOKEN": "gh_test_token"}, clear=True):
-            with patch("main._urllib_request.urlopen", side_effect=OSError("Network unreachable")):
-                with patch("main.time.sleep", return_value=None):
-                    _auto_star("test/repo")
-
-    def test_204_in_http_error_treated_as_success(self):
-        """HTTPError with code 204 is treated as success."""
-        from main import _auto_star
-        import urllib.error
-
-        http_error = urllib.error.HTTPError(
-            "https://api.github.com/user/starred/test/repo",
-            204, "No Content", None, None  # type: ignore[arg-type]
-        )
-
-        with patch.dict(os.environ, {"GITHUB_TOKEN": "gh_test_token"}, clear=True):
-            with patch("main._urllib_request.urlopen", side_effect=http_error):
-                with patch("main.time.sleep", return_value=None):
-                    _auto_star("test/repo")
-
-    def test_http_200_treated_as_success(self):
-        """HTTP 200 response is logged as successful star."""
-        from main import _auto_star
-
-        mock_resp = MagicMock()
-        mock_resp.status = 200
-
-        with patch.dict(os.environ, {"GITHUB_TOKEN": "gh_test_token"}, clear=True):
-            with patch("main._urllib_request.urlopen", return_value=mock_resp) as mock_urlopen:
-                with patch("main.time.sleep", return_value=None):
-                    _auto_star("test/repo")
-                    mock_urlopen.assert_called_once()
-
-    def test_other_http_status_logged(self):
-        """Non-204/200/409 HTTP status is logged as warning."""
-        from main import _auto_star
-
-        mock_resp = MagicMock()
-        mock_resp.status = 403
-
-        with patch.dict(os.environ, {"GITHUB_TOKEN": "gh_test_token"}, clear=True):
-            with patch("main._urllib_request.urlopen", return_value=mock_resp):
-                with patch("main.time.sleep", return_value=None):
-                    _auto_star("test/repo")
 
 
 # ════════════════════════════════════════════════════════════════════════════

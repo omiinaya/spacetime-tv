@@ -29,7 +29,14 @@ TMDB_BASE = "https://api.themoviedb.org/3"
 UA_STR = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 # Admin authentication (set ADMIN_API_KEY in .env)
+# Auto-generates a random key if not set — logs it on first startup.
+# Set ADMIN_API_KEY in .env to disable auto-generation and use a known key.
+import secrets as _secrets
+_AUTO_GEN_KEY: str | None = None
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
+if not ADMIN_API_KEY:
+    _AUTO_GEN_KEY = _secrets.token_hex(32)
+    ADMIN_API_KEY = _AUTO_GEN_KEY
 
 # Request body size limits (bytes)
 MAX_REQUEST_BODY = int(os.getenv("MAX_REQUEST_BODY", "1048576"))  # 1 MB default for POST bodies
