@@ -26,9 +26,24 @@ for API consumers. Fix: add explicit HEAD handler or reorder route resolution.
 ### P4 — Upgrade lucide-react 1.22.0 → 1.23.0 (Dependency)
 Minor bump with new icons and fixes. No breaking changes expected.
 
+### P4 — Check for new hls.js stable release (Dependency)
+hls.js v1.7.0 was in canary/RC when last checked. If stable is now released,
+upgrade from canary build to stable. Check npm registry.
+
 ---
 
 ## Recently Completed
+
+### ✅ P4 — Add device-token auth to cloud sync endpoints (Scoped Access)
+- Cloud backup endpoints now use `X-Device-Token` for scoped per-device auth
+- Tokens are SHA-256 hashed before storage (server never stores raw tokens)
+- First upload for a device_id acts as registration; subsequent read/write requires same token
+- Admin key (`X-Admin-Key`) bypasses device token checks (admin override)
+- Short tokens (< 8 chars) rejected even on first-time registration
+- `CACHE_DIR` centralized in `config.py` (was duplicated across 4 files)
+- `RequestBodySizeMiddleware` now handles chunked transfer encoding (413 on oversized bodies)
+- MSW mock handlers updated to enforce device token on frontend tests
+- 26 cloud sync tests pass, 1209 frontend tests pass, TypeScript 0 errors. Commit `715ed9c`.
 
 ### ✅ P4 — Add `role="dialog"` + aria-modal + focus trap to PinPrompt and KeyboardShortcuts (Accessibility)
 - New `useFocusTrap` hook traps Tab/shift+Tab inside modals, restores previous focus on close
@@ -44,9 +59,6 @@ Minor bump with new icons and fixes. No breaking changes expected.
 
 ### ✅ P4 — Add shaka-player to manualChunks in vite.config.ts (Performance)
 Added `shaka` chunk to `manualChunks` in `vite.config.ts` — isolates shaka-player (~700 KB with its bundled subtitle engine, STT, RTL, Translation API) into a separate vendor chunk. All 1208 frontend tests pass, 597 backend tests pass, TypeScript 0 errors. Commit `51a834a`.
-
-### ✅ P2 — Add keyboard handlers to `role="button"` divs (accessibility)
-All 5 `role="button"` `div` elements already had complete `onKeyDown` handlers for Enter/Space (Movies.tsx:478, WatchlistPage.tsx:160/353, Series.tsx:530/664). Item was already implemented.
 
 ### ✅ P2 — Fix duplicate Toaster + update .env.example with all env vars
 - Removed duplicate `<Toaster>` from `main.tsx` (consolidated in `App.tsx`)
