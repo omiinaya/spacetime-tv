@@ -11,9 +11,6 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-### P4 — Add `role="dialog"` + aria-modal + focus trap to PinPrompt and KeyboardShortcuts (Accessibility)
-Current modal overlays lack proper dialog semantics for screen readers.
-
 ### P4 — Split Series.tsx (957 lines) into sub-components (Maintainability)
 Extract CW section, recently-completed row, and grid keyboard nav into separate components.
 
@@ -26,9 +23,18 @@ included-router partial matches resolve, returning 404/SPA index instead of 405.
 Only affects HEAD on GET-only streaming routes (SSE). Low impact but confusing
 for API consumers. Fix: add explicit HEAD handler or reorder route resolution.
 
+### P4 — Upgrade lucide-react 1.22.0 → 1.23.0 (Dependency)
+Minor bump with new icons and fixes. No breaking changes expected.
+
 ---
 
 ## Recently Completed
+
+### ✅ P4 — Add `role="dialog"` + aria-modal + focus trap to PinPrompt and KeyboardShortcuts (Accessibility)
+- New `useFocusTrap` hook traps Tab/shift+Tab inside modals, restores previous focus on close
+- PinPrompt: `role="dialog"`, `aria-modal="true"`, `aria-label={title}`, focus trap active
+- KeyboardShortcuts: same ARIA dialog semantics + focus trap
+- All 1209 frontend tests pass, 589 backend tests pass, TypeScript 0 errors. Commit `3b0549a`.
 
 ### ✅ P4 — Fix test_main.py syntax error + SSE endpoint HEAD tests
 - Fixed rogue docstring artifact in `test_main.py` (SyntaxError on import)
@@ -53,12 +59,6 @@ All 597 backend tests pass, 1208 frontend tests pass. Commit `c78bfc6`.
 
 ### ✅ P1 — Auth enforcement for Cloud Backup endpoints (security critical)
 All 3 cloud endpoints now use `require_admin_key` dependency. Commit `e84cb4e`.
-
-### ✅ P4.14 — E2E error-state + Recordings tests (Testing A 96%)
-E2E tests for server-down scenarios across 5 pages. Commit `104e96b`.
-
-### ✅ P4.13 — Integration test suite for real IPTV
-8 new tests across Live/VOD/Series/Health endpoints. Commit `4833bb2`.
 
 ---
 
