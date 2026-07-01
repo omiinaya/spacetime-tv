@@ -13,8 +13,6 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ### P2 (UX Polish)
 
-- **P2.1 — Sonner toast for remaining console.* calls** — useDocumentPiP.ts has 3 console.warn calls for PiP failures, LiveTV.tsx has 1 console.warn for fetch failure. Convert to sonner toasts for unified UX. ErrorBoundary's console.error calls OK — they already fire reportRenderError() to server.
-
 - **P2.2 — Fix (window as any).screen type hack** — useFrameRateDetector.ts line 34 uses `(window as any).screen`. Add proper TypeScript type augmentation for the Screen API's `refreshRate` property.
 
 - **P2.3 — Fix catch (e: any) in useCloudBackup** — useCloudBackup.ts lines 72/95/120 use `catch (e: any)`. Replace with typed `catch (e: unknown)` + proper narrowing.
@@ -26,6 +24,9 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 ---
 
 ## Recently Completed
+
+### ✅ P2.1 — Sonner toast for remaining console.warn calls (PiP, LiveTV)
+useDocumentPiP.ts: 3 console.warn calls → toast.error() for PiP failures (Document PiP fallback, video PiP, exit PiP). LiveTV.tsx: 1 console.warn → toast.error() for stream fetch failure. ErrorBoundary's console.error retained (fires reportRenderError() to server). TypeScript clean. 1208 frontend tests pass.
 
 ### ✅ P4.1 — Add API versioning prefix
 All 12 route modules mounted under `/api/v1/` prefix instead of bare `/api/`. Vite dev proxy rewrites `/api/` → `/api/v1/`. Middleware-based redirect: `/api/...` → `/api/v1/...` (avoids route shadowing bug where a catch-all APIRoute would intercept requests before included routers). Rate limiter paths updated. Backend tests: 575 pass, 3 xfailed. Frontend tests: 1208 pass. TypeScript clean.
