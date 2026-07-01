@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Lock, ShieldAlert } from "lucide-react";
 import { useSettings } from "@/context/SettingsContext";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface PinPromptProps {
   onSuccess: () => void;
@@ -20,6 +21,9 @@ export function PinPrompt({
   const [error, setError] = useState(false);
   const [checking, setChecking] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(dialogRef, true);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -75,6 +79,10 @@ export function PinPrompt({
 
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >

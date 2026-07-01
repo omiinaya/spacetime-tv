@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { X, Search, Play, SkipBack, SkipForward, Maximize, VolumeX, ChevronUp, ChevronDown, Keyboard } from "lucide-react";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface Shortcut {
   key: string;
@@ -27,6 +28,9 @@ const SHORTCUTS: Shortcut[] = [
 
 export default function KeyboardShortcuts() {
   const [open, setOpen] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(dialogRef, open);
 
   const toggle = useCallback(() => setOpen((v) => !v), []);
   const close = useCallback(() => setOpen(false), []);
@@ -69,6 +73,10 @@ export default function KeyboardShortcuts() {
 
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Keyboard Shortcuts"
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={close}
     >

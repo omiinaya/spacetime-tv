@@ -110,6 +110,16 @@ describe("KeyboardShortcuts", () => {
     expect(screen.queryByText("Keyboard Shortcuts")).not.toBeInTheDocument();
   });
 
+  it("has dialog ARIA attributes for accessibility", () => {
+    render(<KeyboardShortcuts />);
+    toggleOverlay();
+
+    const dialog = document.querySelector('[role="dialog"]');
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog).toHaveAttribute("aria-label", "Keyboard Shortcuts");
+  });
+
   it("renders footer with ? toggle hint", () => {
     render(<KeyboardShortcuts />);
     toggleOverlay();
