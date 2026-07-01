@@ -114,6 +114,9 @@
 | Video Player | ✅ HLS + MPEG-TS + DASH, subtitles, audio tracks, playback speed, PiP, sleep timer |
 | Admin Dashboard | ✅ Cache stats, stream health (codec/resolution/type), error log, popular content |
 | PWA Support | ✅ Install prompt, offline banner |
+| Cloud Sync | ✅ Channel favorites + watchlist backup/restore to server, device-bound |
+| Theme Customization | ✅ Dark / Light / System mode toggle in Settings |
+| Picture-in-Picture | ✅ Document PiP with video PiP fallback chain |
 | Keyboard Shortcuts | ✅ Global + player shortcuts with help overlay (`?`) |
 | Error Handling | ✅ ErrorBoundary, ErrorReporter beacon, error type differentiation |
 
@@ -127,9 +130,9 @@
 | **EPG Search** | ✅ | ✅ | ✅ | **Medium** |
 | **Multi-provider** | ❌ | ✅ | ❌ | Low (architectural) |
 | **Cloud favorites/backup** | ❌ | ✅ | ✅ | **Medium** |
-| **Picture-in-Picture** | ✅ | ❌ | Partial (button, no system PiP) | Low |
+| **Picture-in-Picture** | ✅ | ❌ | ✅ (Document PiP + video PiP with fallback) | Low |
 | **Auto frame-rate** | ✅ | ❌ | ❌ | Low |
-| **Theme customization** | ✅ | ✅ | ❌ (dark only) | Low |
+| **Theme customization** | ✅ | ✅ | ✅ (Dark/Light/System) | Low |
 | **Multi-user profiles** | ❌ | ✅ | ❌ | Low |
 
 ### What We Do Better
