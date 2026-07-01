@@ -11,9 +11,6 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-### P2 — Add keyboard handlers to `role="button"` divs (accessibility)
-5 `role="button"` `div` elements without keyboard handlers (Movies.tsx:478, WatchlistPage.tsx:160/353, Series.tsx:530/664). These break keyboard navigation for users who can't use a mouse. Add `onKeyDown` handlers for Enter/Space.
-
 ### P4 — Add shaka-player to manualChunks in vite.config.ts (Performance)
 shaka-player (with its bundled subtitle engine, STT, RTL, Translation API) inflates the player chunk by ~700 KB. Add to manualChunks to isolate it in a separate vendor chunk.
 
@@ -29,6 +26,9 @@ Large search results page needs decomposition.
 ---
 
 ## Recently Completed
+
+### ✅ P2 — Add keyboard handlers to `role="button"` divs (accessibility)
+All 5 `role="button"` `div` elements already had complete `onKeyDown` handlers for Enter/Space (Movies.tsx:478, WatchlistPage.tsx:160/353, Series.tsx:530/664). Item was already implemented.
 
 ### ✅ P2 — Fix duplicate Toaster + update .env.example with all env vars
 - Removed duplicate `<Toaster>` from `main.tsx` (consolidated in `App.tsx` with `closeButton` and `toastOptions`)

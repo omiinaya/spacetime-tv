@@ -30,6 +30,7 @@ export default defineConfig({
         manualChunks(id: string) {
           if (id.includes("mpegts.js")) return "mpegts";
           if (id.includes("hls.js")) return "hls";
+          if (id.includes("shaka-player")) return "shaka";
         },
       },
     },
