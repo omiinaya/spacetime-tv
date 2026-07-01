@@ -11,10 +11,6 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-### P3 (Nice to Have)
-
-- **P3.2 — Upgrade Vite 8.1.1 → 8.1.2** — Minor bump available via `npm outdated`.
-
 ### P4 (Tech Debt / DX)
 
 - **P4.1 — Add API versioning prefix** — All routes are bare `/api/...` with no `/v1/` prefix. Add versioning to allow future breaking changes without disrupting clients. Approach: mount all routes under `/api/v1/`, add redirect from bare `/api/...` to `/api/v1/...`.
@@ -22,6 +18,9 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 ---
 
 ## Recently Completed
+
+### ✅ P3.2 — Upgrade Vite 8.1.1 → 8.1.2
+Minor bump via `npm install vite@8.1.2`. Tests: 575 passed, 3 xfailed, TypeScript clean.
 
 ### ✅ P3.1 — Sonner toast coverage for error paths
 Replaced 5 `console.error()` calls in `useRecording.ts` with `toast.error()` notifications from sonner. Added `<Toaster>` component to `main.tsx` with richColors, bottom-right positioning, and close button. Error paths covered:
