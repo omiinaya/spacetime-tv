@@ -338,7 +338,7 @@ function AppLayout() {
       <PWAInstallPrompt />
       <OfflineBanner />
       <KeyboardShortcuts />
-      <Toaster richColors theme={resolvedTheme} position="bottom-right" />
+      <Toaster richColors theme={resolvedTheme} position="bottom-right" closeButton toastOptions={{ style: { fontSize: "0.875rem" } }} />
       <BackToTop />
     </div>
   );
