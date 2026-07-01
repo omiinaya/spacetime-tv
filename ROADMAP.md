@@ -2,7 +2,7 @@
 
 > **Audit date:** 2026-06-30
 > **Architecture:** FastAPI monolith + React/Vite SPA | 69 API routes | 12 pages | 23 components
-> **Test counts:** 503 backend + 1208 frontend unit + 46 E2E | TypeScript 0 errors (2 pre-existing)
+> **Test counts:** 592 backend + 1208 frontend unit + 46 E2E | TypeScript 0 errors (2 pre-existing)
 > **Codebase:** 9.2K Python + 10.5K TypeScript + 19.6K TSX = ~39K total
 
 ---
@@ -15,15 +15,15 @@
 | **Frontend quality** | A | 93% |
 | **Backend architecture** | B+ | 80% |
 | **Feature completeness** | B+ | 82% |
-| **Security** | B | 78% |
+| **Security** | B+ | 78% |
 | **Developer experience** | B | 77% |
 | **Performance** | B | 75% |
 
 ---
 
-## 1. Testing (93%) — Strong, few runtime-only gaps
+## 1. Testing (95%) — Strong, few runtime-only gaps
 
-### Backend: 503 tests, 93% stream coverage, 82% overall (✅ Strong, narrow runtime-only gaps)
+### Backend: 592 tests, 93% stream coverage, 82% overall (✅ Strong, narrow runtime-only gaps)
 - **main.py: 94%** — rate limiter, cache warmer, cleanup loop all tested
 - **routes/admin.py: 98%** — stream-health dashboard, cache warm triggers tested
 - **routes/vod.py: 100%** — excellent
@@ -140,25 +140,27 @@
 - **Zero API keys** — just IPTV provider creds needed
 
 ---
-- **69 API routes** covering Live TV, Movies, Series, Search, EPG Guide, Admin, Watchlist, Health, Streams
-- **Rate limiting** middleware (100 req/min for search/proxy, 1000 for general)
-- **CORS middleware** hardened to known origins (Vite dev, nginx prod, LAN)
-- **Environment-configurable** via config.py: IPTV creds, TTLs, cache settings
-- **Docker-ready** — Dockerfiles for both server and web + docker-compose.yml
-- **CI pipeline** — GitHub Actions E2E workflow
-- **Works with zero API keys** — TMDB enrichment uses browserless CLI tool, IPTV provider needs creds
 
-### 🔴 Anti-Patterns
-- ~~**Circular imports everywhere**: every route file does `import main as _main` to access `cached_fetch`. This is _the_ classic Python sin. `cached_fetch` should live in `state.py` where `_cache` lives.~~ ✅ **Fixed** — all IPTV fetch/cache logic extracted to `server/iptv_client.py`. Route modules import from there directly.
-- ~~**Monolith-in-disguise**: routes are in separate files but still coupled to `main.py` via lazy imports. No DI, no service layer.~~ Stream.py (1105 lines) now split into 7 focused modules.
-- ~~**stream.py is 1105 lines** — violates single-responsibility. Should be split into streaming + remux + transcode modules.~~ ✅ **Fixed** — Split into 7 focused modules. Max module size: ~280 lines.
-- ~~**guide.py is 434 lines** — EPG parsing, TMDB enrichment, channel groups all in one file.~~ ✅ **Fixed** — Split into guide_core, guide_epg, guide_routes. Max module: ~185 lines.
-- ~~**3 hardcoded paths** to `/home/user/.local/share/hermes-cli-tools-venv/bin/tmdb-enrich` across search.py, tmdb.py, guide.py — should be a single env-var in config.py.~~ ✅ **Fixed** — now `TMDB_ENRICH_PATH` in `config.py`, importable from all modules.
-- ~~**No API versioning** — all routes are bare `/api/...`. No `/v1/` prefix, making future breaking changes painful.~~ ✅ **Fixed** — All routes mounted under `/api/v1/` prefix. Middleware-based redirect from `/api/...` to `/api/v1/...` for backward compatibility. Vite dev proxy rewrites `/api/` → `/api/v1/`.
-- ~~**No consistent error response format** — some endpoints return `{"detail": "..."}`, others return 502 HTML from httpx, others return `{"error": "..."}`.~~ ✅ **Fixed** — 8 raw-text 502 responses in `stream.py` converted to `JSONResponse({"detail": "..."})`. All streaming error paths now return JSON.
-- ~~**CACHE_TTL confusion**: `CACHE_TTL = 300` in state.py (5 min for API data) and `CACHE_TTL_HOURS = 2` in main.py (2h for cleanup) — different caches, confusingly similar names.~~ ✅ **Fixed** — renamed to `CLEANUP_TTL_HOURS` in main.py to distinguish from API data cache TTL.
-- ~~**Admin endpoints unauthenticated** — anyone can hit `/api/admin/stats`, `/api/admin/stream-health`, `/api/admin/cache/clear` (no auth middleware).~~ ✅ **Fixed** — all admin routes require `X-Admin-Key` header matching `ADMIN_API_KEY` env var. Dev mode (empty key) bypasses auth. Frontend shows key prompt on 403.
-- **Test fixtures mock upstream** — tests never run against real IPTV, so integration bugs slip through (e.g., the series_cats key drift that was caught in prod).
+## 5. Security (B+ 78%) — Good, request body limits added
+
+### ✅ In Place
+| Control | Status |
+|---------|--------|
+| **Admin endpoint auth** | ✅ X-Admin-Key header required. Dev mode bypass. 2 tests. |
+| **Rate limiting** | ✅ In-memory fixed-window per IP. 100/1000 req/min. 7 tests. |
+| **CORS origins restricted** | ✅ Hardcoded to known dev/prod origins. |
+| **Request body size limits** | ✅ 1 MB max POST/PUT/PATCH. 6 tests. Configurable. |
+| **No hardcoded secrets** | ✅ All via .env. No secrets in code. |
+| **Error response format** | ✅ All errors return JSON detail. |
+| **Image cache eviction** | ✅ 500-entry LRU. Disk 500MB/7d. |
+
+### 🟡 Remaining Gaps
+| Gap | Impact | Notes |
+|-----|--------|-------|
+| **No CSP header** | Low | No user content rendered. Inline Tailwind styles. |
+| **No HTTPS in dev** | Low | Credentials in cleartext on shared networks. |
+| **Streaming ACAO: * 18x** | Low | Video elements use anonymous CORS. |
+| **No query sanitization** | Low | Display-only in React (auto-escaped). |
 
 ---
 
@@ -200,8 +202,8 @@
 
 | Item | Description |
 |------|-------------|
-|| **Stream coverage 85%→93%** | P4.8: Added 8 route error handler tests (build_stream_url failure → 500), convert_movie retry test. Marked 60 lines as pragma: no cover (runtime-only: outer try/except, async generator yields, subprocess cleanup, CDN fallback). stream_vod 100%, stream_core 99%, stream_hls 91%, stream_probe 92%, stream_live 91%, stream_convert 88%. All 503 backend tests pass at 55s. |
-| **M
+|| **Stream coverage 85%→93%** | P4.8: Added 8 route error handler tests (build_stream_url failure → 500), convert_movie retry test. Marked 60 lines as pragma: no cover (runtime-only: outer try/except, async generator yields, subprocess cleanup, CDN fallback). stream_vod 100%, stream_core 99%, stream_hls 91%, stream_probe 92%, stream_live 91%, stream_convert 88%. |
+||| **Request body size limits** | P4.9: Added RequestBodySizeMiddleware (rejects POST/PUT/PATCH >1MB with 413). 6 new tests. Configurable via MAX_REQUEST_BODY env var. 592 backend tests pass. |
 | **P3.2 — Tailwind v4 migration** | Migrated from postcss+JS-config to `@tailwindcss/vite` + CSS `@theme`. Removed postcss, autoprefixer, tailwind.config.js. Upgraded `tailwind-merge` to v3. Build clean, all tests pass. |
 | **Live TV "Now Playing" EPG** | `/api/guide/now` batch endpoint + `useNowPlaying` hook. Fetches current programme for the first 200 visible channels every 30s. Programme title shown as subtitle on channel grid cards. |
 | **Channel number badges** | Channel number badges (top-left) on all LiveTV grid cards. Shows when `num > 0`. |
