@@ -139,6 +139,44 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 app.add_middleware(RequestBodySizeMiddleware)
 app.add_middleware(RateLimitMiddleware)
 
+# ── Security Headers (CSP, HSTS, XFO, XCTO, Referrer-Policy) ──────────────
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses.
+
+    - Content-Security-Policy: restrict script/style sources, disallow plugins
+    - Strict-Transport-Security: force HTTPS (production only)
+    - X-Content-Type-Options: prevent MIME sniffing
+    - X-Frame-Options: prevent clickjacking
+    - Referrer-Policy: limit referrer leakage
+    """
+
+    async def dispatch(self, request: StarletteRequest, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        # CSP — allow inline styles/scripts (React hydration), self for assets,
+        # blob/data for media streams (HLS/mpegts), TMDB for poster images.
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https://image.tmdb.org https://*.tmdb.org; "
+            "media-src 'self' blob: data: https: http:; "
+            "font-src 'self' data:; "
+            "connect-src 'self' https: http:; "
+            "frame-src 'none'; "
+            "object-src 'none'; "
+            "base-uri 'self'"
+        )
+        # HSTS — only in production (ADMIN_API_KEY set is a reasonable proxy)
+        if os.getenv("ADMIN_API_KEY"):
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
+
 # ── HTTP Client & IPTV API ──────────────────────────────────────────────────
 from iptv_client import client, cached_fetch, fetch_iptv, iptv_url
 
