@@ -674,6 +674,26 @@ def test_convert_series_ep_with_retry(client_with_cache):
             output_path.unlink()
 
 
+def test_convert_movie_with_retry(client_with_cache):
+    """convert_movie with retry=true removes stale files and starts fresh."""
+    from routes.stream import CACHE_DIR, _converting
+    cache_key = "movie_555555"
+    output_path = CACHE_DIR / f"{cache_key}.mp4"
+    mkv_path = CACHE_DIR / f"{cache_key}.mkv"
+    try:
+        output_path.write_text("stale mp4")
+        mkv_path.write_text("stale mkv")
+        _converting.pop(cache_key, None)
+        resp = client_with_cache.get(f"/api/v1/movie/convert/555555?retry=true")
+        assert resp.status_code == 200
+        # stale files should be removed by retry
+        assert not output_path.exists()
+        assert not mkv_path.exists()
+    finally:
+        if output_path.exists(): output_path.unlink()
+        if mkv_path.exists(): mkv_path.unlink()
+
+
 def test_serve_mp4_not_found_returns_404(client_with_cache):
     """serve_movie_mp4 returns 404 when MP4 not yet converted."""
     resp = client_with_cache.get("/api/v1/stream/movie/0/mp4")
@@ -1339,4 +1359,84 @@ async def test_stream_vod_mpegts_start_time_zero_no_seek():
         results = [chunk async for chunk in gen]
 
     assert len(results) == 1
+
+
+# ── Route error handling (build_stream_url failures return 500) ───────────────
+# These patch the specific route module's imported reference because
+# the functions are imported at module load time.
+
+def _make_error_client():
+    """Create a TestClient with raise_server_exceptions=False for testing 500s."""
+    import os
+    os.environ.setdefault("IPTV_BASE", "http://test-iptv.live")
+    os.environ.setdefault("IPTV_USER", "test_user")
+    os.environ.setdefault("IPTV_PASS", "test_pass")
+    os.environ.setdefault("CACHE_WARM_ENABLED", "false")
+    os.environ.setdefault("ADMIN_API_KEY", "")
+    from fastapi.testclient import TestClient
+    from main import app
+    return TestClient(app, raise_server_exceptions=False)
+
+
+def test_live_route_error_on_build_stream_url_failure():
+    """stream_live returns 500 when build_stream_url raises (outside try)."""
+    from unittest.mock import patch
+    with _make_error_client() as client:
+        with patch("routes.stream_live.build_stream_url", side_effect=RuntimeError("build failed")):
+            resp = client.get("/api/v1/stream/live/1")
+        assert resp.status_code == 500
+
+
+def test_live_transcode_error_on_build_stream_url_failure():
+    """stream_live_transcode returns 500 when build_stream_url raises."""
+    from unittest.mock import patch
+    with _make_error_client() as client:
+        with patch("routes.stream_live.build_stream_url", side_effect=RuntimeError("build failed")):
+            resp = client.get("/api/v1/stream/live/1/transcode")
+        assert resp.status_code == 500
+
+
+def test_live_quality_error_on_build_stream_url_failure():
+    """stream_live_quality returns 500 when build_stream_url raises."""
+    from unittest.mock import patch
+    with _make_error_client() as client:
+        with patch("routes.stream_live.build_stream_url", side_effect=RuntimeError("build failed")):
+            resp = client.get("/api/v1/stream/live/1/quality/720")
+        assert resp.status_code == 500
+
+
+def test_vod_movie_remux_error_on_build_stream_url_failure():
+    """stream_movie_remux returns 500 when build_stream_url raises."""
+    from unittest.mock import patch
+    with _make_error_client() as client:
+        with patch("routes.stream_vod.build_stream_url", side_effect=RuntimeError("build failed")):
+            resp = client.get("/api/v1/stream/movie/1/remux")
+        assert resp.status_code == 500
+
+
+def test_vod_series_remux_error_on_build_stream_url_failure():
+    """stream_series_remux returns 500 when build_stream_url raises."""
+    from unittest.mock import patch
+    with _make_error_client() as client:
+        with patch("routes.stream_vod.build_stream_url", side_effect=RuntimeError("build failed")):
+            resp = client.get("/api/v1/stream/series/1/42/remux")
+        assert resp.status_code == 500
+
+
+def test_vod_movie_transcode_error_on_build_stream_url_failure():
+    """stream_movie_transcode returns 500 when build_stream_url raises."""
+    from unittest.mock import patch
+    with _make_error_client() as client:
+        with patch("routes.stream_vod.build_stream_url", side_effect=RuntimeError("build failed")):
+            resp = client.get("/api/v1/stream/movie/1/transcode")
+        assert resp.status_code == 500
+
+
+def test_vod_series_transcode_error_on_build_stream_url_failure():
+    """stream_series_transcode returns 500 when build_stream_url raises."""
+    from unittest.mock import patch
+    with _make_error_client() as client:
+        with patch("routes.stream_vod.build_stream_url", side_effect=RuntimeError("build failed")):
+            resp = client.get("/api/v1/stream/series/1/42/transcode")
+        assert resp.status_code == 500
 
