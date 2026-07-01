@@ -31,6 +31,10 @@ UA_STR = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)
 # Admin authentication (set ADMIN_API_KEY in .env)
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
 
+# Request body size limits (bytes)
+MAX_REQUEST_BODY = int(os.getenv("MAX_REQUEST_BODY", "1048576"))  # 1 MB default for POST bodies
+MAX_FILE_UPLOAD = int(os.getenv("MAX_FILE_UPLOAD", "52428800"))   # 50 MB for file uploads
+
 # Path to tmdb-enrich CLI (browserless SSR extraction from themoviedb.org)
 # No API key required — uses HTML scraping from TMDB's own pages
 TMDB_ENRICH_PATH = os.getenv(

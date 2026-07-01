@@ -98,6 +98,21 @@ from starlette.requests import Request as StarletteRequest
 
 _rate_limits: dict[str, tuple[float, int]] = {}
 
+MAX_CONTENT_LENGTH = 1_048_576  # 1 MB default for request bodies
+
+class RequestBodySizeMiddleware(BaseHTTPMiddleware):
+    """Reject requests with body content exceeding MAX_CONTENT_LENGTH."""
+    async def dispatch(self, request: StarletteRequest, call_next):
+        if request.method in ("POST", "PUT", "PATCH"):
+            content_length = request.headers.get("content-length")
+            if content_length and int(content_length) > MAX_CONTENT_LENGTH:
+                return Response(
+                    content='{"detail":"Request body too large"}',
+                    status_code=413,
+                    media_type="application/json",
+                )
+        return await call_next(request)
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: StarletteRequest, call_next):
         ip = request.client.host if request.client else "unknown"
@@ -118,6 +133,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         _rate_limits[ip] = (window_start, count + 1)
         return await call_next(request)
 
+app.add_middleware(RequestBodySizeMiddleware)
 app.add_middleware(RateLimitMiddleware)
 
 # ── HTTP Client & IPTV API ──────────────────────────────────────────────────
