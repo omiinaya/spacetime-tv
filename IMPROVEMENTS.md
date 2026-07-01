@@ -11,13 +11,14 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-### P4 (Tech Debt / DX)
-
-- **P4.2 — Integration test suite for real IPTV** — The ROADMAP notes that all tests mock upstream IPTV. Add a small integration test suite (pytest -m integration) that runs against real IPTV endpoints when .env credentials are available, marked as `integration` to skip in CI.
+None 🎉 — all items completed.
 
 ---
 
 ## Recently Completed
+
+### ✅ P4.2 — Integration test suite for real IPTV
+8 new tests across Live/VOD/Series/Health endpoints using FastAPI TestClient against real IPTV provider. Tests auto-skip when credentials are placeholders. Run with `pytest -m integration -v`. Covers category listings, stream schemas, and field presence validation.
 
 ### ✅ P2.2 — Fix `(window as any).screen` type hack
 useFrameRateDetector.ts: Added global Screen interface augmentation for `refreshRate?: number`. Replaced `(window as any).screen` with typed `window.screen`. TypeScript cleaner.
