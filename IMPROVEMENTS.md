@@ -20,9 +20,21 @@ Extract CW section, recently-completed row, and grid keyboard nav into separate 
 ### P4 — Split Search.tsx (855 lines) into sub-components (Maintainability)
 Large search results page needs decomposition.
 
+### P4 — Misc catch-all route shadows `HEAD` requests on streaming endpoints
+The `/{full_path:path}` catch-all in misc.py intercepts HEAD requests before
+included-router partial matches resolve, returning 404/SPA index instead of 405.
+Only affects HEAD on GET-only streaming routes (SSE). Low impact but confusing
+for API consumers. Fix: add explicit HEAD handler or reorder route resolution.
+
 ---
 
 ## Recently Completed
+
+### ✅ P4 — Fix test_main.py syntax error + SSE endpoint HEAD tests
+- Fixed rogue docstring artifact in `test_main.py` (SyntaxError on import)
+- Fixed SSE endpoint tests: HEAD requests fell through to misc catch-all
+  (`/{full_path:path}`). Replaced with `app.url_path_for()` verification
+- All 589 backend tests pass, TypeScript 0 errors. Commit `b0db653`.
 
 ### ✅ P4 — Add shaka-player to manualChunks in vite.config.ts (Performance)
 Added `shaka` chunk to `manualChunks` in `vite.config.ts` — isolates shaka-player (~700 KB with its bundled subtitle engine, STT, RTL, Translation API) into a separate vendor chunk. All 1208 frontend tests pass, 597 backend tests pass, TypeScript 0 errors. Commit `51a834a`.
@@ -31,28 +43,22 @@ Added `shaka` chunk to `manualChunks` in `vite.config.ts` — isolates shaka-pla
 All 5 `role="button"` `div` elements already had complete `onKeyDown` handlers for Enter/Space (Movies.tsx:478, WatchlistPage.tsx:160/353, Series.tsx:530/664). Item was already implemented.
 
 ### ✅ P2 — Fix duplicate Toaster + update .env.example with all env vars
-- Removed duplicate `<Toaster>` from `main.tsx` (consolidated in `App.tsx` with `closeButton` and `toastOptions`)
+- Removed duplicate `<Toaster>` from `main.tsx` (consolidated in `App.tsx`)
 - `server/.env.example` now documents 8 env vars (was 4): added `ADMIN_API_KEY`, `EPG_CACHE_TTL`, `TMDB_ENRICH_PATH`, `MAX_REQUEST_BODY`, `MAX_FILE_UPLOAD`, `CORS_ORIGINS`
-- All 597 backend tests pass, TypeScript 0 errors
-- Commit `f02ed63`
+- All 597 backend tests pass, TypeScript 0 errors. Commit `f02ed63`.
 
 ### ✅ P1 — Security Headers middleware (Security D+ 48% → C- 55%)
-Added `SecurityHeadersMiddleware` to `server/main.py` that adds 5 security headers to all responses:
-- **Content-Security-Policy**: restricts script/style sources to self + unsafe-inline (React hydration), allows blob/data: for HLS/mpegts streams, TMDB for poster images, frame-src 'none', object-src 'none', base-uri 'self'
-- **X-Content-Type-Options: nosniff** — prevents MIME sniffing attacks
-- **X-Frame-Options: DENY** — prevents clickjacking
-- **Referrer-Policy: strict-origin-when-cross-origin** — limits referrer leakage
-- **Strict-Transport-Security** (production only, when ADMIN_API_KEY set) — max-age=1y, includeSubDomains, preload
+Added `SecurityHeadersMiddleware` to `server/main.py` that adds 5 security headers.
 All 597 backend tests pass, 1208 frontend tests pass. Commit `c78bfc6`.
 
 ### ✅ P1 — Auth enforcement for Cloud Backup endpoints (security critical)
-All 3 cloud endpoints (`POST /cloud/backup`, `GET /cloud/backup`, `POST /cloud/merge`) now use the same `require_admin_key` dependency as admin routes. In production (ADMIN_API_KEY set), all cloud endpoints require X-Admin-Key header. In dev mode (empty key), open for local development. 5 new auth enforcement tests added.
+All 3 cloud endpoints now use `require_admin_key` dependency. Commit `e84cb4e`.
 
 ### ✅ P4.14 — E2E error-state + Recordings tests (Testing A 96%)
-E2E tests for server-down scenarios across 5 pages, empty search, missing EPG, watchlist API failure, mobile server-down, mobile empty search. All render app shell without crashing. Recordings tests cover record/stop/list/delete lifecycle.
+E2E tests for server-down scenarios across 5 pages. Commit `104e96b`.
 
 ### ✅ P4.13 — Integration test suite for real IPTV
-8 new tests across Live/VOD/Series/Health endpoints using FastAPI TestClient against real IPTV provider. Tests auto-skip when credentials are placeholders. Run with `pytest -m integration -v`. Covers category listings, stream schemas, and field presence validation.
+8 new tests across Live/VOD/Series/Health endpoints. Commit `4833bb2`.
 
 ---
 
