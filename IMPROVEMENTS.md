@@ -11,12 +11,23 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-### ✅ P1 — Auth enforcement for Cloud Backup endpoints (security critical)
-All 3 cloud endpoints (`POST /cloud/backup`, `GET /cloud/backup`, `POST /cloud/merge`) now use the same `require_admin_key` dependency as admin routes. In production (ADMIN_API_KEY set), all cloud endpoints require X-Admin-Key header. In dev mode (empty key), open for local development. 5 new auth enforcement tests added. Security audit score: 0/100 → 85/100.
+*(All current items completed — research cycle ongoing)*
 
 ---
 
 ## Recently Completed
+
+### ✅ P1 — Security Headers middleware (Security D+ 48% → C- 55%)
+Added `SecurityHeadersMiddleware` to `server/main.py` that adds 5 security headers to all responses:
+- **Content-Security-Policy**: restricts script/style sources to self + unsafe-inline (React hydration), allows blob/data: for HLS/mpegts streams, TMDB for poster images, frame-src 'none', object-src 'none', base-uri 'self'
+- **X-Content-Type-Options: nosniff** — prevents MIME sniffing attacks
+- **X-Frame-Options: DENY** — prevents clickjacking
+- **Referrer-Policy: strict-origin-when-cross-origin** — limits referrer leakage
+- **Strict-Transport-Security** (production only, when ADMIN_API_KEY set) — max-age=1y, includeSubDomains, preload
+All 597 backend tests pass, 1208 frontend tests pass. Commit `c78bfc6`.
+
+### ✅ P1 — Auth enforcement for Cloud Backup endpoints (security critical)
+All 3 cloud endpoints (`POST /cloud/backup`, `GET /cloud/backup`, `POST /cloud/merge`) now use the same `require_admin_key` dependency as admin routes. In production (ADMIN_API_KEY set), all cloud endpoints require X-Admin-Key header. In dev mode (empty key), open for local development. 5 new auth enforcement tests added.
 
 ### ✅ P4.14 — E2E error-state + Recordings tests (Testing A 96%)
 E2E tests for server-down scenarios across 5 pages, empty search, missing EPG, watchlist API failure, mobile server-down, mobile empty search. All render app shell without crashing. Recordings tests cover record/stop/list/delete lifecycle.
@@ -38,6 +49,9 @@ GZipMiddleware added to main.py for all API responses (min 1KB). Performance sec
 
 ### ✅ P4.8 — Stream module coverage 85%→93%, +8 new tests, pragma for runtime-only lines
 stream_core 99%, stream_vod 100%, stream_live 91%, stream_convert 88%, stream_hls 91%, stream_probe 92%, stream_dash 100%. 8 new tests for error handler presence checks across all sub-modules. `# pragma: no cover` added to runtime-only ffmpeg/curl_cffi lines (accurate coverage).
+
+### ✅ P4.9 — ROADMAP: Security section added, duplicate removed, grades updated
+Security section drafted with honest D+ grade (up from secretly-failing). Frontend duplicate entry removed. All dimensions updated to match verified reality.
 
 ---
 
