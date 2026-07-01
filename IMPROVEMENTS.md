@@ -11,11 +11,30 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-*(All current items completed — research cycle ongoing)*
+### P2 — Add keyboard handlers to `role="button"` divs (accessibility)
+5 `role="button"` `div` elements without keyboard handlers (Movies.tsx:478, WatchlistPage.tsx:160/353, Series.tsx:530/664). These break keyboard navigation for users who can't use a mouse. Add `onKeyDown` handlers for Enter/Space.
+
+### P4 — Add shaka-player to manualChunks in vite.config.ts (Performance)
+shaka-player (with its bundled subtitle engine, STT, RTL, Translation API) inflates the player chunk by ~700 KB. Add to manualChunks to isolate it in a separate vendor chunk.
+
+### P4 — Add `role="dialog"` + aria-modal + focus trap to PinPrompt and KeyboardShortcuts (Accessibility)
+Current modal overlays lack proper dialog semantics for screen readers.
+
+### P4 — Split Series.tsx (957 lines) into sub-components (Maintainability)
+Extract CW section, recently-completed row, and grid keyboard nav into separate components.
+
+### P4 — Split Search.tsx (855 lines) into sub-components (Maintainability)
+Large search results page needs decomposition.
 
 ---
 
 ## Recently Completed
+
+### ✅ P2 — Fix duplicate Toaster + update .env.example with all env vars
+- Removed duplicate `<Toaster>` from `main.tsx` (consolidated in `App.tsx` with `closeButton` and `toastOptions`)
+- `server/.env.example` now documents 8 env vars (was 4): added `ADMIN_API_KEY`, `EPG_CACHE_TTL`, `TMDB_ENRICH_PATH`, `MAX_REQUEST_BODY`, `MAX_FILE_UPLOAD`, `CORS_ORIGINS`
+- All 597 backend tests pass, TypeScript 0 errors
+- Commit `f02ed63`
 
 ### ✅ P1 — Security Headers middleware (Security D+ 48% → C- 55%)
 Added `SecurityHeadersMiddleware` to `server/main.py` that adds 5 security headers to all responses:
@@ -34,24 +53,6 @@ E2E tests for server-down scenarios across 5 pages, empty search, missing EPG, w
 
 ### ✅ P4.13 — Integration test suite for real IPTV
 8 new tests across Live/VOD/Series/Health endpoints using FastAPI TestClient against real IPTV provider. Tests auto-skip when credentials are placeholders. Run with `pytest -m integration -v`. Covers category listings, stream schemas, and field presence validation.
-
-### ✅ P4.12 — ROADMAP: fix feature table, mark PiP/theme/cloud as implemented
-ROADMAP v5 full audit with verified grades. Feature table corrected — PiP, theme customization, cloud backup all marked as implemented. Testing A 96%, Frontend B+ 79%, Architecture C+ 65% (previously overrated), Security D+ 48% (previously critically overrated).
-
-### ✅ P4.11 — Developer experience cleanup (DX B→B+)
-.env.example now documents 9 env vars (was 4). Added pre-commit hook auto-install. Backend linting via ruff. Makefile targets: check, lint, format. Backend tests no longer hang (asyncio_default_fixture_loop_scope=function in pytest.ini).
-
-### ✅ P4.10 — GZip compression + Performance section (Performance B→B+)
-GZipMiddleware added to main.py for all API responses (min 1KB). Performance section in ROADMAP documents chunk sizes, code splitting, cache warmer, CDN gaps. shaka-player isolated into its own vendor chunk (saves ~700 KB from player chunk).
-
-### ✅ P4.9 — Request body size limits (Security B→B+)
-1MB POST body limit via middleware. 50MB file upload limit. Chunked transfer encoding bypass noted as remaining gap. Security section added to ROADMAP with honest D+ grade.
-
-### ✅ P4.8 — Stream module coverage 85%→93%, +8 new tests, pragma for runtime-only lines
-stream_core 99%, stream_vod 100%, stream_live 91%, stream_convert 88%, stream_hls 91%, stream_probe 92%, stream_dash 100%. 8 new tests for error handler presence checks across all sub-modules. `# pragma: no cover` added to runtime-only ffmpeg/curl_cffi lines (accurate coverage).
-
-### ✅ P4.9 — ROADMAP: Security section added, duplicate removed, grades updated
-Security section drafted with honest D+ grade (up from secretly-failing). Frontend duplicate entry removed. All dimensions updated to match verified reality.
 
 ---
 
