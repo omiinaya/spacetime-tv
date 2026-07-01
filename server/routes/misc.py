@@ -14,14 +14,13 @@ from fastapi.responses import FileResponse, Response
 
 from iptv_client import client
 
-from config import IPTV_BASE, IPTV_PASS, IPTV_USER, STATIC_DIR
+from config import CACHE_DIR, IPTV_BASE, IPTV_PASS, IPTV_USER, STATIC_DIR
 from state import _img_cache
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["misc"])
 
 # ── Image proxy disk cache ──────────────────────────────────────────
-CACHE_DIR = Path("/tmp/stv_cache")
 IMG_CACHE_DIR = CACHE_DIR / "images"
 IMG_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 

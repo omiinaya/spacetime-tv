@@ -9,7 +9,9 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
+
+from config import CACHE_DIR
 
 from .stream_core import build_stream_url
 from config import UA_STR
@@ -17,8 +19,6 @@ from config import UA_STR
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["stream"])
 
-CACHE_DIR = Path("/tmp/stv_cache")
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
 _converting: dict[str, asyncio.Task] = {}
 
 

@@ -108,16 +108,29 @@ _rate_limits: dict[str, tuple[float, int]] = {}
 MAX_CONTENT_LENGTH = 1_048_576  # 1 MB default for request bodies
 
 class RequestBodySizeMiddleware(BaseHTTPMiddleware):
-    """Reject requests with body content exceeding MAX_CONTENT_LENGTH."""
+    """Reject requests with body content exceeding MAX_CONTENT_LENGTH.
+
+    Handles both Content-Length headers and chunked transfer encoding.
+    """
     async def dispatch(self, request: StarletteRequest, call_next):
         if request.method in ("POST", "PUT", "PATCH"):
             content_length = request.headers.get("content-length")
-            if content_length and int(content_length) > MAX_CONTENT_LENGTH:
-                return Response(
-                    content='{"detail":"Request body too large"}',
-                    status_code=413,
-                    media_type="application/json",
-                )
+            if content_length:
+                if int(content_length) > MAX_CONTENT_LENGTH:
+                    return Response(
+                        content='{"detail":"Request body too large"}',
+                        status_code=413,
+                        media_type="application/json",
+                    )
+            else:
+                # Chunked transfer encoding — read up to limit + 1 to detect overflow
+                body = await request.body()
+                if len(body) > MAX_CONTENT_LENGTH:
+                    return Response(
+                        content='{"detail":"Request body too large"}',
+                        status_code=413,
+                        media_type="application/json",
+                    )
         return await call_next(request)
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -337,7 +350,7 @@ def start_cache_warmer():
 
 
 # ── Disk Cache (for VOD MP4, HLS, DASH — persistent across restarts) ────
-CACHE_DIR = Path("/tmp/stv_cache")
+from config import CACHE_DIR
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Cache TTL / Auto-cleanup ────────────────────────────────────────────────

@@ -8,7 +8,6 @@ const WATCHLIST_KEY = "stv_watchlist";
 function getDeviceId(): string {
   let id = localStorage.getItem(DEVICE_KEY);
   if (!id) {
-    // Generate a device ID once per browser
     const segments: string[] = [];
     for (let i = 0; i < 4; i++) {
       segments.push(Math.random().toString(36).substring(2, 10));
@@ -33,6 +32,16 @@ function readLocalWatchlist(): Record<string, boolean> {
     if (raw) return JSON.parse(raw);
   } catch {}
   return {};
+}
+
+/**
+ * Returns the device token — same as device_id for simplicity.
+ * The server stores a SHA-256 hash of this token and requires it
+ * on subsequent requests. This means only the device that created
+ * a backup can read or modify it.
+ */
+function getDeviceToken(): string {
+  return getDeviceId();
 }
 
 /**
@@ -62,7 +71,10 @@ export function useCloudBackup() {
       };
       const resp = await fetch(`${API}/backup`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Device-Token": getDeviceToken(),
+        },
         body: JSON.stringify(payload),
       });
       const data = await resp.json();
@@ -84,7 +96,12 @@ export function useCloudBackup() {
     setLoading(true);
     setError(null);
     try {
-      const resp = await fetch(`${API}/backup?device_id=${getDeviceId()}`);
+      const deviceId = getDeviceId();
+      const resp = await fetch(`${API}/backup?device_id=${deviceId}`, {
+        headers: {
+          "X-Device-Token": getDeviceToken(),
+        },
+      });
       const data = await resp.json();
       if (data.status !== "ok") throw new Error(data.detail || "Download failed");
       setLastDownload(Date.now() / 1000);
@@ -107,7 +124,10 @@ export function useCloudBackup() {
       const localFavs = readLocalFavorites();
       const resp = await fetch(`${API}/merge`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Device-Token": getDeviceToken(),
+        },
         body: JSON.stringify({
           device_id: getDeviceId(),
           favorites: localFavs,

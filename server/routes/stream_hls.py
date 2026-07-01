@@ -15,7 +15,8 @@ from .stream_core import build_stream_url
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["stream"])
 
-CACHE_DIR = Path("/tmp/stv_cache")
+from config import CACHE_DIR
+
 HLS_DIR = CACHE_DIR / "hls"
 HLS_DIR.mkdir(parents=True, exist_ok=True)
 _hls_tasks: dict[str, asyncio.Task] = {}

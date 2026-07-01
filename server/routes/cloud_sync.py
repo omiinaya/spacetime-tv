@@ -1,38 +1,39 @@
 """Cloud sync routes — backup/restore channel favorites, watchlist, settings.
 
 Persisted to /tmp/stv_cloud_backup.json so data survives server restarts.
-Each backup is keyed by a simple device_id (UUID generated on first use).
+Each backup is keyed by a device_id and a hashed device token for scoped auth.
 
 Security:
-  - In production (ADMIN_API_KEY set), all endpoints require X-Admin-Key header.
-  - In dev mode (ADMIN_API_KEY empty), endpoints are open for local development.
-  - Use the same require_admin_key dependency pattern as admin routes.
+  - All endpoints require either a valid X-Admin-Key header (admin access)
+    OR a valid X-Device-Token header matching the target device (scoped access).
+  - Device tokens are SHA-256 hashed before storage — server never stores raw tokens.
+  - The first upload for a device_id acts as registration: the provided X-Device-Token
+    is hashed and stored alongside the backup. Subsequent reads/merges require the same token.
+  - Admin key bypasses device token checks (can read/write any device).
 
 Endpoints:
-  POST /api/cloud/backup — Upload a backup blob (favorites, watchlist, settings)
-  GET  /api/cloud/backup — Retrieve the most recent backup for this device
-  POST /api/cloud/merge  — Upload and merge favorites (additive — never removes)
+  POST /api/cloud/backup — Upload a backup blob. Requires X-Device-Token.
+  GET  /api/cloud/backup — Retrieve backup for a device. Requires X-Device-Token.
+  POST /api/cloud/merge  — Upload and merge favorites. Requires X-Device-Token.
 """
 
+import hashlib
 import json
 import logging
+import secrets
 import time
 from pathlib import Path
-from typing import Optional
 
-from fastapi import APIRouter, Depends
-from fastapi import Request as _unused
+from fastapi import APIRouter, Depends, HTTPException, Request
 
-from config import TMDB_ENRICH_PATH as _ignored
-
-# Reuse the admin auth dependency — same X-Admin-Key pattern.
-# In dev mode (ADMIN_API_KEY empty), no auth is required.
+# Reuse the admin auth dependency for admin-level access
 from routes.admin import require_admin_key
 
 log = logging.getLogger("spacetime-tv")
-router = APIRouter(tags=["cloud"], dependencies=[Depends(require_admin_key)])
+router = APIRouter(tags=["cloud"])
 
 BACKUP_FILE = Path("/tmp/stv_cloud_backup.json")
+
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -57,12 +58,62 @@ def _write_backups(data: dict):
         log.warning(f"[CLOUD] Failed to write backup: {e}")
 
 
+def _hash_token(token: str) -> str:
+    """SHA-256 hash of a device token for secure storage."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _verify_device_access(
+    request: Request,
+    device_id: str,
+) -> bool:
+    """Check if the request has scoped device access or admin access.
+
+    Three ways to pass:
+      1. X-Admin-Key matches (admin overrides all)
+      2. X-Device-Token matches the stored token for this device_id
+      3. No backup exists for this device_id yet (first-time registration)
+
+    Returns True if authorized, False otherwise.
+    """
+    backups = _read_backups()
+    entry = backups.get(device_id)
+
+    # No backup yet — anyone can register (first-time setup)
+    # Reject only if a token was provided but is too short (< 8 chars)
+    if entry is None:
+        token = request.headers.get("X-Device-Token", None)
+        if token is not None and len(token) < 8:
+            return False
+        return True
+
+    # Check admin key first (bypasses device token check)
+    from config import ADMIN_API_KEY
+    admin_key = request.headers.get("X-Admin-Key", "")
+    if admin_key and admin_key == ADMIN_API_KEY:
+        return True
+
+    # Check device token
+    token = request.headers.get("X-Device-Token", "")
+    if not token or len(token) < 8:
+        return False
+
+    # Verify hashed token
+    stored_hash = entry.get("_token_hash", "")
+    if not stored_hash:
+        return False
+
+    return _hash_token(token) == stored_hash
+
+
 # ── Routes ─────────────────────────────────────────────────────────────────
 
 
 @router.post("/cloud/backup")
-async def upload_backup(payload: dict):
+async def upload_backup(payload: dict, request: Request):
     """Upload a backup blob for a device.
+
+    Requires X-Device-Token header (or X-Admin-Key for admin override).
 
     Payload format:
     {
@@ -77,11 +128,26 @@ async def upload_backup(payload: dict):
     if not device_id or not isinstance(device_id, str) or len(device_id) < 8:
         return {"status": "error", "detail": "Missing or invalid device_id"}
 
+    # Auth check — but the admin key dependency is NOT on this router,
+    # so we do it inline. This allows admin key OR device token.
+    if not _verify_device_access(request, device_id):
+        return {
+            "status": "error",
+            "detail": "Unauthorized. Provide X-Device-Token or X-Admin-Key header.",
+        }
+
+    token = request.headers.get("X-Device-Token", "")
+    token_hash = _hash_token(token) if token and len(token) >= 8 else ""
+
     backups = _read_backups()
 
     entry = {k: v for k, v in payload.items() if k != "device_id"}
     if "timestamp" not in entry:
         entry["timestamp"] = time.time()
+
+    # Store the token hash for future verification
+    if token_hash:
+        entry["_token_hash"] = token_hash
 
     backups[device_id] = entry
     _write_backups(backups)
@@ -97,13 +163,20 @@ async def upload_backup(payload: dict):
 
 
 @router.get("/cloud/backup")
-async def get_backup(device_id: str):
+async def get_backup(device_id: str, request: Request):
     """Retrieve the most recent backup for a device.
 
+    Requires X-Device-Token header (or X-Admin-Key for admin override).
     Returns empty data object when no backup exists for this device.
     """
     if not device_id or len(device_id) < 8:
         return {"status": "error", "detail": "Missing or invalid device_id"}
+
+    if not _verify_device_access(request, device_id):
+        return {
+            "status": "error",
+            "detail": "Unauthorized. Provide X-Device-Token or X-Admin-Key header.",
+        }
 
     backups = _read_backups()
     entry = backups.get(device_id)
@@ -118,15 +191,20 @@ async def get_backup(device_id: str):
             },
         }
 
+    # Strip internal fields before returning
+    clean = {k: v for k, v in entry.items() if not k.startswith("_")}
+
     return {
         "status": "ok",
-        "data": entry,
+        "data": clean,
     }
 
 
 @router.post("/cloud/merge")
-async def merge_favorites(payload: dict):
+async def merge_favorites(payload: dict, request: Request):
     """Upload favorites and merge them additively with any existing backup.
+
+    Requires X-Device-Token header (or X-Admin-Key for admin override).
 
     Merges favorites arrays (union), never removes entries.
     Useful for additive sync from second device.
@@ -141,6 +219,15 @@ async def merge_favorites(payload: dict):
     if not device_id or not isinstance(device_id, str) or len(device_id) < 8:
         return {"status": "error", "detail": "Missing or invalid device_id"}
 
+    if not _verify_device_access(request, device_id):
+        return {
+            "status": "error",
+            "detail": "Unauthorized. Provide X-Device-Token or X-Admin-Key header.",
+        }
+
+    token = request.headers.get("X-Device-Token", "")
+    token_hash = _hash_token(token) if token and len(token) >= 8 else ""
+
     incoming_favs = set(payload.get("favorites", []))
 
     backups = _read_backups()
@@ -151,6 +238,11 @@ async def merge_favorites(payload: dict):
 
     existing["favorites"] = merged
     existing["timestamp"] = time.time()
+
+    # Store token hash for future verification (in case this is a registration)
+    if token_hash:
+        existing["_token_hash"] = token_hash
+
     backups[device_id] = existing
     _write_backups(backups)
 

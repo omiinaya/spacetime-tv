@@ -63,3 +63,6 @@ CORS_ORIGINS = os.getenv("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",")
 RATE_WINDOW = 60  # 1 minute window
 RATE_SEARCH_LIMIT = 100     # requests per window for search/proxy
 RATE_DEFAULT_LIMIT = 1000   # requests per window for everything else
+
+# Cache directory for transcoded files, image cache, etc.
+CACHE_DIR = Path("/tmp/stv_cache")
