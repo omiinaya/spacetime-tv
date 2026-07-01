@@ -11,9 +11,6 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-### P4 — Add shaka-player to manualChunks in vite.config.ts (Performance)
-shaka-player (with its bundled subtitle engine, STT, RTL, Translation API) inflates the player chunk by ~700 KB. Add to manualChunks to isolate it in a separate vendor chunk.
-
 ### P4 — Add `role="dialog"` + aria-modal + focus trap to PinPrompt and KeyboardShortcuts (Accessibility)
 Current modal overlays lack proper dialog semantics for screen readers.
 
@@ -26,6 +23,9 @@ Large search results page needs decomposition.
 ---
 
 ## Recently Completed
+
+### ✅ P4 — Add shaka-player to manualChunks in vite.config.ts (Performance)
+Added `shaka` chunk to `manualChunks` in `vite.config.ts` — isolates shaka-player (~700 KB with its bundled subtitle engine, STT, RTL, Translation API) into a separate vendor chunk. All 1208 frontend tests pass, 597 backend tests pass, TypeScript 0 errors. Commit `51a834a`.
 
 ### ✅ P2 — Add keyboard handlers to `role="button"` divs (accessibility)
 All 5 `role="button"` `div` elements already had complete `onKeyDown` handlers for Enter/Space (Movies.tsx:478, WatchlistPage.tsx:160/353, Series.tsx:530/664). Item was already implemented.
