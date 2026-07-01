@@ -937,6 +937,63 @@ def test_safe_convert_handles_exception():
     assert "test" not in _converting
 
 
+# ── convert_to_mp4 unit tests (exercises lines currently uncovered) ─────────
+
+
+@pytest.mark.asyncio
+async def test_convert_to_mp4_returns_early_when_output_exists(tmp_path):
+    """convert_to_mp4 returns immediately if output MP4 already exists."""
+    from routes.stream_convert import convert_to_mp4, CACHE_DIR
+    from unittest.mock import patch
+
+    output_path = tmp_path / "movie_1.mp4"
+    output_path.write_text("fake mp4")
+
+    with patch("routes.stream_convert.CACHE_DIR", tmp_path):
+        await convert_to_mp4("1", "movie")
+    assert output_path.exists()
+
+
+@pytest.mark.asyncio
+async def test_convert_to_mp4_download_fails(tmp_path):
+    """convert_to_mp4 handles subprocess download failure gracefully."""
+    from routes.stream_convert import convert_to_mp4
+    from unittest.mock import patch, AsyncMock
+
+    proc = AsyncMock()
+    proc.returncode = 1
+    proc.communicate = AsyncMock(return_value=(b"", b"error: connection failed"))
+
+    with (
+        patch("routes.stream_convert.CACHE_DIR", tmp_path),
+        patch("routes.stream_convert.build_stream_url", return_value="http://fake.url/video.mkv"),
+        patch("asyncio.create_subprocess_exec", return_value=proc),
+    ):
+        await convert_to_mp4("2", "movie")
+
+
+@pytest.mark.asyncio
+async def test_convert_to_mp4_ffmpeg_fails(tmp_path):
+    """convert_to_mp4 handles ffmpeg conversion failure gracefully."""
+    from routes.stream_convert import convert_to_mp4
+    from unittest.mock import patch, AsyncMock
+
+    mkv_path = tmp_path / "movie_3.mkv"
+    mkv_path.write_text("fake mkv content")
+
+    ff_proc = AsyncMock()
+    ff_proc.returncode = 1
+    ff_proc.stderr.readline = AsyncMock(side_effect=[b"error: invalid data", b""])
+    ff_proc.stdout.readline = AsyncMock(return_value=b"")
+
+    with (
+        patch("routes.stream_convert.CACHE_DIR", tmp_path),
+        patch("routes.stream_convert.build_stream_url", return_value="http://fake.url/video.mkv"),
+        patch("asyncio.create_subprocess_exec", return_value=ff_proc),
+    ):
+        await convert_to_mp4("3", "movie")
+
+
 # ── Tests for build_timeshift_url ─────────────────────────────────────────
 
 def test_build_timeshift_url_uses_correct_format():
