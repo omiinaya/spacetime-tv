@@ -233,7 +233,7 @@
 | P3.4 — Rich EPG with program metadata | ✅ **Done** — TMDB enrichment on hover + fallback images via tmdb-enrich CLI. Guide also has search + programme descriptions. |
 | P3.5 — Multi-language audio track selector for VOD | ✅ **Done** — Backend ffmpeg remux + frontend switchAudioTrack(). Click a track in the AudioSelector to switch — player recreates with selected audio, seeks to current position. |
 | P3.7 — EPG programme → TMDB enrichment | ✅ **Done** — `/api/guide/enrich` endpoint with tmdb-enrich CLI. Programme hover popovers show poster, rating, overview. |
-| P3.8 — ManagedMediaSource API for MSE optimization | Modern browsers support ManagedMediaSource (Chrome 120+, Safari 17+). hls.js v1.6+ has partial support. |
+| **P3.8 — ManagedMediaSource API for MSE optimization** | ✅ **Shipped** — hls.js v1.7+ auto-enables ManagedMediaSource when available (Chrome 120+, Safari 17+). Reduces MSE memory overhead on long streams. No code change needed. |
 | **P3.9 — Auto-advance next episode (series)** | ✅ **Done** — Player auto-navigates to next episode in season at ≥95% progress. Stores episode list + index in sessionStorage. |
 | **Bug: unified endpoint limit** | ✅ **Fixed** — `/api/movies/unified` raised 422 for limit >100. Backend bumped to 1000. Watchlist page now uses 1000. |
 | **Bug: nested buttons** | ✅ **Fixed** — Card wrappers changed from `<button>` to `<div role="button">` to fix `validateDOMNesting` warnings on Movies, Series, Watchlist pages. |
