@@ -11,7 +11,7 @@
 
 | Dimension | Grade | Score |
 |-----------|-------|-------|
-| **Testing depth** | A | 95% |
+| **Testing depth** | A | 96% |
 | **Frontend quality** | A | 93% |
 | **Backend architecture** | B+ | 80% |
 | **Feature completeness** | B+ | 82% |
@@ -45,11 +45,12 @@
 - 16/16 hooks have tests — **100%** hook coverage
 - 10/10 lib modules have tests — **100%** lib coverage
 
-### E2E: 56 tests (46 desktop + 10 mobile) (✅ Covers all major flows + responsive)
-- Guide, Live TV, Movies, Series, Search, Watchlist, Navigation — all covered
+### E2E: 74 tests (58 desktop + 16 mobile) (✅ All major flows + error states + responsive)
+- Guide, Live TV, Movies, Series, Search, Watchlist, Navigation, Recordings — all covered
+- **Error-state tests** — server-down (homepage, movies, series, live TV), empty search, missing EPG data, watchlist API failure — all pages render app shell, don't crash
+- **Recordings/DVR page** — page load, empty state, nav icon, API response shape, recording metadata fields
 - Mobile Chrome (Pixel 5), Mobile Safari (iPhone 13), Tablet (iPad) viewport projects
 - No offline/PWA install flow tests
-- No error-state tests (server down, blank EPG, empty search)
 
 ---
 
@@ -254,6 +255,8 @@
 ||| **Request body size limits** | P4.9: Added RequestBodySizeMiddleware (rejects POST/PUT/PATCH >1MB with 413). 6 new tests. Configurable via MAX_REQUEST_BODY env var. 592 backend tests pass. |
 ||| **GZip compression** | P4.10: Added FastAPI GZipMiddleware for responses >1 KB. JSON payloads compress 5-10x over the wire. 0 new tests needed (transparent middleware). |
 ||| **Integration tests (real IPTV)** | P4.13: 8 new integration tests (Live/VOD/Series/Health) using FastAPI TestClient against real IPTV provider. Auto-skip with placeholder creds. `pytest -m integration -v`. |
+||| **E2E error-state tests** | Added 9 error-state E2E tests (server-down on homepage/movies/series/live TV/search/watchlist, empty search, missing EPG data, mobile server-down, mobile empty search). All pages render app shell without crashing when API is unreachable. |
+||| **E2E Recordings tests** | Added 5 E2E tests for Recordings/DVR page (page load, API response, empty state, sidebar nav icon, recording metadata fields). |
 ||| **DX cleanup** | P4.11: Removed 4 stale repo artifacts (architecture.html, spacetime-tv.service, .cursorrules, .gitmessage). Updated .gitignore. Fixed (window as any).screen → typed Screen.refreshRate augmentation. Fixed 3 catch (e: any) → catch (e: unknown) in useCloudBackup. |
 | **P3.2 — Tailwind v4 migration** | Migrated from postcss+JS-config to `@tailwindcss/vite` + CSS `@theme`. Removed postcss, autoprefixer, tailwind.config.js. Upgraded `tailwind-merge` to v3. Build clean, all tests pass. |
 | **Live TV "Now Playing" EPG** | `/api/guide/now` batch endpoint + `useNowPlaying` hook. Fetches current programme for the first 200 visible channels every 30s. Programme title shown as subtitle on channel grid cards. |
