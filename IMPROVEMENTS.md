@@ -11,6 +11,10 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
+### P4 — Upgrade lucide-react ^1.22.0 → ^1.23.0 (Dependency)
+lucide-react 1.23.0 is available on npm (latest stable). No breaking changes expected.
+Bump in package.json + run `npm install`.
+
 ### P4 — Split Search.tsx (855 lines) into sub-components (Maintainability)
 Large search results page needs decomposition.
 
@@ -20,12 +24,9 @@ included-router partial matches resolve, returning 404/SPA index instead of 405.
 Only affects HEAD on GET-only streaming routes (SSE). Low impact but confusing
 for API consumers. Fix: add explicit HEAD handler or reorder route resolution.
 
-### P4 — Upgrade lucide-react 1.22.0 → 1.23.0 (Dependency)
-Minor bump with new icons and fixes. No breaking changes expected.
-
 ### P4 — Check for new hls.js stable release (Dependency)
-hls.js v1.7.0 was in canary/RC when last checked. Latest stable is 1.6.16.
-No v1.7.0 stable yet. Re-check next tick.
+hls.js is pinned at `^1.7.0-beta.1`. Latest stable is 1.6.16 (no v1.7.0 stable yet).
+Re-check next tick.
 
 ---
 
@@ -63,11 +64,6 @@ No v1.7.0 stable yet. Re-check next tick.
 
 ### ✅ P4 — Add shaka-player to manualChunks in vite.config.ts (Performance)
 Added `shaka` chunk to `manualChunks` in `vite.config.ts` — isolates shaka-player (~700 KB with its bundled subtitle engine, STT, RTL, Translation API) into a separate vendor chunk. All 1208 frontend tests pass, 597 backend tests pass, TypeScript 0 errors. Commit `51a834a`.
-
-### ✅ P2 — Fix duplicate Toaster + update .env.example with all env vars
-- Removed duplicate `<Toaster>` from `main.tsx` (consolidated in `App.tsx`)
-- `server/.env.example` now documents 8 env vars (was 4): added `ADMIN_API_KEY`, `EPG_CACHE_TTL`, `TMDB_ENRICH_PATH`, `MAX_REQUEST_BODY`, `MAX_FILE_UPLOAD`, `CORS_ORIGINS`
-- All 597 backend tests pass, TypeScript 0 errors. Commit `f02ed63`.
 
 ---
 
