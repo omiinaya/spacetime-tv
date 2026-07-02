@@ -11,10 +11,6 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-### P4 — Upgrade lucide-react ^1.22.0 → ^1.23.0 (Dependency)
-lucide-react 1.23.0 is available on npm (latest stable). No breaking changes expected.
-Bump in package.json + run `npm install`.
-
 ### P4 — Split Search.tsx (855 lines) into sub-components (Maintainability)
 Large search results page needs decomposition.
 
@@ -31,6 +27,10 @@ Re-check next tick.
 ---
 
 ## Recently Completed
+
+### ✅ P4 — Upgrade lucide-react ^1.22.0 → ^1.23.0 (Dependency)
+Bumped lucide-react to 1.23.0 — new icons and fixes. No breaking changes.
+All 1209 frontend tests pass, TypeScript 0 errors. Commit `181a887`.
 
 ### ✅ P4 — Split Series.tsx (957 lines) into sub-components (Maintainability)
 - Extracted `ContinueWatchingRow` → `@/components/ContinueWatchingRow.tsx`
