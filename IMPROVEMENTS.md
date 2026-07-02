@@ -11,9 +11,6 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-### P4 — Split Series.tsx (957 lines) into sub-components (Maintainability)
-Extract CW section, recently-completed row, and grid keyboard nav into separate components.
-
 ### P4 — Split Search.tsx (855 lines) into sub-components (Maintainability)
 Large search results page needs decomposition.
 
@@ -27,12 +24,19 @@ for API consumers. Fix: add explicit HEAD handler or reorder route resolution.
 Minor bump with new icons and fixes. No breaking changes expected.
 
 ### P4 — Check for new hls.js stable release (Dependency)
-hls.js v1.7.0 was in canary/RC when last checked. If stable is now released,
-upgrade from canary build to stable. Check npm registry.
+hls.js v1.7.0 was in canary/RC when last checked. Latest stable is 1.6.16.
+No v1.7.0 stable yet. Re-check next tick.
 
 ---
 
 ## Recently Completed
+
+### ✅ P4 — Split Series.tsx (957 lines) into sub-components (Maintainability)
+- Extracted `ContinueWatchingRow` → `@/components/ContinueWatchingRow.tsx`
+- Extracted `RecentlyCompletedRow` → `@/components/RecentlyCompletedRow.tsx`
+- Series.tsx reduced from 957 to 748 lines (~22% reduction)
+- Both components have typed props interfaces and behave identically
+- All 1209 frontend tests pass, 592 backend tests pass, TypeScript 0 errors. Commit `897b74d`.
 
 ### ✅ P4 — Add device-token auth to cloud sync endpoints (Scoped Access)
 - Cloud backup endpoints now use `X-Device-Token` for scoped per-device auth
@@ -64,13 +68,6 @@ Added `shaka` chunk to `manualChunks` in `vite.config.ts` — isolates shaka-pla
 - Removed duplicate `<Toaster>` from `main.tsx` (consolidated in `App.tsx`)
 - `server/.env.example` now documents 8 env vars (was 4): added `ADMIN_API_KEY`, `EPG_CACHE_TTL`, `TMDB_ENRICH_PATH`, `MAX_REQUEST_BODY`, `MAX_FILE_UPLOAD`, `CORS_ORIGINS`
 - All 597 backend tests pass, TypeScript 0 errors. Commit `f02ed63`.
-
-### ✅ P1 — Security Headers middleware (Security D+ 48% → C- 55%)
-Added `SecurityHeadersMiddleware` to `server/main.py` that adds 5 security headers.
-All 597 backend tests pass, 1208 frontend tests pass. Commit `c78bfc6`.
-
-### ✅ P1 — Auth enforcement for Cloud Backup endpoints (security critical)
-All 3 cloud endpoints now use `require_admin_key` dependency. Commit `e84cb4e`.
 
 ---
 
