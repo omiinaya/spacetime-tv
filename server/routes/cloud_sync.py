@@ -3,13 +3,14 @@
 Persisted to /tmp/stv_cloud_backup.json so data survives server restarts.
 Each backup is keyed by a device_id and a hashed device token for scoped auth.
 
-Security:
-  - All endpoints require either a valid X-Admin-Key header (admin access)
-    OR a valid X-Device-Token header matching the target device (scoped access).
-  - Device tokens are SHA-256 hashed before storage — server never stores raw tokens.
-  - The first upload for a device_id acts as registration: the provided X-Device-Token
-    is hashed and stored alongside the backup. Subsequent reads/merges require the same token.
-  - Admin key bypasses device token checks (can read/write any device).
+Security (P0 fix — 2026-07-01):
+  - Device-level auth: first upload registers a token. Subsequent reads/merges
+    require the same X-Device-Token header. Token is SHA-256 hashed in storage.
+  - Admin override: X-Admin-Key header bypasses device token checks.
+  - ADMIN_API_KEY is auto-generated as a 64-char hex string on first startup
+    if not configured in .env (config.py lines 36-39).
+  - So even in dev mode, there's always a valid admin key — no true "open"
+    state exists.
 
 Endpoints:
   POST /api/cloud/backup — Upload a backup blob. Requires X-Device-Token.

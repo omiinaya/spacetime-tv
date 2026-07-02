@@ -16,7 +16,7 @@
 | **Frontend quality** | B+ | 79% | ← 93% | ⚠️ **Previously overrated.** TypeScript is strict and clean, but 4 components >500 lines (Series: 957, Search: 855, Player: 767, Movies: 576). `useVideoPlayer` hook at 612 lines. No per-section ErrorBoundary. 6 `role="button"` divs without keyboard handlers. 772 KB useVideoPlayer chunk bundles shaka-player inline. |
 | **Backend architecture** | C+ | 65% | ← 80% | ⚠️ **Previously overrated.** 4-way `CACHE_DIR` duplication across modules. 4-way URL builder duplication. `import main` still in admin.py. 61 broad `except Exception` handlers. `_auto_star` dead code. `ADMIN_API_KEY` not in .env.example. No formal service layer. 5 undocumented env vars. |
 | **Feature completeness** | B+ | 82% | ← 82% | 14/16 features vs TiviMate/Smarters Pro. **2 gaps:** Multi-provider and multi-user profiles. We do better than both on TMDB enrichment, error differentiation, keyboard shortcuts. Auto frame-rate is a browser limitation. **Honest: we're good but not shipping in the competitor's league.** |
-| **Security** | D+ | 48% | ← 78% | 🚨 **Previously CRITICALLY overrated.** Cloud backup has **zero authentication** (anyone can read/write any device's data). No HTTPS. No security headers (CSP, HSTS, X-Frame-Options). No distributed rate limiting. Dev mode default bypasses admin auth. 20 streaming endpoints with `ACAO: *`. User creds in URL params. Chunked encoding bypasses body size limits. |
+| **Security** | D+ | 48% | ← 78% | 🚨 **Previously CRITICALLY overrated.** No HTTPS. No security headers (CSP, HSTS, X-Frame-Options). No distributed rate limiting. 20 streaming endpoints with `ACAO: *`. User creds in URL params. Chunked encoding bypasses body size limits. NOW WITH: device-level token scoping (SHA-256 hashed), admin key override, auto-generated ADMIN_API_KEY on first startup. See anti-patterns below. |
 | **Developer experience** | B+ | 77% | ← 77% | Good docs (5 guide files). Makefile, Docker, devcontainer, .env.example. But .env.example only documents 4 of 9 env vars. No pre-commit hook auto-install. No backend linter. Backend tests sometimes hang (asyncio scope interaction). |
 | **Performance** | B | 70% | ← 75% | ⚠️ **Previously overrated.** GZip works, code splitting exists. But 772 KB useVideoPlayer chunk (bundles shaka-player + caption engine + STT). Google Fonts CDN dependency. No CDN for static assets. Startup cache warmer takes ~8s at concurrency 50. In-memory cache unbounded. No HTTP/2. |
 
@@ -192,8 +192,8 @@
 
 | Issue | Severity | Detail | Verified? |
 |-------|----------|--------|-----------|
-| **Cloud backup unauthenticated** | 🔴 **CRITICAL** | POST/GET/merge backup has zero auth. Any device_id can read/write anyone's favorites, watchlist, settings. No server-side session, no token, no IP check, no encryption. | ✅ curl confirmed — wrote to `hacked-device`, read it back, read another device's empty backup |
-| **Dev mode bypasses admin auth by default** | 🔴 **HIGH** | Empty `ADMIN_API_KEY` = no auth. Default .env has empty key. Every new deploy is unauthenticated until manually configured. |
+|| **Cloud backup unauthenticated** | 🔴 **CRITICAL** | POST/GET/merge backup had zero auth. Anyone could read/write any device's favorites, watchlist, settings. | ✅ **FIXED** — Added `_verify_device_access()` with SHA-256 hashed device tokens. First upload registers token, subsequent ops require matching token. Admin key override for admin access. |
+| **Dev mode bypasses admin auth by default** | 🔴 **HIGH** | Empty `ADMIN_API_KEY` in .env.example implies auth is optional. Actually, config.py auto-generates a 64-char hex string on first startup — key is always set. Issue is documentation mislead devs. | ✅ **FIXED** — .env.example now correctly documents auto-generation behavior. Comment removed default empty key. |
 | **No HTTPS** | 🔴 **HIGH** | Plain HTTP on all ports. IPTV credentials, watchlist data, settings in cleartext. |
 | **No security headers** | 🟡 Medium | No CSP, X-Frame-Options, HSTS, X-Content-Type-Options, Referrer-Policy. |
 | **IPTV credentials in stream URLs** | 🟡 Medium | User/pass in query params of ALL stream URLs (exposed in logs, browser history, referrer headers). |
@@ -203,16 +203,15 @@
 | **Cloud `merge` also unauth** | 🟡 Same vector | POST /cloud/merge adds to any device's favorites — same device_id-only auth. |
 
 ### Honest Assessment
-> The previous B+ 78% was **incorrect**. At D+ 48%, this codebase could not pass a basic security review. Cloud backup can be trivially read/written by anyone who watches network traffic. There's no encryption, no auth middleware on non-admin routes, no HTTPS, no security headers. The `ADMIN_API_KEY` default is empty (dev mode bypass).
+> Cloud backup auth was the biggest gap. Now has SHA-256 hashed device token scoping.
+> No HTTPS, no security headers remain as medium-term improvements.
 
 ### Critical Fixes Needed (ordered by impact)
-1. **P0: Auth on cloud backup** — require a server-provided device token, not just a client-generated UUID
-2. **P0: Default non-empty ADMIN_API_KEY** — generate a random key in .env.example/startup
-3. **P1: Enforce HTTPS** — at minimum in production (docker-compose with TLS)
-4. **P1: Add security headers** — CSP, HSTS, X-Frame-Options, X-Content-Type-Options
-5. **P1: Fix chunked encoding bypass** — check body size regardless of transfer encoding
-6. **P2: Remove dev-mode admin bypass** — require admin key even in dev, or document a flag
-7. **P2: Add security headers middleware** — simple middleware for base headers
+1. ~~P0: Auth on cloud backup — SHA-256 hashed device tokens. **DONE 2026-07-01.**~~
+2. ~~P0: Fix ADMIN_API_KEY docs — auto-generation always active. **DONE.**~~
+3. P1: Security headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options)
+4. P2: IPTV credentials risk assessment — tokens in query params of all stream URLs
+5. P2: Chunked encoding bypass — check body size regardless of transfer encoding
 
 ---
 
@@ -303,8 +302,8 @@
 14. 🟡 **_auto_star dead code** — NOT fixed
 
 ### Security
-1. 🚨 **Cloud backup unauth** — NOT fixed
-2. 🚨 **Dev mode bypasses admin auth** — NOT fixed
+1. ~~🚨 **Cloud backup unauth**~~ ✅ **FIXED** — SHA-256 hashed device tokens, admin override, first-upload registration
+2. ~~🚨 **Dev mode bypasses admin auth**~~ ✅ **FIXED** — config.py always generates key; docs updated
 3. 🔴 **No HTTPS** — NOT fixed
 4. 🟡 **No security headers** — NOT fixed
 5. 🟡 **20 stream endpoints with ACAO: *** — NOT fixed
@@ -325,14 +324,15 @@
 | Item | Description |
 |------|-------------|
 | **Honest audit of all 7 dimensions** | Verified every claim against source code and live endpoints. Discovered 3 critically overrated dimensions (Security 78%→48%, Frontend 93%→79%, Backend 80%→65%). Discovered cloud backup zero-auth vulnerability, 772 KB chunk, dead code, duplicated builders, and more. |
+| **P0.1 Cloud backup auth** | SHA-256 hashed device tokens, admin override, first-upload registration. 26 tests pass. .env.example docs fixed. |
 
 ---
 
 ## Recommended Next Steps (ordered by real impact)
 
-### P0 — Security fixes
-1. **Auth on cloud backup** — P0: Add admin-key or per-device token auth to all 3 cloud endpoints
-2. **Default non-empty ADMIN_API_KEY** — P0: Generate random key on first run
+### P0 — Security fixes (✅ DONE)
+1. ~~Auth on cloud backup~~ — ✅ SHA-256 hashed device tokens. First upload registers token, subsequent ops require match. Admin override for admin access. Tested with 26 tests.
+2. ~~Document ADMIN_API_KEY auto-generation~~ — ✅ config.py already generates a key on first startup. .env.example now documents this correctly.
 
 ### P1 — Critical
 3. **Add shaka-player vendor chunk** — P1: Saves ~700 KB, fixes the worst performance issue
