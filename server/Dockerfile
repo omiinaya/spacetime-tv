@@ -13,11 +13,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Application code
 COPY . .
 
-# Copy frontend build into expected location
-COPY web/dist /app/web/dist
-
 # Override static dir for Docker (ROOT resolves to /app)
 ENV STATIC_DIR=/app/web/dist
+
+# The frontend dist is mounted at runtime via docker-compose volume (./web/dist:/app/web/dist)
 
 EXPOSE 8720
 

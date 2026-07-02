@@ -9,7 +9,7 @@ services:
     env_file:
       - ./server/.env
     volumes:
-      - ./server/web/dist:/app/web/dist # hot-reload frontend builds
+      - ./web/dist:/app/web/dist # hot-reload frontend builds
       - ./server/epg_cache.json:/app/epg_cache.json # persist EPG cache
     restart: unless-stopped
     healthcheck:

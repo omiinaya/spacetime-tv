@@ -19,7 +19,11 @@ EPG_CACHE_TTL = int(os.getenv("EPG_CACHE_TTL", "3600"))  # 1 hour default
 
 # Paths
 ROOT = Path(__file__).resolve().parent.parent
-STATIC_DIR = ROOT / "web" / "dist"
+STATIC_DIR_env = os.getenv("STATIC_DIR")
+if STATIC_DIR_env:
+    STATIC_DIR = Path(STATIC_DIR_env)
+else:
+    STATIC_DIR = ROOT / "web" / "dist"
 
 # TMDB v3 API (optional — enriches metadata when set)
 TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
