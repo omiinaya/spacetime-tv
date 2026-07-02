@@ -111,7 +111,7 @@ async def image_proxy(request: Request, url: str = Query(...)):
     except Exception:
         raise HTTPException(400, "Invalid URL")
 
-    allowed_hosts = {"cmc.exchange-cdn.com", "image.tmdb.org"}
+    allowed_hosts = {"cmc.exchange-cdn.com", "image.tmdb.org", "photo-tmdb.com"}
     host = parsed.hostname or ""
     if not any(host == a or host.endswith("." + a) for a in allowed_hosts):
         raise HTTPException(400, f"Host not allowed: {host}")

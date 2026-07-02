@@ -10,7 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response, StreamingResponse
 
-from config import IPTV_BASE, IPTV_PASS, IPTV_USER
+from .stream_core import _vod_url
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["media"])
@@ -21,13 +21,7 @@ SUBTITLE_VTT_CACHE: dict[str, str] = {}
 AUDIO_CACHE: dict[str, list[dict]] = {}
 
 
-def _get_stream_url(stream_id: int, media_type: str = "movie") -> str:
-    """Build the provider MKV URL for ffprobe/ffmpeg."""
-    if media_type == "movie":
-        return f"{IPTV_BASE}/movie/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
-    return f"{IPTV_BASE}/series/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
-
-
+# Uses shared _vod_url from stream_core.py
 # ── Subtitles ───────────────────────────────────────────────────────
 @router.get("/subtitles/probe/{media_type}/{stream_id}")
 async def probe_subtitles(media_type: str, stream_id: int):
@@ -36,7 +30,7 @@ async def probe_subtitles(media_type: str, stream_id: int):
     if cache_key in SUBTITLE_CACHE:
         return {"tracks": SUBTITLE_CACHE[cache_key], "cached": True}
 
-    url = _get_stream_url(stream_id, media_type)
+    url = _vod_url(stream_id, media_type)
     try:
         proc = await asyncio.create_subprocess_exec(
             "/usr/bin/ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", url,
@@ -75,7 +69,7 @@ async def get_subtitles(media_type: str, stream_id: int, track_index: int):
             media_type="text/vtt",
             headers={"Cache-Control": "public, max-age=86400"},
         )
-    url = _get_stream_url(stream_id, media_type)
+    url = _vod_url(stream_id, media_type)
     try:
         proc = await asyncio.create_subprocess_exec(
             "/usr/bin/ffmpeg", "-y",
@@ -112,7 +106,7 @@ async def probe_audio(media_type: str, stream_id: int):
     if cache_key in AUDIO_CACHE:
         return {"tracks": AUDIO_CACHE[cache_key], "cached": True}
 
-    url = _get_stream_url(stream_id, media_type)
+    url = _vod_url(stream_id, media_type)
     try:
         proc = await asyncio.create_subprocess_exec(
             "/usr/bin/ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", url,
@@ -145,7 +139,7 @@ async def probe_audio(media_type: str, stream_id: int):
 @router.get("/audio/stream/{media_type}/{stream_id}/{audio_index}")
 async def stream_audio_track(media_type: str, stream_id: int, audio_index: int):
     """Stream a VOD with only the selected audio track via ffmpeg remux."""
-    url = _get_stream_url(stream_id, media_type)
+    url = _vod_url(stream_id, media_type)
     try:
         proc = await asyncio.create_subprocess_exec(
             "/usr/bin/ffmpeg", "-y",

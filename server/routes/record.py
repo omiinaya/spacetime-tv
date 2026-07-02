@@ -17,7 +17,8 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
 
-from config import IPTV_BASE, IPTV_PASS, IPTV_USER, UA_STR
+from config import IPTV_BASE, UA_STR
+from routes.stream_core import build_stream_url
 from state import _cache
 
 log = logging.getLogger("spacetime-tv")
@@ -46,10 +47,6 @@ def _save_meta(meta: dict[str, dict]) -> None:
     META_FILE.write_text(json.dumps(meta, indent=2, default=str))
 
 
-def _build_stream_url(stream_id: int) -> str:
-    """Build direct IPTV live stream URL."""
-    return f"{IPTV_BASE}/live/{IPTV_USER}/{IPTV_PASS}/{stream_id}.ts"
-
 
 @router.post("/record/start")
 async def start_recording(
@@ -57,7 +54,7 @@ async def start_recording(
     stream_name: str = Query("", description="Optional display name"),
 ):
     """Start recording a live stream. Returns a recording ID."""
-    url = _build_stream_url(stream_id)
+    url = await build_stream_url(stream_id, "live")
 
     # Try to get EPG programme name for metadata
     epg_name = ""

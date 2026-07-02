@@ -14,7 +14,7 @@ export function imageUrl(raw: string): string {
     return m[1].replace(/^https\/\//, "https://").replace(/^http\/\//, "http://");
   }
 
-  if (raw.includes("cmc.exchange-cdn.com")) {
+  if (raw.includes("cmc.exchange-cdn.com") || raw.includes("photo-tmdb.com")) {
     return `/api/image-proxy?url=${encodeURIComponent(raw)}`;
   }
   return raw;
@@ -149,7 +149,7 @@ export const api = {
         `/series?category_id=${catId}&limit=${limit}&offset=${offset}`, signal
       ),
     details: (id: number, signal?: AbortSignal) => get<SeriesDetails>(`/series/${id}`, signal),
-    probe: (id: number, signal?: AbortSignal) => get<ProbeResult>(`/api/series/probe/${id}`, signal),
+    probe: (id: number, signal?: AbortSignal) => get<ProbeResult>(`/series/probe/${id}`, signal),
   },
   guide: {
     get: (offset = 0, limit = 60, signal?: AbortSignal) =>

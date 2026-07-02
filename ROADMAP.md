@@ -209,7 +209,7 @@
 ### Critical Fixes Needed (ordered by impact)
 1. ~~P0: Auth on cloud backup — SHA-256 hashed device tokens. **DONE 2026-07-01.**~~
 2. ~~P0: Fix ADMIN_API_KEY docs — auto-generation always active. **DONE.**~~
-3. P1: Security headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options)
+3. ~~P1: Security headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options) — **DONE.** Already active. CSP updated to include photo-tmdb.com for channel icons.~~
 4. P2: IPTV credentials risk assessment — tokens in query params of all stream URLs
 5. P2: Chunked encoding bypass — check body size regardless of transfer encoding
 
@@ -294,8 +294,8 @@
 6. ~~Inconsistent errors~~ ✅ Fixed (JSONResponse everywhere)
 7. ~~CACHE_TTL confusion~~ ✅ Fixed (CLEANUP_TTL_HOURS)
 8. ~~Admin unauth~~ ✅ Fixed (X-Admin-Key)
-9. 🔴 **CACHE_DIR duplicated in 4 modules** — NOT fixed
-10. 🔴 **URL builders duplicated in 4 modules** — NOT fixed
+9. 🌤 **CACHE_DIR** — already in config.py (sole source)
+10. 🌤 **URL builders duplicated in 4 modules** — P1: FIXED (consolidated into stream_core.py)
 11. 🔴 **import main from admin.py** — NOT fixed
 12. 🔴 **61 broad except handlers** — NOT fixed
 13. 🟡 **No service layer** — NOT fixed
@@ -305,17 +305,17 @@
 1. ~~🚨 **Cloud backup unauth**~~ ✅ **FIXED** — SHA-256 hashed device tokens, admin override, first-upload registration
 2. ~~🚨 **Dev mode bypasses admin auth**~~ ✅ **FIXED** — config.py always generates key; docs updated
 3. 🔴 **No HTTPS** — NOT fixed
-4. 🟡 **No security headers** — NOT fixed
+4. 🌤 **No security headers** — security headers middleware IS active. CSP updated to include photo-tmdb.com
 5. 🟡 **20 stream endpoints with ACAO: *** — NOT fixed
 6. 🟡 **Chunked encoding bypass** — NOT fixed
 
 ### Frontend
-1. 🔴 **772 KB useVideoPlayer chunk** — NOT fixed
+1. 🌤 **772 KB useVideoPlayer chunk** — P1: FIXED (shaka-player in its own chunk)
 2. 🔴 **Series.tsx 957 lines** — NOT fixed
 3. 🔴 **Player.tsx 767 lines** — NOT fixed
-4. 🔴 **Search.tsx 855 lines** — NOT fixed
+4. 🌤 **Search.tsx 855 lines** — P4: SPLIT
 5. 🟡 **6 div-buttons without keyboard handlers** — NOT fixed
-6. 🟡 **Duplicate Toaster** — NOT fixed
+6. 🌤 **Duplicate Toaster** — already only one instance
 
 ---
 
@@ -324,7 +324,11 @@
 | Item | Description |
 |------|-------------|
 | **Honest audit of all 7 dimensions** | Verified every claim against source code and live endpoints. Discovered 3 critically overrated dimensions (Security 78%→48%, Frontend 93%→79%, Backend 80%→65%). Discovered cloud backup zero-auth vulnerability, 772 KB chunk, dead code, duplicated builders, and more. |
-| **P0.1 Cloud backup auth** | SHA-256 hashed device tokens, admin override, first-upload registration. 26 tests pass. .env.example docs fixed. |
+|| **P0.1 Cloud backup auth** | SHA-256 hashed device tokens, admin override, first-upload registration. 26 tests pass. .env.example docs fixed. |
+|| **P0.2 Docker build fix** | curl-cffi dep, volume path, STATIC_DIR env-overridable. Container now builds + starts healthy. |
+|| **P1 URL builder consolidation** | 3 duplicated URL builders (vod.py, media.py, record.py) consolidated into stream_core.py. |
+|| **P1 image-proxy + CSP** | photo-tmdb.com added to CSP img-src + image-proxy allowlist. Channel icons now proxy through backend. |
+|| **P1 series.probe double-/api fix** | Fixed broken `/api/api/series/probe/` URL path in frontend api.ts. |
 
 ---
 

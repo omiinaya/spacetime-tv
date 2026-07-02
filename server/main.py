@@ -179,7 +179,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
             "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: https://image.tmdb.org https://*.tmdb.org; "
+            "img-src 'self' data: https://image.tmdb.org https://*.tmdb.org http://photo-tmdb.com https://photo-tmdb.com; "
             "media-src 'self' blob: data: https: http:; "
             "font-src 'self' data:; "
             "connect-src 'self' https: http:; "

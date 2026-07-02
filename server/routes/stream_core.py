@@ -86,6 +86,12 @@ async def build_stream_url(stream_id: int, stream_type: str) -> str:
     return f"{IPTV_BASE}/{prefix}/{IPTV_USER}/{IPTV_PASS}/{stream_id}.{ext}"
 
 
+def _vod_url(stream_id: int, media_type: str = "movie") -> str:
+    """Build the provider MKV URL for ffprobe/ffmpeg (VOD subtitle/audio context)."""
+    prefix = "movie" if media_type == "movie" else "series"
+    return f"{IPTV_BASE}/{prefix}/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
+
+
 def build_timeshift_url(stream_id: int, duration_seconds: int) -> str:
     """Build timeshift URL for catch-up TV playback.
 

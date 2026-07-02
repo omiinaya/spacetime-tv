@@ -13,16 +13,10 @@ from iptv_client import cached_fetch
 
 from config import IPTV_BASE, IPTV_PASS, IPTV_USER
 from state import _cache, CACHE_VOD_CATEGORIES, CACHE_VOD_CAT, CACHE_VOD_INFO, CACHE_SERIES_CATEGORIES, CACHE_SERIES_CAT, CACHE_SERIES_INFO
+from routes.stream_core import _vod_url
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["vod"])
-
-
-def get_stream_url(stream_id: int, media_type: str = "movie") -> str:
-    """Build the provider MKV URL for ffprobe/ffmpeg."""
-    if media_type == "movie":
-        return f"{IPTV_BASE}/movie/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
-    return f"{IPTV_BASE}/series/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
 
 
 # ── Movies ───────────────────────────────────────────────────────────
@@ -156,5 +150,5 @@ async def series_details(series_id: int):
 @router.get("/download/{media_type}/{stream_id}")
 async def download_stream(media_type: str, stream_id: int):
     """Download a VOD stream as MKV for offline playback."""
-    url = get_stream_url(stream_id, media_type)
+    url = _vod_url(stream_id, media_type)
     return RedirectResponse(url=url, status_code=302)
