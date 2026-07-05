@@ -201,7 +201,7 @@ async def _curl_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
     finally:
         try:
             proc.stdin.close()
-        except Exception:  # pragma: no cover — stdin close error, runtime only
+        except OSError:  # pragma: no cover — stdin close error, runtime only
             pass  # pragma: no cover — stdin close error, runtime only
 
 
@@ -250,7 +250,7 @@ async def _ffmpeg_pipe(cmd: list[str], feed_coro):
             proc.kill()  # pragma: no cover — cleanup only when generator exits early
             try:
                 await proc.wait()
-            except Exception:
+            except OSError:
                 pass  # pragma: no cover — wait error, runtime only
 
 

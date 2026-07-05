@@ -70,7 +70,7 @@ async def start_recording(
                             epg_name = p.get("title", "")
                         break
                 break
-    except Exception:
+    except (ValueError, TypeError):
         pass
 
     display_name = stream_name or epg_name or f"Channel {stream_id}"

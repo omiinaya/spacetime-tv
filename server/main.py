@@ -231,7 +231,7 @@ async def warm_cache():
     try:
         live_all = await cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
         log.info(f"[WARMER] Live: {len(live_all)} streams cached")
-    except Exception as e:
+    except HTTPException as e:
         log.warning(f"[WARMER] Live warm failed (non-fatal): {e}")
 
     # ── VOD + Series in parallel ────────────────────────────────────
@@ -254,7 +254,7 @@ async def warm_cache():
                     for attempt in range(2):
                         try:
                             return await cached_fetch(CACHE_VOD_CAT.format(id=cid), "get_vod_streams", category_id=cid)
-                        except Exception as e:
+                        except HTTPException as e:
                             if attempt == 0:
                                 log.warning(f"[WARMER] VOD cat {cid} failed (retrying): {e}")
                                 await asyncio.sleep(1)

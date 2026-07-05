@@ -53,7 +53,7 @@ def _img_write_disk(cache_key: str, content: bytes, content_type: str):
         _img_meta_path(cache_key).write_text(
             json.dumps({"ct": content_type, "ts": time.time()})
         )
-    except Exception as e:
+    except (OSError, TypeError) as e:
         log.debug(f"Disk cache write failed: {e}")
 
 

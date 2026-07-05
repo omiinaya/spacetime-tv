@@ -166,7 +166,7 @@ async def stream_audio_track(media_type: str, stream_id: int, audio_index: int):
                 if proc.returncode is None:
                     try:
                         proc.kill()
-                    except Exception:
+                    except OSError:
                         pass
 
         return StreamingResponse(

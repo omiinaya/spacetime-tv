@@ -84,7 +84,7 @@ async def run_hls_segmenter(cache_key: str, input_path: Path):
         if mkv_path.exists():
             try:
                 mkv_path.unlink()
-            except Exception:
+            except OSError:
                 pass  # pragma: no cover — unlink error, runtime only
 
 

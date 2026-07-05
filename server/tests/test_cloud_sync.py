@@ -23,7 +23,7 @@ def _cleanup():
     try:
         if BACKUP_FILE.exists():
             BACKUP_FILE.unlink()
-    except Exception:
+    except OSError:
         pass
 
 

@@ -47,7 +47,7 @@ def _read_backups() -> dict:
             data = json.loads(BACKUP_FILE.read_text())
             if isinstance(data, dict):
                 return data
-    except Exception:
+    except (json.JSONDecodeError, OSError):
         pass
     return {}
 
@@ -56,7 +56,7 @@ def _write_backups(data: dict):
     """Write all backups to disk."""
     try:
         BACKUP_FILE.write_text(json.dumps(data, indent=2))
-    except Exception as e:
+    except OSError as e:
         log.warning(f"[CLOUD] Failed to write backup: {e}")
 
 

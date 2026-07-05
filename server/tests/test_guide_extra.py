@@ -18,7 +18,7 @@ def test_epg_sse_returns_event_stream(client):
     try:
         path = app.url_path_for("epg_sse")
         assert path == "/api/v1/epg/events"
-    except Exception:
+    except (AssertionError, KeyError):
         pytest.fail("Route 'epg_sse' not found in app")
 
 
@@ -28,7 +28,7 @@ def test_epg_sse_has_cors_headers(client):
     try:
         path = app.url_path_for("epg_sse")
         assert path == "/api/v1/epg/events"
-    except Exception:
+    except (AssertionError, KeyError):
         pytest.fail("Route 'epg_sse' not found in app")
 
 
