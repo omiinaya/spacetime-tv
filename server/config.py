@@ -49,7 +49,7 @@ MAX_FILE_UPLOAD = int(os.getenv("MAX_FILE_UPLOAD", "52428800"))   # 50 MB for fi
 # Path to tmdb-enrich CLI (browserless SSR extraction from themoviedb.org)
 # No API key required — uses HTML scraping from TMDB's own pages
 # Must be set via TMDB_ENRICH_PATH env var (no fallback)
-TMDB_ENRICH_PATH = os.getenv("TMDB_ENRICH_PATH", "")
+TMDB_ENRICH_PATH = os.getenv("TMDB_ENRICH_PATH")
 
 # CORS — restrict to known origins instead of wide-open *
 # Comma-separated list — overridable via env var
