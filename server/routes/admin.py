@@ -23,8 +23,6 @@ router = APIRouter(tags=["admin"], dependencies=[Depends(require_admin_key)])
 @router.get("/admin/stats")
 async def admin_stats():
     """Admin dashboard: cache stats, popular content, error trends."""
-    # Lazy import to avoid circular dependency with main.py
-    import main as m
     from state import (
         _cache, _cache_hits, _cache_misses,
         epg_cache, SERVER_START_TIME,
@@ -133,46 +131,45 @@ async def admin_stream_health():
 @router.post("/admin/cache/clear")
 async def admin_clear_cache():
     """Clear all in-memory cache entries. Triggers a fresh warm."""
-    import main as m
+    from routes.cache_warmer import start_cache_warmer
     from state import _cache, epg_cache
 
     count = len(_cache)
     _cache.clear()
     epg_cache["data"] = None
     epg_cache["fetched"] = 0
-    m.start_cache_warmer()
+    start_cache_warmer()
     return {"cleared": count, "message": f"Cleared {count} cache entries. Warming started."}
 
 
 @router.post("/admin/cache/warm")
 async def admin_warm_cache():
-    """Force a cache warm cycle (no-op if already warming)."""
-    import main as m
+    """Force a warm cache cycle (no-op if already warming)."""
+    from routes.cache_warmer import is_warm_running, start_cache_warmer
 
-    if m._warm_task is not None and not m._warm_task.done():
+    if is_warm_running():
         return {"message": "Cache warming already in progress."}
-    m.start_cache_warmer()
+    start_cache_warmer()
     return {"message": "Cache warming started."}
 
 
 @router.post("/admin/cache/warm-full")
 async def admin_warm_full_cache():
     """Clear THEN warm the full cache."""
-    import main as m
+    from routes.cache_warmer import start_cache_warmer
     from state import _cache, epg_cache
 
     count = len(_cache)
     _cache.clear()
     epg_cache["data"] = None
     epg_cache["fetched"] = 0
-    m.start_cache_warmer()
+    start_cache_warmer()
     return {"message": f"Full re-warm started. Cleared {count} stale entries."}
 
 
 @router.post("/admin/epg/refresh")
 async def admin_epg_refresh():
     """Trigger an immediate EPG refresh in the background."""
-    import main as m
     from state import epg_cache, _epg_refresh_task
 
     already_running = _epg_refresh_task is not None and not _epg_refresh_task.done()

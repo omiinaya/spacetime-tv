@@ -340,13 +340,7 @@ async def _verify_cache_coherence():
     else:
         log.info(f"[CACHE-COHERENCE] All {len(CACHE_KEY_PATTERNS)} cache keys verified OK")
 
-_warm_task: Optional[asyncio.Task] = None
-
-def start_cache_warmer():
-    """Launch cache warming in background (non-blocking)."""
-    global _warm_task
-    if _warm_task is None or _warm_task.done():
-        _warm_task = asyncio.create_task(warm_cache())
+from routes.cache_warmer import is_warm_running, start_cache_warmer
 
 
 # ── Disk Cache (for VOD MP4, HLS, DASH — persistent across restarts) ────
