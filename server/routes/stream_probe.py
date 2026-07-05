@@ -59,7 +59,9 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
     except (OSError, asyncio.TimeoutError) as e:
         log.warning(f"ffprobe failed for {stream_id}: {e}")
         return {"codec": "unknown", "error": str(e)}
-    except Exception as e:
+    except (ValueError, RuntimeError) as e:
+        # stderr_bytes.decode() may raise ValueError (UnicodeDecodeError);
+        # RuntimeError if the event loop is closed during asyncio operations.
         log.warning(f"ffprobe unexpected error for {stream_id}: {e}")
         return {"codec": "unknown", "error": str(e)}
 

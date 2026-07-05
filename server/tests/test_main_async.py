@@ -9,12 +9,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from state import _cache
+from iptv_client import fetch_iptv
 from main import (
     CACHE_DIR,
     CLEANUP_TTL_HOURS,
-    _cache,
     cleanup_stale_cache,
-    fetch_iptv,
     start_cleanup_task,
 )
 from iptv_client import cached_fetch

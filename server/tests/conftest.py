@@ -36,7 +36,8 @@ from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch as _cached_fetch_patch
 
 # Import main AFTER env vars are set
-from main import app, _cache
+from main import app
+from state import _cache
 
 # ── Lifespan override ──────────────────────────────────────────
 # Prevent background tasks (cache warmer, cleanup) from running during tests.

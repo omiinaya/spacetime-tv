@@ -10,14 +10,16 @@ import pytest
 from fastapi.testclient import TestClient as FastAPITestClient
 from starlette.testclient import TestClient
 
+from state import _cache
+from routes.cache_warmer import (
+    _verify_cache_coherence,
+    start_cache_warmer,
+    warm_cache,
+)
 from main import (
     CACHE_DIR,
     CLEANUP_INTERVAL,
     CLEANUP_TTL_HOURS,
-    _cache,
-    warm_cache,
-    _verify_cache_coherence,
-    start_cache_warmer,
     cleanup_loop,
     cleanup_stale_cache,
     touch_access,

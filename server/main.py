@@ -263,6 +263,8 @@ async def cleanup_loop():
             # Background loop guard: cleanup_stale_cache() may raise OSError (file ops),
             # ValueError (malformed timestamps), KeyError (corrupt index), etc.
             # Must never crash the loop — catch all expected + unexpected exceptions.
+            # Uses `except Exception`, not bare `except`, so asyncio.CancelledError
+            # (subclass of BaseException) propagates for clean shutdown.
             log.error(f"[CLEANUP] Error: {e}")
 
 
