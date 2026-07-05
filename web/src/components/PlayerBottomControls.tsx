@@ -7,7 +7,7 @@ import { QUALITIES, SPEEDS } from "@/hooks/useVideoPlayer";
 import { SleepTimer } from "@/components/SleepTimer";
 import { SubtitleSelector } from "@/components/SubtitleSelector";
 import { AudioSelector } from "@/components/AudioSelector";
-import { PlayerProgressBar } from "@/components/PlayerProgressBar";
+import PlayerProgressBar from "@/components/PlayerProgressBar";
 
 interface PlayerBottomControlsProps {
   controlsVisible: boolean;
@@ -22,7 +22,6 @@ interface PlayerBottomControlsProps {
   qualityIdx: number;
   currentTime: number;
   duration: number;
-  buffered: number;
   progressPct: number;
   bufferedPct: number;
   isBehindLive: boolean;
@@ -110,7 +109,7 @@ export default function PlayerBottomControls({
   controlsVisible, phase,
   isLive, isVod, isFullscreen, isRecording,
   muted, volume, playbackRate, qualityIdx,
-  currentTime, duration, buffered,
+  currentTime, duration,
   progressPct, bufferedPct,
   isBehindLive, secondsBehindLive,
   liveSeekableStart, liveSeekableEnd,
@@ -135,7 +134,6 @@ export default function PlayerBottomControls({
     if (btn) btn.click();
   }, [fullscreenBtnRef]);
 
-  const showLoc = onShowControls;
   const toggleMute = onToggleMute;
   const setVolume = onSetVolume;
 
@@ -160,7 +158,6 @@ export default function PlayerBottomControls({
           liveSeekableEnd={liveSeekableEnd}
           currentTime={currentTime}
           duration={duration}
-          buffered={buffered}
           progressPct={progressPct}
           bufferedPct={bufferedPct}
           secondsBehindLive={secondsBehindLive}
@@ -367,7 +364,7 @@ export default function PlayerBottomControls({
                   <SubtitleSelector
                     mediaType={type === "series" ? "series" : "movie"}
                     streamId={epId || id || ""}
-                    videoRef={videoRef}
+                    videoRef={videoRef as React.RefObject<HTMLVideoElement>}
                   />
                 </div>
                 {isLive && (
@@ -422,7 +419,7 @@ export default function PlayerBottomControls({
             <SubtitleSelector
               mediaType={type === "series" ? "series" : "movie"}
               streamId={epId || id || ""}
-              videoRef={videoRef}
+              videoRef={videoRef as React.RefObject<HTMLVideoElement>}
             />
             {isLive && (
               <div className="relative">

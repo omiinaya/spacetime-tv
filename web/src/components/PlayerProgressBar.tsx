@@ -7,7 +7,6 @@ interface PlayerProgressBarProps {
   liveSeekableEnd: number;
   currentTime: number;
   duration: number;
-  buffered: number;
   progressPct: number;
   bufferedPct: number;
   secondsBehindLive: number;
@@ -18,7 +17,7 @@ interface PlayerProgressBarProps {
 
 export default function PlayerProgressBar({
   isLive, isVod, liveSeekableStart, liveSeekableEnd,
-  currentTime, duration, buffered, progressPct, bufferedPct,
+  currentTime, duration, progressPct, bufferedPct,
   secondsBehindLive, onSeekTo, onShowControls, fmtTime,
 }: PlayerProgressBarProps) {
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {

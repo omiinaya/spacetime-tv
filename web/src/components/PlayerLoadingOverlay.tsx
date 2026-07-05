@@ -1,4 +1,4 @@
-import { Loader2, Tv } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface PlayerLoadingOverlayProps {
   phase: string;
