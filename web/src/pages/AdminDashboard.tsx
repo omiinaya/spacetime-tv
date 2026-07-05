@@ -208,7 +208,7 @@ export default function AdminDashboard() {
                 const d = await r.json();
                 setCacheMsg(d.message || "Cache cleared");
                 refresh();
-              } catch { setCacheMsg("Failed"); }
+              } catch { setCacheMsg("Failed"); } // SyntaxError or network error
             }}
             disabled={!!cacheMsg}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-xs hover:bg-destructive/20 hover:text-destructive transition-colors disabled:opacity-50"
@@ -225,7 +225,7 @@ export default function AdminDashboard() {
                 setCacheMsg(d.message || "Warming started");
                 setTimeout(() => { setCacheMsg(null); }, 3000);
                 refresh();
-              } catch { setCacheMsg("Failed"); }
+              } catch { setCacheMsg("Failed"); } // SyntaxError or network error
             }}
             disabled={!!cacheMsg}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-xs hover:bg-primary/20 hover:text-primary transition-colors disabled:opacity-50"
@@ -242,7 +242,7 @@ export default function AdminDashboard() {
                 setCacheMsg(d.message || "Full re-warm started");
                 setTimeout(() => { setCacheMsg(null); }, 3000);
                 refresh();
-              } catch { setCacheMsg("Failed"); }
+              } catch { setCacheMsg("Failed"); } // SyntaxError or network error
             }}
             disabled={!!cacheMsg}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-xs hover:bg-amber-500/20 hover:text-amber-400 transition-colors disabled:opacity-50"
@@ -281,6 +281,7 @@ export default function AdminDashboard() {
                   setTimeout(() => { setEpgMsg(null); }, 3000);
                   refresh();
                 } catch {
+                  // SyntaxError or network error
                   setEpgMsg("Failed to trigger refresh");
                 } finally {
                   setEpgRefreshing(false);
@@ -406,7 +407,7 @@ function StreamHealthSection({ headers }: { headers: Record<string, string> }) {
     try {
       const r = await fetch("/api/admin/stream-health", { headers });
       if (r.ok) setHealth(await r.json());
-    } catch { /* ignore */ }
+    } catch { /* SyntaxError or network error — silently ignore */ }
     setLoading(false);
   }, [headers]);
 

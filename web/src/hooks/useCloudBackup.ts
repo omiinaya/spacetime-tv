@@ -22,7 +22,7 @@ function readLocalFavorites(): number[] {
   try {
     const raw = localStorage.getItem(FAV_KEY);
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch {} // DOMException: storage quota or SyntaxError: malformed stored data
   return [];
 }
 
@@ -30,7 +30,7 @@ function readLocalWatchlist(): Record<string, boolean> {
   try {
     const raw = localStorage.getItem(WATCHLIST_KEY);
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch {} // DOMException: storage quota or SyntaxError: malformed stored data
   return {};
 }
 

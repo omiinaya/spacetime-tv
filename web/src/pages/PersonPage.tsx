@@ -70,7 +70,7 @@ export default function PersonPage() {
   const formatDate = (d: string | null) => {
     if (!d) return "";
     try { return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }); }
-    catch { return d; }
+    catch { return d; } // render error — expected with incomplete state
   };
   const age = (birthday: string | null) => {
     if (!birthday) return "";

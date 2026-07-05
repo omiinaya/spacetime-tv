@@ -160,7 +160,7 @@ export function useShakaPlayer(
 
   const destroy = useCallback(() => {
     if (shakaCleanupRef.current) { shakaCleanupRef.current(); shakaCleanupRef.current = null; }
-    try { playerRef.current?.destroy(); } catch {}
+    try { playerRef.current?.destroy(); } catch {} // cleanup — errors expected if already destroyed
     playerRef.current = null;
   }, []);
 

@@ -31,9 +31,9 @@ export function saveRecentChannel(channel: { stream_id: number; name: string; ic
   const trimmed = filtered.slice(0, MAX_ITEMS);
   try {
     localStorage.setItem(KEY, JSON.stringify(trimmed));
-  } catch {}
+  } catch {} // DOMException: localStorage quota
 }
 
 export function clearRecentChannels() {
-  try { localStorage.removeItem(KEY); } catch {}
+  try { localStorage.removeItem(KEY); } catch {} // DOMException: storage quota
 }

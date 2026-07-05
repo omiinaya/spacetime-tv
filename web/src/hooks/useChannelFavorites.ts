@@ -6,14 +6,14 @@ function loadFavorites(): Set<number> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return new Set<number>(JSON.parse(raw));
-  } catch {}
+  } catch {} // DOMException: storage quota
   return new Set<number>();
 }
 
 function saveFavorites(favorites: Set<number>) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...favorites]));
-  } catch {}
+  } catch {} // DOMException: storage quota
 }
 
 /**
