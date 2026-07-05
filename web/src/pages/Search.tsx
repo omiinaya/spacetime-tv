@@ -75,13 +75,13 @@ export default function SearchPage() {
       const { results, ts } = JSON.parse(raw);
       if (Date.now() - ts < SEARCH_CACHE_TTL) return results;
       sessionStorage.removeItem(SEARCH_CACHE_PREFIX + q);
-    } catch {}
+    } catch {} // DOMException: storage quota or disabled
     return null;
   };
   const setCached = (q: string, r: SearchResultsWithTotals) => {
     try {
       sessionStorage.setItem(SEARCH_CACHE_PREFIX + q, JSON.stringify({ results: r, ts: Date.now() }));
-    } catch {}
+    } catch {} // DOMException: storage quota or disabled
   };
 
   // ── Single unified search pipeline ────────────────────────────
@@ -134,6 +134,7 @@ export default function SearchPage() {
       const r = await api.guide.search(trimmed);
       setEpgResults(r.results ?? []);
     } catch {
+      // SyntaxError or network error — EPG search is non-critical
       setEpgResults([]);
     } finally {
       setEpgLoading(false);
@@ -177,7 +178,7 @@ export default function SearchPage() {
         setTotals(r.totals ?? null);
       }
     } catch {
-      // Silently ignore — non-critical
+      // SyntaxError or network error — silently ignore, non-critical
     } finally {
       setLoadingMore(null);
     }

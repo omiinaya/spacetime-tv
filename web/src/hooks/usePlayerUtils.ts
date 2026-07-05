@@ -31,7 +31,7 @@ export function saveWatchPos(key: string, pos: number) {
     const d = JSON.parse(localStorage.getItem("stv_watch") || "{}");
     d[key] = { pos, ts: Date.now() };
     localStorage.setItem("stv_watch", JSON.stringify(d));
-  } catch {}
+  } catch {} // DOMException: storage quota
   // Also queue for PWA background sync (non-blocking)
   queueProgress(key, pos);
 }
@@ -42,7 +42,7 @@ export function getVolume(): number {
 }
 
 export function saveVolume(v: number) {
-  try { localStorage.setItem("stv_volume", String(v)); } catch {}
+  try { localStorage.setItem("stv_volume", String(v)); } catch {} // DOMException: storage quota
 }
 
 export function getMuted(): boolean {
@@ -51,7 +51,7 @@ export function getMuted(): boolean {
 }
 
 export function saveMuted(m: boolean) {
-  try { localStorage.setItem("stv_muted", String(m)); } catch {}
+  try { localStorage.setItem("stv_muted", String(m)); } catch {} // DOMException: storage quota
 }
 
 // ── Autoplay ──────────────────────────────────────────────────
@@ -175,7 +175,7 @@ export function saveProgress(params: SaveProgressParams): void {
         metaEpTitle = m.episodeTitle || "";
         if (m.durationSeconds) metaDuration = m.durationSeconds;
       }
-    } catch {}
+    } catch {} // DOMException: storage quota
 
     saveSeriesProgress({
       seriesId: parseInt(seriesId),
@@ -229,7 +229,7 @@ export function saveProgress(params: SaveProgressParams): void {
               );
               onAutoAdvance(`/watch/series/${seriesId}/${nextEp.id}`);
             }
-          } catch {}
+          } catch {} // DOMException: storage quota
         }
       }
     }
@@ -245,7 +245,7 @@ export function saveProgress(params: SaveProgressParams): void {
           moviePoster = m.poster || "";
         }
       }
-    } catch {}
+    } catch {} // DOMException: storage quota
 
     saveMovieProgress({
       movieId: parseInt(id),

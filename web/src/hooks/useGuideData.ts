@@ -30,7 +30,7 @@ export function useGuideData() {
           }
         }
       }
-    } catch {}
+    } catch {} // DOMException: storage quota or SyntaxError: malformed stored data
     return map;
   }, []);
 
@@ -60,7 +60,7 @@ export function useGuideData() {
               return;
             }
           }
-        } catch {}
+        } catch {} // DOMException: storage quota or SyntaxError: malformed stored data
       }
 
       if (offset === 0) setLoading(true);
@@ -79,7 +79,7 @@ export function useGuideData() {
               CACHE_KEY,
               JSON.stringify({ data: groups, total: d.total_channels, ts: Date.now() })
             );
-          } catch {}
+          } catch {} // DOMException: storage quota
         } else {
           setAllData((prev) => {
             const seen = new Set(prev.map((g) => g.channel_id));
@@ -126,7 +126,7 @@ export function useGuideData() {
 
       evt.addEventListener("update", () => {
         // Invalidate sessionStorage cache and reload
-        try { sessionStorage.removeItem(CACHE_KEY); } catch {}
+        try { sessionStorage.removeItem(CACHE_KEY); } catch {} // DOMException: storage quota
         loadPage(0);
       });
 

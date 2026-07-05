@@ -62,7 +62,7 @@ const SIDEBAR_DEFAULT = 240;
 const BACK_KEY = "stv_back_url";
 
 function saveBackPath(path: string) {
-  try { sessionStorage.setItem(BACK_KEY, path); } catch {}
+  try { sessionStorage.setItem(BACK_KEY, path); } catch {} // DOMException: storage quota or unavailable
 }
 
 // Intercept all clicks that navigate to /watch/ routes and save the

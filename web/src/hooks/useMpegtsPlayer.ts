@@ -162,7 +162,7 @@ export function useMpegtsPlayer(
               reconnectAttempts++;
               try {
                 player.destroy();
-              } catch {}
+              } catch {} // cleanup - errors expected if already destroyed
               playerRef.current = null;
               video.removeEventListener("playing", onPlaying);
               setTimeout(() => {
@@ -196,7 +196,7 @@ export function useMpegtsPlayer(
               reconnectAttempts++;
               try {
                 player.destroy();
-              } catch {}
+              } catch {} // cleanup - errors expected if already destroyed
               playerRef.current = null;
               video.removeEventListener("playing", onPlaying);
               setTimeout(() => {
@@ -229,7 +229,7 @@ export function useMpegtsPlayer(
     }
     try {
       playerRef.current?.destroy();
-    } catch {}
+    } catch {} // cleanup - errors expected if already destroyed
     playerRef.current = null;
   }, []);
 

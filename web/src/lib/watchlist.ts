@@ -28,7 +28,7 @@ export function toggleWatchlist(movieId: number): boolean {
   }
   try {
     localStorage.setItem(MOVIE_WATCHLIST_KEY, JSON.stringify(items));
-  } catch {}
+  } catch {} // DOMException: localStorage quota
   return idx < 0; // true = added, false = removed
 }
 
@@ -62,7 +62,7 @@ export function toggleSeriesWatchlist(seriesId: number): boolean {
   }
   try {
     localStorage.setItem(SERIES_WATCHLIST_KEY, JSON.stringify(items));
-  } catch {}
+  } catch {} // DOMException: localStorage quota
   return idx < 0; // true = added, false = removed
 }
 

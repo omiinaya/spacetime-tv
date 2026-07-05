@@ -214,7 +214,7 @@ export function useRemuxPlayer(
     }
     try {
       playerRef.current?.destroy();
-    } catch {}
+    } catch {} // cleanup - errors expected if already destroyed
     playerRef.current = null;
   }, []);
 

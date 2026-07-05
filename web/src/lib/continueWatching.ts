@@ -47,14 +47,14 @@ export function saveSeriesProgress(progress: SeriesProgress) {
   const trimmed = filtered.slice(0, MAX_ITEMS);
   try {
     localStorage.setItem(KEY, JSON.stringify(trimmed));
-  } catch {}
+  } catch {} // DOMException: localStorage quota
 }
 
 export function removeSeriesProgress(seriesId: number) {
   const items = getContinueWatching().filter((i) => i.seriesId !== seriesId);
   try {
     localStorage.setItem(KEY, JSON.stringify(items));
-  } catch {}
+  } catch {} // DOMException: localStorage quota
 }
 
 // ── Movie continue-watching ────────────────────────────────────────────
@@ -89,20 +89,20 @@ export function saveMovieProgress(progress: MovieProgress) {
   filtered.unshift({ ...progress, updatedAt: Date.now() });
   try {
     localStorage.setItem(MOVIE_KEY, JSON.stringify(filtered.slice(0, MAX_ITEMS)));
-  } catch {}
+  } catch {} // DOMException: localStorage quota
 }
 
 export function removeMovieProgress(movieId: number) {
   const items = getMovieContinueWatching().filter((i) => i.movieId !== movieId);
   try {
     localStorage.setItem(MOVIE_KEY, JSON.stringify(items));
-  } catch {}
+  } catch {} // DOMException: localStorage quota
 }
 
 /** Clear all continue-watching progress (series + movies) */
 export function clearAllProgress() {
-  try { localStorage.removeItem(KEY); } catch {}
-  try { localStorage.removeItem(MOVIE_KEY); } catch {}
+  try { localStorage.removeItem(KEY); } catch {} // DOMException: storage quota
+  try { localStorage.removeItem(MOVIE_KEY); } catch {} // DOMException: storage quota
 }
 
 /**

@@ -125,7 +125,7 @@ export default function Movies() {
         setTotal(d.total);
         if (replace) setCurrentPage(Math.floor(offset / PAGE_SIZE) + 1);
       } catch {
-        // silent — errors handled by empty state
+        // SyntaxError or network error — silently degrade; errors handled by empty state
       } finally {
         if (sid === searchIdRef.current) {
           setLoading(false);

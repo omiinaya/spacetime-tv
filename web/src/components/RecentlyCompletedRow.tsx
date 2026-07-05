@@ -33,7 +33,7 @@ export default function RecentlyCompletedRow({ navigate }: RecentlyCompletedRowP
           cover: item.cover || meta.cover || "",
         };
       }
-    } catch {}
+    } catch {} // DOMException: storage quota
     return {
       ...item,
       seriesName: item.seriesName || `Series ${item.seriesId}`,

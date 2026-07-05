@@ -31,7 +31,7 @@ export default function PWAInstallPrompt() {
       if (ts && Date.now() - parseInt(ts) < 7 * 86400_000) {
         return; // dismissed within a week
       }
-    } catch {}
+    } catch {} // DOMException: storage quota
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -72,7 +72,7 @@ export default function PWAInstallPrompt() {
     _setDismissed(true);
     try {
       localStorage.setItem("stv_pwa_dismissed", String(Date.now()));
-    } catch {}
+    } catch {} // DOMException: storage quota
   };
 
   if (!showPrompt) return null;
