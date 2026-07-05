@@ -79,7 +79,7 @@ def _save_stream_hits():
     try:
         with open(STREAM_HITS_FILE, "w") as f:
             json.dump(_stream_hits, f)
-    except Exception:
+    except OSError:
         pass
 
 def track_hit(stream_type: str, stream_id: int | str):
@@ -109,13 +109,13 @@ def _load_progress_store():
     try:
         if PROGRESS_FILE.exists():
             _progress_store = json.loads(PROGRESS_FILE.read_text())
-    except Exception:
+    except (json.JSONDecodeError, OSError):
         _progress_store = {}
 
 def _save_progress_store():
     try:
         PROGRESS_FILE.write_text(json.dumps(_progress_store))
-    except Exception:
+    except OSError:
         pass
 
 # ── Cache Warming ─────────────────────────────────────────────────────────

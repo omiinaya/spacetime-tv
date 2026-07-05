@@ -362,7 +362,7 @@ def get_last_access(cache_key: str) -> Optional[float]:
     stamp_path = CACHE_DIR / f".{cache_key}.accessed"
     try:
         return float(stamp_path.read_text().strip())
-    except Exception:
+    except (FileNotFoundError, ValueError, PermissionError):
         return None
 
 
