@@ -137,7 +137,7 @@ def serve_cached_mp4(path: Path, request: Request):
     range_header = request.headers.get("range")
     if not range_header:
         return FileResponse(path, media_type="video/mp4", headers={
-            "Access-Control-Allow-Origin": "*", "Accept-Ranges": "bytes",
+            "Accept-Ranges": "bytes",
         })
     start = 0
     end = file_size - 1
@@ -164,7 +164,6 @@ def serve_cached_mp4(path: Path, request: Request):
             "Content-Range": f"bytes {start}-{end}/{file_size}",
             "Content-Length": str(chunk_size),
             "Accept-Ranges": "bytes",
-            "Access-Control-Allow-Origin": "*",
         },
     )
 

@@ -72,7 +72,7 @@ async def live_dash_manifest(stream_id: int):
     return Response(
         content=xml,
         media_type="application/dash+xml",
-        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
+        headers={"Cache-Control": "no-cache"},
     )
 
 
@@ -84,7 +84,7 @@ async def movie_dash_manifest(stream_id: int):
     return Response(
         content=xml,
         media_type="application/dash+xml",
-        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
+        headers={"Cache-Control": "no-cache"},
     )
 
 
