@@ -12,7 +12,7 @@ export function useSwipeToGoBack() {
   /** Build the back URL based on content type and session storage. */
   const getBackUrl = useCallback((type: "live" | "movie" | "series") => {
     let backUrl = "";
-    try { backUrl = sessionStorage.getItem("stv_back_url") || ""; } catch {}
+    try { backUrl = sessionStorage.getItem("stv_back_url") || ""; } catch {} // DOMException: storage quota
     if (!backUrl) {
       backUrl = type === "movie" ? "/movies" : type === "series" ? "/series" : "/live";
     }

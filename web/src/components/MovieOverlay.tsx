@@ -151,7 +151,7 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
         name: displayName || movie.name || movie.base_name || "",
         poster: movie.stream_icon || "",
       }));
-    } catch {}
+    } catch {} // DOMException: storage quota
     navigate(`/watch/movie/${currentStreamId}`);
     onClose();
   };

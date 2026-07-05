@@ -33,14 +33,14 @@ export function loadSettings(): AppSettings {
   try {
     const raw = localStorage.getItem(KEY) || localStorage.getItem(KEY_OLD);
     if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
-  } catch {}
+  } catch {} // DOMException: storage quota
   return { ...DEFAULT_SETTINGS };
 }
 
 export function saveSettings(s: AppSettings) {
   try {
     localStorage.setItem(KEY, JSON.stringify(s));
-  } catch {}
+  } catch {} // DOMException: storage quota
 }
 
 // ── Category filter helpers ─────────────────────────────────────────────────

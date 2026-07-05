@@ -52,7 +52,7 @@ export default function SeriesPage() {
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (parsed[field] && Date.now() - parsed.ts < ttl) return parsed[field];
-    } catch {}
+    } catch {} // DOMException: storage quota or disabled
     return null;
   };
 
@@ -148,7 +148,7 @@ export default function SeriesPage() {
           setCategories(parsed.categories);
           setLoading(false);
         }
-      } catch {}
+      } catch {} // DOMException: storage quota or disabled
     }
     api.series
       .categories()
@@ -199,6 +199,7 @@ export default function SeriesPage() {
         return next;
       });
     } catch {
+      // SyntaxError or network error — silently degrade; empty state handles it
       setRows((prev) => {
         const next = new Map(prev);
         const cur = prev.get(key);
@@ -243,7 +244,7 @@ export default function SeriesPage() {
         setShowAllTotal(d.total);
         setShowAllPage(page);
       } catch {
-        // silent — empty state handles it
+        // SyntaxError or network error — silent; empty state handles it
       } finally {
         setShowAllLoading(false);
       }

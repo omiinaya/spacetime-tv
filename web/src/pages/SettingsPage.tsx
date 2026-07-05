@@ -426,7 +426,7 @@ export default function SettingsPage() {
                 try {
                   localStorage.setItem("stv_channel_favorites", JSON.stringify(data.favorites));
                   window.location.reload();
-                } catch {}
+                } catch {} // DOMException: storage quota or disabled
               }
             }}
             disabled={cloudLoading}

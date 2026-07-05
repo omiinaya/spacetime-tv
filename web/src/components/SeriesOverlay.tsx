@@ -236,7 +236,7 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
         `stv_series_active_season_${series.series_id}`,
         String(activeSeason)
       );
-    } catch {}
+    } catch {} // DOMException: storage quota
     navigate(`/watch/series/${series.series_id}/${epId}`);
     onClose();
   };

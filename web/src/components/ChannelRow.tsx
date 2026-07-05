@@ -157,6 +157,7 @@ function ProgrammeCard({
           const resp = await api.guide.enrich(programme.title);
           setEnrichResult(resp.result ?? null);
         } catch {
+          // API or network error — silently degrade enrichment
           setEnrichResult(null);
         } finally {
           setEnrichLoading(false);

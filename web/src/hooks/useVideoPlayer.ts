@@ -250,13 +250,13 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance, timesh
   const playMPEGTS = useCallback((url: string, liveFlag: boolean, isTranscode: boolean) => {
     // Clean up HLS, remux, and shaka before delegating to sub-hook
     if (hlsCleanupRef.current) { hlsCleanupRef.current(); hlsCleanupRef.current = null; }
-    try { subHlsRef.current?.destroy(); } catch {}
+    try { subHlsRef.current?.destroy(); } catch {} // cleanup — errors expected if already destroyed
     subHlsRef.current = null;
     if (remuxCleanupRef.current) { remuxCleanupRef.current(); remuxCleanupRef.current = null; }
-    try { remuxPlayerRef.current?.destroy(); } catch {}
+    try { remuxPlayerRef.current?.destroy(); } catch {} // cleanup — errors expected if already destroyed
     remuxPlayerRef.current = null;
     if (shakaCleanupRef.current) { shakaCleanupRef.current(); shakaCleanupRef.current = null; }
-    try { shakaPlayerRef.current?.destroy(); } catch {}
+    try { shakaPlayerRef.current?.destroy(); } catch {} // cleanup — errors expected if already destroyed
     shakaPlayerRef.current = null;
     setPhase("loading"); setErrorMsg(null);
     if (isTranscode) setTranscoding(true);
@@ -267,13 +267,13 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance, timesh
   const playVodRemux = useCallback((streamUrl: string, startPos: number | null = null, isTranscode: boolean = false) => {
     // Clean up HLS and shaka if present before delegating to sub-hook
     if (hlsCleanupRef.current) { hlsCleanupRef.current(); hlsCleanupRef.current = null; }
-    try { subHlsRef.current?.destroy(); } catch {}
+    try { subHlsRef.current?.destroy(); } catch {} // cleanup — errors expected if already destroyed
     subHlsRef.current = null;
     if (shakaCleanupRef.current) { shakaCleanupRef.current(); shakaCleanupRef.current = null; }
-    try { shakaPlayerRef.current?.destroy(); } catch {}
+    try { shakaPlayerRef.current?.destroy(); } catch {} // cleanup — errors expected if already destroyed
     shakaPlayerRef.current = null;
     if (mpegtsCleanupRef.current) { mpegtsCleanupRef.current(); mpegtsCleanupRef.current = null; }
-    try { mpegtsPlayerRef.current?.destroy(); } catch {}
+    try { mpegtsPlayerRef.current?.destroy(); } catch {} // cleanup — errors expected if already destroyed
     mpegtsPlayerRef.current = null;
     subPlayVodRemux(streamUrl, startPos, isTranscode, type, seriesId, epId, id, watchKey, onAutoAdvance);
   }, [subPlayVodRemux, type, seriesId, epId, id, watchKey, onAutoAdvance, hlsCleanupRef, subHlsRef, shakaCleanupRef, shakaPlayerRef, mpegtsCleanupRef, mpegtsPlayerRef]);
@@ -286,16 +286,16 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance, timesh
       if (!v) return;
       // Clean up any existing sub-hook players
       if (hlsCleanupRef.current) { hlsCleanupRef.current(); hlsCleanupRef.current = null; }
-      try { subHlsRef.current?.destroy(); } catch {}
+      try { subHlsRef.current?.destroy(); } catch {} // cleanup — errors expected if already destroyed
       subHlsRef.current = null;
       if (shakaCleanupRef.current) { shakaCleanupRef.current(); shakaCleanupRef.current = null; }
-      try { shakaPlayerRef.current?.destroy(); } catch {}
+      try { shakaPlayerRef.current?.destroy(); } catch {} // cleanup — errors expected if already destroyed
       shakaPlayerRef.current = null;
       if (mpegtsCleanupRef.current) { mpegtsCleanupRef.current(); mpegtsCleanupRef.current = null; }
-      try { mpegtsPlayerRef.current?.destroy(); } catch {}
+      try { mpegtsPlayerRef.current?.destroy(); } catch {} // cleanup — errors expected if already destroyed
       mpegtsPlayerRef.current = null;
       if (remuxCleanupRef.current) { remuxCleanupRef.current(); remuxCleanupRef.current = null; }
-      try { remuxPlayerRef.current?.destroy(); } catch {}
+      try { remuxPlayerRef.current?.destroy(); } catch {} // cleanup — errors expected if already destroyed
       remuxPlayerRef.current = null;
       setPhase("loading");
       setErrorMsg(null);
@@ -587,7 +587,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance, timesh
         if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
         const doc = document as DocumentWithWebkit;
         if (doc.webkitFullscreenElement) doc.webkitExitFullscreen();
-      } catch {}
+      } catch {} // Error: fullscreen not supported or already exited
       const video = videoRef.current;
       if (video) { video.pause(); video.removeAttribute("src"); video.load(); }
       destroyMpegts();

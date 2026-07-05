@@ -28,7 +28,7 @@ export default function LiveTV() {
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (parsed[field] && Date.now() - parsed.ts < ttl) return parsed[field];
-    } catch {}
+    } catch {} // DOMException: storage quota or disabled
     return null;
   };
 
@@ -51,7 +51,7 @@ export default function LiveTV() {
           direct_source: "", tv_archive_duration: 0,
         } as LiveStream));
       }
-    } catch {}
+    } catch {} // DOMException: storage quota or disabled
     return [];
   };
 
@@ -70,7 +70,7 @@ export default function LiveTV() {
       if (!raw) return true;
       const parsed = JSON.parse(raw);
       return !(parsed.a?.length && Date.now() - parsed.ts < 900000);
-    } catch {
+    } catch { // DOMException: storage quota or disabled
       return true;
     }
   });
@@ -147,7 +147,7 @@ export default function LiveTV() {
           setCategories(parsed.categories);
           setLoading(false);
         }
-      } catch {}
+      } catch {} // DOMException: storage quota or disabled
     }
     api.live
       .categories()
@@ -173,7 +173,7 @@ export default function LiveTV() {
           }
           setAllLoading(false);
         }
-      } catch {}
+      } catch {} // DOMException: storage quota or disabled
     }
     if (!restored) {
       api.live
@@ -187,7 +187,7 @@ export default function LiveTV() {
                 id: s.stream_id, n: s.name, c: s.category_id,
               }));
               sessionStorage.setItem(SLIM_ALL_KEY, JSON.stringify({ a: slim, ts: Date.now() }));
-            } catch {}
+            } catch {} // DOMException: storage quota or disabled
           }
         })
         .catch(() => toast.error("Failed to load all streams"))

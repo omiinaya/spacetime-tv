@@ -33,7 +33,7 @@ export default function ContinueWatchingRow({ navigate }: ContinueWatchingRowPro
           cover: item.cover || meta.cover || "",
         };
       }
-    } catch {}
+    } catch {} // DOMException: storage quota
     return {
       ...item,
       seriesName: item.seriesName || `Series ${item.seriesId}`,

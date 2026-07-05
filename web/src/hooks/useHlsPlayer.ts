@@ -163,7 +163,7 @@ export function useHlsPlayer(
 
   const destroy = useCallback(() => {
     if (hlsCleanupRef.current) { hlsCleanupRef.current(); hlsCleanupRef.current = null; }
-    try { hlsRef.current?.destroy(); } catch {}
+    try { hlsRef.current?.destroy(); } catch {} // cleanup — errors expected if already destroyed
     hlsRef.current = null;
   }, []);
 
