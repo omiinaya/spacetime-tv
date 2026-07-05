@@ -96,5 +96,5 @@ async def series_dash_manifest(series_id: int, episode_id: int):
     return Response(
         content=xml,
         media_type="application/dash+xml",
-        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
+        headers={"Cache-Control": "no-cache"},
     )

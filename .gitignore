@@ -16,6 +16,8 @@ epg_cache.json
 web/[0-9]*/
 server/[0-9]*/
 .hermes-tmp*
+# Runtime data directory
+server/data/
 # Stale repo artifacts
 *.service
 *.html

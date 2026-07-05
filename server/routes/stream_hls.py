@@ -149,5 +149,5 @@ async def serve_hls_file(stream_type: str, stream_id: str, filename: str):
         raise HTTPException(404, "Segment not found")
     media = "application/vnd.apple.mpegurl" if filename.endswith(".m3u8") else "video/mp2t"
     return FileResponse(file_path, media_type=media, headers={  # pragma: no cover — requires real HLS file
-        "Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache",
+        "Cache-Control": "no-cache",
     })

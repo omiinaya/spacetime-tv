@@ -172,7 +172,7 @@ async def stream_audio_track(media_type: str, stream_id: int, audio_index: int):
         return StreamingResponse(
             audio_stream(),
             media_type="video/mp2t",
-            headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
+            headers={"Cache-Control": "no-cache"},
         )
     except HTTPException:
         raise

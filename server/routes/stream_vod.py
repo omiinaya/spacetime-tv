@@ -42,7 +42,6 @@ async def handle_vod_request(req: Request, stream_id: int, stream_type: str,
             media_type=out_content_type,
             status_code=206,
             headers={
-                "Access-Control-Allow-Origin": "*",
                 "Cache-Control": "no-cache",
                 "Accept-Ranges": "bytes",
             },
@@ -53,7 +52,6 @@ async def handle_vod_request(req: Request, stream_id: int, stream_type: str,
         stream_vod_bytes(url),
         media_type=out_content_type,
         headers={
-            "Access-Control-Allow-Origin": "*",
             "Cache-Control": "no-cache",
             "Accept-Ranges": "bytes",
         },
@@ -124,7 +122,7 @@ async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
         return StreamingResponse(
             stream_vod_mpegts(url, start),
             media_type="video/mp2t",
-            headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
+            headers={"Cache-Control": "no-cache"},
         )
     except Exception as e:  # pragma: no cover — StreamingResponse never raises at construction
         log.error(f"Movie remux error ({stream_id}): {e}")  # pragma: no cover
@@ -139,7 +137,7 @@ async def stream_series_remux(series_id: int, episode_id: int, start: Optional[f
         return StreamingResponse(
             stream_vod_mpegts(url, start),
             media_type="video/mp2t",
-            headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
+            headers={"Cache-Control": "no-cache"},
         )
     except Exception as e:  # pragma: no cover — StreamingResponse never raises at construction
         log.error(f"Series remux error ({episode_id}): {e}")  # pragma: no cover
@@ -154,7 +152,7 @@ async def stream_movie_transcode(stream_id: int):
         return StreamingResponse(
             stream_vod_transcode(url),
             media_type="video/mp2t",
-            headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
+            headers={"Cache-Control": "no-cache"},
         )
     except Exception as e:  # pragma: no cover — StreamingResponse never raises at construction
         log.error(f"VOD transcode error (movie {stream_id}): {e}")  # pragma: no cover
@@ -169,7 +167,7 @@ async def stream_series_transcode(series_id: int, episode_id: int):
         return StreamingResponse(
             stream_vod_transcode(url),
             media_type="video/mp2t",
-            headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
+            headers={"Cache-Control": "no-cache"},
         )
     except Exception as e:  # pragma: no cover — StreamingResponse never raises at construction
         log.error(f"VOD transcode error (series {episode_id}): {e}")  # pragma: no cover

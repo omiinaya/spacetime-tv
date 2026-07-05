@@ -17,7 +17,7 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
                     data = resp.read()
                     self.send_response(resp.status)
                     self.send_header("Content-Type", resp.headers.get("Content-Type", "application/json"))
-                    self.send_header("Access-Control-Allow-Origin", "*")
+                    # CORS handled by backend middleware
                     self.end_headers()
                     self.wfile.write(data)
             except Exception as e:
@@ -27,7 +27,7 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_OPTIONS(self):
         self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
+        # CORS handled by backend middleware
         self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
         self.end_headers()
 

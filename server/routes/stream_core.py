@@ -270,7 +270,6 @@ async def stream_proxy(url: str, content_type: str):
             stream_bytes(url),
             media_type=content_type,
             headers={
-                "Access-Control-Allow-Origin": "*",
                 "Cache-Control": "no-cache",
             },
         )

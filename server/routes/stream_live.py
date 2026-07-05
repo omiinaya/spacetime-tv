@@ -38,7 +38,6 @@ async def stream_live(stream_id: int, request: Request):
             monitored_stream(),
             media_type="video/mp2t",
             headers={
-                "Access-Control-Allow-Origin": "*",
                 "Cache-Control": "no-cache",
             },
         )
@@ -56,7 +55,6 @@ async def stream_live_transcode(stream_id: int):
             stream_bytes_transcode(url),
             media_type="video/mp2t",
             headers={
-                "Access-Control-Allow-Origin": "*",
                 "Cache-Control": "no-cache",
             },
         )
@@ -93,7 +91,6 @@ async def stream_live_timeshift(request: Request, stream_id: int, duration: int 
             monitored_stream(),
             media_type="video/mp2t",
             headers={
-                "Access-Control-Allow-Origin": "*",
                 "Cache-Control": "no-cache",
             },
         )
@@ -111,7 +108,6 @@ async def stream_live_quality(stream_id: int, height: int):
             stream_bytes_transcode(url, target_height=height),
             media_type="video/mp2t",
             headers={
-                "Access-Control-Allow-Origin": "*",
                 "Cache-Control": "no-cache",
             },
         )
