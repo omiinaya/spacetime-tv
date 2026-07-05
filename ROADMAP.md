@@ -53,7 +53,7 @@
 
 ---
 
-## 2. Frontend Quality (79%) — Clean TypeScript, but components are bloated
+## 2. Frontend Quality (84%) — Clean TypeScript, 2 components still >500 lines
 
 ### ✅ Genuine Strengths
 - **TypeScript strict mode:** `strict: true`, zero `any` types in production code, zero `@ts-expect-error` in production, zero unused imports
@@ -141,7 +141,7 @@
 | **DVR / Recording** | ✅ Shipped | ffmpeg pipeline, full CRUD, concurrent recordings |
 | **Parental Controls (PIN)** | ✅ Shipped | SHA-256 hashed, local-only (more secure than Smarters' server-based) |
 | **EPG Search** | ✅ Shipped | Title/subtitle/category/desc + TMDB enrichment — **better than both competitors** |
-| **Cloud favorites/backup** | ✅ Shipped (🟡 unauthenticated) | Server-side backup with device_id — **but zero auth** |
+| **Cloud favorites/backup** | ✅ Shipped | Server-side backup with device_id — SHA-256 device token scoped auth |
 | **Picture-in-Picture** | ✅ Shipped | Document PiP + Video PiP fallback chain |
 | **Theme customization** | ✅ Shipped | Dark/Light/System with live media-query listener |
 | **Continue Watching** | ✅ Shipped | Per-episode progress with auto-advance at ≥95% |
@@ -204,7 +204,8 @@
 
 ### Honest Assessment
 > Cloud backup auth was the biggest gap. Now has SHA-256 hashed device token scoping.
-> No HTTPS, no security headers remain as medium-term improvements.
+> Security headers (CSP, HSTS, XFO, XCTO, Referrer-Policy) now active in both nginx and backend middleware.
+> No HTTPS remains the top open security gap.
 
 ### Critical Fixes Needed (ordered by impact)
 1. ~~P0: Auth on cloud backup — SHA-256 hashed device tokens. **DONE 2026-07-01.**~~
@@ -217,7 +218,7 @@
 
 ---
 
-## 6. Performance (70%) — GZip works, but big chunk problem
+## 6. Performance (74%) — Shaka chunk fixed, Google Fonts remains
 
 ### ✅ In Place
 | Optimization | Status | Detail |
