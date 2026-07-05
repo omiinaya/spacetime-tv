@@ -9,6 +9,7 @@ Usage:
     resp = await client.get(url)
 """
 
+import json
 import logging
 import time
 from urllib.parse import urlencode
@@ -46,7 +47,7 @@ async def fetch_iptv(action: str, **params) -> dict | list:
         resp = await client.get(url)
         resp.raise_for_status()
         return resp.json()
-    except Exception as e:
+    except (httpx.HTTPError, httpx.TimeoutException, json.JSONDecodeError) as e:
         log.error(f"IPTV API error ({action}): {e}")
         raise HTTPException(502, f"IPTV provider error: {e}")
 

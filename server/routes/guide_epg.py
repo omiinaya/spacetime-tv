@@ -8,6 +8,7 @@ import logging
 import time
 from datetime import datetime, timedelta, timezone
 
+import httpx
 from iptv_client import cached_fetch, client
 
 from config import EPG_CACHE_FILE, EPG_CACHE_TTL, IPTV_BASE, IPTV_PASS, IPTV_USER
@@ -33,7 +34,7 @@ async def load_epg() -> dict:
                 epg_cache["fetched"] = cached["fetched"]
                 _guide_cache["channel_groups"] = None
                 return cached["data"]
-        except Exception as e:
+        except (json.JSONDecodeError, OSError, KeyError) as e:
             log.warning(f"EPG cache file corrupted: {e} — will refetch")
 
     log.info("Fetching EPG XMLTV ...")
@@ -50,7 +51,7 @@ async def load_epg() -> dict:
         EPG_CACHE_FILE.write_text(json.dumps({"data": data, "fetched": now}))
         log.info(f"EPG parsed: {len(data.get('programmes', []))} programmes")
         return data
-    except Exception as e:
+    except (httpx.HTTPError, httpx.TimeoutException, asyncio.TimeoutError, json.JSONDecodeError) as e:
         log.error(f"EPG fetch failed: {e}")
         if epg_cache["data"]:
             return epg_cache["data"]
@@ -75,6 +76,7 @@ async def _refresh_epg_background():
         await load_epg()
     except Exception as e:
         log.warning(f"Background EPG refresh failed: {e}")
+        # Intentionally broad — load_epg can raise httpx, json, os, or asyncio errors
 
 
 # ── EPG Broadcast (SSE refresh loop) ───────────────────────────────────
@@ -96,7 +98,7 @@ async def _epg_broadcast_loop():
                 if q in _epg_clients:
                     _epg_clients.remove(q)
             log.info(f"[EPG-SSE] Broadcast to {len(_epg_clients)} clients")
-        except Exception as e:
+        except (OSError, RuntimeError) as e:
             log.error(f"[EPG-SSE] Broadcast failed: {e}")
 
 
@@ -129,7 +131,7 @@ async def _build_guide_cache() -> tuple[list[dict], int]:
             epg_id = s.get("epg_channel_id")
             if epg_id and epg_id not in ch_to_stream:
                 ch_to_stream[epg_id] = s["stream_id"]
-    except Exception as e:
+    except (httpx.HTTPError, KeyError, IndexError) as e:
         log.warning(f"EPG: Failed to load live_all for stream mapping: {e}")
 
     now = datetime.now(timezone.utc)

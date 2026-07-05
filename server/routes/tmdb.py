@@ -225,6 +225,9 @@ from config import TMDB_ENRICH_PATH
 
 async def tmdb_enrich_cli(*args: str) -> dict | None:
     """Call tmdb-enrich CLI and return parsed JSON result."""
+    if not TMDB_ENRICH_PATH:
+        log.warning("tmdb-enrich CLI not configured (set TMDB_ENRICH_PATH env var)")
+        return None
     try:
         proc = await asyncio.create_subprocess_exec(
             TMDB_ENRICH_PATH, "--json", *args,
