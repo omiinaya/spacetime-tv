@@ -305,7 +305,7 @@
 1. ~~🚨 **Cloud backup unauth**~~ ✅ **FIXED** — SHA-256 hashed device tokens, admin override, first-upload registration
 2. ~~🚨 **Dev mode bypasses admin auth**~~ ✅ **FIXED** — config.py always generates key; docs updated
 3. 🔴 **No HTTPS** — NOT fixed
-4. 🌤 **No security headers** — security headers middleware IS active. CSP updated to include photo-tmdb.com
+4. ~~🌤 **No security headers** — security headers middleware IS active. CSP updated to include photo-tmdb.com. **DONE 2026-07-05** — nginx.conf now has CSP, HSTS, XFO, XCTO, Referrer-Policy, Permissions-Policy~~
 5. 🟡 **20 stream endpoints with ACAO: *** — NOT fixed
 6. 🟡 **Chunked encoding bypass** — NOT fixed
 
