@@ -61,7 +61,7 @@ async def _enrich_tmdb_item(item_type: str, tmdb_id: str) -> dict | None:
                     data = None
             else:
                 data = None
-        except Exception:
+        except (FileNotFoundError, asyncio.TimeoutError, OSError):
             data = None
 
     if not data:

@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 from urllib.parse import urlencode
 
+import httpx
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, Response
 
@@ -70,7 +71,7 @@ def _img_read_disk(cache_key: str):
             meta.unlink(missing_ok=True)
             return None
         return content, m["ct"], m["ts"]
-    except Exception:
+    except (FileNotFoundError, json.JSONDecodeError, KeyError, OSError):
         return None
 
 
@@ -83,7 +84,7 @@ async def iptv_raw(path: str):
     try:
         resp = await client.get(full)
         return Response(content=resp.content, media_type=resp.headers.get("content-type", "application/octet-stream"))
-    except Exception as e:
+    except httpx.HTTPError as e:
         raise HTTPException(502, str(e))
 
 
@@ -108,7 +109,7 @@ async def image_proxy(request: Request, url: str = Query(...)):
 
     try:
         parsed = urlparse(url)
-    except Exception:
+    except (ValueError, TypeError):
         raise HTTPException(400, "Invalid URL")
 
     allowed_hosts = {"cmc.exchange-cdn.com", "image.tmdb.org", "photo-tmdb.com"}
