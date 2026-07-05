@@ -13,17 +13,15 @@ from fastapi import APIRouter, HTTPException, Query
 
 from iptv_client import cached_fetch
 
-from config import TMDB_API_KEY
+from config import TMDB_API_KEY, TMDB_ENRICH_PATH
 from state import _cache, record_search, CACHE_LIVE_ALL, CACHE_VOD_CATEGORIES, CACHE_VOD_CAT, CACHE_SERIES_CATEGORIES, CACHE_SERIES_CAT
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["search"])
 
-# ── tmdb-enrich CLI path ──────────────────────────────────────────────
-_TMDB_ENRICH = os.getenv(
-    "TMDB_ENRICH_PATH",
-    "/home/user/.local/share/hermes-cli-tools-venv/bin/tmdb-enrich",
-)
+# ── tmdb-enrich CLI path ──────────────────────────────────────────
+# Path to tmdb-enrich CLI (browserless SSR extraction) — from config.py / env var
+_TMDB_ENRICH = TMDB_ENRICH_PATH
 
 # ── Search Enrichment Cache ───────────────────────────────────────────
 _SEARCH_ENRICH_CACHE: dict[str, tuple[float, dict | None]] = {}
