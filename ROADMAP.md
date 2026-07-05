@@ -235,28 +235,28 @@
 
 | Issue | Detail |
 |-------|--------|
-| ~~**772 KB useVideoPlayer chunk**~~ | ~~Bundles shaka-player + full caption engine (RTL text, VTT parsing, Speech-to-Text, Translation API, IntersectionObserver for captions). No manual chunk for shaka-player.~~ ✅ **FIXED** — shaka-player extracted to its own vendor chunk (~700 KB). |
-| **316 KB main index bundle** | Combined framework + initial page code |
+| ~~**772 KB useVideoPlayer chunk**~~ | ~~Bundles shaka-player + full caption engine (RTL text, VTT parsing, Speech-to-Text, Translation API, IntersectionObserver for captions). No manual chunk for shaka-player.~~ ✅ **FIXED** — shaka-player extracted to its own vendor chunk (765 KB). |
+| **324 KB main index bundle** | Combined framework + initial page code |
 | **Google Fonts CDN dependency** | Renders dependent on external font CDN |
 | **Startup cache warmer ~8s** | 575 categories at concurrency 50 |
 | **No CDN for static assets** | 1.3 MB total prod build served direct |
 
 ### Build Bundle Breakdown
 ```
-772 KB  useVideoPlayer-*.js     # shaka-player + captions + STT + Translation API
-546 KB  hls-*.js                 # hls.js (includes subtitle/caption support)
-316 KB  index-*.js               # React + React Router + all shared code
-264 KB  mpegts-*.js              # mpegts.js
-  ~0 KB  shaka-*.js              # shaka-player extracted to its own chunk (was bundled in useVideoPlayer)
-  34 KB Player-*.js              # Player component (mostly JSX, imports from useVideoPlayer)
-  22 KB SettingsPage-*.js        # Page-level async chunk
-  22 KB Series-*.js              # Page-level async chunk
+765 KB  shaka-ELt-QQMK.js         # shaka-player standalone vendor chunk (extracted from useVideoPlayer)
+509 KB  hls-9WvmVnWS.js           # hls.js (includes subtitle/caption support)
+324 KB  index-BUvYC5GF.js         # React + React Router + all shared code
+269 KB  mpegts-CGd1JLSa.js        # mpegts.js
+ 37 KB  Player-D99-RviA.js        # Player component (JSX, imports from useVideoPlayer)
+ 25 KB  useVideoPlayer-CK5c7ar7.js # Player logic w/ captions (no shaka — was 772 KB)
+ 22 KB  SettingsPage-m8rVQ5x_.js  # Page-level async chunk
+ 22 KB  Series-X1q0_sYe.js        # Page-level async chunk
 ```
 
-*Note: Build outputs may vary by build. Shaka-player chunk SHA was observed at ~700 KB when extracted — check actual `dist/` output for exact sizes.*
+*Note: Sizes from `npm run build` on 2026-07-05. Actual output varies — run the build yourself for current numbers.*
 
 ### Recommendations
-1. ~~**Add shaka-player to manualChunks**~~ ✅ **DONE** — saves ~700 KB from the player chunk
+1. ~~**Add shaka-player to manualChunks**~~ ✅ **DONE** — dropped useVideoPlayer from 772 KB to 25 KB
 2. **Remove Google Fonts** — bundle Inter locally
 3. **Inline CSS for initial render** — reduce CLS
 4. **Add CDN for static assets** — or serve from nginx with aggressive caching
