@@ -55,7 +55,7 @@ async def probe_subtitles(media_type: str, stream_id: int):
         return {"tracks": tracks, "cached": False}
     except asyncio.TimeoutError:
         return {"tracks": [], "error": "Probe timed out"}
-    except Exception as e:
+    except (OSError, json.JSONDecodeError) as e:
         return {"tracks": [], "error": str(e)}
 
 
@@ -94,7 +94,7 @@ async def get_subtitles(media_type: str, stream_id: int, track_index: int):
         raise HTTPException(504, "Subtitle extraction timed out")
     except HTTPException:
         raise
-    except Exception as e:
+    except OSError as e:
         raise HTTPException(500, str(e))
 
 
@@ -132,7 +132,7 @@ async def probe_audio(media_type: str, stream_id: int):
         return {"tracks": tracks, "cached": False}
     except asyncio.TimeoutError:
         return {"tracks": [], "error": "Probe timed out"}
-    except Exception as e:
+    except (OSError, json.JSONDecodeError) as e:
         return {"tracks": [], "error": str(e)}
 
 
@@ -176,5 +176,5 @@ async def stream_audio_track(media_type: str, stream_id: int, audio_index: int):
         )
     except HTTPException:
         raise
-    except Exception as e:
+    except OSError as e:
         raise HTTPException(500, str(e))

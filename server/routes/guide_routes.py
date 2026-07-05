@@ -135,7 +135,7 @@ async def guide_now(
             epg_id = s.get("epg_channel_id")
             if sid in ids and epg_id:
                 stream_to_ch[sid] = epg_id
-    except Exception as e:
+    except HTTPException as e:
         log.warning(f"[GUIDE/NOW] Failed to load live_all: {e}")
 
     now = datetime.now(timezone.utc)
@@ -208,7 +208,7 @@ async def guide_enrich(
             return {"enabled": True, "result": result}
     except asyncio.TimeoutError:
         log.warning(f"tmdb-enrich timed out for: {q[:50]}")
-    except Exception as e:
+    except (OSError, json.JSONDecodeError) as e:
         log.warning(f"tmdb-enrich error for '{q[:50]}': {e}")
 
     _EPG_ENRICH_CACHE[cache_key] = (now, None)
@@ -239,7 +239,7 @@ async def guide_catchup(
             if s["stream_id"] == stream_id:
                 ch_id = s.get("epg_channel_id")
                 break
-    except Exception as e:
+    except HTTPException as e:
         log.warning(f"[GUIDE/CATCHUP] Failed to load live_all: {e}")
 
     if not ch_id:

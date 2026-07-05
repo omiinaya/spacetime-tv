@@ -46,7 +46,7 @@ async def tmdb_fetch(path: str) -> dict | None:
             data = resp.json()
             _TMDB_CACHE[cache_key] = (now, data)
             return data
-    except Exception as e:
+    except (httpx.HTTPError, httpx.TimeoutException) as e:
         log.error(f"TMDB fetch error for {path}: {e}")
         return None
 
@@ -243,7 +243,7 @@ async def tmdb_enrich_cli(*args: str) -> dict | None:
     except asyncio.TimeoutError:
         log.warning(f"tmdb-enrich timed out for: {' '.join(args)[:80]}")
         return None
-    except Exception as e:
+    except (OSError, json.JSONDecodeError) as e:
         log.warning(f"tmdb-enrich error: {e}")
         return None
 

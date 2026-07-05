@@ -44,6 +44,6 @@ async def report_error(request: Request):
             f"  stack: {(stack or 'none')[:300]}\n"
             f"  component: {(component_stack or 'none')[:200]}"
         )
-    except Exception as e:
+    except json.JSONDecodeError as e:
         log.warning(f"[CLIENT ERROR] Failed to parse error body: {e}")
     return {"ok": True}

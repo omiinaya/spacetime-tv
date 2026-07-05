@@ -1,8 +1,11 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useKeyboard } from "@/hooks/useKeyboard";
 import { useVideoPlayer, fmtTime } from "@/hooks/useVideoPlayer";
+import { useControlsVisibility } from "@/hooks/useControlsVisibility";
+import { useSwipeToGoBack } from "@/hooks/useSwipeToGoBack";
+import { DocumentWithWebkit, VideoElementWithWebkit } from "@/hooks/usePlayerTypes";
 import PlayerLoadingOverlay from "@/components/PlayerLoadingOverlay";
 import PlayerErrorOverlay from "@/components/PlayerErrorOverlay";
 import PlayerResumePrompt from "@/components/PlayerResumePrompt";
@@ -18,17 +21,6 @@ import { useFrameRateDetector } from "@/hooks/useFrameRateDetector";
 
 // ── Types ─────────────────────────────────────────────────────
 interface PlayerProps { type: "live" | "movie" | "series"; }
-
-// WebKit-prefixed fullscreen API (not in standard TS DOM types)
-interface DocumentWithWebkit extends Document {
-  webkitFullscreenElement: Element | null;
-  webkitExitFullscreen: () => void;
-}
-
-interface VideoElementWithWebkit extends HTMLVideoElement {
-  webkitRequestFullscreen?: () => Promise<void>;
-  webkitEnterFullscreen?: () => void;
-}
 
 // ── Component ─────────────────────────────────────────────────
 export default function Player({ type }: PlayerProps) {
@@ -49,6 +41,14 @@ export default function Player({ type }: PlayerProps) {
     setSearchParams({});
   }, [setSearchParams]);
 
+  // ── Controls visibility ─────────────────────────────────────
+  const { controlsVisible, showControls, hideControls } = useControlsVisibility();
+
+  // ── Swipe-to-go-back gesture ─────────────────────────────────
+  const centerTouched = useRef(false);
+  const { goBack, handleTouchStart, handleTouchMove, handleTouchEnd } = useSwipeToGoBack();
+
+  // ── Video player hook (core playback logic) ──────────────────
   const {
     videoRef, containerRef, phase, errorMsg, errorType, loadingStep, transcoding,
     volume, muted, playbackRate, qualityIdx, currentTime, duration, buffered,
@@ -65,45 +65,8 @@ export default function Player({ type }: PlayerProps) {
     }, [navigate]),
   });
 
-  // ── UI State ─────────────────────────────────────────────────
+  // ── Fullscreen ───────────────────────────────────────────────
   const { isFullscreen, setIsFullscreen } = useFullscreen();
-
-  // ── Recording ────────────────────────────────────────────────
-  const { isRecording, startRecording, stopRecording } = useRecording();
-
-  // ── Document Picture-in-Picture ──────────────────────────────
-  const { isPiPActive, enterPiP, exitPiP } = useDocumentPiP(videoRef, containerRef);
-
-  // ── Frame rate detection ─────────────────────────────────────
-  const frameRate = useFrameRateDetector(videoRef, phase === "playing");
-
-  const handleRecordToggle = useCallback(() => {
-    if (isRecording) {
-      stopRecording();
-    } else if (type === "live" && id) {
-      startRecording(parseInt(id, 10));
-    }
-  }, [isRecording, stopRecording, startRecording, type, id]);
-  const [controlsVisible, setControlsVisible] = useState(true);
-  const controlsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const swipeStart = useRef<{ x: number; y: number } | null>(null);
-  const centerTouched = useRef(false);
-  // Force a fresh video element on each mount (page refresh) to avoid
-  // any browser-cached state interfering with mpegts.js initialization.
-  const mountKey = useRef(Date.now()).current;
-
-  const showControls = useCallback((temporary = false) => {
-    setControlsVisible(true);
-    if (controlsTimer.current) clearTimeout(controlsTimer.current);
-    if (temporary) {
-      controlsTimer.current = setTimeout(() => setControlsVisible(false), 3000);
-    }
-  }, []);
-
-  const hideControls = useCallback(() => {
-    if (controlsTimer.current) clearTimeout(controlsTimer.current);
-    setControlsVisible(false);
-  }, []);
 
   const toggleFullscreen = useCallback(() => {
     const video = videoRef.current;
@@ -123,7 +86,7 @@ export default function Player({ type }: PlayerProps) {
     }
   }, []);
 
-  // ── Native fullscreen handler ────────────────────────────────
+  // ── Native fullscreen event listener ─────────────────────────
   const fullscreenBtnRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const btn = fullscreenBtnRef.current;
@@ -132,25 +95,34 @@ export default function Player({ type }: PlayerProps) {
     return () => btn.removeEventListener("click", toggleFullscreen);
   }, [toggleFullscreen]);
 
+  // ── Recording ────────────────────────────────────────────────
+  const { isRecording, startRecording, stopRecording } = useRecording();
+
+  const handleRecordToggle = useCallback(() => {
+    if (isRecording) {
+      stopRecording();
+    } else if (type === "live" && id) {
+      startRecording(parseInt(id, 10));
+    }
+  }, [isRecording, stopRecording, startRecording, type, id]);
+
+  // ── Document Picture-in-Picture ──────────────────────────────
+  const { isPiPActive, enterPiP, exitPiP } = useDocumentPiP(videoRef, containerRef);
+
+  // ── Frame rate detection ─────────────────────────────────────
+  const frameRate = useFrameRateDetector(videoRef, phase === "playing");
+
   // ── Keyboard ─────────────────────────────────────────────────
   useKeyboard({ togglePlay, seek, toggleFullscreen, toggleMute, setVolume, volume });
 
-  // ── Back navigation ──────────────────────────────────────────
-  const goBack = () => {
-    let backUrl = "";
-    try { backUrl = sessionStorage.getItem("stv_back_url") || ""; } catch {}
-    if (!backUrl) {
-      backUrl = type === "movie" ? "/movies" : type === "series" ? "/series" : "/live";
-    }
-    window.location.href = backUrl;
-  };
+  // ── Force a fresh video element on each mount ────────────────
+  const mountKey = useRef(Date.now()).current;
 
   // ── Track recently played live channels ──────────────────────
   useEffect(() => {
     if (type !== "live" || !id) return;
     const sid = parseInt(id, 10);
     if (!sid) return;
-    // Try to fetch channel name; if it fails, just record the ID
     api.live.info([sid]).then((res) => {
       const ch = res.streams[0];
       saveRecentChannel({ stream_id: sid, name: ch?.name || `Channel ${sid}`, icon: ch?.stream_icon || "" });
@@ -169,44 +141,22 @@ export default function Player({ type }: PlayerProps) {
     ? 100
     : duration > 0 ? (buffered / duration) * 100 : 0;
 
+  // ── Touch handler: toggle controls on tap while tracking swipe ─
+  const onContainerTouchStart = (e: React.TouchEvent) => {
+    handleTouchStart(e, centerTouched);
+    if (controlsVisible) hideControls();
+    else showControls(true);
+  };
+
   return (
     <div
       ref={containerRef}
       className="relative w-full bg-black group"
       onMouseMove={() => showControls(true)}
       onMouseLeave={() => { if (phase === "playing") hideControls(); }}
-      onTouchStart={(e) => {
-        // If a center button was just touched, skip controls toggle
-        if (centerTouched.current) {
-          centerTouched.current = false;
-          return;
-        }
-        // Track swipe start for swipe-to-go-back
-        if (e.touches.length === 1) {
-          swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        }
-        // Toggle controls on tap
-        if (controlsVisible) hideControls();
-        else showControls(true);
-      }}
-      onTouchMove={(e) => {
-        if (!swipeStart.current || e.touches.length !== 1) return;
-        // Only handle horizontal swipes (not vertical scrolls)
-        const dx = e.touches[0].clientX - swipeStart.current.x;
-        const dy = e.touches[0].clientY - swipeStart.current.y;
-        if (Math.abs(dx) > Math.abs(dy) && dx > 30) {
-          e.preventDefault();
-        }
-      }}
-      onTouchEnd={(e) => {
-        if (!swipeStart.current) return;
-        const dx = (e.changedTouches[0]?.clientX || 0) - swipeStart.current.x;
-        const dy = Math.abs((e.changedTouches[0]?.clientY || 0) - swipeStart.current.y);
-        if (dx > 80 && dx > dy * 1.5) {
-          goBack();
-        }
-        swipeStart.current = null;
-      }}
+      onTouchStart={onContainerTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={(e) => handleTouchEnd(e, type)}
       style={{ aspectRatio: "16 / 9", maxHeight: "100dvh" }}
     >
       <video
@@ -242,7 +192,7 @@ export default function Player({ type }: PlayerProps) {
         controlsVisible={controlsVisible}
         phase={phase}
         isPiPActive={isPiPActive}
-        onBack={goBack}
+        onBack={() => goBack(type)}
         onEnterPiP={enterPiP}
         onExitPiP={exitPiP}
       />

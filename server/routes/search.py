@@ -153,7 +153,7 @@ async def search(
     try:
         live_data = await cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
         all_live = [s for s in live_data if query in s.get("name", "").lower()]
-    except Exception as e:
+    except HTTPException as e:
         log.error(f"Live search error: {e}")
 
     def _search_all(prefix: str, id_field: str, name_fields=("name",)):
@@ -202,7 +202,7 @@ async def search(
                             if query in s.get("name", "").lower():
                                 out.append(s)
                 return out
-            except Exception as e:
+            except (HTTPException, asyncio.TimeoutError) as e:
                 log.error(f"VOD search error: {e}")
                 return []
         all_movies = await get_all_vod()
@@ -231,7 +231,7 @@ async def search(
                             if query in name or query in plot:
                                 out.append(s)
                 return out
-            except Exception as e:
+            except (HTTPException, asyncio.TimeoutError) as e:
                 log.error(f"Series search error: {e}")
                 return []
         all_series = await get_all_series()

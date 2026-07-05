@@ -20,7 +20,7 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
                     # CORS handled by backend middleware
                     self.end_headers()
                     self.wfile.write(data)
-            except Exception as e:
+            except (urllib.error.URLError, urllib.error.HTTPError) as e:
                 self.send_error(502, f"Proxy error: {e}")
         else:
             super().do_GET()

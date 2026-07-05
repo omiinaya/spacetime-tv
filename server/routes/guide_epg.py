@@ -74,9 +74,9 @@ async def _refresh_epg_background():
     """Refresh EPG in background task — logs failures but never raises."""
     try:
         await load_epg()
-    except Exception as e:
+    except OSError as e:
         log.warning(f"Background EPG refresh failed: {e}")
-        # Intentionally broad — load_epg can raise httpx, json, os, or asyncio errors
+        # OSError from EPG_CACHE_FILE.write_text in load_epg — all other errors are caught internally
 
 
 # ── EPG Broadcast (SSE refresh loop) ───────────────────────────────────

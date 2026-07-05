@@ -72,7 +72,7 @@ async def _lookup_extension(stream_id: int, stream_type: str) -> str:
                 if ext:
                     log.info(f"Looked up extension for {stream_type} {stream_id}: {ext} (API fallback)")
                     return ext
-    except Exception as e:
+    except (httpx.HTTPError, httpx.TimeoutException) as e:
         log.warning(f"Extension lookup API fallback failed for {stream_type} {stream_id}: {e}")
 
     log.info(f"Extension lookup for {stream_type} {stream_id}: defaulting to mkv")
@@ -115,7 +115,7 @@ async def get_content_length(url: str) -> Optional[int]:
                 return int(cr.split("/")[-1])
             cl = resp.headers.get("content-length")
             return int(cl) if cl else None
-    except Exception as e:
+    except (httpx.HTTPError, httpx.TimeoutException) as e:
         log.debug(f"Content-Length probe failed for {url}: {e}")
         return None
 
@@ -196,7 +196,7 @@ async def _curl_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
             proc.stdin.write(chunk)
             await proc.stdin.drain()
         resp.close()
-    except Exception as e:  # pragma: no cover — network error, runtime only
+    except curl_cffi.requests.errors.RequestsError as e:  # pragma: no cover — network error, runtime only
         log.warning(f"{log_prefix} download error: {e}")  # pragma: no cover — network error, runtime only
     finally:
         try:
@@ -273,7 +273,7 @@ async def stream_proxy(url: str, content_type: str):
                 "Cache-Control": "no-cache",
             },
         )
-    except Exception as e:
+    except (RuntimeError, curl_cffi.requests.errors.RequestsError) as e:
         log.error(f"Stream proxy error ({url}): {e}")
         return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
 

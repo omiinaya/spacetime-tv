@@ -20,6 +20,11 @@ export interface DocumentWithWebkit extends Document {
   webkitExitFullscreen: () => void;
 }
 
+export interface VideoElementWithWebkit extends HTMLVideoElement {
+  webkitRequestFullscreen?: () => Promise<void>;
+  webkitEnterFullscreen?: () => void;
+}
+
 export type PlayPhase = "probing" | "loading" | "playing" | "paused" | "error";
 
 export type ErrorType =

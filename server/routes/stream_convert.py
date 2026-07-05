@@ -85,7 +85,7 @@ async def convert_to_mp4(stream_id: str, stream_type: str):
 async def _safe_convert(stream_id: str, stream_type: str, cache_key: str):
     try:
         await convert_to_mp4(stream_id, stream_type)
-    except Exception as e:
+    except (OSError, asyncio.TimeoutError) as e:
         log.error(f"Conversion failed for {cache_key}: {e}", exc_info=True)  # pragma: no cover — subprocess error, runtime only
     finally:
         _converting.pop(cache_key, None)  # pragma: no cover — cleanup, runtime only
