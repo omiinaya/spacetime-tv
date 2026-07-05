@@ -11,9 +11,10 @@ Covers:
 """
 
 import os
+from config import DATA_DIR
 from pathlib import Path
 
-BACKUP_FILE = Path("/tmp/stv_cloud_backup.json")
+BACKUP_FILE = DATA_DIR / "cloud_backup.json"
 
 TEST_TOKEN = "test-device-token-abc-123"
 

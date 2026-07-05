@@ -1,6 +1,6 @@
 """Cloud sync routes — backup/restore channel favorites, watchlist, settings.
 
-Persisted to /tmp/stv_cloud_backup.json so data survives server restarts.
+Persisted to data directory so data survives server restarts.
 Each backup is keyed by a device_id and a hashed device token for scoped auth.
 
 Security (P0 fix — 2026-07-01):
@@ -26,6 +26,7 @@ import time
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from config import DATA_DIR
 
 # Reuse the admin auth dependency for admin-level access
 from routes.admin import require_admin_key
@@ -33,7 +34,7 @@ from routes.admin import require_admin_key
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["cloud"])
 
-BACKUP_FILE = Path("/tmp/stv_cloud_backup.json")
+BACKUP_FILE = DATA_DIR / "cloud_backup.json"
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────

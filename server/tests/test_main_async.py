@@ -164,7 +164,7 @@ class TestCleanupStaleCache:
     """Cover the cleanup_stale_cache function (lines 261-287)."""
 
     def setup_method(self):
-        # Use the real CACHE_DIR (/tmp/stv_cache) — test artifacts prefixed with _test_
+        # Use the real CACHE_DIR — test artifacts prefixed with _test_
         self._cleanup_test_files()
 
     def teardown_method(self):

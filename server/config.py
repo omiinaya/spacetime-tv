@@ -66,5 +66,11 @@ RATE_WINDOW = 60  # 1 minute window
 RATE_SEARCH_LIMIT = 100     # requests per window for search/proxy
 RATE_DEFAULT_LIMIT = 1000   # requests per window for everything else
 
+
+# Data directory — persistent store for all runtime data.
+# Defaults to server/data/ beside config.py. Override via STV_DATA_DIR env var.
+DATA_DIR = Path(os.getenv("STV_DATA_DIR", Path(__file__).parent / "data"))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
 # Cache directory for transcoded files, image cache, etc.
-CACHE_DIR = Path("/tmp/stv_cache")
+CACHE_DIR = DATA_DIR / "cache"

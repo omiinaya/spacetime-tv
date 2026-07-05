@@ -8,6 +8,7 @@ import json
 import time
 from pathlib import Path
 from typing import Optional
+import config
 
 # ── Cache Keys (single source of truth) ───────────────────────────────────
 # Every cache key prefix/constant used across the codebase is defined here.
@@ -59,7 +60,7 @@ _epg_refresh_task: Optional[asyncio.Task] = None
 _guide_cache: dict = {"channel_groups": None, "total_channels": 0, "built_at": 0}
 
 # ── Health & Monitoring ───────────────────────────────────────────────────
-STREAM_HITS_FILE = "/tmp/stv_stream_hits.json"
+STREAM_HITS_FILE = str(config.DATA_DIR / "stream_hits.json")
 _stream_hits: dict[str, int] = {}
 _error_log: list[dict] = []
 _search_queries: list[dict] = []
@@ -100,7 +101,7 @@ def record_search(query: str):
 _epg_clients: list[asyncio.Queue] = []
 
 # ── Watch Progress Store ──────────────────────────────────────────────────
-PROGRESS_FILE = Path("/tmp/stv_watch_progress.json")
+PROGRESS_FILE = config.DATA_DIR / "watch_progress.json"
 _progress_store: dict = {}
 
 def _load_progress_store():

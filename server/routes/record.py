@@ -17,14 +17,14 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
 
-from config import IPTV_BASE, UA_STR
+from config import DATA_DIR, IPTV_BASE, UA_STR
 from routes.stream_core import build_stream_url
 from state import _cache
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["recordings"])
 
-RECORDINGS_DIR = Path("/tmp/stv_recordings")
+RECORDINGS_DIR = DATA_DIR / "recordings"
 RECORDINGS_DIR.mkdir(parents=True, exist_ok=True)
 META_FILE = RECORDINGS_DIR / "_meta.json"
 

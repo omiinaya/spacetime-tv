@@ -69,7 +69,7 @@ test.describe("Live TV channel playback", () => {
         { timeout: 25_000 },
       );
     } catch {
-      await page.screenshot({ path: "/tmp/e2e-playback-failure.png" });
+      await page.screenshot({ path: "e2e-screenshots/playback-failure.png" });
       const state = await page.evaluate(() => {
         const v = document.querySelector("video");
         return {

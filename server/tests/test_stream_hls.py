@@ -14,6 +14,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from config import DATA_DIR
 
 
 # ── serve_hls_file ────────────────────────────────────────────────────────
@@ -145,7 +146,7 @@ async def test_run_hls_segmenter_creates_segment_dir():
     if seg_dir.exists():
         shutil.rmtree(seg_dir)
 
-    input_path = Path("/tmp/test_input.mkv")
+    input_path = DATA_DIR / "_test_input.mkv"
     input_path.write_bytes(b"x" * 100)
 
     try:
@@ -181,7 +182,7 @@ async def test_run_hls_segmenter_nonzero_exit():
     if seg_dir.exists():
         shutil.rmtree(seg_dir)
 
-    input_path = Path("/tmp/test_fail.mkv")
+    input_path = DATA_DIR / "_test_fail.mkv"
     input_path.write_bytes(b"x" * 100)
 
     try:
