@@ -1,15 +1,14 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router";
-import {
-  Loader2, AlertCircle, ArrowLeft, Play, Pause, Maximize, Minimize,
-  Volume2, VolumeX, SkipBack, SkipForward, Settings, PictureInPicture2, Download, Tv, RadioTower, Circle,
-} from "lucide-react";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useKeyboard } from "@/hooks/useKeyboard";
-import { useVideoPlayer, fmtTime, QUALITIES, SPEEDS } from "@/hooks/useVideoPlayer";
-import { SubtitleSelector } from "@/components/SubtitleSelector";
-import { AudioSelector } from "@/components/AudioSelector";
-import { SleepTimer } from "@/components/SleepTimer";
+import { useVideoPlayer, fmtTime } from "@/hooks/useVideoPlayer";
+import { PlayerLoadingOverlay } from "@/components/PlayerLoadingOverlay";
+import { PlayerErrorOverlay } from "@/components/PlayerErrorOverlay";
+import { PlayerResumePrompt } from "@/components/PlayerResumePrompt";
+import { PlayerTopBar } from "@/components/PlayerTopBar";
+import { PlayerCenterControls } from "@/components/PlayerCenterControls";
+import { PlayerBottomControls } from "@/components/PlayerBottomControls";
 import { CatchupTimeline } from "@/components/CatchupTimeline";
 import { saveRecentChannel } from "@/lib/recentChannels";
 import { api } from "@/lib/api";
