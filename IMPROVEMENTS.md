@@ -17,16 +17,15 @@ included-router partial matches resolve, returning 404/SPA index instead of 405.
 Only affects HEAD on GET-only streaming routes (SSE). Low impact but confusing
 for API consumers. Fix: add explicit HEAD handler or reorder route resolution.
 
-### P4 — Check for new hls.js stable release (Dependency)
-hls.js is pinned at `^1.7.0-beta.1`. Latest stable is 1.6.16 (no v1.7.0 stable yet).
-Re-check next tick.
-
 ### P4 — Upgrade @rolldown/binding-linux-x64-gnu ^1.1.3 → ^1.1.4 (Dependency)
 Minor bump available. Non-breaking.
 
 ---
 
 ## Recently Completed
+
+### ✅ P4 — Pin hls.js to stable (Dependency)
+hls.js was referenced as `^1.7.0-beta.1` in docs but already pinned to `^1.6.16` (latest stable) in package.json. Removed stale entry.
 
 ### ✅ P4 — Split Search.tsx (855 lines) into sub-components (Maintainability)
 - Extracted `SearchHeader` → `@/components/SearchHeader.tsx` (search bar, history, result counts)
