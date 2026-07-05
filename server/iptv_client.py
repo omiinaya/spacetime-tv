@@ -63,7 +63,7 @@ async def cached_fetch(key: str, action: str, **params) -> list | dict:
     _cache_misses += 1
     try:
         data = await fetch_iptv(action, **params)
-    except Exception as e:
+    except HTTPException as e:
         log.warning(f"cached_fetch: {key} fetch failed ({e})", extra={"action": action, "params": params})
         if key in _cache:
             stale_data = _cache[key][1]

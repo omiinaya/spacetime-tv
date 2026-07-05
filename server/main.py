@@ -391,7 +391,7 @@ async def cleanup_stale_cache():
                 if stamp.exists():
                     stamp.unlink()
                 deleted_total += 1
-            except Exception as e:
+            except OSError as e:
                 log.warning(f"[CLEANUP] Failed to remove {cache_key}: {e}")
     if deleted_total:
         log.info(f"[CLEANUP] Removed {deleted_total} stale entries")
@@ -404,6 +404,7 @@ async def cleanup_loop():
         try:
             await cleanup_stale_cache()
         except Exception as e:
+            # Broad catch: background loop must never crash — expected: OSError from file ops
             log.error(f"[CLEANUP] Error: {e}")
 
 

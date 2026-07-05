@@ -74,6 +74,6 @@ async def live_info(
         results = [{"stream_id": s["stream_id"], "name": s.get("name", ""), "stream_icon": s.get("stream_icon", "")}
                     for s in live_all if s["stream_id"] in requested]
         return {"streams": results}
-    except Exception as e:
+    except HTTPException as e:
         log.warning(f"[LIVE/INFO] Failed: {e}")
         return {"streams": []}

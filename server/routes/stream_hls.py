@@ -107,7 +107,7 @@ async def ensure_hls(stream_id: str, stream_type: str, seek_seconds: float = 0) 
             mkv = await download_mkv(stream_id, stream_type, cache_key)
             if mkv:
                 await run_hls_segmenter(cache_key, mkv)  # pragma: no cover — subprocess pipeline, runtime only
-        except Exception as e:
+        except (OSError, httpx.HTTPError, httpx.TimeoutException) as e:
             log.error(f"[HLS] Pipeline failed for {cache_key}: {e}", exc_info=True)  # pragma: no cover
         finally:
             _hls_tasks.pop(cache_key, None)

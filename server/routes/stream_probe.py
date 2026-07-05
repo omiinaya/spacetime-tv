@@ -90,7 +90,7 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
                     result = {"codec": "unavailable", "error": "Not on this CDN edge"}  # pragma: no cover — network runtime
                     _probe_cache[cache_key] = (now, result)
                     return result  # pragma: no cover — network runtime
-        except Exception as e:
+        except httpx.HTTPError as e:
             log.warning(f"Probe HTTP GET failed for stream {stream_id}: {e}")  # pragma: no cover — network runtime
         return {"codec": "unknown"}
 
