@@ -9,9 +9,9 @@ import time
 from datetime import datetime, timedelta, timezone
 
 import httpx
-from iptv_client import cached_fetch, client
+from iptv_client import cached_fetch, client, iptv_xmltv_url
 
-from config import EPG_CACHE_FILE, EPG_CACHE_TTL, IPTV_BASE, IPTV_PASS, IPTV_USER
+from config import EPG_CACHE_FILE, EPG_CACHE_TTL
 from state import _epg_clients, epg_cache, _epg_refresh_task, _guide_cache, CACHE_LIVE_ALL
 from .guide_core import parse_xmltv
 
@@ -38,7 +38,7 @@ async def load_epg() -> dict:
             log.warning(f"EPG cache file corrupted: {e} — will refetch")
 
     log.info("Fetching EPG XMLTV ...")
-    url = f"{IPTV_BASE}/xmltv.php?username={IPTV_USER}&password={IPTV_PASS}"
+    url = iptv_xmltv_url()
     try:
         resp = await client.get(url, timeout=120.0)
         resp.raise_for_status()

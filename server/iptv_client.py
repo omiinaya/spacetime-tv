@@ -33,11 +33,59 @@ client = httpx.AsyncClient(
 
 
 def iptv_url(action: str, **params) -> str:
-    """Build IPTV API URL with credentials."""
+    """Build IPTV API URL (player_api.php) with credentials."""
     params.setdefault("username", IPTV_USER)
     params.setdefault("password", IPTV_PASS)
     params["action"] = action
     return f"{IPTV_BASE}/player_api.php?{urlencode(params)}"
+
+
+def iptv_stream_url(stream_id: int, stream_type: str = "live", ext: str | None = None) -> str:
+    """Build a direct stream URL for the IPTV CDN.
+
+    Format: {base}/{prefix}/{user}/{pass}/{stream_id}.{ext}
+
+    For live streams the extension is "ts"; for VOD the extension
+    should be resolved upstream (e.g. via _lookup_extension).
+    """
+    prefix = "live" if stream_type == "live" else stream_type
+    if ext is None:
+        ext = "ts" if stream_type == "live" else "mkv"
+    return f"{IPTV_BASE}/{prefix}/{IPTV_USER}/{IPTV_PASS}/{stream_id}.{ext}"
+
+
+def iptv_vod_url(stream_id: int, media_type: str = "movie") -> str:
+    """Build a provider MKV URL for ffprobe/ffmpeg (VOD probe context).
+
+    Always uses .mkv extension — ffprobe probes the container regardless.
+    """
+    prefix = "movie" if media_type == "movie" else "series"
+    return f"{IPTV_BASE}/{prefix}/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
+
+
+def iptv_timeshift_url(stream_id: int, duration_seconds: int) -> str:
+    """Build a timeshift URL for catch-up TV playback.
+
+    Xtream Codes API format:
+      {base}/live/{user}/{pass}/{stream_id}/timeshift/{duration}.ts
+    """
+    return f"{IPTV_BASE}/live/{IPTV_USER}/{IPTV_PASS}/{stream_id}/timeshift/{duration_seconds}.ts"
+
+
+def iptv_xmltv_url() -> str:
+    """Build the EPG XMLTV URL."""
+    return f"{IPTV_BASE}/xmltv.php?username={IPTV_USER}&password={IPTV_PASS}"
+
+
+def iptv_raw_proxy_url(path: str) -> str:
+    """Build a URL for proxying arbitrary IPTV paths (images, etc.)."""
+    params = {"username": IPTV_USER, "password": IPTV_PASS}
+    return f"{IPTV_BASE}/{path}?{urlencode(params)}"
+
+
+def iptv_referer() -> str:
+    """Build the Referer header value for IPTV CDN requests."""
+    return f"{IPTV_BASE}/"
 
 
 async def fetch_iptv(action: str, **params) -> dict | list:

@@ -17,7 +17,8 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
 
-from config import DATA_DIR, IPTV_BASE, UA_STR
+from config import DATA_DIR, UA_STR
+from iptv_client import iptv_referer
 from routes.stream_core import build_stream_url
 from state import _cache
 
@@ -83,7 +84,7 @@ async def start_recording(
         "/usr/bin/ffmpeg",
         "-loglevel", "warning",
         "-user_agent", UA_STR,
-        "-headers", f"Referer: {IPTV_BASE}/\r\n",
+        "-headers", f"Referer: {iptv_referer()}\r\n",
         "-i", url,
         "-c", "copy",
         "-bsf:a", "aac_adtstoasc",

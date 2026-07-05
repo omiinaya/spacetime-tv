@@ -7,15 +7,14 @@ import json
 import logging
 import time
 from pathlib import Path
-from urllib.parse import urlencode
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, Response
 
-from iptv_client import client
+from iptv_client import client, iptv_raw_proxy_url
 
-from config import CACHE_DIR, IPTV_BASE, IPTV_PASS, IPTV_USER, STATIC_DIR
+from config import CACHE_DIR, STATIC_DIR
 from state import _img_cache
 
 log = logging.getLogger("spacetime-tv")
@@ -79,8 +78,7 @@ def _img_read_disk(cache_key: str):
 @router.get("/api/v1/iptv/{path:path}")
 async def iptv_raw(path: str):
     """Raw proxy for any IPTV API call (images, etc.)."""
-    params = {"username": IPTV_USER, "password": IPTV_PASS}
-    full = f"{IPTV_BASE}/{path}?{urlencode(params)}"
+    full = iptv_raw_proxy_url(path)
     try:
         resp = await client.get(full)
         return Response(content=resp.content, media_type=resp.headers.get("content-type", "application/octet-stream"))

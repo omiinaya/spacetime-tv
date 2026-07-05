@@ -12,7 +12,8 @@ import httpx
 import curl_cffi.requests as CurlReq
 from fastapi import APIRouter
 
-from config import IPTV_BASE, UA_STR
+from config import UA_STR
+from iptv_client import iptv_referer
 from .stream_core import _lookup_extension, _probe_cache, PROBE_CACHE_TTL, build_stream_url
 
 log = logging.getLogger("spacetime-tv")
@@ -72,7 +73,7 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
             resp = await asyncio.get_event_loop().run_in_executor(
                 None, lambda: CurlReq.get(
                     cffi_url,
-                    headers={"User-Agent": UA_STR, "Referer": f"{IPTV_BASE}/", "Range": "bytes=0-65535"},
+                    headers={"User-Agent": UA_STR, "Referer": iptv_referer(), "Range": "bytes=0-65535"},
                     timeout=10,
                     impersonate="chrome120",
                 )

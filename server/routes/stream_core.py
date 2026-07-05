@@ -15,7 +15,8 @@ import httpx
 import curl_cffi.requests as CurlReq
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from config import IPTV_BASE, IPTV_PASS, IPTV_USER, UA_STR
+from config import UA_STR
+from iptv_client import iptv_referer, iptv_stream_url, iptv_timeshift_url, iptv_url, iptv_vod_url
 
 log = logging.getLogger("spacetime-tv")
 
@@ -48,15 +49,9 @@ async def _lookup_extension(stream_id: int, stream_type: str) -> str:
                 return ext if ext else "mp4"
 
     # ── 2. Fallback: query the provider API directly ────────────────
-    params = {
-        "username": IPTV_USER,
-        "password": IPTV_PASS,
-        "action": "get_vod_info" if stream_type == "movie" else "get_series_info",
-    }
     id_key = "vod_id" if stream_type == "movie" else "series_id"
-    params[id_key] = str(stream_id)
-    qs = "&".join(f"{k}={v}" for k, v in params.items())
-    api_url = f"{IPTV_BASE}/player_api.php?{qs}"
+    action = "get_vod_info" if stream_type == "movie" else "get_series_info"
+    api_url = iptv_url(action, **{id_key: str(stream_id)})
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as c:
@@ -82,14 +77,12 @@ async def _lookup_extension(stream_id: int, stream_type: str) -> str:
 async def build_stream_url(stream_id: int, stream_type: str) -> str:
     """Build the IPTV stream URL for a given stream ID and type."""
     ext = "ts" if stream_type == "live" else await _lookup_extension(stream_id, stream_type)
-    prefix = "live" if stream_type == "live" else stream_type
-    return f"{IPTV_BASE}/{prefix}/{IPTV_USER}/{IPTV_PASS}/{stream_id}.{ext}"
+    return iptv_stream_url(stream_id, stream_type, ext)
 
 
 def _vod_url(stream_id: int, media_type: str = "movie") -> str:
     """Build the provider MKV URL for ffprobe/ffmpeg (VOD subtitle/audio context)."""
-    prefix = "movie" if media_type == "movie" else "series"
-    return f"{IPTV_BASE}/{prefix}/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
+    return iptv_vod_url(stream_id, media_type)
 
 
 def build_timeshift_url(stream_id: int, duration_seconds: int) -> str:
@@ -101,7 +94,7 @@ def build_timeshift_url(stream_id: int, duration_seconds: int) -> str:
     Duration is how far back in seconds (e.g. 3600 = 1 hour ago).
     Returns the raw provider URL; the caller proxies it through the server.
     """
-    return f"{IPTV_BASE}/live/{IPTV_USER}/{IPTV_PASS}/{stream_id}/timeshift/{duration_seconds}.ts"
+    return iptv_timeshift_url(stream_id, duration_seconds)
 
 
 async def get_content_length(url: str) -> Optional[int]:
@@ -135,7 +128,7 @@ async def _curl_iter_chunks(url: str, *,
     """
     headers = {
         "User-Agent": UA_STR,
-        "Referer": f"{IPTV_BASE}/",
+        "Referer": iptv_referer(),
     }
     if range_header:
         headers["Range"] = range_header
@@ -182,7 +175,7 @@ async def _curl_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
     """
     try:
         loop = asyncio.get_event_loop()
-        headers = {"User-Agent": UA_STR, "Referer": f"{IPTV_BASE}/"}
+        headers = {"User-Agent": UA_STR, "Referer": iptv_referer()}
         if range_header:
             headers["Range"] = range_header  # pragma: no cover — tested via start_time mock
 
