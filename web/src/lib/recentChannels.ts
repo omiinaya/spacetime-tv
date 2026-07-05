@@ -19,8 +19,7 @@ export function getRecentChannels(): RecentChannel[] {
       .filter((i) => i.watchedAt > cutoff)
       .sort((a, b) => b.watchedAt - a.watchedAt)
       .slice(0, MAX_ITEMS);
-  } catch {
-    return [];
+  } catch /* DOMException: localStorage quota */ {
   }
 }
 

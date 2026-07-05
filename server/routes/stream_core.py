@@ -12,7 +12,7 @@ from functools import partial
 from typing import Optional
 
 import httpx
-import curl_cffi.requests as CurlReq
+
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from config import IPTV_BASE, IPTV_PASS, IPTV_USER, UA_STR
@@ -122,16 +122,16 @@ async def get_content_length(url: str) -> Optional[int]:
 
 # ── Stream generators (byte-level) ─────────────────────────────────────────
 
-async def _curl_iter_chunks(url: str, *,
+async def _http_iter_chunks(url: str, *,
                             range_header: Optional[str] = None,
                             chunk_size: int = 1048576,
                             status_ok: tuple[int, ...] = (200,),
                             timeout: int = 120):
-    """Async generator: yield chunks from a CDN URL via curl_cffi streaming.
+    """Async generator: yield chunks from a CDN URL via httpx streaming.
 
-    Uses ``curl_cffi`` with ``impersonate="chrome120"`` to bypass Cloudflare
-    bot detection (the CDN blocks httpx/ffmpeg with 405 but accepts
-    curl_cffi's Chrome-emulated TLS fingerprint).
+    Uses ``httpx.AsyncClient`` with ``follow_redirects=True`` to follow the
+    provider's 302 redirect from Cloudflare to the CDN edge. No TLS
+    impersonation needed — plain Chrome UA is sufficient.
     """
     headers = {
         "User-Agent": UA_STR,
@@ -140,28 +140,15 @@ async def _curl_iter_chunks(url: str, *,
     if range_header:
         headers["Range"] = range_header
 
-    def _do_get():
-        return CurlReq.get(url, headers=headers, stream=True,
-                           timeout=timeout, impersonate="chrome120")
+    async with httpx.AsyncClient(follow_redirects=True, timeout=timeout) as c:
+        resp = await c.get(url, headers=headers)
 
-    resp = await asyncio.to_thread(_do_get)
+        if resp.status_code not in status_ok:
+            log.warning(f"_http_iter_chunks: CDN returned HTTP {resp.status_code} for {url[:80]}...")
+            raise RuntimeError(f"CDN returned HTTP {resp.status_code} (stream unavailable)")
 
-    if resp.status_code not in status_ok:
-        resp.close()
-        log.warning(f"_curl_iter_chunks: CDN returned HTTP {resp.status_code} for {url[:80]}...")
-        raise RuntimeError(f"CDN returned HTTP {resp.status_code} (stream unavailable)")
-
-    chunk_iter = resp.iter_content(chunk_size=chunk_size)
-    try:
-        while True:
-            def _next_chunk(it=chunk_iter):
-                return next(it, b"")
-            chunk = await asyncio.to_thread(_next_chunk)
-            if not chunk:
-                break
+        async for chunk in resp.aiter_bytes(chunk_size=chunk_size):
             yield chunk  # pragma: no cover — async generator yield (covered at runtime, not tracked by coverage)
-    finally:
-        resp.close()
 
 
 async def stream_bytes(url: str):

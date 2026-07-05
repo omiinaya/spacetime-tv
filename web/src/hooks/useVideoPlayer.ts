@@ -391,7 +391,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance, timesh
         }, 5_000);
         let result: ProbeResult;
         try { result = await probeStream(probeUrl, abortController.signal); }
-        catch { result = { codec: "unknown" }; }
+        catch { result = { codec: "unknown" }; } /* HTTP error or abort */
         clearTimeout(probeTimer);
         if (phaseTimedOut || cancelled) return;
 
@@ -515,7 +515,7 @@ export function useVideoPlayer({ type, id, seriesId, epId, onAutoAdvance, timesh
     try {
       v.currentTime = Math.max(0, time);
       setCurrentTime(v.currentTime);
-    } catch {
+    } catch { /* Remux/stream error — silent fallback */
       const url = remuxVodUrlRef.current;
       const isTC = remuxVodTranscodeRef.current;
       destroyMpegts();
