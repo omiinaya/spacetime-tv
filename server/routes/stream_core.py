@@ -196,7 +196,7 @@ async def _curl_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
             proc.stdin.write(chunk)
             await proc.stdin.drain()
         resp.close()
-    except curl_cffi.requests.errors.RequestsError as e:  # pragma: no cover — network error, runtime only
+    except CurlReq.RequestsError as e:  # pragma: no cover — network error, runtime only
         log.warning(f"{log_prefix} download error: {e}")  # pragma: no cover — network error, runtime only
     finally:
         try:
@@ -273,7 +273,7 @@ async def stream_proxy(url: str, content_type: str):
                 "Cache-Control": "no-cache",
             },
         )
-    except (RuntimeError, curl_cffi.requests.errors.RequestsError) as e:
+    except (RuntimeError, CurlReq.RequestsError) as e:
         log.error(f"Stream proxy error ({url}): {e}")
         return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
 

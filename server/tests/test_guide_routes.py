@@ -144,7 +144,7 @@ class TestGuideNowParseError:
     def test_guide_now_handles_bad_timestamps(self, client_with_cache):
         """When a programme has invalid timestamps, it's skipped without crashing."""
         from state import epg_cache
-        from main import _cache
+        from state import _cache
 
         now = datetime.now(timezone.utc)
         epg_data = {
@@ -196,7 +196,7 @@ class TestGuideCatchup:
     def test_catchup_returns_timeline(self, client_with_cache):
         """GET /api/guide/catchup returns programme timeline for a stream."""
         from state import epg_cache
-        from main import _cache
+        from state import _cache
 
         epg_cache["data"] = SAMPLE_EPG
         epg_cache["fetched"] = time.time()
@@ -228,7 +228,7 @@ class TestGuideCatchup:
     def test_catchup_unknown_stream_id(self, client_with_cache):
         """Unknown stream_id returns empty programme list."""
         from state import epg_cache
-        from main import _cache
+        from state import _cache
 
         epg_cache["data"] = SAMPLE_EPG
         epg_cache["fetched"] = time.time()
@@ -262,7 +262,7 @@ class TestGuideCatchup:
     def test_catchup_malformed_programme_timestamps(self, client_with_cache):
         """Malformed programme timestamps are skipped in catchup."""
         from state import epg_cache
-        from main import _cache
+        from state import _cache
 
         now = datetime.now(timezone.utc)
         epg_data = {
@@ -318,7 +318,7 @@ class TestGuideCatchup:
     def test_catchup_filters_outside_window(self, client_with_cache):
         """Programmes outside the catchup window are excluded."""
         from state import epg_cache
-        from main import _cache
+        from state import _cache
 
         now = datetime.now(timezone.utc)
         epg_data = {
@@ -537,7 +537,7 @@ class TestGuideNowPastProgramme:
     def test_guide_now_skips_past_programme(self, client_with_cache):
         """Programme ending before cutoff_past is skipped, current one returned."""
         from state import epg_cache
-        from main import _cache
+        from state import _cache
         from datetime import datetime, timedelta, timezone
 
         now = datetime.now(timezone.utc)

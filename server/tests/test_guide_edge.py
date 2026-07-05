@@ -70,7 +70,7 @@ def test_guide_empty_epg(client):
 def test_guide_now_with_partial_ids(client_with_cache):
     """/api/v1/guide/now should handle partial stream ID matches."""
     from state import epg_cache
-    from main import _cache
+    from state import _cache
     epg_cache["data"] = SAMPLE_EPG_DATA
     epg_cache["fetched"] = time.time()
     _cache["live_all"] = (1000.0, [
@@ -97,7 +97,7 @@ def test_guide_now_empty_ids(client):
 
 def test_guide_now_no_epg_data(client_with_cache):
     """/api/v1/guide/now should return empty when EPG cache is empty."""
-    from main import _cache
+    from state import _cache
     _cache["live_all"] = (1000.0, [
         {"stream_id": 1, "name": "BBC One", "stream_icon": "", "category_id": "1", "epg_channel_id": "BBC1.uk"},
     ])

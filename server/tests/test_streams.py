@@ -43,7 +43,7 @@ def test_movies_pagination_params(client):
 
 def test_movies_with_cached_data(client_with_cache):
     """Movies endpoint should return cached streams."""
-    from main import _cache
+    from state import _cache
 
     movies = [{"stream_id": i, "name": f"EN - Movie {i}"} for i in range(1, 21)]
     _cache["vod_10"] = (1000.0, movies)

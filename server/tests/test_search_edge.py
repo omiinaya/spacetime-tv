@@ -17,7 +17,7 @@ def test_search_special_chars(client_with_cache):
 
 def test_search_section_filter_movies(client_with_cache):
     """section=movies returns only movies section."""
-    from main import _cache
+    from state import _cache
     _cache["vod_categories"] = (1000.0, [{"category_id": 10, "category_name": "EN - Action"}])
     _cache["vod_10"] = (1000.0, [
         {"stream_id": 100, "name": "The Dark Knight", "stream_icon": "", "container_extension": "mkv"},
@@ -34,7 +34,7 @@ def test_search_section_filter_movies(client_with_cache):
 
 def test_search_section_filter_series(client_with_cache):
     """section=series returns only series section."""
-    from main import _cache
+    from state import _cache
     _cache["series_categories"] = (1000.0, [{"category_id": 5, "category_name": "EN - Drama"}])
     _cache["series_5"] = (1000.0, [
         {"series_id": 50, "name": "Breaking Bad", "cover": "", "plot": ""},
@@ -50,7 +50,7 @@ def test_search_section_filter_series(client_with_cache):
 
 def test_search_series_plot_match(client_with_cache):
     """Series should match on plot field when name doesn't match."""
-    from main import _cache
+    from state import _cache
     _cache["series_categories"] = (1000.0, [{"category_id": 5, "category_name": "EN - Drama"}])
     _cache["series_5"] = (1000.0, [
         {"series_id": 50, "name": "BB", "cover": "", "plot": "A chemistry teacher turns to cooking methamphetamine"},
@@ -65,7 +65,7 @@ def test_search_series_plot_match(client_with_cache):
 
 def test_search_unicode(client_with_cache):
     """Search with unicode characters should work."""
-    from main import _cache
+    from state import _cache
     _cache["live_all"] = (1000.0, [
         {"stream_id": 1, "name": "Café Français", "stream_icon": "", "category_id": "1"},
         {"stream_id": 2, "name": "日本語チャンネル", "stream_icon": "", "category_id": "1"},

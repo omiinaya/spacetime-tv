@@ -11,7 +11,7 @@ from unittest.mock import patch, MagicMock
 
 def test_live_dash_manifest_returns_mpd(client_with_cache):
     """GET /api/stream/live/{id}/manifest.mpd returns valid MPD XML."""
-    from main import _cache
+    from state import _cache
     _cache["live_all"] = (1000.0, [
         {"stream_id": 999, "name": "Test Channel", "stream_icon": "", "category_id": "1",
          "epg_channel_id": "", "num": 1, "stream_type": "live", "added": "", "is_adult": 0,
@@ -27,7 +27,7 @@ def test_live_dash_manifest_returns_mpd(client_with_cache):
 
 def test_live_dash_manifest_has_cors_headers(client_with_cache):
     """DASH manifest should include CORS headers."""
-    from main import _cache
+    from state import _cache
     _cache["live_all"] = (1000.0, [
         {"stream_id": 999, "name": "Test Channel", "stream_icon": "", "category_id": "1",
          "epg_channel_id": "", "num": 1, "stream_type": "live", "added": "", "is_adult": 0,
@@ -48,7 +48,7 @@ def test_live_dash_manifest_nonexistent_stream(client_with_cache):
 
 def test_movie_dash_manifest_with_cache(client_with_cache):
     """Movie DASH manifest returns valid MPD when cache is populated."""
-    from main import _cache
+    from state import _cache
     _cache["vod_categories"] = (1000.0, [{"category_id": 10, "category_name": "Test"}])
     _cache["vod_10"] = (1000.0, [
         {"stream_id": 500, "name": "Test Movie", "stream_icon": "", "container_extension": "mkv",
@@ -64,7 +64,7 @@ def test_movie_dash_manifest_with_cache(client_with_cache):
 
 def test_series_dash_manifest_with_cache(client_with_cache):
     """Series DASH manifest returns valid MPD when cache is populated."""
-    from main import _cache
+    from state import _cache
     _cache["series_categories"] = (1000.0, [{"category_id": 5, "category_name": "Drama"}])
     _cache["series_5"] = (1000.0, [
         {"series_id": 300, "name": "Test Series", "cover": "", "container_extension": "mp4",
@@ -1041,7 +1041,7 @@ def test_build_timeshift_url_with_various_ids():
 
 def test_vod_movie_route_accessible(client_with_cache):
     """VOD movie route is accessible (not a 404)."""
-    from main import _cache
+    from state import _cache
     _cache["vod_1"] = (1000.0, [
         {"stream_id": 1, "name": "Test Movie", "container_extension": "mp4",
          "category_id": "1", "stream_type": "movie", "added": "", "num": 1,
@@ -1057,7 +1057,7 @@ def test_vod_movie_route_accessible(client_with_cache):
 
 def test_vod_movie_route_with_range(client_with_cache):
     """VOD movie route handles Range header (not a 404)."""
-    from main import _cache
+    from state import _cache
     _cache["vod_1"] = (1000.0, [
         {"stream_id": 99, "name": "Test Movie Range", "container_extension": "mp4",
          "category_id": "1", "stream_type": "movie", "added": "", "num": 1,
@@ -1072,7 +1072,7 @@ def test_vod_movie_route_with_range(client_with_cache):
 
 def test_vod_series_route_accessible(client_with_cache):
     """VOD series episode route is accessible (not a 404)."""
-    from main import _cache
+    from state import _cache
     _cache["series_"] = (1000.0, [
         {"series_id": 3, "name": "Test Series", "container_extension": "mkv",
          "category_id": "1", "stream_type": "series", "num": 1,
@@ -1234,7 +1234,7 @@ def test_stream_series_transcode_route_exists(client_with_cache):
 
 def test_lookup_extension_skips_non_matching_prefix(client_with_cache):
     """_lookup_extension skips cache keys that don't match the prefix."""
-    from main import _cache
+    from state import _cache
     _cache["series_1"] = (1000.0, [{"series_id": 1, "container_extension": "mkv"}])
 
     # Asking for a movie (prefix "vod_") should skip series_ keys
@@ -1247,7 +1247,7 @@ def test_lookup_extension_skips_non_matching_prefix(client_with_cache):
 
 def test_lookup_extension_skips_non_list_data(client_with_cache):
     """_lookup_extension skips cache entries where data isn't a list."""
-    from main import _cache
+    from state import _cache
     _cache["vod_1"] = (1000.0, "not a list")
 
     from routes.stream_core import _lookup_extension
