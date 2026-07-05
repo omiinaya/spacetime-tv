@@ -13,7 +13,7 @@
 
 | Dimension | Grade | Score | Change | Honest Assessment |
 |-----------|-------|-------|--------|-------------------|
-| **Testing depth** | A | 96% | ← 95% | 592 tests @ 96% coverage + 1208 frontend + 74 E2E. Only runtime-only lines uncovered (ffmpeg, curl_cffi, yield points). 2.2:1 test-to-source ratio. **Genuinely excellent.** |
+| **Testing depth** | A | 96% | ← 95% | 592 tests @ 96% coverage + 1209 frontend + 74 E2E. Only runtime-only lines uncovered (ffmpeg, curl_cffi, yield points). 2.2:1 test-to-source ratio. **Genuinely excellent.** |
 | **Frontend quality** | B+ | 84% | ← 93% | ⚠️ **Much improved since audit.** TypeScript is strict and clean, but 2 components still >500 lines (Series: 634, Movies: 576). Search (456) and Player (315) both split into sub-components. `useVideoPlayer` hook still at 612 lines. 43 components now (was 26 — splits added many focused sub-components). 772 KB useVideoPlayer chunk fixed by shaka-player vendor chunk. `role="dialog"` + focus trap added to PinPrompt/KeyboardShortcuts. |
 | **Backend architecture** | C+ | 68% | ← 65% | ⚠️ **Previously overrated.** CACHE_DIR and URL builder duplication now consolidated in config.py/stream_core.py. ~~`import main` still in admin.py~~ ✅ FIXED. 58 broad `except Exception` handlers. ~~`_auto_star` dead code~~ ✅ Already removed. `ADMIN_API_KEY` now auto-generated and documented. No formal service layer. Still some anti-patterns (see below). |
 | **Feature completeness** | B+ | 82% | ← 82% | 14/16 features vs TiviMate/Smarters Pro. **2 gaps:** Multi-provider and multi-user profiles. We do better than both on TMDB enrichment, error differentiation, keyboard shortcuts. Auto frame-rate is a browser limitation. **Honest: we're good but not shipping in the competitor's league.** |
@@ -26,19 +26,19 @@
 ## 1. Testing (96%) — Genuinely strong, verified with live coverage run
 
 ### Backend: 592 tests, 96% coverage (verified 2026-07-01)
-- **32 test files**, 7,570 source lines, 338 uncovered = **96% overall**
+- **34 test files**, 7,570 source lines, 338 uncovered = **96% overall**
 - **29 files at 100%** — including config.py, stream_vod, stream_dash, stream_core (99%), guide_core/guide_epg, tmdb.py, watchlist.py, all 32 test files
 - **Files below 90%:** record.py (24% — runtime-only ffmpeg subprocess), state.py (72% — cache cleanup loop, runtime-only), health.py (79% — some runtime paths), search.py (84%), misc.py (85%), live.py (87%)
 - **Stream modules:** stream_core 99%, stream_vod 100%, stream_live 91%, stream_convert 88%, stream_hls 91%, stream_probe 92%, stream_dash 100% — **overall stream 93%**
 - **Full suite:** 592 passed, 3 xfailed, 36.5s runtime
 - **Integration tests:** 8 tests (Live/VOD/Series/Health) — auto-skip with placeholder creds
 
-### Frontend: 1208 tests (verified 2026-07-01)
-- **66 test files**, 1208 tests across pages, components, hooks, lib
+### Frontend: 1209 tests (verified 2026-07-05)
+- **66 test files**, 1209 tests across pages, components, hooks, lib
 - **100% page coverage** — 13/13 pages have tests
-- **100% component coverage** — 26/26 components have tests
-- **100% hook coverage** — 21/21 hooks have tests
-- **100% lib coverage** — 19/19 lib modules have tests
+- **100% component coverage** — 43/43 components have tests
+- **100% hook coverage** — 22/22 hooks have tests
+- **100% lib coverage** — 10/10 lib modules have tests
 
 ### E2E: 74 tests (58 desktop + 16 mobile)
 - **13 spec files** — Guide, Live TV, Movies, Series, Search, Watchlist, Navigation, Settings, History, Recordings, Error states, Mobile, Homepage
@@ -180,7 +180,7 @@
 |---------|--------|-----------|
 | **Admin endpoint auth** | ✅ Works | 403 with wrong key ✅, 200 with correct key ✅ |
 | **Rate limiting** | ✅ Works | 429 at 101 req/min for search ✅, 429 at 901 req for general (only tested on search — fast enough) |
-| **Request body size limits** | ✅ Works | 413 on 2MB POST ✅. But **bypassable** via chunked encoding (only checks Content-Length header) |
+| **Request body size limits** | ✅ Works | 413 on 2MB POST ✅. Chunked transfer encoding handled by `RequestBodySizeMiddleware` — reads body and enforces limit. |
 | **CORS origins restricted** | ✅ Works | Evil origins blocked ✅. Legit origins allowed ✅. |
 | **Error response** | ✅ No leakage | 500s return generic "Internal Server Error" — no stack traces. **But** 502 from httpx proxy leaks "502 Bad Gateway" text. |
 | **Image proxy host allowlist** | ✅ Works | Internal IPs (10.x, 192.168.x, 172.x, 127.x) blocked ✅ |
