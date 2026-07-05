@@ -264,7 +264,7 @@ async def warm_cache():
 
             await asyncio.gather(*[fetch_vod_cat(cid) for cid in vod_cat_ids], return_exceptions=True)
             log.info(f"[WARMER] VOD: {len(vod_cat_ids)} categories cached")
-        except Exception as e:
+        except HTTPException as e:
             log.warning(f"[WARMER] VOD warm failed (non-fatal): {e}")
 
     async def _warm_series():
@@ -282,7 +282,7 @@ async def warm_cache():
                     for attempt in range(2):
                         try:
                             return await cached_fetch(CACHE_SERIES_CAT.format(id=cid), "get_series", category_id=cid)
-                        except Exception as e:
+                        except HTTPException as e:
                             if attempt == 0:
                                 log.warning(f"[WARMER] Series cat {cid} failed (retrying): {e}")
                                 await asyncio.sleep(1)
@@ -292,7 +292,7 @@ async def warm_cache():
 
             await asyncio.gather(*[fetch_series_cat(cid) for cid in series_cat_ids], return_exceptions=True)
             log.info(f"[WARMER] Series: {len(series_cat_ids)} categories cached")
-        except Exception as e:
+        except HTTPException as e:
             log.warning(f"[WARMER] Series warm failed (non-fatal): {e}")
 
     # Fire VOD and series in parallel
@@ -306,7 +306,7 @@ async def warm_cache():
         channels = epg_data.get("channels", [])
         programmes = epg_data.get("programmes", [])
         log.info(f"[WARMER] EPG: {len(channels)} channels, {len(programmes)} programmes")
-    except Exception as e:
+    except (httpx.HTTPError, httpx.TimeoutException, asyncio.TimeoutError, OSError, json.JSONDecodeError) as e:
         log.warning(f"[WARMER] EPG warm failed (non-fatal): {e}")
 
     elapsed = time.time() - start
