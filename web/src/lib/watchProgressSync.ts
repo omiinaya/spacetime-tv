@@ -108,7 +108,7 @@ export async function getPendingProgress(): Promise<PendingProgress[]> {
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
     });
-  } catch {
+  } catch /* IndexedDB unavailable or corrupt */ {
     return [];
   }
 }
@@ -203,7 +203,7 @@ export async function flushPendingProgress(): Promise<{ flushed: number; failed:
       } else {
         failed++;
       }
-    } catch {
+    } catch /* IndexedDB write error */ {
       failed++;
     }
   }

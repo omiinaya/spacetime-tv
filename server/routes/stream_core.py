@@ -153,37 +153,34 @@ async def _http_iter_chunks(url: str, *,
 
 async def stream_bytes(url: str):
     """Generator that yields bytes from a live stream URL via curl_cffi."""
-    async for chunk in _curl_iter_chunks(url, status_ok=(200,)):
+    async for chunk in _http_iter_chunks(url, status_ok=(200,)):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
 
 
-async def _curl_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
+async def _http_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
                            range_header: Optional[str] = None,
                            buf_size: int = 1048576,
                            log_prefix: str = ""):
-    """Fetch a URL via curl_cffi and pipe the data to an ffmpeg process stdin.
+    """Fetch a URL via httpx and pipe the data to an ffmpeg process stdin.
 
-    Designed to be used as the *feed_coro* argument to :func:`_ffmpeg_pipe`.
-    Runs curl_cffi in a thread (blocking API), iterates response chunks and
-    writes them to ``proc.stdin``, then closes stdin on completion.
+    Uses ``httpx.AsyncClient`` with ``follow_redirects=True`` to follow the
+    provider's 302 redirect — no TLS impersonation needed.
     """
     try:
-        loop = asyncio.get_event_loop()
         headers = {"User-Agent": UA_STR, "Referer": f"{IPTV_BASE}/"}
         if range_header:
             headers["Range"] = range_header  # pragma: no cover — tested via start_time mock
 
-        resp = await loop.run_in_executor(
-            None, lambda: CurlReq.get(url, headers=headers, stream=True,
-                                      timeout=120, impersonate="chrome120"),
-        )
-        for chunk in resp.iter_content(chunk_size=buf_size):
-            if not chunk:
-                break  # pragma: no cover — end-of-stream, runtime only
-            proc.stdin.write(chunk)
-            await proc.stdin.drain()
-        resp.close()
-    except CurlReq.RequestsError as e:  # pragma: no cover — network error, runtime only
+        async with httpx.AsyncClient(follow_redirects=True, timeout=120) as c:
+            resp = await c.get(url, headers=headers)
+            resp.raise_for_status()
+
+            async for chunk in resp.aiter_bytes(chunk_size=buf_size):
+                if not chunk:
+                    break  # pragma: no cover — end-of-stream, runtime only
+                proc.stdin.write(chunk)
+                await proc.stdin.drain()
+    except httpx.HTTPError as e:  # pragma: no cover — network error, runtime only
         log.warning(f"{log_prefix} download error: {e}")  # pragma: no cover — network error, runtime only
     finally:
         try:
@@ -245,7 +242,7 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
     """Generator that yields VOD bytes via curl_cffi streaming.
     Supports Range/206 for seeking.
     """
-    async for chunk in _curl_iter_chunks(url, range_header=range_header,
+    async for chunk in _http_iter_chunks(url, range_header=range_header,
                                          status_ok=(200, 206)):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
 
