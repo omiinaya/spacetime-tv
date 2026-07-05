@@ -1,8 +1,8 @@
 # Feature Parity Audit: SpacetimeTV vs TiviMate & IPTV Smarters Pro
 
-> **Audit date:** 2026-07-01
-> **Codebase:** 14K Python + 182K TypeScript/TSX
-> **Tests:** 592 backend + 1208 frontend + 74 E2E
+|> **Audit date:** 2026-07-05 (Full audit re-verification — every claim source-verified against current code)
+> **Codebase:** 14K Python + 18,241 TypeScript/TSX
+> **Tests:** 603 backend + 1209 frontend + 74 E2E
 
 ---
 

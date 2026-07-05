@@ -1,4 +1,5 @@
 """Health & monitoring routes."""
+import json
 import logging
 import time
 from fastapi import APIRouter, Request

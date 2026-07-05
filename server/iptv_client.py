@@ -9,6 +9,7 @@ Usage:
     resp = await client.get(url)
 """
 
+import json
 import logging
 import time
 from urllib.parse import urlencode
