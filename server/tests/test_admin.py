@@ -385,13 +385,15 @@ def test_admin_stream_health_nonstandard_resolution(client: TestClient):
 def test_admin_warm_cache_already_in_progress(client: TestClient):
     """POST /api/admin/cache/warm when already warming should indicate in progress."""
     import asyncio
-    import main as m
-    old = m._warm_task
+    from routes.cache_warmer import _warm_task as wt
+    old = wt
 
     # Create a not-done task (an incomplete asyncio future)
     pending = asyncio.Future()
     try:
-        m._warm_task = pending  # not None and not done()
+        # Monkey-patch the module-level _warm_task
+        import routes.cache_warmer as cw
+        cw._warm_task = pending  # not None and not done()
 
         from main import app
         with _admin_client() as c:
@@ -400,7 +402,7 @@ def test_admin_warm_cache_already_in_progress(client: TestClient):
         data = resp.json()
         assert "in progress" in data["message"].lower() or "already" in data["message"].lower()
     finally:
-        m._warm_task = old
+        cw._warm_task = old
         pending.cancel()
 
 

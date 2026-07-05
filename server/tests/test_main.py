@@ -424,29 +424,31 @@ class TestStartCacheWarmer:
 
     async def test_creates_task_when_none(self):
         """start_cache_warmer creates a new asyncio.Task when _warm_task is None."""
+        import routes.cache_warmer as cw
         import main as m
 
-        old_task = m._warm_task
+        old_task = cw._warm_task
         old_enabled = m.CACHE_WARM_ENABLED
         try:
-            m._warm_task = None
+            cw._warm_task = None
             m.CACHE_WARM_ENABLED = False
 
             start_cache_warmer()
 
-            assert m._warm_task is not None
-            assert not m._warm_task.done()
+            assert cw._warm_task is not None
+            assert not cw._warm_task.done()
 
-            await m._warm_task
+            await cw._warm_task
         finally:
-            m._warm_task = old_task
+            cw._warm_task = old_task
             m.CACHE_WARM_ENABLED = old_enabled
 
     async def test_replaces_done_task(self):
         """start_cache_warmer replaces a done task with a new one."""
+        import routes.cache_warmer as cw
         import main as m
 
-        old_task = m._warm_task
+        old_task = cw._warm_task
         old_enabled = m.CACHE_WARM_ENABLED
         try:
             m.CACHE_WARM_ENABLED = False
@@ -454,41 +456,41 @@ class TestStartCacheWarmer:
             async def dummy():
                 pass
 
-            m._warm_task = asyncio.create_task(dummy())
-            await m._warm_task
+            cw._warm_task = asyncio.create_task(dummy())
+            await cw._warm_task
 
             start_cache_warmer()
 
-            assert m._warm_task is not None
-            assert not m._warm_task.done()
-            await m._warm_task
+            assert cw._warm_task is not None
+            assert not cw._warm_task.done()
+            await cw._warm_task
         finally:
-            m._warm_task = old_task
+            cw._warm_task = old_task
             m.CACHE_WARM_ENABLED = old_enabled
 
     async def test_noop_when_task_running(self):
         """start_cache_warmer does nothing when _warm_task is still running."""
-        import main as m
+        import routes.cache_warmer as cw
 
-        old_task = m._warm_task
+        old_task = cw._warm_task
         try:
             async def never_done():
                 await asyncio.sleep(3600)
 
-            m._warm_task = asyncio.create_task(never_done())
-            task_before = m._warm_task
+            cw._warm_task = asyncio.create_task(never_done())
+            task_before = cw._warm_task
 
             start_cache_warmer()
 
-            assert m._warm_task is task_before
+            assert cw._warm_task is task_before
 
-            m._warm_task.cancel()
+            cw._warm_task.cancel()
             try:
-                await m._warm_task
+                await cw._warm_task
             except asyncio.CancelledError:
                 pass
         finally:
-            m._warm_task = old_task
+            cw._warm_task = old_task
 
 
 # ════════════════════════════════════════════════════════════════════════════
