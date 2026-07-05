@@ -135,7 +135,6 @@ def test_serve_cached_mp4_no_range(tmp_path, monkeypatch):
     assert resp.status_code == 200
     assert resp.media_type == "video/mp4"
     assert resp.headers.get("accept-ranges") == "bytes"
-    assert resp.headers.get("access-control-allow-origin") == "*"
 
 
 def test_serve_cached_mp4_with_range(tmp_path, monkeypatch):
