@@ -404,7 +404,9 @@ async def cleanup_loop():
         try:
             await cleanup_stale_cache()
         except Exception as e:
-            # Broad catch: background loop must never crash — expected: OSError from file ops
+            # Background loop guard: cleanup_stale_cache() may raise OSError (file ops),
+            # ValueError (malformed timestamps), KeyError (corrupt index), etc.
+            # Must never crash the loop — catch all expected + unexpected exceptions.
             log.error(f"[CLEANUP] Error: {e}")
 
 

@@ -56,8 +56,11 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
         )
         stdout, stderr_bytes = await asyncio.wait_for(proc.communicate(), timeout=10.0)
         stderr_text = stderr_bytes.decode() if stderr_bytes else ""
-    except Exception as e:
+    except (OSError, asyncio.TimeoutError) as e:
         log.warning(f"ffprobe failed for {stream_id}: {e}")
+        return {"codec": "unknown", "error": str(e)}
+    except Exception as e:
+        log.warning(f"ffprobe unexpected error for {stream_id}: {e}")
         return {"codec": "unknown", "error": str(e)}
 
     if proc.returncode != 0 or not stdout:
