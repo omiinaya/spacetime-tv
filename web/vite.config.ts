@@ -25,17 +25,21 @@ export default defineConfig({
         const indexPath = path.resolve(distDir, "index.html");
         let html = readFileSync(indexPath, "utf-8");
 
+        // Log a snippet to verify the hook runs
+        console.log("[inline-css] Post-processing", indexPath);
+
         const cssLinkRegex = /<link\s+[^>]*rel="stylesheet"[^>]*href="([^"]+)"[^>]*\/?>/gi;
         let match;
         while ((match = cssLinkRegex.exec(html)) !== null) {
           const fullLink = match[0];
-          const cssPath = path.resolve(distDir, match[1]);
+          const cssPath = path.resolve(distDir, match[1].replace(/^\//, ""));
+          console.log("[inline-css] Inlining", match[1], "→", cssPath);
           try {
             const css = readFileSync(cssPath, "utf-8");
             html = html.replace(fullLink, `<style>${css}</style>`);
             try { unlinkSync(cssPath); } catch {}
           } catch {
-            // Skip if file doesn't exist — keep the link as-is
+            console.log("[inline-css] SKIP - file not found:", cssPath);
           }
         }
 
