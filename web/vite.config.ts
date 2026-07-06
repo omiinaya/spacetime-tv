@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, unlinkSync } from "fs";
 
 export default defineConfig({
   plugins: [
@@ -15,6 +15,30 @@ export default defineConfig({
         const indexPath = path.resolve(__dirname, "dist/index.html");
         let html = readFileSync(indexPath, "utf-8");
         html = html.replace(/\s+crossorigin(=["'][^"']*["'])?/g, "");
+        writeFileSync(indexPath, html);
+      },
+    },
+    {
+      name: "inline-css",
+      closeBundle() {
+        const distDir = path.resolve(__dirname, "dist");
+        const indexPath = path.resolve(distDir, "index.html");
+        let html = readFileSync(indexPath, "utf-8");
+
+        const cssLinkRegex = /<link\s+[^>]*rel="stylesheet"[^>]*href="([^"]+)"[^>]*\/?>/gi;
+        let match;
+        while ((match = cssLinkRegex.exec(html)) !== null) {
+          const fullLink = match[0];
+          const cssPath = path.resolve(distDir, match[1]);
+          try {
+            const css = readFileSync(cssPath, "utf-8");
+            html = html.replace(fullLink, `<style>${css}</style>`);
+            try { unlinkSync(cssPath); } catch {}
+          } catch {
+            // Skip if file doesn't exist — keep the link as-is
+          }
+        }
+
         writeFileSync(indexPath, html);
       },
     },
