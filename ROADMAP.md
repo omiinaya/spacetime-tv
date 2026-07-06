@@ -1,11 +1,11 @@
 # SpacetimeTV Roadmap v5 — Honest Full Audit
 
-> **Audit date:** 2026-07-05 (Full audit re-verification — every claim source-verified against current code)
-> **Last refreshed:** 2026-07-06 (Re-verified hook/lib counts: 24 hooks/9 lib modules. Frontend source: 16,107 non-test + 17,479 test)
+> **Audit date:** 2026-07-06 (Reconciliation audit — line counts verified)
+> **Last refreshed:** 2026-07-06 (Re-verified hook/lib counts: 24 hooks/9 lib modules. Frontend source: 16,510 non-test + 17,479 test)
 > **Architecture:** FastAPI monolith + React/Vite SPA | 81 API routes | 13 pages | 43 components | 24 hooks | 9 lib modules
 > **Test counts:** 558 backend pass (34 pre-existing asyncio failures, 3 xfailed) + 1209 frontend unit + 74 E2E | TypeScript 0 errors
-> **Codebase:** 4,487 backend Python + 16,107 frontend TypeScript source + 17,479 test/__tests__ files = ~33,586 total TS lines
-> **Tests:** 34 backend test files + 66 frontend test files + 13 E2E spec files = 113 test files
+> **Codebase:** 4,579 backend Python + 16,510 frontend TypeScript source + 17,479 test/__tests__ files = ~33,989 total TS lines
+> **Tests:** 32 backend test files + 66 frontend test files + 13 E2E spec files = 111 test files
 
 ---
 
@@ -26,7 +26,7 @@
 ## 1. Testing (88%) — Strong core, 34 asyncio fixture failures
 
 ### Backend: 595 tests, 558 pass, 34 pre-existing asyncio failures (verified 2026-07-06)
-- **34 test files**, 9,747 source lines in tests
+- **32 test files**, 9,747 source lines in tests
 - **5 additional tests fixed:** TMDB_ENRICH None guards (3 guide_enrich tests), _safe_convert broad except (1 stream test), recentChannels.ts TypeScript (1 TS error to 0)
 - **29 files at 100%** — including config.py, stream_vod, stream_dash, stream_core (99%), guide_core/guide_epg, tmdb.py, watchlist.py, all 32 test files
 - **Files below 90%:** record.py (24% — runtime-only ffmpeg subprocess), state.py (72% — cache cleanup loop, runtime-only), health.py (79% — some runtime paths), search.py (84%), misc.py (85%), live.py (87%)
