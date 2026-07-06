@@ -4,6 +4,7 @@ These routes involve HTTP calls to external services, so we mock
 the `main.client` httpx.AsyncClient where needed.
 """
 from unittest.mock import AsyncMock, MagicMock, patch
+import httpx
 # ── SPA fallback: /{full_path:path} ───────────────────────────────────
 
 def test_spa_fallback_serves_index(client):
@@ -180,6 +181,6 @@ def test_iptv_raw_proxy_proxies_request(client):
 
 def test_iptv_raw_proxy_failure_returns_502(client):
     """IPTV raw proxy should return 502 when upstream fails."""
-    with patch("iptv_client.client.get", side_effect=Exception("Connection refused")):
+    with patch("iptv_client.client.get", side_effect=httpx.HTTPError("Connection refused")):
         resp = client.get("/api/v1/iptv/some/path")
         assert resp.status_code == 502

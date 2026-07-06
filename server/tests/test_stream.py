@@ -6,6 +6,7 @@ pre-populating caches and using the mock client fixture."""
 
 import pytest
 import time
+import httpx
 from unittest.mock import patch, MagicMock
 
 
@@ -257,7 +258,7 @@ def test_lookup_extension_api_fallback_error_returns_mkv(client_with_cache):
 
     class _MockCtxError:
         async def get(self, url):
-            raise Exception("Network error")
+            raise httpx.HTTPError("Network error")
 
     with patch("routes.stream_core.httpx.AsyncClient") as MockClient:
         MockClient.return_value.__aenter__.return_value = _MockCtxError()
@@ -377,7 +378,7 @@ def test_get_content_length_handles_exception():
 
     class _MockCtxErr:
         async def get(self, url):
-            raise Exception("Connection error")
+            raise httpx.HTTPError("Connection error")
 
     with patch("routes.stream_core.httpx.AsyncClient") as MockClient:
         MockClient.return_value.__aenter__.return_value = _MockCtxErr()
