@@ -19,6 +19,11 @@ from .guide_core import _EPG_ENRICH_CACHE, _EPG_ENRICH_TTL
 from .guide_epg import _build_guide_cache, _parse_ts, load_epg_background
 
 log = logging.getLogger("spacetime-tv")
+
+_RICH_ENABLED = bool(_TMDB_ENRICH)
+
+
+log.info(f"TMDB enrich: {'enabled' if _RICH_ENABLED else 'disabled'} — {'path: ' + str(_TMDB_ENRICH) if _RICH_ENABLED else 'no TMDB_ENRICH_PATH set'}")
 router = APIRouter(tags=["guide"])
 
 
@@ -189,6 +194,10 @@ async def guide_enrich(
             if data:
                 return {"enabled": True, "result": data}
             return {"enabled": False, "result": None}
+
+    if not _RICH_ENABLED:
+        _EPG_ENRICH_CACHE[cache_key] = (now, None)
+        return {"enabled": False, "result": None}
 
     try:
         proc = await asyncio.create_subprocess_exec(
