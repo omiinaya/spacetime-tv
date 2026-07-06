@@ -282,7 +282,7 @@ async def stream_bytes_transcode(url: str, target_height: Optional[int] = None):
         "-f", "mpegts",
         "pipe:1",
     ]
-    feed = partial(_curl_feed_stdin, url=url, log_prefix="transcode")
+    feed = partial(_http_feed_stdin, url=url, log_prefix="transcode")
     async for chunk in _ffmpeg_pipe(cmd, feed):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
 

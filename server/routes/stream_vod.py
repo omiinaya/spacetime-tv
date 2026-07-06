@@ -11,8 +11,9 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from state import track_hit
 from .stream_core import (
-    _curl_feed_stdin,
     _ffmpeg_pipe,
+    _http_feed_stdin,
+    _lookup_extension,
     _mime_from_url,
     build_stream_url,
     stream_vod_bytes,
@@ -82,7 +83,7 @@ async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
         "-f", "mpegts",
         "pipe:1",
     ]
-    feed = partial(_curl_feed_stdin, url=url, range_header=range_header,
+    feed = partial(_http_feed_stdin, url=url, range_header=range_header,
                    buf_size=262144, log_prefix="vod-remux")
     async for chunk in _ffmpeg_pipe(cmd, feed):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
@@ -107,7 +108,7 @@ async def stream_vod_transcode(url: str):
         "-f", "mpegts",
         "pipe:1",
     ]
-    feed = partial(_curl_feed_stdin, url=url, log_prefix="vod-transcode")
+    feed = partial(_http_feed_stdin, url=url, log_prefix="vod-transcode")
     async for chunk in _ffmpeg_pipe(cmd, feed):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
 
