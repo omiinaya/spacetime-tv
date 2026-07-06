@@ -17,8 +17,8 @@ from fastapi import APIRouter
 # Re-export all public symbols for backward compatibility with tests.
 # These allow ``from routes.stream import build_stream_url`` etc. to keep working.
 from routes.stream_core import (
-    _curl_iter_chunks,
     _ffmpeg_pipe,
+    _http_iter_chunks,
     _lookup_extension,
     _mime_from_url,
     _probe_cache,
