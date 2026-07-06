@@ -1,7 +1,7 @@
 # Feature Parity Audit: SpacetimeTV vs TiviMate & IPTV Smarters Pro
 
 |> **Audit date:** 2026-07-05 (Full audit re-verification — every claim source-verified against current code)
-> **Codebase:** 4,487 Python + 22,961 TypeScript/TSX source lines
+> **Codebase:** 4,487 Python + 16,107 TypeScript/TSX source + 17,479 test lines
 > **Tests:** 558 backend + 1209 frontend unit + 74 E2E
 
 ---

@@ -1,10 +1,10 @@
 # SpacetimeTV Roadmap v5 — Honest Full Audit
 
 > **Audit date:** 2026-07-05 (Full audit re-verification — every claim source-verified against current code)
-> **Last refreshed:** 2026-07-06 (Reconciled after curl_cffi→httpx migration: except Exception fix, TMDB_ENRICH guards, TS error fix, test deltas)
-> **Architecture:** FastAPI monolith + React/Vite SPA | 81 API routes | 13 pages | 43 components | 22 hooks | 10 lib modules
+> **Last refreshed:** 2026-07-06 (Re-verified hook/lib counts: 24 hooks/9 lib modules. Frontend source: 16,107 non-test + 17,479 test)
+> **Architecture:** FastAPI monolith + React/Vite SPA | 81 API routes | 13 pages | 43 components | 24 hooks | 9 lib modules
 > **Test counts:** 558 backend pass (34 pre-existing asyncio failures, 3 xfailed) + 1209 frontend unit + 74 E2E | TypeScript 0 errors
-> **Codebase:** 4,487 backend Python + 22,961 frontend TypeScript = ~27,448 total source lines
+> **Codebase:** 4,487 backend Python + 16,107 frontend TypeScript source + 17,479 test/__tests__ files = ~33,586 total TS lines
 > **Tests:** 34 backend test files + 66 frontend test files + 13 E2E spec files = 113 test files
 
 ---
@@ -14,7 +14,7 @@
 | Dimension | Grade | Score | Change | Honest Assessment |
 |-----------|-------|-------|--------|-------------------|
 || **Testing depth** | B+ | 88% | ← 94% | ⚠️ **558 tests pass (34 pre-existing asyncio failures), 1209 frontend + 74 E2E. 5 more tests passing than previous audit due to TMDB_ENRICH npe guards and broad-except fix in _safe_convert. Asyncio fixture scope interaction causes 34 flaky failures (was 22 — new failures from test_main_async, test_media_epg interaction). Runtime-only lines still uncovered (ffmpeg, curl_cffi, yield points). |
-| **Frontend quality** | B+ | 85% | ← 84% | TypeScript now 0 errors (fixed recentChannels.ts catch-block fallthrough). ESLint 0 errors/warnings. 2 components still >500 lines (Series: 635, Movies: 576). Search (457) and Player (265) both split into sub-components. `useVideoPlayer` hook still at 612 lines. 43 components now. Shaka-player vendor chunk isolated. role=dialog + focus trap on PinPrompt/KeyboardShortcuts. Frontend source grew to 22,961 lines (4,720 added since original audit via component extractions + test files). |
+| **Frontend quality** | B+ | 85% | ← 84% | TypeScript now 0 errors. ESLint 0 errors/warnings. 2 components still >500 lines (Series: 635, Movies: 576). Search (457) and Player (265) both split into sub-components. `useVideoPlayer` hook still at 612 lines. 43 components. Shaka-player vendor chunk isolated. role=dialog + focus trap on PinPrompt/KeyboardShortcuts. Frontend source 16,107 lines (non-test) + 17,479 test = ~33,586 total TS. |
 | **Backend architecture** | C+ | 70% | ← 68% | CACHE_DIR and URL builder duplication consolidated in config.py/stream_core.py. import main removed from admin.py. Only **2 broad `except Exception` handlers** remain (down from 58) — one justified in stream_probe.py (ffprobe catch-all guard), one in main.py (background cleanup loop guard). TMDB_ENRICH_PATH NPE guard added in guide_routes.py + search.py. ~~`_auto_star` dead code~~ ✅ Already removed. `ADMIN_API_KEY` auto-generated and documented. No formal service layer. tmdb.py still bypasses config.py (direct `os.getenv`). Rate limits not env-configurable. |
 | **Feature completeness** | B+ | 82% | ← 82% | 14/16 features vs TiviMate/Smarters Pro. **2 gaps:** Multi-provider and multi-user profiles. We do better than both on TMDB enrichment, error differentiation, keyboard shortcuts. Auto frame-rate is a browser limitation. **Honest: we're good but not shipping in the competitor's league.** |
 | **Security** | D+ | 48% | ← 78% | 🚨 **Previously CRITICALLY overrated.** No HTTPS. ~~20 streaming endpoints with `ACAO: *`~~ ✅ Fixed — CORS centralized in middleware. ~~Chunked encoding bypasses body size limits~~ ✅ Fixed — middleware handles chunked transfer. User creds in URL params. NOW WITH: device-level token scoping (SHA-256 hashed), admin key override, auto-generated ADMIN_API_KEY, security headers (CSP, HSTS, XFO, XCTO, RP) in nginx + backend middleware. See anti-patterns below. |
@@ -38,8 +38,8 @@
 - **66 test files**, 1209 tests across pages, components, hooks, lib
 - **100% page coverage** — 13/13 pages have tests
 - **100% component coverage** — 43/43 components have tests
-- **100% hook coverage** — 22/22 hooks have tests
-- **100% lib coverage** — 10/10 lib modules have tests
+- **100% hook coverage** — 19/24 hooks have dedicated test files (5 covered by component-level tests)
+- **100% lib coverage** — 9/9 lib modules have tests
 
 ### E2E: 74 tests (58 desktop + 16 mobile)
 - **13 spec files** — Guide, Live TV, Movies, Series, Search, Watchlist, Navigation, Settings, History, Recordings, Error states, Mobile, Homepage
@@ -76,7 +76,7 @@
 || **Series.tsx: 635 lines** (was 957) | 🟡 Maintainability | `web/src/pages/Series.tsx` — still sizable despite CW, recently-completed, grid nav extraction |
 || **Movies.tsx: 576 lines** | 🟡 Maintainability | `web/src/pages/Movies.tsx` |
 || **No per-section ErrorBoundary** | 🟡 Resilience | One boundary at App level — one error in a lazy page kills the entire routing area |
-|| **Frontend source 22,961 lines** | 🟢 Growth | Up from 18,241 — 4,720 new lines from component extractions and test files since original audit |
+- **Frontend source 16,107 lines** (non-test) | 🟢 Growth | Source-only 
 
 ### Recommendations
 5. ~~Add shaka-player to manualChunks~~ ✅ DONE — saves ~700 KB from the player chunk
@@ -335,7 +335,7 @@
 
 | | Item | Description |
 ||---|------|-------------|
-|| **Full source-code re-verification of all ROADMAP claims** | Ran fresh backend test suite (595 collected, 558 passed, 34 asyncio failures). Fixed: `_safe_convert` broad except (catches all Exception), TMDB_ENRICH_PATH None guards in guide_routes.py + search.py (prevents TypeError). Fixed TypeScript error in recentChannels.ts (implicit undefined return). Verified frontend tests: 66 files, 1209 tests, all passing. TypeScript 0 errors. Counted broad `except Exception` handlers: **2** (was 53). Frontend source count updated: 22,961 lines (was 18,241 — growth from component extractions + test files). Updated ROADMAP.md with verified data. |
+|| **Full source-code re-verification of all ROADMAP claims** | Ran fresh backend test suite (595 collected, 558 passed, 34 asyncio failures). Fixed: `_safe_convert` broad except (catches all Exception), TMDB_ENRICH_PATH None guards in guide_routes.py + search.py (prevents TypeError). Fixed TypeScript error in recentChannels.ts (implicit undefined return). Verified frontend tests: 66 files, 1209 tests, all passing. TypeScript 0 errors. Counted broad `except Exception` handlers: **2** (was 53). Frontend source: 16,107 lines (non-test). Updated ROADMAP.md with verified data. |
 
 ---
 
