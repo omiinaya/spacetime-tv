@@ -25,7 +25,7 @@ def test_cache_key_producer_consumer_match(client):
     should either match an exact _cache entry (static keys) or have at least
     one matching prefix entry (template keys).
     """
-    from main import _cache
+    from state import _cache
 
     # Populate all static keys with test data
     for name, pattern in CACHE_KEY_PATTERNS.items():
@@ -67,7 +67,7 @@ def test_cold_cache_triggers_upstream(client):
 
 def test_warm_cache_returns_cached(client_with_cache):
     """Pre-populated cache returns data without upstream call."""
-    from main import _cache
+    from state import _cache
 
     test_data = [{"category_id": 1, "category_name": "News"}]
     _cache["live_cats"] = (9999999999.0, test_data)
@@ -80,7 +80,7 @@ def test_warm_cache_returns_cached(client_with_cache):
 
 def test_stale_cache_served_on_upstream_failure(client_with_cache):
     """When upstream fails but stale cache exists, stale data is returned."""
-    from main import _cache
+    from state import _cache
     import time
 
     stale_time = time.time() - 1000  # Well past TTL
@@ -102,7 +102,7 @@ def test_cache_miss_returns_error(client_with_cache):
 
 def test_cache_entries_have_timestamps(client_with_cache):
     """Cache entries should have timestamp + data tuple shape."""
-    from main import _cache
+    from state import _cache
 
     _cache["live_cats"] = (1000.0, [{"category_id": 1}])
     entry = _cache["live_cats"]

@@ -29,7 +29,7 @@ export function programmeProgress(p: { start: string; stop: string; is_live?: bo
     const duration = stop.getTime() - start.getTime();
     if (duration <= 0) return 0;
     return (now.getTime() - start.getTime()) / duration;
-  } catch {
+  } catch /* DOMException or SyntaxError */ {
     return 0;
   }
 }
@@ -38,7 +38,7 @@ export function programmeProgress(p: { start: string; stop: string; is_live?: bo
 export function programmeTimeRange(p: { start: string; stop: string }): string {
   try {
     return `${formatTime(parseXmltvTime(p.start))} – ${formatTime(parseXmltvTime(p.stop))}`;
-  } catch {
+  } catch /* DOMException or SyntaxError */ {
     return "";
   }
 }

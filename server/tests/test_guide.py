@@ -225,7 +225,7 @@ def test_guide_now_invalid_ids_ignored(client):
 def test_guide_now_with_cache_mapping(client_with_cache):
     """When live_all cache has epg_channel_id mappings, /api/guide/now should resolve programmes."""
     from state import epg_cache
-    from main import _cache
+    from state import _cache
     _setup_epg_cache(epg_cache)
 
     # Pre-populate live_all with stream-to-EPG-channel mapping

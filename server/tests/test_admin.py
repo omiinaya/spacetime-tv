@@ -91,7 +91,8 @@ def test_admin_stats_cache_empty_on_fresh_start(client: TestClient):
 
 def test_admin_stats_reflects_populated_cache(client_with_cache: TestClient):
     """Pre-populated cache should show in admin stats."""
-    from main import _cache, app
+    from state import _cache
+from main import app
 
     _cache["vod_10"] = (time.time(), [{"stream_id": 1, "name": "Test Movie"}])
     _cache["vod_categories"] = (time.time(), [{"category_id": 10}])
@@ -108,7 +109,8 @@ def test_admin_stats_reflects_populated_cache(client_with_cache: TestClient):
 
 def test_admin_clear_cache_returns_count(client_with_cache: TestClient):
     """POST /api/admin/cache/clear should return the count of cleared entries."""
-    from main import _cache, app
+    from state import _cache
+from main import app
 
     _cache["test_key"] = (time.time(), "test_value")
     _cache["another_key"] = (time.time(), "another_value")
@@ -123,7 +125,8 @@ def test_admin_clear_cache_returns_count(client_with_cache: TestClient):
 
 def test_admin_clear_cache_empties_cache(client_with_cache: TestClient):
     """After POST /api/admin/cache/clear, the cache should be empty."""
-    from main import _cache, app
+    from state import _cache
+from main import app
 
     _cache["test_key"] = (time.time(), "test_value")
 
@@ -162,7 +165,8 @@ def test_admin_warm_cache_returns_message(client: TestClient):
 
 def test_admin_warm_full_cache_clears_and_warms(client_with_cache: TestClient):
     """POST /api/admin/cache/warm-full clears cache then warms."""
-    from main import _cache, app
+    from state import _cache
+from main import app
 
     _cache["stale_key"] = (time.time(), "stale_value")
 

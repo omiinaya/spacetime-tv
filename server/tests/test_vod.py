@@ -21,7 +21,7 @@ def test_movies_categories_empty_when_cache_empty(client):
 
 def test_movies_categories_with_cache(client_with_cache):
     """Should return cached VOD categories."""
-    from main import _cache
+    from state import _cache
 
     test_cats = [
         {"category_id": 10, "category_name": "EN - Action", "parent_id": 0},
@@ -51,7 +51,7 @@ def test_movie_details_empty_when_cache_cold(client):
 
 def test_movie_details_with_cache(client_with_cache):
     """Movie details should return cached VOD info — inner info dict."""
-    from main import _cache
+    from state import _cache
 
     fake_info = {
         "stream_id": 42,
@@ -88,7 +88,7 @@ def test_movies_unified_empty_when_no_vod_cache(client):
 
 def test_movies_unified_uses_cached_vod_data(client_with_cache):
     """Unified should merge streams from vod_* caches, grouped by TMDB."""
-    from main import _cache
+    from state import _cache
 
     _cache["vod_10"] = (time.time() + 3600, [
         {"stream_id": 101, "name": "EN - The Matrix (1999)", "tmdb": "tmdb603",
@@ -110,7 +110,7 @@ def test_movies_unified_uses_cached_vod_data(client_with_cache):
 
 def test_movies_unified_filters_by_query(client_with_cache):
     """Unified should filter by ?q= parameter."""
-    from main import _cache
+    from state import _cache
 
     _cache["vod_10"] = (time.time() + 3600, [
         {"stream_id": 101, "name": "EN - The Matrix (1999)", "tmdb": "tmdb603",
@@ -128,7 +128,7 @@ def test_movies_unified_filters_by_query(client_with_cache):
 
 def test_movies_unified_groups_languages(client_with_cache):
     """Unified should group multiple language entries under same TMDB."""
-    from main import _cache
+    from state import _cache
 
     _cache["vod_10"] = (time.time() + 3600, [
         {"stream_id": 101, "name": "EN - The Matrix (1999)", "tmdb": "tmdb603",
@@ -161,7 +161,7 @@ def test_series_categories_empty_when_cache_empty(client):
 
 def test_series_categories_with_cache(client_with_cache):
     """Should return cached series categories."""
-    from main import _cache
+    from state import _cache
 
     test_cats = [
         {"category_id": 30, "category_name": "EN - Drama", "parent_id": 0},
@@ -197,7 +197,7 @@ def test_series_returns_paginated(client):
 
 def test_series_with_cached_data(client_with_cache):
     """Series should return cached series data with pagination."""
-    from main import _cache
+    from state import _cache
 
     series_list = [{"id": i, "name": f"Series {i}"} for i in range(1, 11)]
     _cache["series_30"] = (time.time() + 3600, series_list)
@@ -222,7 +222,7 @@ def test_series_details_empty_when_cache_cold(client):
 
 def test_series_details_with_cache(client_with_cache):
     """Series details should return cached info."""
-    from main import _cache
+    from state import _cache
 
     fake_info = {
         "id": 42,

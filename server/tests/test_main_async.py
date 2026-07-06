@@ -17,6 +17,8 @@ from main import (
     cleanup_stale_cache,
     start_cleanup_task,
 )
+from iptv_client import fetch_iptv
+from state import _cache
 from iptv_client import cached_fetch
 
 

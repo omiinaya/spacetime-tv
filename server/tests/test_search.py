@@ -23,7 +23,7 @@ def test_search_returns_all_sections(client):
 
 def test_search_filters_live(client_with_cache):
     """Search should filter live streams by name."""
-    from main import _cache
+    from state import _cache
 
     _cache["live_all"] = (1000.0, [
         {"stream_id": 1, "name": "BBC News", "stream_icon": "", "category_id": "1"},
@@ -42,7 +42,7 @@ def test_search_filters_live(client_with_cache):
 
 def test_search_filters_movies_from_cache(client_with_cache):
     """Search should find movies in pre-populated VOD caches."""
-    from main import _cache
+    from state import _cache
 
     _cache["vod_categories"] = (1000.0, [{"category_id": 10, "category_name": "EN - Action"}])
     _cache["vod_10"] = (1000.0, [
@@ -70,7 +70,7 @@ def test_search_empty_query_returns_empty(client):
 
 def test_search_pagination_limit_offset_section(client_with_cache):
     """Search with limit, offset, and section params should return sliced results."""
-    from main import _cache
+    from state import _cache
 
     _cache["live_all"] = (1000.0, [
         {"stream_id": 101, "name": "Channel One", "stream_icon": "", "category_id": "1"},

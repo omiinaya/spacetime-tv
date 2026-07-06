@@ -21,7 +21,7 @@ def test_live_categories_empty_when_cache_empty(client):
 
 def test_live_categories_with_cache(client_with_cache):
     """GET /api/live/categories should return cached categories."""
-    from main import _cache
+    from state import _cache
 
     test_cats = [
         {"category_id": 1, "category_name": "General", "parent_id": 0},
@@ -51,7 +51,7 @@ def test_live_all_empty_when_cache_empty(client):
 
 def test_live_all_with_cache(client_with_cache):
     """GET /api/live/all should return cached live streams."""
-    from main import _cache
+    from state import _cache
 
     test_streams = [
         {"stream_id": 1, "name": "BBC News", "stream_icon": "", "category_id": "1"},
@@ -85,7 +85,7 @@ def test_live_streams_empty_when_cache_empty(client):
 
 def test_live_streams_with_cache(client_with_cache):
     """GET /api/live/streams should return cached streams for a category."""
-    from main import _cache
+    from state import _cache
 
     test_streams = [
         {"stream_id": 10, "name": "BBC One", "stream_icon": "", "category_id": "1"},
@@ -129,7 +129,7 @@ def test_live_info_empty_when_cache_empty(client):
 
 def test_live_info_with_cache(client_with_cache):
     """GET /api/live/info should return info for matching stream IDs."""
-    from main import _cache
+    from state import _cache
 
     _cache["live_all"] = (time.time() + 3600, [
         {"stream_id": 101, "name": "BBC One HD", "stream_icon": "http://example.com/bbc1.png", "category_id": "1"},
@@ -153,7 +153,7 @@ def test_live_info_with_cache(client_with_cache):
 
 def test_live_info_mixed_valid_invalid_ids(client_with_cache):
     """GET /api/live/info should handle mix of valid and invalid IDs."""
-    from main import _cache
+    from state import _cache
 
     _cache["live_all"] = (time.time() + 3600, [
         {"stream_id": 1, "name": "Channel 1", "stream_icon": "", "category_id": "1"},
@@ -169,7 +169,7 @@ def test_live_info_mixed_valid_invalid_ids(client_with_cache):
 
 def test_live_info_stream_icon_included(client_with_cache):
     """GET /api/live/info should include stream_icon in response."""
-    from main import _cache
+    from state import _cache
 
     _cache["live_all"] = (time.time() + 3600, [
         {"stream_id": 42, "name": "Test Channel", "stream_icon": "http://example.com/icon.png", "category_id": "1"},

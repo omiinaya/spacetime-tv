@@ -13,7 +13,7 @@ def test_live_categories_empty_when_cache_empty(client):
 
 def test_live_categories_with_cache(client_with_cache):
     """/api/v1/live/categories should return cached categories."""
-    from main import _cache
+    from state import _cache
 
     test_cats = [
         {"category_id": 1, "category_name": "News", "parent_id": 0},
@@ -32,7 +32,7 @@ def test_live_categories_with_cache(client_with_cache):
 
 def test_movie_categories_with_cache(client_with_cache):
     """/api/v1/movies/categories should return cached categories."""
-    from main import _cache
+    from state import _cache
 
     test_cats = [
         {"category_id": 10, "category_name": "EN - Action", "parent_id": 0},

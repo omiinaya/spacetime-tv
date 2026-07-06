@@ -21,7 +21,7 @@ def test_health_includes_cached_categories(client):
 
 def test_health_after_cache_populated(client_with_cache):
     """Pre-populated cache should show up in health stats."""
-    from main import _cache
+    from state import _cache
     test_data = [{"stream_id": 1, "name": "Test"}]
     _cache["vod_1"] = (1000.0, test_data)
     _cache["vod_categories"] = (1000.0, [{"category_id": 1, "category_name": "Movies"}])
@@ -35,7 +35,7 @@ def test_health_after_cache_populated(client_with_cache):
 
 def test_health_with_dict_cache_values(client_with_cache):
     """Health should handle dict cache values (not just lists)."""
-    from main import _cache
+    from state import _cache
 
     _cache["some_dict"] = (1000.0, {"key1": "val1", "key2": "val2"})
     _cache["empty_dict"] = (1000.0, {})

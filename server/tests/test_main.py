@@ -10,12 +10,7 @@ import pytest
 from fastapi.testclient import TestClient as FastAPITestClient
 from starlette.testclient import TestClient
 
-from state import _cache
-from routes.cache_warmer import (
-    _verify_cache_coherence,
-    start_cache_warmer,
-    warm_cache,
-)
+from routes.cache_warmer import warm_cache, start_cache_warmer, _verify_cache_coherence
 from main import (
     CACHE_DIR,
     CLEANUP_INTERVAL,
@@ -26,6 +21,7 @@ from main import (
     get_last_access,
     app,
 )
+from state import _cache
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -180,7 +176,7 @@ class TestWarmCache:
                     return [{"stream_id": 1, "name": "Test"}]
                 return []
 
-            with patch("main.cached_fetch", mock_cached_fetch):
+            with patch("iptv_client.cached_fetch", mock_cached_fetch):
                 with patch("routes.guide.load_epg", return_value={"channels": [{"id": "c1"}], "programmes": []}) as mock_epg:
                     await warm_cache()
 
@@ -215,7 +211,7 @@ class TestWarmCache:
                     return []
                 return []
 
-            with patch("main.cached_fetch", mock_cached_fetch):
+            with patch("iptv_client.cached_fetch", mock_cached_fetch):
                 with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     await warm_cache()
 
@@ -245,7 +241,7 @@ class TestWarmCache:
                     return [{"id": 1}]
                 return []
 
-            with patch("main.cached_fetch", mock_cached_fetch):
+            with patch("iptv_client.cached_fetch", mock_cached_fetch):
                 with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     await warm_cache()  # Should not raise
         finally:
@@ -273,7 +269,7 @@ class TestWarmCache:
                     return [{"id": 1}]
                 return []
 
-            with patch("main.cached_fetch", mock_cached_fetch):
+            with patch("iptv_client.cached_fetch", mock_cached_fetch):
                 with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     await warm_cache()
         finally:
@@ -307,7 +303,7 @@ class TestWarmCache:
                     return [{"id": 1}]
                 return []
 
-            with patch("main.cached_fetch", mock_cached_fetch):
+            with patch("iptv_client.cached_fetch", mock_cached_fetch):
                 with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     with patch("asyncio.sleep", new_callable=AsyncMock):
                         await warm_cache()
@@ -338,7 +334,7 @@ class TestWarmCache:
                     return [{"id": 1}]
                 return []
 
-            with patch("main.cached_fetch", mock_cached_fetch):
+            with patch("iptv_client.cached_fetch", mock_cached_fetch):
                 with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     await warm_cache()
         finally:
@@ -366,7 +362,7 @@ class TestWarmCache:
                     return [{"id": 1}]
                 return []
 
-            with patch("main.cached_fetch", mock_cached_fetch):
+            with patch("iptv_client.cached_fetch", mock_cached_fetch):
                 with patch("routes.guide.load_epg", new_callable=AsyncMock) as mock_epg:
                     mock_epg.side_effect = Exception("EPG file corrupt")
                     await warm_cache()
@@ -660,7 +656,7 @@ class TestWarmCacheSeries:
                     return [{"id": 1}]
                 return []
 
-            with patch("main.cached_fetch", mock_cached_fetch):
+            with patch("iptv_client.cached_fetch", mock_cached_fetch):
                 with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     with patch("asyncio.sleep", new_callable=AsyncMock):
                         await warm_cache()
@@ -691,7 +687,7 @@ class TestWarmCacheSeries:
                     return []
                 return []
 
-            with patch("main.cached_fetch", mock_cached_fetch):
+            with patch("iptv_client.cached_fetch", mock_cached_fetch):
                 with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     await warm_cache()
         finally:
@@ -721,7 +717,7 @@ class TestWarmCacheSeries:
                     raise Exception("Persistent failure")
                 return []
 
-            with patch("main.cached_fetch", mock_cached_fetch):
+            with patch("iptv_client.cached_fetch", mock_cached_fetch):
                 with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     with patch("asyncio.sleep", new_callable=AsyncMock):
                         await warm_cache()  # Should not raise
