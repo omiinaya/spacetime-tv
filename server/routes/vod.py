@@ -9,10 +9,17 @@ from typing import Optional
 from fastapi import APIRouter, Query
 from fastapi.responses import RedirectResponse
 
-from iptv_client import cached_fetch
+from iptv_client import cached_fetch, vod_url as _vod_url
 
-from state import _cache, CACHE_VOD_CATEGORIES, CACHE_VOD_CAT, CACHE_VOD_INFO, CACHE_SERIES_CATEGORIES, CACHE_SERIES_CAT, CACHE_SERIES_INFO
-from routes.stream_core import _vod_url
+from state import (
+    CACHE_SERIES_CAT,
+    CACHE_SERIES_CATEGORIES,
+    CACHE_SERIES_INFO,
+    CACHE_VOD_CAT,
+    CACHE_VOD_CATEGORIES,
+    CACHE_VOD_INFO,
+    _cache,
+)
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["vod"])

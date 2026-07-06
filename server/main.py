@@ -25,7 +25,7 @@ from config import (
     CORS_ORIGINS,
     RATE_WINDOW, RATE_SEARCH_LIMIT, RATE_DEFAULT_LIMIT,
 )
-from state import SERVER_START_TIME, _load_stream_hits
+from state import SERVER_START_TIME, _load_stream_hits, _cache  # re-exported for tests
 
 
 @asynccontextmanager
@@ -198,6 +198,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 # warm_cache() moved to routes/cache_warmer.py -- admin.py and routes import
 # from there directly, eliminating circular import of main.py.
 from routes.cache_warmer import is_warm_running, start_cache_warmer, warm_cache
+from routes.cache_warmer import CACHE_WARM_ENABLED, CACHE_WARM_CATEGORIES  # noqa: F401 — re-exported for tests
 
 # ── Disk Cache (for VOD MP4, HLS, DASH — persistent across restarts) ────
 from config import CACHE_DIR

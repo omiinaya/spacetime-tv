@@ -10,7 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response, StreamingResponse
 
-from .stream_core import _vod_url
+from iptv_client import vod_url as _vod_url
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["media"])

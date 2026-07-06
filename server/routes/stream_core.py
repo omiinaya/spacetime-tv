@@ -16,7 +16,15 @@ import curl_cffi.requests as CurlReq
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from config import UA_STR
-from iptv_client import iptv_referer, iptv_stream_url, iptv_timeshift_url, iptv_url, iptv_vod_url
+from iptv_client import (
+    iptv_referer,
+    iptv_stream_url,
+    iptv_url,
+    vod_url,
+    build_timeshift_url,
+)
+# Backward-compat aliases — canonical definitions now live in iptv_client.py
+_vod_url = vod_url
 
 log = logging.getLogger("spacetime-tv")
 
@@ -78,23 +86,6 @@ async def build_stream_url(stream_id: int, stream_type: str) -> str:
     """Build the IPTV stream URL for a given stream ID and type."""
     ext = "ts" if stream_type == "live" else await _lookup_extension(stream_id, stream_type)
     return iptv_stream_url(stream_id, stream_type, ext)
-
-
-def _vod_url(stream_id: int, media_type: str = "movie") -> str:
-    """Build the provider MKV URL for ffprobe/ffmpeg (VOD subtitle/audio context)."""
-    return iptv_vod_url(stream_id, media_type)
-
-
-def build_timeshift_url(stream_id: int, duration_seconds: int) -> str:
-    """Build timeshift URL for catch-up TV playback.
-
-    Xtream Codes API format:
-      {base}/live/{user}/{pass}/{stream_id}/timeshift/{duration}.ts
-
-    Duration is how far back in seconds (e.g. 3600 = 1 hour ago).
-    Returns the raw provider URL; the caller proxies it through the server.
-    """
-    return iptv_timeshift_url(stream_id, duration_seconds)
 
 
 async def get_content_length(url: str) -> Optional[int]:
