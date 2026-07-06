@@ -45,6 +45,9 @@ async def _enrich_tmdb_item(item_type: str, tmdb_id: str) -> dict | None:
         from routes.tmdb import tmdb_fetch  # type: ignore[import-unused]
         data = await tmdb_fetch(f"tv/{tmdb_id}")
     else:
+        if not _TMDB_ENRICH:
+            _SEARCH_ENRICH_CACHE[cache_key] = (now, None)
+            return None
         # Fallback: try tmdb-enrich CLI (browserless extraction)
         try:
             proc = await asyncio.create_subprocess_exec(

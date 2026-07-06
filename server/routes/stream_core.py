@@ -12,19 +12,10 @@ from functools import partial
 from typing import Optional
 
 import httpx
-import curl_cffi.requests as CurlReq
+
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from config import UA_STR
-from iptv_client import (
-    iptv_referer,
-    iptv_stream_url,
-    iptv_url,
-    vod_url,
-    build_timeshift_url,
-)
-# Backward-compat aliases — canonical definitions now live in iptv_client.py
-_vod_url = vod_url
+from config import IPTV_BASE, IPTV_PASS, IPTV_USER, UA_STR
 
 log = logging.getLogger("spacetime-tv")
 
@@ -57,9 +48,15 @@ async def _lookup_extension(stream_id: int, stream_type: str) -> str:
                 return ext if ext else "mp4"
 
     # ── 2. Fallback: query the provider API directly ────────────────
+    params = {
+        "username": IPTV_USER,
+        "password": IPTV_PASS,
+        "action": "get_vod_info" if stream_type == "movie" else "get_series_info",
+    }
     id_key = "vod_id" if stream_type == "movie" else "series_id"
-    action = "get_vod_info" if stream_type == "movie" else "get_series_info"
-    api_url = iptv_url(action, **{id_key: str(stream_id)})
+    params[id_key] = str(stream_id)
+    qs = "&".join(f"{k}={v}" for k, v in params.items())
+    api_url = f"{IPTV_BASE}/player_api.php?{qs}"
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as c:
@@ -85,7 +82,26 @@ async def _lookup_extension(stream_id: int, stream_type: str) -> str:
 async def build_stream_url(stream_id: int, stream_type: str) -> str:
     """Build the IPTV stream URL for a given stream ID and type."""
     ext = "ts" if stream_type == "live" else await _lookup_extension(stream_id, stream_type)
-    return iptv_stream_url(stream_id, stream_type, ext)
+    prefix = "live" if stream_type == "live" else stream_type
+    return f"{IPTV_BASE}/{prefix}/{IPTV_USER}/{IPTV_PASS}/{stream_id}.{ext}"
+
+
+def _vod_url(stream_id: int, media_type: str = "movie") -> str:
+    """Build the provider MKV URL for ffprobe/ffmpeg (VOD subtitle/audio context)."""
+    prefix = "movie" if media_type == "movie" else "series"
+    return f"{IPTV_BASE}/{prefix}/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
+
+
+def build_timeshift_url(stream_id: int, duration_seconds: int) -> str:
+    """Build timeshift URL for catch-up TV playback.
+
+    Xtream Codes API format:
+      {base}/live/{user}/{pass}/{stream_id}/timeshift/{duration}.ts
+
+    Duration is how far back in seconds (e.g. 3600 = 1 hour ago).
+    Returns the raw provider URL; the caller proxies it through the server.
+    """
+    return f"{IPTV_BASE}/live/{IPTV_USER}/{IPTV_PASS}/{stream_id}/timeshift/{duration_seconds}.ts"
 
 
 async def get_content_length(url: str) -> Optional[int]:
@@ -106,81 +122,65 @@ async def get_content_length(url: str) -> Optional[int]:
 
 # ── Stream generators (byte-level) ─────────────────────────────────────────
 
-async def _curl_iter_chunks(url: str, *,
+async def _http_iter_chunks(url: str, *,
                             range_header: Optional[str] = None,
                             chunk_size: int = 1048576,
                             status_ok: tuple[int, ...] = (200,),
                             timeout: int = 120):
-    """Async generator: yield chunks from a CDN URL via curl_cffi streaming.
+    """Async generator: yield chunks from a CDN URL via httpx streaming.
 
-    Uses ``curl_cffi`` with ``impersonate="chrome120"`` to bypass Cloudflare
-    bot detection (the CDN blocks httpx/ffmpeg with 405 but accepts
-    curl_cffi's Chrome-emulated TLS fingerprint).
+    Uses ``httpx.AsyncClient`` with ``follow_redirects=True`` to follow the
+    provider's 302 redirect from Cloudflare to the CDN edge. No TLS
+    impersonation needed — plain Chrome UA is sufficient.
     """
     headers = {
         "User-Agent": UA_STR,
-        "Referer": iptv_referer(),
+        "Referer": f"{IPTV_BASE}/",
     }
     if range_header:
         headers["Range"] = range_header
 
-    def _do_get():
-        return CurlReq.get(url, headers=headers, stream=True,
-                           timeout=timeout, impersonate="chrome120")
+    async with httpx.AsyncClient(follow_redirects=True, timeout=timeout) as c:
+        resp = await c.get(url, headers=headers)
 
-    resp = await asyncio.to_thread(_do_get)
+        if resp.status_code not in status_ok:
+            log.warning(f"_http_iter_chunks: CDN returned HTTP {resp.status_code} for {url[:80]}...")
+            raise RuntimeError(f"CDN returned HTTP {resp.status_code} (stream unavailable)")
 
-    if resp.status_code not in status_ok:
-        resp.close()
-        log.warning(f"_curl_iter_chunks: CDN returned HTTP {resp.status_code} for {url[:80]}...")
-        raise RuntimeError(f"CDN returned HTTP {resp.status_code} (stream unavailable)")
-
-    chunk_iter = resp.iter_content(chunk_size=chunk_size)
-    try:
-        while True:
-            def _next_chunk(it=chunk_iter):
-                return next(it, b"")
-            chunk = await asyncio.to_thread(_next_chunk)
-            if not chunk:
-                break
+        async for chunk in resp.aiter_bytes(chunk_size=chunk_size):
             yield chunk  # pragma: no cover — async generator yield (covered at runtime, not tracked by coverage)
-    finally:
-        resp.close()
 
 
 async def stream_bytes(url: str):
     """Generator that yields bytes from a live stream URL via curl_cffi."""
-    async for chunk in _curl_iter_chunks(url, status_ok=(200,)):
+    async for chunk in _http_iter_chunks(url, status_ok=(200,)):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
 
 
-async def _curl_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
+async def _http_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
                            range_header: Optional[str] = None,
                            buf_size: int = 1048576,
                            log_prefix: str = ""):
-    """Fetch a URL via curl_cffi and pipe the data to an ffmpeg process stdin.
+    """Fetch a URL via httpx and pipe the data to an ffmpeg process stdin.
 
-    Designed to be used as the *feed_coro* argument to :func:`_ffmpeg_pipe`.
-    Runs curl_cffi in a thread (blocking API), iterates response chunks and
-    writes them to ``proc.stdin``, then closes stdin on completion.
+    Uses ``httpx.AsyncClient`` with ``follow_redirects=True`` to follow the
+    provider's 302 redirect — no TLS impersonation needed.
     """
     try:
-        loop = asyncio.get_event_loop()
-        headers = {"User-Agent": UA_STR, "Referer": iptv_referer()}
+        headers = {"User-Agent": UA_STR, "Referer": f"{IPTV_BASE}/"}
         if range_header:
             headers["Range"] = range_header  # pragma: no cover — tested via start_time mock
 
-        resp = await loop.run_in_executor(
-            None, lambda: CurlReq.get(url, headers=headers, stream=True,
-                                      timeout=120, impersonate="chrome120"),
-        )
-        for chunk in resp.iter_content(chunk_size=buf_size):
-            if not chunk:
-                break  # pragma: no cover — end-of-stream, runtime only
-            proc.stdin.write(chunk)
-            await proc.stdin.drain()
-        resp.close()
-    except curl_cffi.requests.errors.RequestsError as e:  # pragma: no cover — network error, runtime only
+        async with httpx.AsyncClient(follow_redirects=True, timeout=120) as c:
+            resp = await c.get(url, headers=headers)
+            resp.raise_for_status()
+
+            async for chunk in resp.aiter_bytes(chunk_size=buf_size):
+                if not chunk:
+                    break  # pragma: no cover — end-of-stream, runtime only
+                proc.stdin.write(chunk)
+                await proc.stdin.drain()
+    except httpx.HTTPError as e:  # pragma: no cover — network error, runtime only
         log.warning(f"{log_prefix} download error: {e}")  # pragma: no cover — network error, runtime only
     finally:
         try:
@@ -242,7 +242,7 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
     """Generator that yields VOD bytes via curl_cffi streaming.
     Supports Range/206 for seeking.
     """
-    async for chunk in _curl_iter_chunks(url, range_header=range_header,
+    async for chunk in _http_iter_chunks(url, range_header=range_header,
                                          status_ok=(200, 206)):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
 
@@ -257,7 +257,7 @@ async def stream_proxy(url: str, content_type: str):
                 "Cache-Control": "no-cache",
             },
         )
-    except (RuntimeError, curl_cffi.requests.errors.RequestsError) as e:
+    except (RuntimeError, httpx.RequestError) as e:
         log.error(f"Stream proxy error ({url}): {e}")
         return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
 
@@ -282,7 +282,7 @@ async def stream_bytes_transcode(url: str, target_height: Optional[int] = None):
         "-f", "mpegts",
         "pipe:1",
     ]
-    feed = partial(_curl_feed_stdin, url=url, log_prefix="transcode")
+    feed = partial(_http_feed_stdin, url=url, log_prefix="transcode")
     async for chunk in _ffmpeg_pipe(cmd, feed):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
 

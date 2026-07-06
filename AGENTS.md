@@ -41,14 +41,14 @@ Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :
 6|
 7|## Identity
 8|
-9|**SpacetimeTV** is an IPTV cable TV dashboard — Live TV streaming, EPG guide with schedule, Movies & Series catalog with search and watchlist, and VOD streaming with remux.
-10|
-11|- ~40 Python source files (server/)
-12|- 45+ TypeScript/React frontend tests (web/)
-13|- 22+ Python backend tests (server/tests/)
-14|- 12 API route modules
-15|- 11 frontend page components
-16|- Stack: FastAPI + React 19 + Vite 8 + Tailwind + nginx + ffmpeg
+**SpacetimeTV** is an IPTV cable TV dashboard — Live TV streaming, EPG guide with schedule, Movies & Series catalog with search and watchlist, and VOD streaming with remux.
+
+- ~40 Python source files (server/, 4,487 lines)
+- 66 TypeScript/React frontend test files (22,961 lines)
+- 34 Python backend test files (server/tests/)
+- 12 API route modules
+- 13 frontend page components (was 11)
+- Stack: FastAPI + React 19 + Vite 8 + Tailwind + nginx + ffmpeg
 17|
 18|---
 19|
