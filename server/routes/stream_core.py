@@ -257,7 +257,7 @@ async def stream_proxy(url: str, content_type: str):
                 "Cache-Control": "no-cache",
             },
         )
-    except (RuntimeError, CurlReq.RequestsError) as e:
+    except (RuntimeError, httpx.RequestError) as e:
         log.error(f"Stream proxy error ({url}): {e}")
         return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
 

@@ -532,7 +532,7 @@ def test_probe_stream_ffprobe_returns_405_curl_cffi_fallback():
         return fn()
 
     with patch("asyncio.create_subprocess_exec", return_value=proc), \
-         patch("routes.stream_core.CurlReq.get", mock_get), \
+         patch("routes.stream_probe.CurlReq.get", mock_get), \
          patch("asyncio.get_event_loop") as mock_loop:
         mock_loop.return_value.run_in_executor = _mock_run_in_executor
         result = asyncio.run(probe_stream(444, "live"))
@@ -810,80 +810,109 @@ async def _gather(agen):
     return result
 
 
-def test_curl_iter_chunks_yields_chunks():
-    """_curl_iter_chunks yields chunks from curl_cffi response."""
+def test_http_iter_chunks_yields_chunks():
+    """_http_iter_chunks yields bytes via httpx response."""
     import asyncio
-    from unittest.mock import patch, MagicMock
-    from routes.stream import _curl_iter_chunks
+    from unittest.mock import patch, MagicMock, AsyncMock
+    from routes.stream import _http_iter_chunks
 
     mock_resp = MagicMock()
     mock_resp.status_code = 200
-    mock_resp.iter_content.return_value = iter([b"chunk1", b"chunk2", b""])
 
-    def _fake_get(*a, **kw):
+    async def _fake_aiter_bytes(*a, **kw):
+        for chunk in [b"chunk1", b"chunk2"]:
+            yield chunk
+
+    mock_resp.aiter_bytes = _fake_aiter_bytes
+
+    async def _fake_get(*a, **kw):
         return mock_resp
 
-    with patch("routes.stream_core.CurlReq.get", _fake_get):
-        chunks = asyncio.run(_gather(_curl_iter_chunks("http://test/stream")))
+    mock_client = MagicMock()
+    mock_client.get = _fake_get
+
+    with patch("routes.stream_core.httpx.AsyncClient") as mock_async_client:
+        mock_async_client.return_value.__aenter__.return_value = mock_client
+        chunks = asyncio.run(_gather(_http_iter_chunks("http://test/stream")))
     assert chunks == [b"chunk1", b"chunk2"]
 
 
-def test_curl_iter_chunks_raises_on_non_200():
-    """_curl_iter_chunks raises RuntimeError for non-200 status."""
+def test_http_iter_chunks_raises_on_non_200():
+    """_http_iter_chunks raises RuntimeError for non-200 status."""
     import asyncio
     from unittest.mock import patch, MagicMock
     import pytest
-    from routes.stream import _curl_iter_chunks
+    from routes.stream import _http_iter_chunks
 
     mock_resp = MagicMock()
     mock_resp.status_code = 403
 
-    def _fake_get(*a, **kw):
+    async def _fake_get(*a, **kw):
         return mock_resp
 
-    with patch("routes.stream_core.CurlReq.get", _fake_get):
+    mock_client = MagicMock()
+    mock_client.get = _fake_get
+
+    with patch("routes.stream_core.httpx.AsyncClient") as mock_async_client:
+        mock_async_client.return_value.__aenter__.return_value = mock_client
         with pytest.raises(RuntimeError, match="403"):
-            asyncio.run(_gather(_curl_iter_chunks("http://test/stream")))
+            asyncio.run(_gather(_http_iter_chunks("http://test/stream")))
 
 
-def test_curl_iter_chunks_accepts_206_with_vod():
-    """_curl_iter_chunks accepts 206 when status_ok includes 206."""
+def test_http_iter_chunks_accepts_206_with_vod():
+    """_http_iter_chunks accepts 206 when status_ok includes 206."""
     import asyncio
     from unittest.mock import patch, MagicMock
-    from routes.stream import _curl_iter_chunks
+    from routes.stream import _http_iter_chunks
 
     mock_resp = MagicMock()
     mock_resp.status_code = 206
-    mock_resp.iter_content.return_value = iter([b"data"])
 
-    def _fake_get(*a, **kw):
+    async def _fake_aiter_bytes(*a, **kw):
+        yield b"data"
+
+    mock_resp.aiter_bytes = _fake_aiter_bytes
+
+    async def _fake_get(*a, **kw):
         return mock_resp
 
-    with patch("routes.stream_core.CurlReq.get", _fake_get):
+    mock_client = MagicMock()
+    mock_client.get = _fake_get
+
+    with patch("routes.stream_core.httpx.AsyncClient") as mock_async_client:
+        mock_async_client.return_value.__aenter__.return_value = mock_client
         chunks = asyncio.run(_gather(
-            _curl_iter_chunks("http://test/stream", status_ok=(200, 206))))
+            _http_iter_chunks("http://test/stream", status_ok=(200, 206))))
     assert chunks == [b"data"]
 
 
-def test_curl_iter_chunks_passes_range_header():
-    """_curl_iter_chunks passes Range header to curl_cffi."""
+def test_http_iter_chunks_passes_range_header():
+    """_http_iter_chunks passes Range header via httpx."""
     import asyncio
     from unittest.mock import patch, MagicMock
-    from routes.stream import _curl_iter_chunks
+    from routes.stream import _http_iter_chunks
 
     captured = {}
 
-    def _fake_get(url, *, headers, **kw):
+    async def _fake_get(url, *, headers, **kw):
         captured["range"] = headers.get("Range")
         captured["url"] = url
         resp = MagicMock()
         resp.status_code = 206
-        resp.iter_content.return_value = iter([])
+        resp.aiter_bytes = lambda *a, **kw: _async_iter([])
         return resp
 
-    with patch("routes.stream_core.CurlReq.get", _fake_get):
+    async def _async_iter(items):
+        for i in items:
+            yield i
+
+    mock_client = MagicMock()
+    mock_client.get = _fake_get
+
+    with patch("routes.stream_core.httpx.AsyncClient") as mock_async_client:
+        mock_async_client.return_value.__aenter__.return_value = mock_client
         asyncio.run(_gather(
-            _curl_iter_chunks("http://test/stream", range_header="bytes=0-999",
+            _http_iter_chunks("http://test/stream", range_header="bytes=0-999",
                               status_ok=(200, 206))))
     assert captured.get("range") == "bytes=0-999"
 
@@ -933,7 +962,7 @@ def test_stream_live_timeshift_non_existent(client_with_cache):
 
 def test_stream_vod_bytes_accepts_206():
     """stream_vod_bytes should accept 200 OR 206 status codes."""
-    from routes.stream_core import stream_vod_bytes, _curl_iter_chunks
+    from routes.stream_core import stream_vod_bytes, _http_iter_chunks
     # Thin wrapper test — verify the status_ok tuple includes 206
     import inspect
     source = inspect.getsource(stream_vod_bytes)
@@ -1332,7 +1361,7 @@ async def test_stream_vod_mpegts_start_time_yields_with_mock_ffmpeg():
 
     with (
         patch("routes.stream_vod._ffmpeg_pipe", side_effect=mock_ffmpeg),
-        patch("routes.stream_vod._curl_feed_stdin"),
+        patch("routes.stream_vod._http_feed_stdin"),
     ):
         gen = stream_vod_mpegts("http://test.url/stream.mkv", 30.0)
         results = [chunk async for chunk in gen]
@@ -1352,7 +1381,7 @@ async def test_stream_vod_mpegts_start_time_zero_no_seek():
 
     with (
         patch("routes.stream_vod._ffmpeg_pipe", side_effect=mock_ffmpeg),
-        patch("routes.stream_vod._curl_feed_stdin"),
+        patch("routes.stream_vod._http_feed_stdin"),
     ):
         gen = stream_vod_mpegts("http://test.url/stream.mkv", None)
         results = [chunk async for chunk in gen]
