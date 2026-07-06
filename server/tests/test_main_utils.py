@@ -23,9 +23,9 @@ os.environ.setdefault("CACHE_WARM_ENABLED", "false")
 from main import (
     _cache,
     get_last_access,
-    iptv_url,
     touch_access,
 )
+from iptv_client import iptv_url
 from routes.stream import (
     _lookup_extension,
     _mime_from_url,

@@ -91,7 +91,7 @@ def _mock_http_image(content: bytes = b"fake-image", content_type: str = "image/
     mock_response.content = content
     mock_response.headers = {"content-type": content_type}
     mock_response.raise_for_status = MagicMock()
-    return patch("main.client.get", return_value=mock_response)
+    return patch("iptv_client.client.get", return_value=mock_response)
 
 
 def test_image_proxy_allows_tmdb_host(client):
@@ -166,7 +166,7 @@ def test_image_proxy_with_localhost_referer_allows_access(client):
 
 def test_iptv_raw_proxy_proxies_request(client):
     """IPTV raw proxy should forward requests and return upstream content."""
-    with patch("main.client.get") as mock_get:
+    with patch("iptv_client.client.get") as mock_get:
         mock_resp = AsyncMock()
         mock_resp.content = b"upstream response content"
         mock_resp.headers = {"content-type": "text/plain"}
@@ -180,6 +180,6 @@ def test_iptv_raw_proxy_proxies_request(client):
 
 def test_iptv_raw_proxy_failure_returns_502(client):
     """IPTV raw proxy should return 502 when upstream fails."""
-    with patch("main.client.get", side_effect=Exception("Connection refused")):
+    with patch("iptv_client.client.get", side_effect=Exception("Connection refused")):
         resp = client.get("/api/v1/iptv/some/path")
         assert resp.status_code == 502
