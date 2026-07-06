@@ -88,6 +88,27 @@ def iptv_referer() -> str:
     return f"{IPTV_BASE}/"
 
 
+def vod_url(stream_id: int, media_type: str = "movie") -> str:
+    """Build the provider MKV URL for ffprobe/ffmpeg (VOD subtitle/audio context).
+
+    Always uses .mkv extension — ffprobe probes the container regardless.
+    Alias for iptv_vod_url() for backward compatibility.
+    """
+    return iptv_vod_url(stream_id, media_type)
+
+
+def build_timeshift_url(stream_id: int, duration_seconds: int) -> str:
+    """Build timeshift URL for catch-up TV playback.
+
+    Xtream Codes API format:
+      {base}/live/{user}/{pass}/{stream_id}/timeshift/{duration}.ts
+
+    Duration is how far back in seconds (e.g. 3600 = 1 hour ago).
+    Returns the raw provider URL; the caller proxies it through the server.
+    """
+    return iptv_timeshift_url(stream_id, duration_seconds)
+
+
 async def fetch_iptv(action: str, **params) -> dict | list:
     """Fetch from IPTV API and parse JSON."""
     url = iptv_url(action, **params)
