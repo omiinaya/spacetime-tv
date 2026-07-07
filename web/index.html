@@ -87,6 +87,7 @@
         touch-action: manipulation;
         min-height: 100vh;
         overscroll-behavior: contain;
+        overflow-wrap: break-word;
       }
       * { border-color: var(--color-border); }
       #root { min-height: 100vh; }
@@ -119,6 +120,8 @@
       .border-b { border-bottom-width: 1px; }
       .border-t { border-top-width: 1px; }
       .bg-black\/50 { background-color: rgb(0 0 0 / 0.5); }
+      .min-w-0 { min-width: 0; }
+      .max-w-full { max-width: 100%; }
 
       @media (min-width: 768px) {
         .md\:block { display: block; }
@@ -143,9 +146,11 @@
       .w-full { width: 100%; }
 
       /* ── Spacing utilities for initial shell ── */
+      .gap-1 { gap: 0.25rem; }
       .gap-2 { gap: 0.5rem; }
       .gap-2\.5 { gap: 0.625rem; }
       .gap-3 { gap: 0.75rem; }
+      .gap-4 { gap: 1rem; }
       .space-y-0\.5 > * + * { margin-top: 0.125rem; }
       .p-4 { padding: 1rem; }
       .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
@@ -160,6 +165,8 @@
       .text-xs { font-size: 0.75rem; line-height: 1rem; }
       .font-semibold { font-weight: 600; }
       .text-left { text-align: left; }
+      .text-center { text-align: center; }
+      .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
       /* ── Border utilities for initial shell ── */
       .border-l-2 { border-left-width: 2px; }
@@ -169,6 +176,13 @@
       .border-2 { border-width: 2px; }
       .border-blue-500 { border-color: rgb(59 130 246); }
       .border-t-transparent { border-top-color: transparent; }
+      .border-primary { border-color: var(--color-primary); }
+
+      /* ── Media sizing (prevents CLS from images/video loading) ── */
+      .aspect-video { aspect-ratio: 16 / 9; }
+      .object-cover { object-fit: cover; }
+      .object-contain { object-fit: contain; }
+      img, video { max-width: 100%; height: auto; }
 
       /* ── Responsive padding ── */
       @media (min-width: 768px) {

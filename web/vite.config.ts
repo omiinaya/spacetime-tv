@@ -57,25 +57,49 @@ export default defineConfig({
           html = html.replace(fullLink, `<style>${css}</style>`);
         }
 
-        // Ensure styles are in <head> — move any <style> blocks that ended up after <script> or <link rel="modulepreload">
+        // Ensure styles precede scripts in <head> for optimal render ordering
         const headCloseIdx = html.indexOf("</head>");
         if (headCloseIdx !== -1) {
-          // Find all <style> blocks outside <head> and move them in
-          const afterHead = html.slice(headCloseIdx + 7);
-          const styleOutsideRegex = /<style>[\s\S]*?<\/style>/g;
-          let styleMatch;
-          const moved: string[] = [];
-          while ((styleMatch = styleOutsideRegex.exec(afterHead)) !== null) {
-            moved.push(styleMatch[0]);
+          const head = html.slice(0, headCloseIdx);
+          const rest = html.slice(headCloseIdx);
+
+          // Find all <style> blocks inside <head> that appear AFTER the first <script>
+          const firstScriptInHead = head.indexOf("<script");
+          if (firstScriptInHead !== -1) {
+            const beforeFirstScript = head.slice(0, firstScriptInHead);
+            const afterFirstScript = head.slice(firstScriptInHead);
+            const styleInAfter = /<style>[\s\S]*?<\/style>/g;
+            let styleMatch;
+            const moved: string[] = [];
+            while ((styleMatch = styleInAfter.exec(afterFirstScript)) !== null) {
+              moved.push(styleMatch[0]);
+            }
+            if (moved.length > 0) {
+              // Remove from after-script area
+              let cleanedAfter = afterFirstScript;
+              for (const s of moved) {
+                cleanedAfter = cleanedAfter.replace(s, "");
+              }
+              // Insert before first <script>
+              html = beforeFirstScript + moved.join("\n    ") + "\n" + cleanedAfter + rest;
+            }
           }
-          if (moved.length > 0) {
-            // Remove from after-head area
-            let cleaned = afterHead;
-            for (const s of moved) {
+
+          // Also move any <style> blocks that ended up outside <head> (edge case)
+          const afterHeadRest = html.slice(headCloseIdx + 7);
+          const styleOutsideRegex = /<style>[\s\S]*?<\/style>/g;
+          let styleMatch2;
+          const movedOutside: string[] = [];
+          while ((styleMatch2 = styleOutsideRegex.exec(afterHeadRest)) !== null) {
+            movedOutside.push(styleMatch2[0]);
+          }
+          if (movedOutside.length > 0) {
+            let cleaned = afterHeadRest;
+            for (const s of movedOutside) {
               cleaned = cleaned.replace(s, "");
             }
-            // Insert into <head> before </head>
-            html = html.slice(0, headCloseIdx) + moved.join("\n    ") + "\n" + html.slice(headCloseIdx);
+            const headIdx = html.indexOf("</head>");
+            html = html.slice(0, headIdx) + movedOutside.join("\n    ") + "\n" + html.slice(headIdx);
           }
         }
 
