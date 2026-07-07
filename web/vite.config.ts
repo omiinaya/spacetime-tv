@@ -25,21 +25,57 @@ export default defineConfig({
         const indexPath = path.resolve(distDir, "index.html");
         let html = readFileSync(indexPath, "utf-8");
 
-        // Log a snippet to verify the hook runs
         console.log("[inline-css] Post-processing", indexPath);
 
+        // Collect all CSS <link> tags that point to local files
         const cssLinkRegex = /<link\s+[^>]*rel="stylesheet"[^>]*href="([^"]+)"[^>]*\/?>/gi;
+        const inlined: { fullLink: string; css: string }[] = [];
         let match;
         while ((match = cssLinkRegex.exec(html)) !== null) {
           const fullLink = match[0];
-          const cssPath = path.resolve(distDir, match[1].replace(/^\//, ""));
-          console.log("[inline-css] Inlining", match[1], "→", cssPath);
+          const href = match[1];
+
+          // Skip remote URLs (e.g. Google Fonts)
+          if (href.startsWith("http://") || href.startsWith("https://") || href.startsWith("//")) {
+            console.log("[inline-css] SKIP - remote URL:", href);
+            continue;
+          }
+
+          const cssPath = path.resolve(distDir, href.replace(/^\//, ""));
+          console.log("[inline-css] Inlining", href, "→", cssPath);
           try {
             const css = readFileSync(cssPath, "utf-8");
-            html = html.replace(fullLink, `<style>${css}</style>`);
+            inlined.push({ fullLink, css });
             try { unlinkSync(cssPath); } catch {}
           } catch {
             console.log("[inline-css] SKIP - file not found:", cssPath);
+          }
+        }
+
+        // Replace each <link> with <style> — reverse order to preserve indices
+        for (const { fullLink, css } of inlined.reverse()) {
+          html = html.replace(fullLink, `<style>${css}</style>`);
+        }
+
+        // Ensure styles are in <head> — move any <style> blocks that ended up after <script> or <link rel="modulepreload">
+        const headCloseIdx = html.indexOf("</head>");
+        if (headCloseIdx !== -1) {
+          // Find all <style> blocks outside <head> and move them in
+          const afterHead = html.slice(headCloseIdx + 7);
+          const styleOutsideRegex = /<style>[\s\S]*?<\/style>/g;
+          let styleMatch;
+          const moved: string[] = [];
+          while ((styleMatch = styleOutsideRegex.exec(afterHead)) !== null) {
+            moved.push(styleMatch[0]);
+          }
+          if (moved.length > 0) {
+            // Remove from after-head area
+            let cleaned = afterHead;
+            for (const s of moved) {
+              cleaned = cleaned.replace(s, "");
+            }
+            // Insert into <head> before </head>
+            html = html.slice(0, headCloseIdx) + moved.join("\n    ") + "\n" + html.slice(headCloseIdx);
           }
         }
 
