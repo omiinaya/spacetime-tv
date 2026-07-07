@@ -61,10 +61,10 @@ DEFAULT_CORS_ORIGINS = (
 )
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",")
 
-# Rate limiting
-RATE_WINDOW = 60  # 1 minute window
-RATE_SEARCH_LIMIT = 100     # requests per window for search/proxy
-RATE_DEFAULT_LIMIT = 1000   # requests per window for everything else
+# Rate limiting (env-configurable)
+RATE_WINDOW = int(os.getenv("RATE_WINDOW", "60"))           # seconds
+RATE_SEARCH_LIMIT = int(os.getenv("RATE_SEARCH_LIMIT", "100"))   # requests per window for search/proxy
+RATE_DEFAULT_LIMIT = int(os.getenv("RATE_DEFAULT_LIMIT", "1000")) # requests per window for everything else
 
 
 # Data directory — persistent store for all runtime data.
