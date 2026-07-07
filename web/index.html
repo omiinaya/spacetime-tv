@@ -217,6 +217,95 @@
 
       /* ── Hover effects on channel cards (fade in) ── */
       .transition-colors { transition-property: color, background-color, border-color, text-decoration-color, fill, stroke; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
+
+      /* ── Channel grid — prevents CLS when full CSS loads ── */
+      .channel-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 0.75rem;
+      }
+      .channel-card {
+        transition: all 0.15s ease;
+      }
+      .channel-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      /* ── Poster grid ── */
+      .poster-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1rem;
+      }
+
+      /* ── Scrollbar hide for horizontal rows ── */
+      .scrollbar-none {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .scrollbar-none::-webkit-scrollbar {
+        display: none;
+      }
+
+      /* ── Video player container — explicit size prevents collapse ── */
+      .video-container {
+        position: relative;
+        width: 100%;
+        max-width: 100%;
+        aspect-ratio: 16 / 9;
+        background: #000;
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      .video-container video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      /* ── Overlay animations (prevents FOUC on modals) ── */
+      @keyframes fade-in {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+      }
+      @keyframes zoom-in-95 {
+        from { transform: scale(0.95); opacity: 0; }
+        to   { transform: scale(1);    opacity: 1; }
+      }
+      @keyframes slide-in-from-bottom-10 {
+        from { transform: translateY(10px); opacity: 0; }
+        to   { transform: translateY(0);    opacity: 1; }
+      }
+      @keyframes slide-in-from-bottom-4 {
+        from { transform: translateY(4px); opacity: 0; }
+        to   { transform: translateY(0);   opacity: 1; }
+      }
+      .animate-in {
+        animation-duration: 200ms;
+        animation-fill-mode: both;
+      }
+      .fade-in {
+        animation-name: fade-in;
+      }
+      .zoom-in-95 {
+        animation-name: zoom-in-95;
+      }
+      .slide-in-from-bottom-10 {
+        animation-name: slide-in-from-bottom-10;
+      }
+      .slide-in-from-bottom-4 {
+        animation-name: slide-in-from-bottom-4;
+      }
+      .duration-300 {
+        animation-duration: 300ms;
+      }
+
+      /* ── Skeleton shimmer (prevents flash of empty space) ── */
+      @keyframes shimmer {
+        0%   { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
     </style>
     <!-- Preconnect + preload for critical Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
