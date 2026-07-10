@@ -130,10 +130,37 @@ async def _http_iter_chunks(url: str, *,
                             timeout: int = 120):
     """Async generator: yield chunks from a CDN URL via aiohttp.
 
-    The provider's Cloudflare WAF blocks httpx (httpcore/anyio TLS fingerprint)
-    with HTTP 405.  ``aiohttp`` uses a different TLS stack (c-ares + native
-    asyncio sockets) that currently passes Cloudflare's checks, and avoids the
-    pipe-copy overhead of the curl subprocess approach.
+    ═══════════════════════════════════════════════════════════════════
+    TRANSPORT CHOICE — DO NOT CHANGE WITHOUT READING THIS
+    ═══════════════════════════════════════════════════════════════════
+
+    The provider (iptv-provider.example.com) uses Cloudflare → CDN (Apache2 HTTP/1.1):
+
+      1. Cloudflare at iptv-provider.example.com returns HTTP 302 with short-lived token
+      2. CDN edge (e.g. 185.245.x.x:80) returns the actual MPEG-TS stream
+
+    httpx (via httpcore/anyio) **cannot** read from the CDN after the redirect.
+    It hangs/times out even with follow_redirects=True and a fresh redirect URL.
+    This is an httpx + this-specific-Apache2-CDN bug — not Cloudflare blocking.
+
+    Subprocess curl works but has **55% throughput penalty** (0.73 MB/s vs 1.4 MB/s)
+    due to pipe-copy overhead. See commit 4be4d3b.
+
+    **aiohttp works correctly** (1.4 MB/s, 90% of direct) because its HTTP/1.1
+    implementation handles this CDN's Connection: close and chunked encoding
+    properly. aiohttp uses c-ares DNS + native asyncio sockets.
+
+    What to do if streaming breaks again:
+    - First verify: does ``curl -vL --max-time 15 'http://iptv-provider.example.com/live/{USER}/{PASS}/{STREAM_ID}.ts'``
+      return 302 → 200 with streaming data? If yes, the provider is fine.
+    - Test every candidate HTTP library (httpx, aiohttp, requests, tls_client)
+      against the FULL redirect chain (not just the first hop) with a WORKING
+      stream ID. Some stream IDs (250, 1) are dead channels that return 405
+      regardless of client — test with a known-working ID like 483976.
+    - ⚠️  Do NOT use subprocess curl for streaming — the pipe overhead halves
+      throughput. Only use subprocess as a last resort if no Python library works.
+
+    ═══════════════════════════════════════════════════════════════════
     """
     headers = {
         "User-Agent": UA_STR,

@@ -29,7 +29,7 @@ Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :
 **Layers:**
 - **Frontend** (React 19 + Vite 8 + Tailwind) — 11 pages, custom HLS/mpegts player. Proxies `/api/*` to backend.
 - **Backend** (FastAPI Python) — 12 route modules. Handles live TV streaming, VOD remux (ffmpeg), EPG parsing, search, watchlists.
-- **External:** IPTV provider (iptv-provider.example.com via curl_cffi chrome120), TMDB API for metadata.
+- **External:** IPTV provider (iptv-provider.example.com via aiohttp), TMDB API for metadata.
 
 ---
 
@@ -187,8 +187,8 @@ Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :
 152|## Critical Conventions
 153|
 154|1. **No API keys in code** — All credentials via `.env` file (server/.env), never hardcoded.
-155|2. **IPTV provider traffic uses curl_cffi** — The IPTV provider blocks httpx with HTTP 405. Use `curl_cffi` with `impersonate="chrome120"` for IPTV proxy requests. Installed in the Hermes venv.
-156|3. **Blocking calls in async context** — Use `asyncio.to_thread()` for sync `curl_cffi` calls inside async FastAPI routes.
+155|2. **IPTV streaming uses aiohttp** — DO NOT switch to httpx or subprocess curl without reading the docstring in ``server/routes/stream_core.py::_http_iter_chunks()``. httpx has a compatibility bug with the provider's CDN (hangs after redirect). Subprocess curl has 55% throughput penalty. aiohttp works at 90% of direct speed.
+156|3. **IPTV raw proxy** — ``/api/v1/iptv/{path}`` uses ``iptv_client.client`` (httpx) for API data calls. This is separate from streaming — API data calls work fine with httpx.
 157|4. **VOD remux uses ffmpeg** — ffmpeg is required on the backend for VOD remux (installed in Dockerfile).
 158|5. **Cache EPG to disk** — `epg_cache.json` avoids re-parsing XMLTV on every restart. TTL is 1 hour.
 159|6. **Stream/firehose endpoints have rate limits** — `/api/live/all` (2 req/min) and `/api/search` (30 req/min) are rate-limited. Test with moderation.
@@ -210,7 +210,7 @@ Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :
 175|
 176|1. **Running both vite dev + docker at once** — Port 8720 conflicts. Stop one before starting the other.
 177|2. **Missing IPTV credentials** — The .env file needs IPTV_USER/IPTV_PASS. Without them, live TV and VOD endpoints return empty data.
-178|3. **curl_cffi import errors** — It's NOT in the requirements.txt. Must be installed separately (it's in the Hermes venv). If running outside Hermes, `pip install curl_cffi`.
+178|3. **aiohttp required for streaming** — Make sure ``aiohttp`` is installed (it's in ``requirements.txt``). The streaming routes in ``stream_core.py`` use aiohttp exclusively — httpx cannot read from the provider's CDN after the Cloudflare 302 redirect.
 179|4. **EPG cache stale** — `epg_cache.json` may have stale data. Hit `POST /api/admin/epg/refresh` or delete the file to force a reload.
 180|5. **Test flakiness with live IPTV** — `test_live.py` requires an active IPTV connection. Run `pytest tests/ --ignore=tests/test_live.py` for offline-safe testing.
 181|

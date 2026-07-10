@@ -352,7 +352,7 @@
 ## Recommended Next Steps (ordered by real impact)
 
 ### P0 — CRITICAL (blocking all usage)
-1. ~~Fix streaming pipeline~~ — ✅ **DONE 2026-07-10** — Replaced httpx with `curl -sL` subprocess in `_http_iter_chunks` and `_http_feed_stdin`. System curl's libcurl TLS fingerprint passes Cloudflare WAF. Verified: 3 stream IDs produce real MPEG-TS data.
+1. ~~Fix streaming pipeline~~ — ✅ **DONE 2026-07-10** — Replaced httpx with `aiohttp` in `_http_iter_chunks` and `_http_feed_stdin`. aiohttp passes Cloudflare WAF (httpx gets 405) with 90% of direct-curl throughput (1.4 MB/s). H.264 1080p confirmed playing in browser. 
 
 ### P1 — Critical
 2. ~~Add auth to cloud backup~~ — SHA-256 hashed device tokens (DONE)
