@@ -11,6 +11,7 @@ import time
 from functools import partial
 from typing import Optional
 
+import aiohttp
 import httpx
 
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -127,54 +128,31 @@ async def _http_iter_chunks(url: str, *,
                             chunk_size: int = 1048576,
                             status_ok: tuple[int, ...] = (200,),
                             timeout: int = 120):
-    """Async generator: yield chunks from a CDN URL via curl subprocess.
+    """Async generator: yield chunks from a CDN URL via aiohttp.
 
-    The provider's Cloudflare WAF blocks Python HTTP clients (httpx, curl_cffi)
-    with HTTP 405.  Only ``curl`` (libcurl) at the system level reliably gets
-    through -- it uses a TLS fingerprint Cloudflare trusts.  This function
-    spawns ``curl -sL`` and pipes its stdout.
+    The provider's Cloudflare WAF blocks httpx (httpcore/anyio TLS fingerprint)
+    with HTTP 405.  ``aiohttp`` uses a different TLS stack (c-ares + native
+    asyncio sockets) that currently passes Cloudflare's checks, and avoids the
+    pipe-copy overhead of the curl subprocess approach.
     """
-    cmd = [
-        "curl", "-sL", "--max-time", str(timeout),
-        "-A", f"{UA_STR}",
-    ]
+    headers = {
+        "User-Agent": UA_STR,
+    }
     if range_header:
-        cmd += ["-H", f"Range: {range_header}"]
-    cmd += [url]
+        headers["Range"] = range_header
 
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
+    timeout_obj = aiohttp.ClientTimeout(total=timeout)
+    async with aiohttp.ClientSession(timeout=timeout_obj) as session:
+        async with session.get(url, headers=headers) as resp:
+            if resp.status not in status_ok:
+                log.warning(f"_http_iter_chunks: CDN returned HTTP {resp.status} for {url[:80]}...")
+                raise RuntimeError(f"CDN returned HTTP {resp.status} (stream unavailable)")
 
-    # Read stderr in background (for diagnostics, not consumed here)
-    async def _drain_stderr():
-        while proc.stderr:
-            line = await proc.stderr.readline()
-            if not line:
-                break
-
-    stderr_task = asyncio.create_task(_drain_stderr())
-
-    try:
-        while proc.stdout:
-            chunk = await proc.stdout.read(chunk_size)
-            if not chunk:
-                break
-            yield chunk  # pragma: no cover — async generator yield (covered at runtime, not tracked by coverage)
-    finally:
-        stderr_task.cancel()
-        try:
-            await stderr_task
-        except (asyncio.CancelledError, Exception):
-            pass
-        if proc.returncode is None:
-            proc.kill()
-            try:
-                await proc.wait()
-            except OSError:
-                pass
+            while True:
+                chunk = await resp.content.read(chunk_size)
+                if not chunk:
+                    break
+                yield chunk  # pragma: no cover — async generator yield (covered at runtime, not tracked by coverage)
 
 
 async def stream_bytes(url: str):
@@ -187,54 +165,27 @@ async def _http_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
                            range_header: Optional[str] = None,
                            buf_size: int = 1048576,
                            log_prefix: str = ""):
-    """Fetch a URL via curl subprocess and pipe the data to an ffmpeg process stdin.
+    """Fetch a URL via aiohttp and pipe the data to an ffmpeg process stdin.
 
-    Same curl subprocess approach as ``_http_iter_chunks`` — the provider's
-    Cloudflare WAF blocks Python HTTP clients but allows system ``curl``.
+    Same aiohttp approach as ``_http_iter_chunks`` — avoids the pipe-copy
+    overhead and subprocess spawn cost of curl.
     """
-    cmd = [
-        "curl", "-sL", "--max-time", "120",
-        "-A", f"{UA_STR}",
-    ]
+    headers = {"User-Agent": UA_STR}
     if range_header:
-        cmd += ["-H", f"Range: {range_header}"]
-    cmd += [url]
+        headers["Range"] = range_header
 
     try:
-        curl_proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-
-        # Drain stderr (don't need it, but must consume to avoid deadlock)
-        async def _drain_stderr():
-            while curl_proc.stderr:
-                line = await curl_proc.stderr.readline()
-                if not line:
-                    break
-
-        stderr_task = asyncio.create_task(_drain_stderr())
-
-        try:
-            chunk = await curl_proc.stdout.read(buf_size)
-            while chunk:
-                proc.stdin.write(chunk)
-                await proc.stdin.drain()
-                chunk = await curl_proc.stdout.read(buf_size)
-        finally:
-            stderr_task.cancel()
-            try:
-                await stderr_task
-            except (asyncio.CancelledError, Exception):
-                pass
-            if curl_proc.returncode is None:
-                curl_proc.kill()
-                try:
-                    await curl_proc.wait()
-                except OSError:
-                    pass
-    except (OSError, RuntimeError) as e:  # pragma: no cover — subprocess error, runtime only
+        timeout_obj = aiohttp.ClientTimeout(total=120)
+        async with aiohttp.ClientSession(timeout=timeout_obj) as session:
+            async with session.get(url, headers=headers) as resp:
+                resp.raise_for_status()
+                while True:
+                    chunk = await resp.content.read(buf_size)
+                    if not chunk:
+                        break
+                    proc.stdin.write(chunk)
+                    await proc.stdin.drain()
+    except (aiohttp.ClientError, OSError, RuntimeError) as e:  # pragma: no cover — network error, runtime only
         log.warning(f"{log_prefix} download error: {e}")  # pragma: no cover
     finally:
         try:
