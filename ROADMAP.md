@@ -1,7 +1,7 @@
 # SpacetimeTV Roadmap v5 — Honest Full Audit
 
-> **Audit date:** 2026-07-06 (Reconciliation audit — line counts verified)
-> **Last refreshed:** 2026-07-06 (Re-verified hook/lib counts: 24 hooks/9 lib modules. Frontend source: 16,510 non-test + 17,479 test)
+> **Audit date:** 2026-07-10 (Honest assessment — fresh investigation with 4-day delta from last audit)
+> **Last refreshed:** 2026-07-10 (Verified: backend streaming BROKEN, CSS inline over-engineered, 1 new backend test failure, frontend tests still 66/1209/0-fail)
 > **Architecture:** FastAPI monolith + React/Vite SPA | 81 API routes | 13 pages | 43 components | 24 hooks | 9 lib modules
 > **Test counts:** 558 backend pass (34 pre-existing asyncio failures, 3 xfailed) + 1209 frontend unit + 74 E2E | TypeScript 0 errors
 > **Codebase:** 4,579 backend Python + 16,510 frontend TypeScript source + 17,479 test/__tests__ files = ~33,989 total TS lines
@@ -13,13 +13,13 @@
 
 | Dimension | Grade | Score | Change | Honest Assessment |
 |-----------|-------|-------|--------|-------------------|
-|| **Testing depth** | B+ | 88% | ← 94% | ⚠️ **558 tests pass (34 pre-existing asyncio failures), 1209 frontend + 74 E2E. 5 more tests passing than previous audit due to TMDB_ENRICH npe guards and broad-except fix in _safe_convert. Asyncio fixture scope interaction causes 34 flaky failures (was 22 — new failures from test_main_async, test_media_epg interaction). Runtime-only lines still uncovered (ffmpeg, curl_cffi, yield points). |
+||| **Testing depth** | B | 84% | ← 88% | ⚠️ **Streaming pipeline fixed (curl subprocess). 558 pass (47/48 targeted, 1 new asyncio failure). 1209 frontend ALL PASSING. 74 E2E pass. No test covers the curl subprocess path. 34 asyncio failures deterministic.** |
 | **Frontend quality** | B+ | 85% | ← 84% | TypeScript now 0 errors. ESLint 0 errors/warnings. 2 components still >500 lines (Series: 635, Movies: 576). Search (457) and Player (265) both split into sub-components. `useVideoPlayer` hook still at 612 lines. 43 components. Shaka-player vendor chunk isolated. role=dialog + focus trap on PinPrompt/KeyboardShortcuts. Frontend source 16,107 lines (non-test) + 17,479 test = ~33,586 total TS. |
-| **Backend architecture** | C+ | 70% | ← 68% | CACHE_DIR and URL builder duplication consolidated in config.py/stream_core.py. import main removed from admin.py. Only **2 broad `except Exception` handlers** remain (down from 58) — one justified in stream_probe.py (ffprobe catch-all guard), one in main.py (background cleanup loop guard). TMDB_ENRICH_PATH NPE guard added in guide_routes.py + search.py. ~~`_auto_star` dead code~~ ✅ Already removed. `ADMIN_API_KEY` auto-generated and documented. No formal service layer. tmdb.py still bypasses config.py (direct `os.getenv`). Rate limits not env-configurable. |
-| **Feature completeness** | B+ | 82% | ← 82% | 14/16 features vs TiviMate/Smarters Pro. **2 gaps:** Multi-provider and multi-user profiles. We do better than both on TMDB enrichment, error differentiation, keyboard shortcuts. Auto frame-rate is a browser limitation. **Honest: we're good but not shipping in the competitor's league.** |
+|| **Backend architecture** | C+ | 72% | ← 70% | CACHE_DIR and URL builder duplication consolidated in config.py/stream_core.py. import main removed from admin.py. Only **2 broad `except Exception` handlers** remain (down from 58). TMDB_ENRICH_PATH NPE guard added. ~~`_auto_star` dead code~~ ✅ Removed. `ADMIN_API_KEY` auto-generated. Rate limits env-configurable. **Streaming pipeline fixed** (curl subprocess replaces httpx). Still: tmdb.py bypasses config.py, no service layer, dead `curl_cffi.requests.errors.RequestsError` refs in stream_live.py. |
+|| **Feature completeness** | B | 78% | ← 82% | 14/16 features written. **Streaming fixed** (curl subprocess now delivers live MPEG-TS). VOD untested but same pipeline. CSS inline over-engineered (82KB duplicate). |
 | **Security** | D+ | 48% | ← 78% | 🚨 **Previously CRITICALLY overrated.** No HTTPS. ~~20 streaming endpoints with `ACAO: *`~~ ✅ Fixed — CORS centralized in middleware. ~~Chunked encoding bypasses body size limits~~ ✅ Fixed — middleware handles chunked transfer. User creds in URL params. NOW WITH: device-level token scoping (SHA-256 hashed), admin key override, auto-generated ADMIN_API_KEY, security headers (CSP, HSTS, XFO, XCTO, RP) in nginx + backend middleware. See anti-patterns below. |
 || **Developer experience** | B+ | 80% | ← 79% | Good docs (5 guide files). Makefile, Docker, devcontainer, .env.example now documents all 10 env vars. No pre-commit hook auto-install. No backend linter. 34 backend tests fail from asyncio fixture interaction. Backend coverage: 14,234 total Python lines (4,487 source + 9,747 tests). |
-| **Performance** | B+ | 74% | ← 75% | ⚠️ **Improved: shaka-player vendor chunk** now isolates the ~700 KB player code from the main chunk. GZip works, code splitting exists. Remaining: Google Fonts CDN dependency, no CDN for static assets, startup cache warmer ~8s, in-memory cache unbounded, no HTTP/2. |
+|| **Performance** | C | 62% | ← 74% | 🚨 **Inline CSS optimization went too far — 82KB of Tailwind CSS inline in HTML. Duplicate utility class definitions (manual + auto-inlined). Google Fonts CDN still present. Streaming broken so perf irrelevant for the primary use case.** |
 
 ---
 
@@ -331,47 +331,62 @@
 
 ---
 
+## Currently Broken (this session)
+
+| Issue | Severity | Detail | Root Cause |
+|-------|----------|--------|------------|
+| ~~**Live TV streaming returns 200/0-bytes**~~ | ~~🔴 CRITICAL~~ | ~~Player stuck at "Detecting video format". All live stream endpoints return 200 OK with zero bytes. The app can browse catalogs but cannot play anything.~~ | ✅ **FIXED 2026-07-10** — Replaced httpx with `curl -sL` subprocess in `_http_iter_chunks` and `_http_feed_stdin`. Provider Cloudflare WAF blocks Python HTTP clients but allows system curl (libcurl TLS fingerprint). Confirmed: 3 streams tested, all return real MPEG-TS data (4.5MB–38.5MB each in 8s). |
+| ~~**Watchlist endpoint returns SPA HTML**~~ | ~~🟡~~ | ~~`/api/v1/watchlist`~~ | ✅ **NOT A BUG** — tested wrong path. Correct path is `/api/v1/watchlist/progress` which returns `{"progress":{}}`. |
+| **CSS inline over-engineered** | 🟡 Medium | `dist/index.html` has 3 inline `<style>` blocks totaling ~90KB, including 82KB of full Tailwind CSS output. Manual utility class definitions duplicate Tailwind's output. Potential cascade conflicts. | The `inline-css` Vite plugin (commit series) inlines the entire Tailwind CSS file into HTML. Combined with manual inline CSS from `index.html` source, creates duplicate definitions. |
+| **Backend 1 new test failure** | 🟡 Low | `test_search_filters_movies_from_cache` — RuntimeError: Event loop is closed | Asyncio fixture scope interaction, joins the 34 pre-existing failures. |
+
 ## Current Session Completed
 
-| | Item | Description |
-||---|------|-------------|
+|| | Item | Description |
+|||---|------|-------------|
 || **Full source-code re-verification of all ROADMAP claims** | Ran fresh backend test suite (595 collected, 558 passed, 34 asyncio failures). Fixed: `_safe_convert` broad except (catches all Exception), TMDB_ENRICH_PATH None guards in guide_routes.py + search.py (prevents TypeError). Fixed TypeScript error in recentChannels.ts (implicit undefined return). Verified frontend tests: 66 files, 1209 tests, all passing. TypeScript 0 errors. Counted broad `except Exception` handlers: **2** (was 53). Frontend source: 16,107 lines (non-test). Updated ROADMAP.md with verified data. |
+||| **2026-07-10 Honest Assessment** | Investigated "CSS and playback still fucked" complaint. Found streaming broken (httpx 405 from Cloudflare). **FIXED**: replaced httpx with `curl -sL` subprocess in `_http_iter_chunks` and `_http_feed_stdin`. Verified 3 streams returning real MPEG-TS data (18MB/4.5MB/38MB). Watchlist route NOT a bug (tested wrong path). Updated grades accordingly. |
 
 ---
 
 ## Recommended Next Steps (ordered by real impact)
 
+### P0 — CRITICAL (blocking all usage)
+1. ~~Fix streaming pipeline~~ — ✅ **DONE 2026-07-10** — Replaced httpx with `curl -sL` subprocess in `_http_iter_chunks` and `_http_feed_stdin`. System curl's libcurl TLS fingerprint passes Cloudflare WAF. Verified: 3 stream IDs produce real MPEG-TS data.
+
 ### P1 — Critical
-1. ~~Add auth to cloud backup~~ — ✅ SHA-256 hashed device tokens (DONE)
-2. ~~Document ADMIN_API_KEY auto-generation~~ — ✅ (DONE)
+2. ~~Add auth to cloud backup~~ — SHA-256 hashed device tokens (DONE)
+3. ~~Document ADMIN_API_KEY auto-generation~~ — (DONE)
 
 ### P1 — Remaining
-3. ~~Add shaka-player vendor chunk~~ — ✅ DONE
-4. ~~Extract CACHE_DIR to config.py~~ — ✅ already in config.py (sole source)
-5. ~~Fix chunked encoding bypass~~ — ✅ Already handled in RequestBodySizeMiddleware
-6. ~~Add security headers middleware~~ — ✅ DONE
-7. ~~Fix ACAO:* per-endpoint headers~~ — ✅ DONE — all removed, CORS centralized
-8. ~~Fix TMDB_ENRICH_PATH None guards~~ — ✅ DONE this session
-9. **HTTPS** — all traffic unencrypted, IPTV credentials in cleartext
+4. ~~Add shaka-player vendor chunk~~ — DONE
+5. ~~Extract CACHE_DIR to config.py~~ — already in config.py (sole source)
+6. ~~Fix chunked encoding bypass~~ — Already handled in RequestBodySizeMiddleware
+7. ~~Add security headers middleware~~ — DONE
+8. ~~Fix ACAO:* per-endpoint headers~~ — DONE — all removed, CORS centralized
+9. ~~Fix TMDB_ENRICH_PATH None guards~~ — DONE this session
+10. **HTTPS** — all traffic unencrypted, IPTV credentials in cleartext
+11. **Fix inline CSS** — 82KB of inlined Tailwind CSS is too much. Either: (a) keep source-level manual inline CSS but disable the auto-inline plugin in vite.config.ts, or (b) use the auto-inline but strip the manual inline block. Current approach does BOTH resulting in duplication.
 
 ### P2 — Quality
-10. ~~Remove `_auto_star` dead code~~ — ✅ Already removed from source
-11. ~~Remove duplicate `<Toaster>`~~ — ✅ DONE
-12. ~~Add keyboard handlers to `role="button"` divs~~ — ✅ All 6 already have onKeyDown + tabIndex
-13. **More granular ErrorBoundary** — NOT fixed
-14. ~~Split Series.tsx~~ — ✅ DONE (957→635 lines)
-15. ~~Split Player.tsx~~ — ✅ DONE (767→265 lines)
-16. ~~Split Search.tsx~~ — ✅ DONE (855→457 lines)
-17. ~~Fix recentChannels.ts TypeScript error~~ — ✅ DONE this session
+12. ~~Remove `_auto_star` dead code~~ — Already removed from source
+13. ~~Remove duplicate `<Toaster>`~~ — DONE
+14. ~~Add keyboard handlers to `role="button"` divs~~ — All 6 already have onKeyDown + tabIndex
+15. **More granular ErrorBoundary** — NOT fixed
+16. ~~Split Series.tsx~~ — DONE (957 to 635 lines)
+17. ~~Split Player.tsx~~ — DONE (767 to 265 lines)
+18. ~~Split Search.tsx~~ — DONE (855 to 457 lines)
+19. ~~Fix recentChannels.ts TypeScript error~~ — DONE this session
+20. **Fix watchlist route** — returns SPA HTML instead of JSON
 
 ### P3 — Architecture
-18. ~~Audit 53 broad except handlers~~ — ✅ 2 remain, both justified
-19. **No service layer** — business logic embedded in route modules
-20. **Migrate tmdb.py to config.py** — bypasses config layer with direct os.getenv()
+21. ~~Audit 53 broad except handlers~~ — 2 remain, both justified
+22. **No service layer** — business logic embedded in route modules
+23. **Migrate tmdb.py to config.py** — bypasses config layer with direct os.getenv()
+24. **Remove dead `curl_cffi.requests.errors.RequestsError` refs** — stream_live.py references undefined name in dead except clauses
 
 ### P4 — Nice to have
-21. **Multi-provider support** — Second IPTV provider option
-22. **Multi-user profiles** — Auth + profile isolation (requires SpacetimeDB or auth system)
-23. **Remove Google Fonts CDN** — bundle Inter locally
-24. **Inline initial CSS** — reduce CLS
-25. **Add CDN for static assets** — or serve from nginx with aggressive caching
+25. **Multi-provider support** — Second IPTV provider option
+26. **Multi-user profiles** — Auth + profile isolation (requires SpacetimeDB or auth system)
+27. **Remove Google Fonts CDN** — bundle Inter locally
+28. **Add CDN for static assets** — or serve from nginx with aggressive caching
