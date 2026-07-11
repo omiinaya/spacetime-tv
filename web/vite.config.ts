@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync, unlinkSync } from "fs";
 
 export default defineConfig({
   plugins: [
-    tailwindcss(),
+    tailwindcss({ inject: false }),
     react(),
     {
       name: "strip-crossorigin",
