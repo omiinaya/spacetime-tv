@@ -118,15 +118,26 @@ async def auth_middleware(request: Request, call_next):
 
 # ── HTTPS redirect middleware (when ENFORCE_HTTPS=true) ──────────
 @app.middleware("http")
+@app.middleware("http")
 async def https_redirect_middleware(request: Request, call_next):
-    """Redirect HTTP to HTTPS when ENFORCE_HTTPS is enabled."""
+    """Redirect HTTP to HTTPS when ENFORCE_HTTPS is enabled.
+    Uses X-Forwarded-Proto header (set by nginx proxy) to detect original scheme,
+    because behind proxy the backend sees HTTP internally.
+    If no X-Forwarded-Proto, assume direct internal connection (no redirect).
+    """
     from config import ENFORCE_HTTPS
-    if ENFORCE_HTTPS and request.url.scheme == "http":
-        from fastapi.responses import RedirectResponse
-        url = request.url.replace(scheme="https", port=443)
-        return RedirectResponse(url, status_code=301)
+    if ENFORCE_HTTPS:
+        forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
+        if forwarded_proto:
+            if forwarded_proto == "http":
+                from fastapi.responses import RedirectResponse
+                url = request.url.replace(scheme="https", port=443)
+                return RedirectResponse(url, status_code=301)
+        elif request.url.scheme == "http":
+            from fastapi.responses import RedirectResponse
+            url = request.url.replace(scheme="https", port=443)
+            return RedirectResponse(url, status_code=301)
     return await call_next(request)
-
 # ── Backward compatibility redirect: /api/... → /api/v1/... ─────────────
 # NOTE: This is done as a middleware rather than a catch-all route because
 # Starlette matches catch-all patterns before included-router partial matches,
@@ -183,11 +194,18 @@ class RequestBodySizeMiddleware(BaseHTTPMiddleware):
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: StarletteRequest, call_next):
-        ip = request.client.host if request.client else "unknown"
         now = time.time()
         path = request.url.path
+        # Key by device token when available, fallback to IP
+        # This ensures shared-NAT users with different device tokens
+        # each have their own rate-limit bucket.
+        device_token = request.headers.get("X-Device-Token", "")
+        if device_token:
+            key = device_token
+        else:
+            key = request.client.host if request.client else "unknown"
         limit = RATE_SEARCH_LIMIT if "/api/v1/search" in path or "/api/v1/image-proxy" in path else RATE_DEFAULT_LIMIT
-        window_start, count = _rate_limits.get(ip, (0, 0))
+        window_start, count = _rate_limits.get(key, (0, 0))
         if now - window_start > RATE_WINDOW:
             window_start = now
             count = 0
@@ -198,7 +216,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 media_type="application/json",
                 headers={"Retry-After": str(int(RATE_WINDOW - (now - window_start)))},
             )
-        _rate_limits[ip] = (window_start, count + 1)
+        _rate_limits[key] = (window_start, count + 1)
         return await call_next(request)
 
 app.add_middleware(RequestBodySizeMiddleware)

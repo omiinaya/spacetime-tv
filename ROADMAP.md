@@ -200,7 +200,7 @@
 | **IPTV credentials in stream URLs** | 🟡 Medium | User/pass in query params of ALL stream URLs (exposed in logs, browser history, referrer headers). | |
 | ~~**20 streaming endpoints with ACAO: ***~~ | ~~🟡 Medium~~ | ~~stream_vod (8), stream_live (4), stream_dash (3), stream_core (1), stream_hls (1), stream_convert (2), media (1). Necessary for MSE but permissive.~~ | ✅ **FIXED** — All per-response ACAO headers removed. CORS handled centrally by middleware with restricted origins. |
 | ~~**Chunked encoding bypasses body limit**~~ | ~~🟡 Medium~~ | ~~Body size middleware only checks `Content-Length` header. Chunked transfer (no Content-Length) passes through.~~ | ✅ **FIXED** — `RequestBodySizeMiddleware` now reads chunked body and enforces `MAX_CONTENT_LENGTH`. |
-| **Rate limiting is IP-based only** | 🟡 Low | Shared NAT users blocked together. No in-memory distributed (single process). | |
+| ~~**Rate limiting is IP-based only**~~ | ~~🟡 Low~~ | ~~Shared NAT users blocked together. No in-memory distributed (single process).~~ | ✅ **FIXED** — Rate limiting keyed by `X-Device-Token` when available, falls back to IP. Each device gets its own bucket. |
 | **Cloud `merge` also unauth** | 🟡 Same vector | POST /cloud/merge adds to any device's favorites — same device_id-only auth. | ✅ Same fix — SHA-256 device token scoping covers all cloud endpoints. |
 
 ### Honest Assessment

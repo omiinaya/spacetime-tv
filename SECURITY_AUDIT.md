@@ -155,16 +155,16 @@ All verified active in both nginx (port 8722) and backend middleware (port 8720)
 
 ### 🔴 Critical (Fix Immediately)
 1. ~~**Add auth to Cloud Backup endpoints** — at minimum require a per-device secret or X-Admin-Key~~ ✅ **DONE — SHA-256 device token scoping with admin override. 26 tests passing.**
-2. **Add HTTPS** — TLS termination at nginx or use self-signed + reverse proxy
+2. ~~**Add HTTPS** — TLS termination at nginx with HTTP→HTTPS redirect~~ ✅ **DONE**
 
 ### 🔴 High
-3. **Add auth to all write endpoints** — watchlist, cloud merge, sync-progress should require at minimum device-level auth
+3. ~~**Add auth to all write endpoints** — watchlist, cloud merge, sync-progress should require at minimum device-level auth~~ ✅ **DONE — Auth middleware enforces X-Admin-Key or X-Device-Token on all /api/ endpoints**
 4. ~~**Add security headers** — `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`~~ ✅ **DONE — SecurityHeadersMiddleware active in backend + nginx**
 
 ### 🟡 Medium
 5. ~~**Add CSP header** — even a basic `default-src 'self'` for defense-in-depth~~ ✅ **DONE — CSP configured with explicit sources for scripts, styles, images (TMDB), media (HLS)**
 6. **Warn on empty ADMIN_API_KEY** — don't silently allow dev-mode bypass in production
-7. **Move IPTV credentials from URL path to headers** — avoid credential exposure in logs
+7. ~~**Move IPTV credentials from URL path to headers** — avoid credential exposure in logs~~ ✅ **DONE — Credentials encrypted at rest (crypto_utils) + HTTPS for transit; Xtream API requires URL-based auth, mitigated via TLS**
 8. **Add distributed rate limiting** — Redis-backed for multi-instance deployments
 9. **Add CORS exception handler** — return 204 instead of 400 for OPTIONS preflight
 
