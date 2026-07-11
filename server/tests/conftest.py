@@ -1,6 +1,7 @@
-"""Pytest configuration for Spacetime-TV backend tests.
+"""
+conftest.py — test configuration for spacetime-tv backend.
 
-Sets environment variables BEFORE importing the app module so that
+Sets test environment variables before importing main module so that
 os.getenv() calls in main.py pick up test values instead of production .env.
 
 Overrides lifespan to skip background tasks (cache warmer, cleanup).
@@ -25,7 +26,8 @@ os.environ.setdefault("ADMIN_API_KEY", "test-admin-key-insecure")
 # Add server dir to Python path so `from main import ...` works
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch as _cached_fetch_patch
+import asyncio
 import pytest
 from fastapi.testclient import TestClient
 
@@ -33,35 +35,25 @@ from fastapi.testclient import TestClient
 # Test configuration and fixtures
 # ══════════════════════════════════════════════════════════════════════════
 
-from unittest.mock import AsyncMock, patch as _cached_fetch_patch
-
 # Import main AFTER env vars are set
 from main import app
 from state import _cache
 
 # ── Lifespan override ──────────────────────────────────────────
-# Prevent background tasks (cache warmer, cleanup) from running during tests.
-from contextlib import asynccontextmanager
-
-
-@asynccontextmanager
-async def noop_lifespan(_app):
+# Override the lifespan context manager to skip background tasks
+# (cache warmer, cleanup) that would otherwise use an unpatched iptv_client.
+@pytest.fixture(autouse=True)
+def override_lifespan():
+    """Replace app.lifespan_context with a no-op to prevent background tasks."""
+    import contextlib
+    app.lifespan_context = contextlib.nullcontext
     yield
 
 
-app.router.lifespan_context = noop_lifespan
-
-
-# ── Fixtures ───────────────────────────────────────────────────
 @pytest.fixture(autouse=True)
-def clear_cache():
-    """Clear all caches before each test so state doesn't leak."""
-    _cache.clear()
-    # Also clear the module-level probe caches
-    import main as m
-    # _probe_cache moved to routes/stream.py during P1.1 Phase 3 extraction
-    from routes.stream import _probe_cache as stream_probe_cache
-    stream_probe_cache.clear()
+def reset_shared_state():
+    """Clear all shared mutable state between tests so ordering doesn't matter."""
+    # Clear EPG cache
     from state import epg_cache, _progress_store
     epg_cache["data"] = None
     epg_cache["fetched"] = 0

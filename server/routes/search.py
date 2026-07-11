@@ -14,7 +14,7 @@ from fastapi import APIRouter, HTTPException, Query
 from iptv_client import cached_fetch
 
 from config import TMDB_API_KEY, TMDB_ENRICH_PATH
-from state import _cache, record_search, CACHE_LIVE_ALL, CACHE_VOD_CATEGORIES, CACHE_VOD_CAT, CACHE_SERIES_CATEGORIES, CACHE_SERIES_CAT
+from state import _cache, record_search, CACHE_LIVE_ALL
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["search"])
@@ -184,60 +184,12 @@ async def search(
 
     # Fallback if caches weren't warm
     if not all_movies:
-        async def get_all_vod():
-            try:
-                vod_cats = await cached_fetch(CACHE_VOD_CATEGORIES, "get_vod_categories")
-                cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
-                sem = asyncio.Semaphore(20)
-                async def f(cid):
-                    async with sem:
-                        return await cached_fetch(CACHE_VOD_CAT.format(id=cid), "get_vod_streams", category_id=cid)
-                all_streams = await asyncio.gather(*[f(cid) for cid in cat_ids], return_exceptions=True)
-                seen = set()
-                out = []
-                for streams in all_streams:
-                    if isinstance(streams, Exception):
-                        continue
-                    for s in streams:
-                        sid = s.get("stream_id")
-                        if sid and sid not in seen:
-                            seen.add(sid)
-                            if query in s.get("name", "").lower():
-                                out.append(s)
-                return out
-            except (HTTPException, asyncio.TimeoutError) as e:
-                log.error(f"VOD search error: {e}")
-                return []
-        all_movies = await get_all_vod()
+        from services.search_service import search_all_vod
+        all_movies = await search_all_vod(query)
 
     if not all_series:
-        async def get_all_series():
-            try:
-                cats = await cached_fetch(CACHE_SERIES_CATEGORIES, "get_series_categories")
-                cat_ids = [c["category_id"] for c in cats if c.get("category_id")]
-                sem = asyncio.Semaphore(20)
-                async def f(cid):
-                    async with sem:
-                        return await cached_fetch(CACHE_SERIES_CAT.format(id=cid), "get_series", category_id=cid)
-                all_series_data = await asyncio.gather(*[f(cid) for cid in cat_ids], return_exceptions=True)
-                seen = set()
-                out = []
-                for slist in all_series_data:
-                    if isinstance(slist, Exception):
-                        continue
-                    for s in slist:
-                        sid = s.get("series_id")
-                        if sid and sid not in seen:
-                            seen.add(sid)
-                            name = (s.get("name") or "").lower()
-                            plot = (s.get("plot") or "").lower()
-                            if query in name or query in plot:
-                                out.append(s)
-                return out
-            except (HTTPException, asyncio.TimeoutError) as e:
-                log.error(f"Series search error: {e}")
-                return []
-        all_series = await get_all_series()
+        from services.search_service import search_all_series
+        all_series = await search_all_series(query)
 
     totals = {
         "live": len(all_live),

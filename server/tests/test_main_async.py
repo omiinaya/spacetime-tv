@@ -28,6 +28,7 @@ from iptv_client import cached_fetch
 class TestCachedFetch:
     """Cover empty-list handling (lines 146-154) and stale fallback on fetch failure (lines 139-145)."""
 
+    @pytest.mark.asyncio
     async def test_fresh_cache_returns_cached(self):
         """When cache has fresh data (within TTL), return it without calling upstream."""
         _cache.clear()
@@ -36,6 +37,7 @@ class TestCachedFetch:
         result = await cached_fetch("fresh_key", "some_action")
         assert result == "cached_value"
 
+    @pytest.mark.asyncio
     async def test_cache_miss_triggers_upstream(self):
         """When cache is cold, cached_fetch calls fetch_iptv and caches the result."""
         _cache.clear()
@@ -51,6 +53,7 @@ class TestCachedFetch:
         assert "miss_key" in _cache
         assert _cache["miss_key"][1] == upstream_data
 
+    @pytest.mark.asyncio
     async def test_empty_list_not_cached(self):
         """Empty list from upstream should be returned but NOT stored in cache (line 146-148, 152)."""
         _cache.clear()
@@ -64,6 +67,7 @@ class TestCachedFetch:
         assert result == []
         assert "empty_key" not in _cache, "Empty list should not be cached"
 
+    @pytest.mark.asyncio
     async def test_stale_fallback_on_empty_list(self):
         """When upstream returns empty list but stale cache exists, the stale data is returned (lines 148-151)."""
         _cache.clear()
@@ -78,6 +82,7 @@ class TestCachedFetch:
 
         assert result == stale_data, "Stale data should be returned when upstream returns empty"
 
+    @pytest.mark.asyncio
     async def test_failed_upstream_with_stale_fallback(self):
         """When upstream raises but stale data exists, stale data is returned (lines 139-144)."""
         _cache.clear()
@@ -92,6 +97,7 @@ class TestCachedFetch:
 
         assert result == stale_data
 
+    @pytest.mark.asyncio
     async def test_failed_upstream_no_stale_raises(self):
         """When upstream fails and no stale data exists, the exception propagates (line 145)."""
         _cache.clear()
@@ -103,6 +109,7 @@ class TestCachedFetch:
             with pytest.raises(Exception, match="Upstream down"):
                 await cached_fetch("raise_key", "test_action")
 
+    @pytest.mark.asyncio
     async def test_cache_hit_increments_counter(self):
         """A cache hit increments the global _cache_hits counter."""
         import iptv_client as ic
@@ -115,6 +122,7 @@ class TestCachedFetch:
         await cached_fetch("hit_counter_key", "unused")
         assert ic._cache_hits == start_hits + 1
 
+    @pytest.mark.asyncio
     async def test_cache_miss_increments_miss_counter(self):
         """A cache miss increments the global _cache_misses counter."""
         import iptv_client as ic
@@ -141,6 +149,7 @@ class TestFetchIptv:
     we need a real HTTP call, so we target the error path at lines 122-124 instead.
     """
 
+    @pytest.mark.asyncio
     async def test_upstream_error_raises_502(self):
         """When the httpx client call raises, fetch_iptv raises HTTPException(502)."""
         from fastapi import HTTPException
@@ -190,6 +199,7 @@ class TestCleanupStaleCache:
         stamp.write_text(str(time.time() - age_seconds))
         return path, stamp
 
+    @pytest.mark.asyncio
     async def test_removes_stale_files(self):
         """Files older than CLEANUP_TTL_HOURS get cleaned up."""
         stale_age = (CLEANUP_TTL_HOURS * 3600) + 100
@@ -201,6 +211,7 @@ class TestCleanupStaleCache:
         assert not path.exists()
         assert not stamp.exists()
 
+    @pytest.mark.asyncio
     async def test_preserves_fresh_files(self):
         """Files within TTL are not removed."""
         self._create_entry("_test_cleanup_fresh_file", 1)
@@ -211,6 +222,7 @@ class TestCleanupStaleCache:
 
         assert path.exists()
 
+    @pytest.mark.asyncio
     async def test_skips_dot_files(self):
         """Files starting with a dot are skipped."""
         dot = CACHE_DIR / "._test_cleanup_dotfile"
@@ -222,6 +234,7 @@ class TestCleanupStaleCache:
         assert dot.exists()
         dot.unlink()
 
+    @pytest.mark.asyncio
     async def test_removes_stale_directories(self):
         """Directories older than TTL are removed."""
         stale_age = (CLEANUP_TTL_HOURS * 3600) + 100
@@ -237,6 +250,7 @@ class TestCleanupStaleCache:
         assert not dir_path.exists()
         assert not stamp.exists()
 
+    @pytest.mark.asyncio
     async def test_new_entry_no_stamp_gets_stamped(self):
         """A new entry without an access stamp gets one created (stamped for directories)."""
         # Create a directory (the code path for no-stamp dirs creates stamps)
@@ -254,6 +268,7 @@ class TestCleanupStaleCache:
         # Note: line 269-270 only fires for directories; files without stamps are just skipped
         dir_path.rmdir()
 
+    @pytest.mark.asyncio
     async def test_delete_error_does_not_crash(self):
         """If a file can't be deleted, the error is logged but cleanup continues."""
         stale_age = (CLEANUP_TTL_HOURS * 3600) + 100
@@ -274,6 +289,7 @@ class TestCleanupStaleCache:
 class TestStartCleanupTask:
     """Cover start_cleanup_task (lines 303-305)."""
 
+    @pytest.mark.asyncio
     async def test_creates_and_starts_cleanup_task(self):
         """start_cleanup_task stores a non-done asyncio task."""
         import main as m
