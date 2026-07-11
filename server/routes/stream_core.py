@@ -60,7 +60,7 @@ async def _lookup_extension(stream_id: int, stream_type: str) -> str:
                     if ext:
                         log.info(f"Looked up extension for {stream_type} {stream_id}: {ext} (cached)")
                         return ext if ext else "mp4"
-    except Exception as e:
+    except (HTTPException, KeyError, TypeError, IndexError) as e:
         log.warning(f"Extension lookup cache failed for {stream_type} {stream_id}: {e}")
 
     # ── 2. Fallback: query the provider API directly ────────────────

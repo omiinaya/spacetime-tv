@@ -39,7 +39,7 @@ def _maybe_encrypt(pwd: str) -> str:
         try:
             from crypto_utils import encrypt as _enc
             return _enc(pwd)
-        except Exception:
+        except (ImportError, OSError, ValueError, TypeError):
             pass  # fallback to plaintext if crypto unavailable
     return pwd
 

@@ -32,7 +32,7 @@ def verify_device_token(request: Request, device_id: str) -> bool:
         try:
             from routes.cloud_sync import _read_backups
             backups = _read_backups()
-        except Exception:
+        except (ImportError, OSError, json.JSONDecodeError):
             return False
     entry = backups.get(device_id, {})
     stored_hash = entry.get("_token_hash", "")

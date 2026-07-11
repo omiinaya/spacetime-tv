@@ -64,7 +64,7 @@ def decrypt(encrypted: str) -> str:
         cipher = get_cipher()
         token = encrypted[4:].encode("utf-8")
         return cipher.decrypt(token).decode("utf-8")
-    except Exception as e:
+    except (InvalidToken, TypeError, ValueError) as e:
         log.error(f"Decryption failed: {e}")
         return ""
 def is_encrypted(value: str) -> bool:
