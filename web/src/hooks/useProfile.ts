@@ -109,6 +109,44 @@ export async function syncProfileProgress(
   return res.ok;
 }
 
+
+// ── Watch history ─────────────────────────────────────────────────
+
+export async function addProfileHistory(
+  profileId: string,
+  watchKey: string,
+  title: string,
+  contentType: string,
+  position: number = 0,
+  duration: number = 0,
+  metadata: Record<string, any> = {},
+): Promise<boolean> {
+  const res = await fetch(`${API_BASE}/profiles/${profileId}/history`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ watchKey, title, contentType, position, duration, metadata }),
+  });
+  return res.ok;
+}
+
+export async function fetchProfileHistory(
+  profileId: string,
+  limit: number = 50,
+  offset: number = 0,
+): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/profiles/${profileId}/history?limit=${limit}&offset=${offset}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.history || [];
+}
+
+export async function clearProfileHistory(profileId: string): Promise<boolean> {
+  const res = await fetch(`${API_BASE}/profiles/${profileId}/history`, {
+    method: "DELETE",
+  });
+  return res.ok;
+}
+
 // ── Hook ───────────────────────────────────────────────────────────
 
 export function useProfile() {

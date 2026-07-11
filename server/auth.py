@@ -177,3 +177,41 @@ def delete_profile(profile_id: str) -> bool:
     del profiles[profile_id]
     _save_profiles(profiles)
     return True
+
+
+# ── Profile watch history ──────────────────────────────────────────
+
+def add_profile_history(profile_id: str, entry: dict) -> bool:
+    """Add a watch history entry to a profile. Returns False if profile not found."""
+    profiles = _load_profiles()
+    if profile_id not in profiles:
+        return False
+    if 'history' not in profiles[profile_id]:
+        profiles[profile_id]['history'] = []
+    entry['timestamp'] = time.time()
+    # Most recent first, max 500 entries
+    profiles[profile_id]['history'].insert(0, entry)
+    if len(profiles[profile_id]['history']) > 500:
+        profiles[profile_id]['history'] = profiles[profile_id]['history'][:500]
+    _save_profiles(profiles)
+    return True
+
+
+def get_profile_history(profile_id: str, limit: int = 50, offset: int = 0) -> list:
+    """Get paginated watch history for a profile."""
+    profiles = _load_profiles()
+    if profile_id not in profiles:
+        return []
+    history = profiles[profile_id].get('history', [])
+    return history[offset:offset + limit]
+
+
+def clear_profile_history(profile_id: str) -> bool:
+    """Clear all watch history for a profile."""
+    profiles = _load_profiles()
+    if profile_id not in profiles:
+        return False
+    profiles[profile_id]['history'] = []
+    _save_profiles(profiles)
+    return True
+
