@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { readFileSync, writeFileSync, unlinkSync } from "fs";
+import compression from "vite-plugin-compression";
 
 export default defineConfig({
   plugins: [
@@ -18,6 +19,12 @@ export default defineConfig({
         writeFileSync(indexPath, html);
       },
     },
+    compression({
+      algorithm: "gzip",
+      ext: ".gz",
+      threshold: 10240,  // 10KB minimum
+      deleteOriginFile: false,
+    }),
   ],
   resolve: {
     alias: {
