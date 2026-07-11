@@ -17,7 +17,7 @@ export default defineConfig({
         html = html.replace(/\s+crossorigin(=["'][^"']*["'])?/g, "");
         writeFileSync(indexPath, html);
       },
-    },    },
+    },
   ],
   resolve: {
     alias: {
