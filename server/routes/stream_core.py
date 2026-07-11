@@ -14,6 +14,7 @@ from typing import Optional
 import aiohttp
 import httpx
 
+from fastapi import HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from config import UA_STR
