@@ -301,7 +301,7 @@ def _update_provider_health(provider: ProviderConfig, success: bool, error: str 
                     if error:
                         _provider_health[h_idx]["last_error_msg"] = error
                 break
-    except Exception:
+    except (KeyError, AttributeError, IndexError, TypeError, ImportError):
         pass  # health tracking is best-effort
 
 

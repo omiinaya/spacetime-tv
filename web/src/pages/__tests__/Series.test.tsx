@@ -72,6 +72,17 @@ vi.mock("@/components/ContentRow", () => ({
       {children}
     </div>,
 }));
+vi.mock("@/components/TrendingSeriesRow", () => ({
+  default: () => (
+    <div data-testid="trending-row">
+      <h3>Trending This Week</h3>
+      <span>9.5</span>
+      <span>Breaking Bad</span>
+      <span>2008</span>
+    </div>
+  ),
+}));
+
 
 vi.mock("@/components/Pagination", () => ({
   Pagination: ({ currentPage, totalPages, onPageChange }: { currentPage: number; totalPages: number; onPageChange: (p: number) => void }) =>

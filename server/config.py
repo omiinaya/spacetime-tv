@@ -30,6 +30,11 @@ class ProviderConfig:
     enabled: bool = True
     order: int = 0  # lower = higher priority for failover
 
+# Credential encryption at rest
+# Set ENCRYPT_CREDENTIALS=false to disable Fernet encryption of stored IPTV passwords
+ENCRYPT_CREDENTIALS = os.getenv("ENCRYPT_CREDENTIALS", "true").lower() == "true"
+# Encryption key override (auto-generated if not set, stored in DATA_DIR/.encrypt_key)
+STV_ENCRYPT_KEY = os.getenv("STV_ENCRYPT_KEY", "")
 # ── Credential encryption helper ───────────────────────────────────────
 def _maybe_encrypt(pwd: str) -> str:
     """Encrypt password if encryption is enabled and not already encrypted."""
@@ -133,11 +138,6 @@ RATE_SEARCH_LIMIT = int(os.getenv("RATE_SEARCH_LIMIT", "100"))   # requests per 
 RATE_DEFAULT_LIMIT = int(os.getenv("RATE_DEFAULT_LIMIT", "1000")) # requests per window for everything else
 
 
-# Credential encryption at rest
-# Set ENCRYPT_CREDENTIALS=false to disable Fernet encryption of stored IPTV passwords
-ENCRYPT_CREDENTIALS = os.getenv("ENCRYPT_CREDENTIALS", "true").lower() == "true"
-# Encryption key override (auto-generated if not set, stored in DATA_DIR/.encrypt_key)
-STV_ENCRYPT_KEY = os.getenv("STV_ENCRYPT_KEY", "")
 
 
 # Data directory — persistent store for all runtime data.

@@ -5,19 +5,19 @@ import {
   Loader2,
   AlertCircle,
   RotateCcw,
-  Star,
   Search,
   X,
-  Heart,
 } from "lucide-react";
-import { isSeriesInWatchlist, toggleSeriesWatchlist as toggleSeriesWl } from "@/lib/watchlist";
-import { api, Category, Series, TmdbTvResult, tmdbImgProps } from "@/lib/api";
+import { toggleSeriesWatchlist as toggleSeriesWl } from "@/lib/watchlist";
+import { api, Category, Series } from "@/lib/api";
 import ContentRow from "@/components/ContentRow";
 import SeriesOverlay from "@/components/SeriesOverlay";
 import SeriesWatchingSection from "@/components/SeriesWatchingSection";
 import SeriesGridNav from "@/components/SeriesGridNav";
 import { Skeleton } from "@/components/Skeleton";
 import { PosterCardSkeleton } from "@/components/Skeleton";
+import SeriesCard from "@/components/SeriesCard";
+import TrendingSeriesRow from "@/components/TrendingSeriesRow";
 import { useSettings } from "@/context/SettingsContext";
 import { filterCategories } from "@/lib/settings";
 
@@ -74,10 +74,6 @@ export default function SeriesPage() {
     [setSearchParams]
   );
 
-  // ── Trending (TMDB TV) ───────────────────────────────────────────
-  const [trending, setTrending] = useState<TmdbTvResult[]>([]);
-  const [trendingLoading, setTrendingLoading] = useState(true);
-  const [trendingEnabled, setTrendingEnabled] = useState(false);
 
   // ── "Show All" mode ────────────────────────────────────────────
   const [showAllCatId, setShowAllCatId] = useState<string | null>(null);
@@ -87,19 +83,8 @@ export default function SeriesPage() {
   const [showAllPage, setShowAllPage] = useState(1);
   const [showAllLoading, setShowAllLoading] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    setTrendingLoading(true);
-    api.tmdb.tv.trending("week", 1).then((res) => {
-      if (cancelled) return;
-      setTrending(res.trending || []);
-      setTrendingEnabled(res.enabled);
-      setTrendingLoading(false);
-    }).catch(() => {
-      if (!cancelled) setTrendingLoading(false);
-    });
-    return () => { cancelled = true; };
-  }, []);
+
+
 
   // Overlay state
   const [overlaySeries, setOverlaySeries] = useState<Series | null>(null);
@@ -358,75 +343,8 @@ export default function SeriesPage() {
       {/* Continue Watching / Recently Completed */}
       <SeriesWatchingSection navigate={navigate} />
 
-      {/* Trending (TMDB TV proxy) */}
-      {!trendingLoading && trendingEnabled && trending.length > 0 && (
-        <div>
-          <ContentRow title="Trending This Week" itemCount={trending.length}>
-            {trending.map((t, idx) => {
-              const posterProps = t.poster_path ? tmdbImgProps(t.poster_path) : null;
-              const year = t.first_air_date ? t.first_air_date.slice(0, 4) : "";
-              return (
-                <button
-                  key={`trending-${t.id}`}
-                  data-row-idx={idx}
-                  className="shrink-0 w-[140px] group text-left focus:outline-none"
-                  onClick={() => {
-                    // Find the matching series by TMDB ID and open its overlay
-                    for (const [, row] of rows) {
-                      const match = row.series.find(
-                        (s) => s.tmdb === String(t.id) || s.name.toLowerCase().includes(t.name.toLowerCase().slice(0, 20))
-                      );
-                      if (match) {
-                        setOverlaySeries(match);
-                        break;
-                      }
-                    }
-                  }}
-                >
-                  <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-0 group-focus:ring-2 group-focus:ring-primary/60 group-focus:ring-offset-2 group-focus:ring-offset-background transition-all">
-                    {posterProps ? (
-                      <img
-                        {...posterProps}
-                        alt={`${t.name} poster`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-[#141420]">
-                        <Tv2 className="h-8 w-8 text-white/10" />
-                      </div>
-                    )}
-                    {/* Bottom gradient */}
-                    <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
-                    {/* Rating badge */}
-                    {t.vote_average > 0 && (
-                      <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[11px] font-semibold text-yellow-400 flex items-center gap-0.5">
-                        <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
-                        {t.vote_average.toFixed(1)}
-                      </div>
-                    )}
-                    {/* Year badge */}
-                    {year && (
-                      <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[10px] font-medium text-white/70">
-                        {year}
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-                    {t.name}
-                  </p>
-                  {year && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{year}</p>
-                  )}
-                </button>
-              );
-            })}
-          </ContentRow>
-        </div>
-      )}
-
+      {/* Trending (TMDB TV proxy) — extracted to TrendingSeriesRow */}
+      <TrendingSeriesRow />
       {/* Section search */}
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
@@ -532,71 +450,13 @@ export default function SeriesPage() {
                     : undefined
                 }
               >
-                {filtered.map((s, sIdx) => (
-                  <div
+                {filtered.map((s) => (
+                  <SeriesCard
                     key={s.series_id}
-                    data-row-idx={sIdx}
-                    onClick={() => setOverlaySeries(s)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setOverlaySeries(s);
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    className="group shrink-0 w-[170px] sm:w-[185px] flex flex-col rounded-xl overflow-hidden bg-card border border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/40 cursor-pointer"
-                  >
-                    {/* Poster */}
-                    <div className="relative w-full aspect-[2/3] bg-muted overflow-hidden">
-                      {s.cover ? (
-                        <img
-                          src={s.cover}
-                          alt={s.name ? `${s.name} poster` : ""}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
-                          loading="lazy"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-[#141420]">
-                          <Tv2 className="h-8 w-8 text-white/10" />
-                        </div>
-                      )}
-                      {/* Bottom gradient for title readability */}
-                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
-                      {/* Rating badge */}
-                      {s.rating && (
-                        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[11px] font-semibold text-yellow-400 flex items-center gap-0.5">
-                          <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
-                          {parseFloat(s.rating).toFixed(1)}
-                        </div>
-                      )}
-                      {/* Year badge */}
-                      {s.releaseDate && (
-                        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[10px] font-medium text-white/70">
-                          {s.releaseDate.slice(0, 4)}
-                        </div>
-                      )}
-                      {/* Watchlist heart — always visible on mobile, brighter on hover */}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); toggleSeriesWatchlist(s.series_id); }}
-                        className="absolute bottom-2 right-2 p-1 rounded-full bg-black/60 backdrop-blur-sm opacity-70 hover:opacity-100 transition-opacity hover:scale-110"
-                        aria-label={isSeriesInWatchlist(s.series_id) ? "Remove from watchlist" : "Add to watchlist"}
-                      >
-                        <Heart
-                          className={`h-4 w-4 ${isSeriesInWatchlist(s.series_id) ? "fill-red-500 text-red-500" : "text-white/70"}`}
-                        />
-                      </button>
-                    </div>
-                    {/* Title */}
-                    <div className="p-2.5 flex-1">
-                      <p className="text-xs font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-                        {s.name}
-                      </p>
-                    </div>
-                  </div>
+                    series={s}
+                    onSelect={setOverlaySeries}
+                    onToggleWatchlist={toggleSeriesWatchlist}
+                  />
                 ))}
               </ContentRow>
             );

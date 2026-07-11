@@ -308,12 +308,10 @@ async def cleanup_loop():
         await asyncio.sleep(CLEANUP_INTERVAL)
         try:
             await cleanup_stale_cache()
-        except Exception as e:
+        except (OSError, ValueError, KeyError) as e:
             # Background loop guard: cleanup_stale_cache() may raise OSError (file ops),
             # ValueError (malformed timestamps), KeyError (corrupt index), etc.
-            # Must never crash the loop — catch all expected + unexpected exceptions.
-            # Uses `except Exception`, not bare `except`, so asyncio.CancelledError
-            # (subclass of BaseException) propagates for clean shutdown.
+            # Must never crash the loop — catch specific expected exceptions.
             log.error(f"[CLEANUP] Error: {e}")
 
 

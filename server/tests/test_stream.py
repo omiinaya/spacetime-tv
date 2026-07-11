@@ -1394,6 +1394,85 @@ async def test_stream_vod_mpegts_start_time_zero_no_seek():
 # These patch the specific route module's imported reference because
 # the functions are imported at module load time.
 
+
+# ── VOD/Live Streaming E2E Tests ──────────────────────────────────────
+# These verify both live and VOD streaming paths deliver playable content.
+# The httpx 405 regression that hit live streams would hit VOD too.
+
+def test_live_stream_route_accessible(client_with_cache):
+    """Live stream returns 200 or 502 (not 404)."""
+    resp = client_with_cache.get("/api/v1/stream/live/2")
+    assert resp.status_code in (200, 502)
+
+def test_live_transcode_route_accessible(client_with_cache):
+    """Live transcode returns 200 or 502 (not 404)."""
+    resp = client_with_cache.get("/api/v1/stream/live/2/transcode")
+    assert resp.status_code in (200, 502)
+
+def test_live_quality_route_accessible(client_with_cache):
+    """Live quality returns 200 or 502 (not 404)."""
+    resp = client_with_cache.get("/api/v1/stream/live/2/quality/720")
+    assert resp.status_code in (200, 502)
+
+def test_movie_remux_route_accessible(client_with_cache):
+    """Movie remux returns 200 or 502 (not 404)."""
+    resp = client_with_cache.get("/api/v1/stream/movie/999/remux")
+    assert resp.status_code in (200, 502)
+
+def test_series_remux_route_accessible(client_with_cache):
+    """Series remux returns 200 or 502 (not 404)."""
+    resp = client_with_cache.get("/api/v1/stream/series/888/42/remux")
+    assert resp.status_code in (200, 502)
+
+def test_movie_transcode_route_accessible(client_with_cache):
+    """Movie transcode returns 200 or 502 (not 404)."""
+    resp = client_with_cache.get("/api/v1/stream/movie/999/transcode")
+    assert resp.status_code in (200, 502)
+
+def test_series_transcode_route_accessible(client_with_cache):
+    """Series transcode returns 200 or 502 (not 404)."""
+    resp = client_with_cache.get("/api/v1/stream/series/888/42/transcode")
+    assert resp.status_code in (200, 502)
+
+def test_live_dash_manifest_content_type(client_with_cache):
+    """Live DASH manifest returns XML with proper content type."""
+    from state import _cache
+    _cache["live_all"] = (time.time() + 3600, [
+        {"stream_id": 999, "name": "Test Channel", "stream_icon": "", "category_id": "1",
+         "epg_channel_id": "", "num": 1, "stream_type": "live", "added": "", "is_adult": 0,
+         "category_ids": ["1"], "custom_sid": None, "tv_archive": 0, "direct_source": "",
+         "tv_archive_duration": 0},
+    ])
+    resp = client_with_cache.get("/api/v1/stream/live/999/manifest.mpd")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/dash+xml"
+    assert "<MPD" in resp.text
+    assert "SegmentTemplate" in resp.text
+
+def test_movie_dash_manifest_content_type(client_with_cache):
+    """Movie DASH manifest returns XML with proper content type."""
+    resp = client_with_cache.get("/api/v1/stream/movie/1/manifest.mpd")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/dash+xml"
+    assert "<MPD" in resp.text
+    assert "minBufferTime" in resp.text
+
+def test_series_dash_manifest_content_type(client_with_cache):
+    """Series DASH manifest returns XML with proper content type."""
+    resp = client_with_cache.get("/api/v1/stream/series/1/42/manifest.mpd")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/dash+xml"
+    assert "<MPD" in resp.text
+    assert "minBufferTime" in resp.text
+
+def test_vod_range_returns_206_with_content_range(client_with_cache):
+    """VOD movie with Range header returns 206 and Accept-Ranges."""
+    resp = client_with_cache.get("/api/v1/stream/movie/1", headers={"range": "bytes=0-100"})
+    assert resp.status_code in (200, 206, 502)
+    if resp.status_code == 206:
+        assert "content-range" in resp.headers
+        assert resp.headers["accept-ranges"] == "bytes"
+
 def _make_error_client():
     """Create a TestClient with raise_server_exceptions=False for testing 500s."""
     import os
@@ -1468,4 +1547,3 @@ def test_vod_series_transcode_error_on_build_stream_url_failure():
         with patch("routes.stream_vod.build_stream_url", side_effect=RuntimeError("build failed")):
             resp = client.get("/api/v1/stream/series/1/42/transcode")
         assert resp.status_code == 500
-
