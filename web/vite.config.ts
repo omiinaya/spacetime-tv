@@ -17,29 +17,7 @@ export default defineConfig({
         html = html.replace(/\s+crossorigin(=["'][^"']*["'])?/g, "");
         writeFileSync(indexPath, html);
       },
-    },
-    {
-      name: "extract-large-css",
-      closeBundle() {
-        const indexPath = path.resolve(__dirname, "dist/index.html");
-        let html = readFileSync(indexPath, "utf-8");
-        const styleRegex = /<style>([\s\S]*?)<\/style>/g;
-        let match;
-        const extracted = [];
-        while ((match = styleRegex.exec(html)) !== null) {
-          if (match[1].length > 10000) {
-            extracted.push({ full: match[0], css: match[1], index: match.index });
-          }
-        }
-        for (const { full, css, index } of extracted.reverse()) {
-          const filename = `tailwind-${index}.css`;
-          const outputPath = path.resolve(__dirname, "dist", "assets", filename);
-          writeFileSync(outputPath, css, "utf-8");
-          html = html.replace(full, `<link rel="stylesheet" href="/assets/${filename}" />`);
-        }
-        writeFileSync(indexPath, html);
-      },
-    },
+    },    },
   ],
   resolve: {
     alias: {
