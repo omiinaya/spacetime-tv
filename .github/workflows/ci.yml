@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches-ignore: [master]
+  pull_request:
+    branches-ignore: [master]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install backend deps
+        working-directory: server
+        run: pip install -r requirements.txt
+
+      - name: Run backend unit tests
+        working-directory: server
+        run: python -m pytest tests/ -v --ignore=tests/test_live.py --ignore=tests/test_streaming_e2e.py --ignore=tests/test_integration_iptv.py -x --timeout=60
+
+      - name: Install frontend deps
+        working-directory: web
+        run: npm ci
+
+      - name: Lint frontend
+        working-directory: web
+        run: npm run lint
+
+      - name: Run frontend unit tests
+        working-directory: web
+        run: npm test
+
+      - name: Build frontend
+        working-directory: web
+        run: npm run build
