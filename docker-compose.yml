@@ -5,7 +5,8 @@ services:
       dockerfile: Dockerfile
     container_name: stv-backend
     ports:
-      - "8720:8720"
+      - "8720:8720"  # HTTP
+      - "8723:8723"  # HTTPS (when ENFORCE_HTTPS=true and TLS certs configured)
     env_file:
       - ./server/.env
     volumes:

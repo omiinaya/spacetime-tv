@@ -187,3 +187,73 @@ async def admin_epg_refresh():
         "epg_age_s": age,
         "message": "EPG refresh triggered." if not already_running else "EPG refresh already in progress.",
     }
+
+# ── Provider Management ──────────────────────────────────────────────────
+
+@router.get("/admin/providers")
+async def admin_get_providers():
+    """List all configured IPTV providers with health status."""
+    from config import PROVIDERS
+    from state import _provider_health
+
+    result = []
+    for i, p in enumerate(PROVIDERS):
+        health = _provider_health.get(i, {})
+        result.append({
+            "index": i,
+            "name": p.name,
+            "base_url": p.base_url,
+            "username": p.username,
+            "enabled": p.enabled,
+            "order": p.order,
+            "health": {
+                "last_ok": health.get("last_ok"),
+                "last_error": health.get("last_error"),
+                "error_count": health.get("error_count", 0),
+                "ok_count": health.get("ok_count", 0),
+            },
+        })
+    return {"providers": result}
+
+
+@router.post("/admin/providers/{idx}/toggle")
+async def admin_toggle_provider(idx: int):
+    """Enable/disable a provider."""
+    from config import PROVIDERS
+    if idx < 0 or idx >= len(PROVIDERS):
+        raise HTTPException(404, f"Provider index {idx} not found")
+    PROVIDERS[idx].enabled = not PROVIDERS[idx].enabled
+    return {"index": idx, "name": PROVIDERS[idx].name, "enabled": PROVIDERS[idx].enabled}
+
+
+@router.post("/admin/providers/{idx}/reorder")
+async def admin_reorder_provider(idx: int, new_order: int):
+    """Change provider priority order."""
+    from config import PROVIDERS
+    if idx < 0 or idx >= len(PROVIDERS):
+        raise HTTPException(404, f"Provider index {idx} not found")
+    PROVIDERS[idx].order = new_order
+    PROVIDERS.sort(key=lambda x: x.order)
+    # Re-index
+    for i, p in enumerate(PROVIDERS):
+        p.order = i
+    return {"message": f"Provider '{PROVIDERS[idx].name}' reordered to position {new_order}"}
+
+
+@router.post("/admin/providers/reset-health")
+async def admin_reset_provider_health():
+    """Reset all provider health counters."""
+    from state import _provider_health
+    _provider_health.clear()
+    return {"message": "Provider health counters reset"}
+
+
+@router.get("/admin/providers/active")
+async def admin_get_active_provider():
+    """Get the currently active (highest-priority enabled) provider."""
+    from iptv_client import get_active_provider
+    p = get_active_provider()
+    if not p:
+        return {"active": None}
+    return {"active": {"name": p.name, "base_url": p.base_url}}
+

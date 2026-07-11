@@ -16,7 +16,9 @@ import httpx
 
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from config import IPTV_BASE, IPTV_PASS, IPTV_USER, UA_STR
+from config import UA_STR
+from iptv_client import build_timeshift_url as _build_timeshift_url, iptv_stream_url, iptv_vod_url, iptv_timeshift_url, get_active_provider
+from config import ProviderConfig
 
 log = logging.getLogger("spacetime-tv")
 
@@ -24,76 +26,86 @@ log = logging.getLogger("spacetime-tv")
 _probe_cache: dict[str, tuple[float, dict]] = {}
 PROBE_CACHE_TTL = 3600
 
+def stream_core_get_provider(provider_idx: int = -1):
+    """Get provider by index or active provider.
+    
+    Args:
+        provider_idx: Provider index (-1 = active/default)
+    Returns:
+        ProviderConfig or None
+    """
+    if provider_idx >= 0:
+        from iptv_client import get_provider_by_index
+        return get_provider_by_index(provider_idx)
+    return get_active_provider()
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 async def _lookup_extension(stream_id: int, stream_type: str) -> str:
-    """Look up the container_extension for a VOD stream.
+    """Look up the container extension for a stream, using cached or API data."""
+    # ── 1. Try cached category data first (pre-warmed from live/movie/series listings)
+    from iptv_client import cached_fetch, get_active_provider
 
-    Checks the in-memory cache first. Falls back to the IPTV provider's VOD
-    info API when the stream isn't cached, caching the result for subsequent
-    lookups.
-    """
-    from state import _cache
+    cache_key = f"ext_lookup_{stream_type}_{stream_id}"
+    cached_val = None
 
-    # ── 1. Check local in-memory cache ─────────────────────────────
-    prefix = f"{stream_type}_" if stream_type == "series" else "vod_"
-    for key, (ts, data) in _cache.items():
-        if not key.startswith(prefix):
-            continue
-        if not isinstance(data, list):
-            continue
-        for item in data:
-            sid = item.get("stream_id") if stream_type == "movie" else item.get("series_id")
-            if sid == stream_id:
-                ext = item.get("container_extension", "mp4")
-                return ext if ext else "mp4"
+    # Check primary provider's category listings for the extension
+    action = "get_live_streams" if stream_type == "live" else "get_vod_streams" if stream_type == "movie" else "get_series"
+    try:
+        data = await cached_fetch(cache_key, action)
+        if isinstance(data, list):
+            for item in data:
+                sid = item.get("stream_id") if stream_type in ("live", "movie") else item.get("series_id")
+                if sid == stream_id:
+                    ext = item.get("container_extension", "mp4")
+                    if ext:
+                        log.info(f"Looked up extension for {stream_type} {stream_id}: {ext} (cached)")
+                        return ext if ext else "mp4"
+    except Exception as e:
+        log.warning(f"Extension lookup cache failed for {stream_type} {stream_id}: {e}")
 
     # ── 2. Fallback: query the provider API directly ────────────────
-    params = {
-        "username": IPTV_USER,
-        "password": IPTV_PASS,
-        "action": "get_vod_info" if stream_type == "movie" else "get_series_info",
-    }
-    id_key = "vod_id" if stream_type == "movie" else "series_id"
-    params[id_key] = str(stream_id)
-    qs = "&".join(f"{k}={v}" for k, v in params.items())
-    api_url = f"{IPTV_BASE}/player_api.php?{qs}"
+    provider = get_active_provider()
+    if provider:
+        from urllib.parse import urlencode
+        ext_params = {
+            "username": provider.username,
+            "password": provider.password,
+            "action": "get_vod_info" if stream_type == "movie" else "get_series_info",
+        }
+        id_key = "vod_id" if stream_type == "movie" else "series_id"
+        ext_params[id_key] = str(stream_id)
+        api_url = f"{provider.base_url}/player_api.php?{urlencode(ext_params)}"
 
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as c:
-            resp = await c.get(api_url)
-            if resp.status_code == 200:
-                data = resp.json()
-                if stream_type == "movie":
-                    md = data.get("movie_data", {}) if isinstance(data, dict) else {}
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as c:
+                resp = await c.get(api_url)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if stream_type == "movie":
+                        md = data.get("movie_data", {}) if isinstance(data, dict) else {}
+                    else:
+                        md = data.get("info", {}) if isinstance(data, dict) else {}
                     ext = md.get("container_extension", "")
-                else:
-                    md = data.get("info", {}) if isinstance(data, dict) else {}
-                    ext = md.get("container_extension", "")
-                if ext:
-                    log.info(f"Looked up extension for {stream_type} {stream_id}: {ext} (API fallback)")
-                    return ext
-    except (httpx.HTTPError, httpx.TimeoutException) as e:
-        log.warning(f"Extension lookup API fallback failed for {stream_type} {stream_id}: {e}")
+                    if ext:
+                        log.info(f"Looked up extension for {stream_type} {stream_id}: {ext} (API fallback)")
+                        return ext
+        except (httpx.HTTPError, httpx.TimeoutException) as e:
+            log.warning(f"Extension lookup API fallback failed for {stream_type} {stream_id}: {e}")
 
     log.info(f"Extension lookup for {stream_type} {stream_id}: defaulting to mkv")
     return "mkv"
-
-
-async def build_stream_url(stream_id: int, stream_type: str) -> str:
+async def build_stream_url(stream_id: int, stream_type: str, provider_idx: int = -1) -> str:
     """Build the IPTV stream URL for a given stream ID and type."""
     ext = "ts" if stream_type == "live" else await _lookup_extension(stream_id, stream_type)
-    prefix = "live" if stream_type == "live" else stream_type
-    return f"{IPTV_BASE}/{prefix}/{IPTV_USER}/{IPTV_PASS}/{stream_id}.{ext}"
+    provider = stream_core_get_provider(provider_idx)
+    return iptv_stream_url(stream_id, stream_type, ext=ext, provider=provider)
 
-
-def _vod_url(stream_id: int, media_type: str = "movie") -> str:
+def _vod_url(stream_id: int, media_type: str = "movie", provider_idx: int = -1) -> str:
     """Build the provider MKV URL for ffprobe/ffmpeg (VOD subtitle/audio context)."""
-    prefix = "movie" if media_type == "movie" else "series"
-    return f"{IPTV_BASE}/{prefix}/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
+    provider = stream_core_get_provider(provider_idx)
+    return iptv_vod_url(stream_id, media_type, provider=provider)
 
-
-def build_timeshift_url(stream_id: int, duration_seconds: int) -> str:
+def build_timeshift_url(stream_id: int, duration_seconds: int, provider_idx: int = -1) -> str:
     """Build timeshift URL for catch-up TV playback.
 
     Xtream Codes API format:
@@ -102,8 +114,8 @@ def build_timeshift_url(stream_id: int, duration_seconds: int) -> str:
     Duration is how far back in seconds (e.g. 3600 = 1 hour ago).
     Returns the raw provider URL; the caller proxies it through the server.
     """
-    return f"{IPTV_BASE}/live/{IPTV_USER}/{IPTV_PASS}/{stream_id}/timeshift/{duration_seconds}.ts"
-
+    provider = stream_core_get_provider(provider_idx)
+    return iptv_timeshift_url(stream_id, duration_seconds, provider=provider)
 
 async def get_content_length(url: str) -> Optional[int]:
     """Discover Content-Length via Range request (HEAD returns 0 for this CDN)."""
@@ -119,7 +131,6 @@ async def get_content_length(url: str) -> Optional[int]:
     except (httpx.HTTPError, httpx.TimeoutException) as e:
         log.debug(f"Content-Length probe failed for {url}: {e}")
         return None
-
 
 # ── Stream generators (byte-level) ─────────────────────────────────────────
 
@@ -181,12 +192,10 @@ async def _http_iter_chunks(url: str, *,
                     break
                 yield chunk  # pragma: no cover — async generator yield (covered at runtime, not tracked by coverage)
 
-
 async def stream_bytes(url: str):
     """Generator that yields bytes from a live stream URL via curl_cffi."""
     async for chunk in _http_iter_chunks(url, status_ok=(200,)):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
-
 
 async def _http_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
                            range_header: Optional[str] = None,
@@ -219,7 +228,6 @@ async def _http_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
             proc.stdin.close()
         except OSError:  # pragma: no cover — stdin close error, runtime only
             pass  # pragma: no cover
-
 
 async def _ffmpeg_pipe(cmd: list[str], feed_coro):
     """Run ffmpeg with pipes and yield its stdout chunks.
@@ -269,7 +277,6 @@ async def _ffmpeg_pipe(cmd: list[str], feed_coro):
             except OSError:
                 pass  # pragma: no cover — wait error, runtime only
 
-
 async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
     """Generator that yields VOD bytes via curl_cffi streaming.
     Supports Range/206 for seeking.
@@ -277,7 +284,6 @@ async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
     async for chunk in _http_iter_chunks(url, range_header=range_header,
                                          status_ok=(200, 206)):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
-
 
 async def stream_proxy(url: str, content_type: str):
     """Stream a remote URL through our backend, bypassing CORS."""
@@ -292,7 +298,6 @@ async def stream_proxy(url: str, content_type: str):
     except (RuntimeError, httpx.RequestError) as e:
         log.error(f"Stream proxy error ({url}): {e}")
         return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
-
 
 async def stream_bytes_transcode(url: str, target_height: Optional[int] = None):
     """Transcode HEVC→H.264 via ffmpeg using curl_cffi download pipe."""
@@ -317,7 +322,6 @@ async def stream_bytes_transcode(url: str, target_height: Optional[int] = None):
     feed = partial(_http_feed_stdin, url=url, log_prefix="transcode")
     async for chunk in _ffmpeg_pipe(cmd, feed):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
-
 
 # ── MIME helper ────────────────────────────────────────────────────────────
 

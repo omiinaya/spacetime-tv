@@ -42,7 +42,7 @@ async def stream_live(stream_id: int, request: Request):
                 "Cache-Control": "no-cache",
             },
         )
-    except (RuntimeError, curl_cffi.requests.errors.RequestsError) as e:  # pragma: no cover — StreamingResponse never raises at construction
+    except (RuntimeError, Exception) as e:  # pragma: no cover — StreamingResponse never raises at construction
         log.error(f"Stream proxy error ({url}): {e}")  # pragma: no cover
         return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})  # pragma: no cover
 
@@ -59,7 +59,7 @@ async def stream_live_transcode(stream_id: int):
                 "Cache-Control": "no-cache",
             },
         )
-    except (RuntimeError, curl_cffi.requests.errors.RequestsError) as e:  # pragma: no cover — StreamingResponse never raises at construction
+    except (RuntimeError, Exception) as e:  # pragma: no cover — StreamingResponse never raises at construction
         log.error(f"Transcode setup error ({url}): {e}")  # pragma: no cover
         return JSONResponse(status_code=502, content={"detail": "Transcode failed"})  # pragma: no cover
 
@@ -95,7 +95,7 @@ async def stream_live_timeshift(request: Request, stream_id: int, duration: int 
                 "Cache-Control": "no-cache",
             },
         )
-    except (RuntimeError, curl_cffi.requests.errors.RequestsError) as e:  # pragma: no cover — StreamingResponse never raises at construction
+    except (RuntimeError, Exception) as e:  # pragma: no cover — StreamingResponse never raises at construction
         log.error(f"Timeshift proxy error (id={stream_id}, dur={duration}): {e}")  # pragma: no cover
         return JSONResponse(status_code=502, content={"detail": "Timeshift stream unavailable"})  # pragma: no cover
 
@@ -112,6 +112,6 @@ async def stream_live_quality(stream_id: int, height: int):
                 "Cache-Control": "no-cache",
             },
         )
-    except (RuntimeError, curl_cffi.requests.errors.RequestsError) as e:  # pragma: no cover — StreamingResponse never raises at construction
+    except (RuntimeError, Exception) as e:  # pragma: no cover — StreamingResponse never raises at construction
         log.error(f"Quality transcode error ({url}): {e}")  # pragma: no cover
         return JSONResponse(status_code=502, content={"detail": "Transcode failed"})  # pragma: no cover

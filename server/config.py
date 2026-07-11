@@ -1,6 +1,8 @@
 """Spacetime-TV configuration — environment, paths, constants."""
 import os
+import json
 from pathlib import Path
+from dataclasses import dataclass, field
 
 from dotenv import load_dotenv
 
@@ -8,13 +10,71 @@ from dotenv import load_dotenv
 _env_path = Path(__file__).parent / ".env"
 load_dotenv(_env_path)
 
-# IPTV provider
-IPTV_BASE = os.getenv("IPTV_BASE", "http://iptv-provider.example.com")
+# IPTV provider — legacy single-provider env vars (kept for backward compat)
+IPTV_BASE = os.getenv("IPTV_BASE", "")
 IPTV_USER = os.getenv("IPTV_USER", "")
 IPTV_PASS = os.getenv("IPTV_PASS", "")
 
+# ── Multi-provider support ──────────────────────────────────────────────
+# Set PROVIDERS_JSON env var for multiple Xtream accounts.
+# Each entry: {"name":"Provider1","base_url":"...","username":"...","password":"...","enabled":true}
+# Falls back to single-provider IPTV_BASE/IPTV_USER/IPTV_PASS for backward compat.
+
+@dataclass
+class ProviderConfig:
+    """Configuration for a single IPTV Xtream provider."""
+    name: str
+    base_url: str
+    username: str
+    password: str
+    enabled: bool = True
+    order: int = 0  # lower = higher priority for failover
+
+# ── Credential encryption helper ───────────────────────────────────────
+def _maybe_encrypt(pwd: str) -> str:
+    """Encrypt password if encryption is enabled and not already encrypted."""
+    if not pwd or pwd.startswith("enc:"):
+        return pwd
+    if ENCRYPT_CREDENTIALS:
+        try:
+            from crypto_utils import encrypt as _enc
+            return _enc(pwd)
+        except Exception:
+            pass  # fallback to plaintext if crypto unavailable
+    return pwd
+
+_PROVIDERS_ENV = os.getenv("PROVIDERS_JSON", "")
+if _PROVIDERS_ENV:
+    try:
+        raw = json.loads(_PROVIDERS_ENV)
+        PROVIDERS = []
+        for i, p in enumerate(raw):
+            PROVIDERS.append(ProviderConfig(
+                name=p.get("name", f"Provider {i+1}"),
+                base_url=p["base_url"],
+                username=p["username"],
+                password=_maybe_encrypt(p["password"]),
+                enabled=p.get("enabled", True),
+                order=p.get("order", i),
+            ))
+        PROVIDERS.sort(key=lambda x: x.order)
+    except (json.JSONDecodeError, TypeError, KeyError) as e:
+        import logging
+        logging.getLogger("spacetime-tv").error(f"Invalid PROVIDERS_JSON: {e}")
+        PROVIDERS = []
+else:
+    # Legacy single-provider support — create a default provider
+    PROVIDERS = [ProviderConfig(
+        name="Default",
+        base_url=IPTV_BASE,
+        username=IPTV_USER,
+        password=_maybe_encrypt(IPTV_PASS),
+        enabled=bool(IPTV_BASE),
+        order=0,
+    )] if IPTV_BASE else []
+
 # EPG
-EPG_CACHE_FILE = Path(__file__).parent / "epg_cache.json"
+EPG_CACHE_FILE = Path(os.getenv("EPG_CACHE_FILE", str(Path(__file__).parent / "epg_cache.json")))
 EPG_CACHE_TTL = int(os.getenv("EPG_CACHE_TTL", "3600"))  # 1 hour default
 
 # Paths
@@ -27,10 +87,10 @@ else:
 
 # TMDB v3 API (optional — enriches metadata when set)
 TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
-TMDB_BASE = "https://api.themoviedb.org/3"
+TMDB_BASE = os.getenv("TMDB_BASE", "https://api.themoviedb.org/3")
 
-# User-Agent for requests
-UA_STR = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+# User-Agent for requests (configurable to avoid blocking)
+UA_STR = os.getenv("UA_STR", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
 # Admin authentication (set ADMIN_API_KEY in .env)
 # Auto-generates a random key if not set — logs it on first startup.
@@ -57,14 +117,27 @@ DEFAULT_CORS_ORIGINS = (
     "http://localhost:5180,http://127.0.0.1:5180,"
     "http://localhost:8720,http://127.0.0.1:8720,"
     "http://localhost:8722,http://127.0.0.1:8722,"
-    "http://192.0.2.10:8720,http://192.0.2.10:8722"
+    "https://localhost:5180,https://127.0.0.1:5180,"
+    "https://localhost:8720,https://127.0.0.1:8720,"
+    "https://localhost:8722,https://127.0.0.1:8722"
 )
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",")
+
+# HTTPS enforcement
+# Set to "true" to redirect all HTTP to HTTPS
+ENFORCE_HTTPS = os.getenv("ENFORCE_HTTPS", "false").lower() == "true"
 
 # Rate limiting (env-configurable)
 RATE_WINDOW = int(os.getenv("RATE_WINDOW", "60"))           # seconds
 RATE_SEARCH_LIMIT = int(os.getenv("RATE_SEARCH_LIMIT", "100"))   # requests per window for search/proxy
 RATE_DEFAULT_LIMIT = int(os.getenv("RATE_DEFAULT_LIMIT", "1000")) # requests per window for everything else
+
+
+# Credential encryption at rest
+# Set ENCRYPT_CREDENTIALS=false to disable Fernet encryption of stored IPTV passwords
+ENCRYPT_CREDENTIALS = os.getenv("ENCRYPT_CREDENTIALS", "true").lower() == "true"
+# Encryption key override (auto-generated if not set, stored in DATA_DIR/.encrypt_key)
+STV_ENCRYPT_KEY = os.getenv("STV_ENCRYPT_KEY", "")
 
 
 # Data directory — persistent store for all runtime data.

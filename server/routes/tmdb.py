@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import os
+from config import TMDB_API_KEY, TMDB_BASE
 import time
 
 import httpx
@@ -22,8 +23,8 @@ _TMDB_CACHE_TTL = 600  # 10 minutes
 
 async def tmdb_fetch(path: str) -> dict | None:
     """Fetch from TMDB v3 API with caching."""
-    api_key = os.getenv("TMDB_API_KEY", "")
-    tmdb_base = "https://api.themoviedb.org/3"
+    api_key = TMDB_API_KEY
+    tmdb_base = TMDB_BASE
 
     if not api_key:
         return None

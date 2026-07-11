@@ -62,6 +62,7 @@ from routes.media import router as media_router
 from routes.record import router as record_router
 from routes.cloud_sync import router as cloud_sync_router
 from routes.misc import router as misc_router
+from routes.profiles import router as profiles_router
 app.include_router(health_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 app.include_router(tmdb_router, prefix="/api/v1")
@@ -78,6 +79,43 @@ app.include_router(cloud_sync_router, prefix="/api/v1")
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
 app.include_router(misc_router)
+app.include_router(profiles_router, prefix="/api/v1")
+
+
+# ── Auth middleware: enforce X-Device-Token or X-Admin-Key ───────
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    """Check auth for all /api/ endpoints except health/error."""
+    path = request.url.path
+    # Allow health, error reporting, and non-API paths
+    if path in ("/api/health", "/api/error") or path.startswith("/api/health"):
+        return await call_next(request)
+    if not path.startswith("/api/"):
+        return await call_next(request)
+    # Check auth header
+    admin_key = request.headers.get("X-Admin-Key", "")
+    from config import ADMIN_API_KEY
+    if admin_key and admin_key == ADMIN_API_KEY:
+        return await call_next(request)
+    device_token = request.headers.get("X-Device-Token", "")
+    if device_token and len(device_token) >= 8:
+        return await call_next(request)
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=401,
+        content={"detail": "Authentication required. Provide X-Admin-Key or X-Device-Token header."},
+    )
+
+# ── HTTPS redirect middleware (when ENFORCE_HTTPS=true) ──────────
+@app.middleware("http")
+async def https_redirect_middleware(request: Request, call_next):
+    """Redirect HTTP to HTTPS when ENFORCE_HTTPS is enabled."""
+    from config import ENFORCE_HTTPS
+    if ENFORCE_HTTPS and request.url.scheme == "http":
+        from fastapi.responses import RedirectResponse
+        url = request.url.replace(scheme="https", port=443)
+        return RedirectResponse(url, status_code=301)
+    return await call_next(request)
 
 # ── Backward compatibility redirect: /api/... → /api/v1/... ─────────────
 # NOTE: This is done as a middleware rather than a catch-all route because

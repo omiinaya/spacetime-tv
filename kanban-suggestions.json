@@ -1,0 +1,37 @@
+[
+  {
+    "title": "Fix overly permissive CORS ACAO headers on ~20 streaming endpoints",
+    "priority": 0,
+    "description": "ROADMAP.md explicitly flags 'No HTTPS. ~~20 streaming endpoints with ACAO' (Access-Control-Allow-Origin likely wildcarded). 39 SECURITY tags total, security grade D+ (48%). CORS misconfiguration on all streaming routes is the single highest-risk finding — verify ACAO is not '*' and audit CORS middleware in main.py + per-route headers."
+  },
+  {
+    "title": "Remove hardcoded credential/secret from source tree",
+    "priority": 0,
+    "description": "1 secret detected in the codebase (secrets_found: true, secret_count: 1). Find and relocate to .env or config.py with os.getenv(), then rotate the exposed credential. This is an active credential leak."
+  },
+  {
+    "title": "Fix streaming silent failure — 200 OK with 0-byte body on live/VOD routes",
+    "priority": 1,
+    "description": "ROADMAP.md line 348: 'Found streaming broken (hls/ts 200/0B)' as of 2026-07-10. Async generators in stream_core.py catch transport errors silently and return empty responses — mpegts.js shows 'Detecting video format' forever. The transport layer (_http_iter_chunks) raises before yielding but the error is swallowed. Fix: propagate the error so client gets 502 with meaningful message instead of 200/0B."
+  },
+  {
+    "title": "Systematically resolve all 39 SECURITY-tagged comments across the codebase",
+    "priority": 1,
+    "description": "39 SECURITY annotations found in source — by far the largest category. Only 1 appears in SECURITY_AUDIT.md (error response leakage, 80/100). The remaining 38 are unaddressed and likely span CSP img-src gaps, request validation, admin endpoint hardening, and CORS refinement. Audit each SECURITY: tag and either fix it or document the accept/reject rationale."
+  },
+  {
+    "title": "Fix CSS layout and video playback rendering issues",
+    "priority": 1,
+    "description": "ROADMAP.md line 348: 'CSS and playback still fucked'. Frontend has only 2 CSS files (Tailwind v4 theme) but rendering issues affect core UX. Likely involves player container sizing, responsive card grid breakpoints, or mpegts.js DOM integration. Debug browser console for layout warnings, check player container dimensions at 375px/768px/1920px viewports."
+  },
+  {
+    "title": "Add ESLint flat config + Prettier config for 177 TS/TSX frontend files",
+    "priority": 2,
+    "description": "82 TypeScript + 95 TSX files with no ESLint or Prettier configuration detected. The skill has eslint-flat-config.md reference documenting ESLint 9 flat config setup. Add configs, run auto-fix, then address remaining lint errors to prevent style drift across the large frontend codebase."
+  },
+  {
+    "title": "Decompose remaining large monolithic files flagged by infrastructure scan",
+    "priority": 2,
+    "description": "Infrastructure scan flagged 'has_large_files'. stream.py was already decomposed (1105→7 modules, guide.py 429→3 modules), but other files likely still exceed maintainable size. Identify files >400 lines in the repo that were NOT part of the previous decomposition pass and split them using the established module-extraction recipe."
+  }
+]

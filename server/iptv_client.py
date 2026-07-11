@@ -1,23 +1,29 @@
-"""IPTV API client — fetch with caching, URL building, HTTP client.
+"""IPTV API client — multi-provider fetch with caching, URL building, HTTP client.
 
-Extracted from main.py to eliminate circular import pattern where route
-modules did ``import main as _main`` just to call ``cached_fetch()``.
+Supports multiple Xtream providers with automatic failover:
+- Each provider is tried in priority order
+- If a provider fails (connection error, timeout, non-JSON response), next is tried
+- Cached data scoped per-provider
+- Legacy single-provider IPTV_BASE/IPTV_USER/IPTV_PASS still supported
 
 Usage:
-    from iptv_client import cached_fetch, client
+    from iptv_client import cached_fetch, client, get_active_provider
     data = await cached_fetch("vod_categories", "get_vod_categories")
-    resp = await client.get(url)
+    data = await cached_fetch("live_streams", "get_live_streams", provider_idx=1)
+    # provider_idx=-1 (default) = try all providers, return first success
+    # provider_idx=N = use specific provider only
 """
 
 import json
 import logging
 import time
 from urllib.parse import urlencode
+from typing import Optional
 
 import httpx
 from fastapi import HTTPException
 
-from config import IPTV_BASE, IPTV_PASS, IPTV_USER
+from config import IPTV_BASE, IPTV_PASS, IPTV_USER, PROVIDERS, ProviderConfig
 from state import CACHE_TTL, _cache, _cache_hits, _cache_misses
 
 log = logging.getLogger("spacetime-tv")
@@ -31,16 +37,56 @@ client = httpx.AsyncClient(
     },
 )
 
+# Provider-level HTTP clients (for per-provider connection pools)
+_provider_clients: dict[int, httpx.AsyncClient] = {}
 
-def iptv_url(action: str, **params) -> str:
-    """Build IPTV API URL (player_api.php) with credentials."""
-    params.setdefault("username", IPTV_USER)
-    params.setdefault("password", IPTV_PASS)
+
+def _get_provider_client(provider: ProviderConfig) -> httpx.AsyncClient:
+    """Get or create a provider-specific HTTP client."""
+    client_key = hash(provider.base_url + provider.username)
+    if client_key not in _provider_clients:
+        _provider_clients[client_key] = httpx.AsyncClient(
+            timeout=30.0,
+            headers={
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            },
+        )
+    return _provider_clients[client_key]
+
+
+def get_enabled_providers() -> list[ProviderConfig]:
+    """Return list of enabled providers, sorted by priority (order asc)."""
+    return [p for p in PROVIDERS if p.enabled]
+
+
+def get_active_provider() -> Optional[ProviderConfig]:
+    """Get the highest-priority (first) enabled provider, or None."""
+    providers = get_enabled_providers()
+    return providers[0] if providers else None
+
+
+def get_provider_by_index(idx: int) -> Optional[ProviderConfig]:
+    """Get provider by index in enabled list. Returns None if out of range."""
+    providers = get_enabled_providers()
+    if 0 <= idx < len(providers):
+        return providers[idx]
+    return None
+
+
+def iptv_url(action: str, provider: Optional[ProviderConfig] = None, **params) -> str:
+    """Build IPTV API URL (player_api.php) with credentials for a provider."""
+    p = provider or get_active_provider()
+    if not p:
+        raise HTTPException(500, "No IPTV provider configured")
+    params.setdefault("username", p.username)
+    params.setdefault("password", p.password)
     params["action"] = action
-    return f"{IPTV_BASE}/player_api.php?{urlencode(params)}"
+    return f"{p.base_url}/player_api.php?{urlencode(params)}"
 
 
-def iptv_stream_url(stream_id: int, stream_type: str = "live", ext: str | None = None) -> str:
+def iptv_stream_url(stream_id: int, stream_type: str = "live", ext: str | None = None,
+                    provider: Optional[ProviderConfig] = None) -> str:
     """Build a direct stream URL for the IPTV CDN.
 
     Format: {base}/{prefix}/{user}/{pass}/{stream_id}.{ext}
@@ -48,57 +94,27 @@ def iptv_stream_url(stream_id: int, stream_type: str = "live", ext: str | None =
     For live streams the extension is "ts"; for VOD the extension
     should be resolved upstream (e.g. via _lookup_extension).
     """
-    prefix = "live" if stream_type == "live" else stream_type
-    if ext is None:
-        ext = "ts" if stream_type == "live" else "mkv"
-    return f"{IPTV_BASE}/{prefix}/{IPTV_USER}/{IPTV_PASS}/{stream_id}.{ext}"
+    p = provider or get_active_provider()
+    if not p:
+        raise HTTPException(500, "No IPTV provider configured")
+    prefix = {"live": "live", "movie": "movie", "series": "series"}.get(stream_type, "live")
+    ext = ext or ("ts" if stream_type == "live" else "mkv")
+    return f"{p.base_url}/{prefix}/{p.username}/{p.password}/{stream_id}.{ext}"
 
 
-def iptv_vod_url(stream_id: int, media_type: str = "movie") -> str:
-    """Build a provider MKV URL for ffprobe/ffmpeg (VOD probe context).
-
-    Always uses .mkv extension — ffprobe probes the container regardless.
-    """
-    prefix = "movie" if media_type == "movie" else "series"
-    return f"{IPTV_BASE}/{prefix}/{IPTV_USER}/{IPTV_PASS}/{stream_id}.mkv"
-
-
-def iptv_timeshift_url(stream_id: int, duration_seconds: int) -> str:
-    """Build a timeshift URL for catch-up TV playback.
-
-    Xtream Codes API format:
-      {base}/live/{user}/{pass}/{stream_id}/timeshift/{duration}.ts
-    """
-    return f"{IPTV_BASE}/live/{IPTV_USER}/{IPTV_PASS}/{stream_id}/timeshift/{duration_seconds}.ts"
+def iptv_vod_url(stream_id: int, media_type: str = "movie",
+                 provider: Optional[ProviderConfig] = None) -> str:
+    """Build a provider MKV URL for ffprobe/ffmpeg (VOD probe context)."""
+    p = provider or get_active_provider()
+    if not p:
+        raise HTTPException(500, "No IPTV provider configured")
+    prefix = {"movie": "movie", "series": "series"}.get(media_type, "movie")
+    return f"{p.base_url}/{prefix}/{p.username}/{p.password}/{stream_id}.mkv"
 
 
-def iptv_xmltv_url() -> str:
-    """Build the EPG XMLTV URL."""
-    return f"{IPTV_BASE}/xmltv.php?username={IPTV_USER}&password={IPTV_PASS}"
-
-
-def iptv_raw_proxy_url(path: str) -> str:
-    """Build a URL for proxying arbitrary IPTV paths (images, etc.)."""
-    params = {"username": IPTV_USER, "password": IPTV_PASS}
-    return f"{IPTV_BASE}/{path}?{urlencode(params)}"
-
-
-def iptv_referer() -> str:
-    """Build the Referer header value for IPTV CDN requests."""
-    return f"{IPTV_BASE}/"
-
-
-def vod_url(stream_id: int, media_type: str = "movie") -> str:
-    """Build the provider MKV URL for ffprobe/ffmpeg (VOD subtitle/audio context).
-
-    Always uses .mkv extension — ffprobe probes the container regardless.
-    Alias for iptv_vod_url() for backward compatibility.
-    """
-    return iptv_vod_url(stream_id, media_type)
-
-
-def build_timeshift_url(stream_id: int, duration_seconds: int) -> str:
-    """Build timeshift URL for catch-up TV playback.
+def iptv_timeshift_url(stream_id: int, duration_seconds: int,
+                       provider: Optional[ProviderConfig] = None) -> str:
+    """Build a timeshift URL.
 
     Xtream Codes API format:
       {base}/live/{user}/{pass}/{stream_id}/timeshift/{duration}.ts
@@ -106,45 +122,219 @@ def build_timeshift_url(stream_id: int, duration_seconds: int) -> str:
     Duration is how far back in seconds (e.g. 3600 = 1 hour ago).
     Returns the raw provider URL; the caller proxies it through the server.
     """
-    return iptv_timeshift_url(stream_id, duration_seconds)
+    p = provider or get_active_provider()
+    if not p:
+        raise HTTPException(500, "No IPTV provider configured")
+    return f"{p.base_url}/live/{p.username}/{p.password}/{stream_id}/timeshift/{duration_seconds}.ts"
+
+
+def iptv_xmltv_url(provider: Optional[ProviderConfig] = None) -> str:
+    """Build XMLTV URL for EPG data."""
+    p = provider or get_active_provider()
+    if not p:
+        raise HTTPException(500, "No IPTV provider configured")
+    return f"{p.base_url}/xmltv.php?username={p.username}&password={p.password}"
+
+
+def iptv_raw_proxy_url(path: str, provider: Optional[ProviderConfig] = None) -> str:
+    """Build a raw proxy URL with credentials appended."""
+    p = provider or get_active_provider()
+    if not p:
+        raise HTTPException(500, "No IPTV provider configured")
+    params = urlencode({"username": p.username, "password": p.password})
+    return f"{p.base_url}/{path}?{params}"
+
+
+def iptv_referer(provider: Optional[ProviderConfig] = None) -> str:
+    """Return the base URL as a referer header value (anti-hotlinking)."""
+    p = provider or get_active_provider()
+    if not p:
+        return ""
+    return f"{p.base_url}/"
+
+
+def iptv_probe_url(stream_id: int, media_type: str = "movie",
+                   provider: Optional[ProviderConfig] = None) -> str:
+    """Build the provider MKV URL for ffprobe/ffmpeg (VOD subtitle/audio context).
+    Alias for iptv_vod_url() for backward compatibility.
+    """
+    return iptv_vod_url(stream_id, media_type, provider=provider)
 
 
 async def fetch_iptv(action: str, **params) -> dict | list:
-    """Fetch from IPTV API and parse JSON."""
-    url = iptv_url(action, **params)
-    try:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        return resp.json()
-    except (httpx.HTTPError, httpx.TimeoutException, json.JSONDecodeError) as e:
-        log.error(f"IPTV API error ({action}): {e}")
-        raise HTTPException(502, f"IPTV provider error: {e}")
+    """Fetch from IPTV API using active provider. Raises if no providers work."""
+    providers = get_enabled_providers()
+    if not providers:
+        raise HTTPException(500, "No IPTV provider configured")
+
+    last_error = None
+    for idx, p in enumerate(providers):
+        url = iptv_url(action, provider=p, **params)
+        try:
+            pclient = _get_provider_client(p)
+            resp = await pclient.get(url)
+            resp.raise_for_status()
+            data = resp.json()
+            # Success — log and return
+            if idx > 0:
+                log.info(f"API success using failover provider '{p.name}' (idx={idx}) for action={action}")
+            return data
+        except (httpx.HTTPError, httpx.TimeoutException, json.JSONDecodeError) as e:
+            log.warning(f"Provider '{p.name}' failed for action={action}: {e}")
+            last_error = e
+            continue
+
+    # All providers failed
+    log.error(f"All IPTV providers failed for action={action}, last error: {last_error}")
+    raise HTTPException(502, f"IPTV provider error: {last_error}")
 
 
-async def cached_fetch(key: str, action: str, **params) -> list | dict:
-    """Fetch with caching — returns cached data within TTL, stale fallback on error."""
-    # These are global mutable counters in state.py
+async def cached_fetch(key: str, action: str, provider_idx: int = -1, **params) -> list | dict:
+    """Fetch with caching — returns cached data within TTL, stale fallback on error.
+
+    Args:
+        key: Cache key (will be prefixed with provider info if multi-provider)
+        action: IPTV API action name
+        provider_idx: Provider index to use (-1 = try all enabled providers)
+        **params: Additional query parameters
+
+    Returns:
+        Parsed JSON data (list or dict)
+    """
     global _cache_hits, _cache_misses  # noqa: PLW0603
     now = time.time()
-    if key in _cache and (now - _cache[key][0]) < CACHE_TTL:
+
+    providers = get_enabled_providers()
+    if not providers:
+        raise HTTPException(500, "No IPTV provider configured")
+
+    # Build scoped cache key including provider info
+    # When provider_idx is specific, scope to that provider
+    provider_scope = "all"
+
+    if provider_idx >= 0:
+        p = get_provider_by_index(provider_idx)
+        if p:
+            provider_scope = f"p{provider_idx}:{p.name}"
+        else:
+            raise HTTPException(400, f"Provider index {provider_idx} out of range")
+    else:
+        # All providers — use a hash of enabled provider names for cache isolation
+        provider_scope = "+".join(p.name for p in providers)
+
+    scoped_key = f"{provider_scope}:{key}"
+
+    # Check cache hit
+    if scoped_key in _cache and (now - _cache[scoped_key][0]) < CACHE_TTL:
         _cache_hits += 1
-        return _cache[key][1]
+        return _cache[scoped_key][1]
     _cache_misses += 1
-    try:
-        data = await fetch_iptv(action, **params)
-    except HTTPException as e:
-        log.warning(f"cached_fetch: {key} fetch failed ({e})", extra={"action": action, "params": params})
-        if key in _cache:
-            stale_data = _cache[key][1]
-            log.warning(f"cached_fetch: falling back to stale cache for {key} ({type(stale_data).__name__})")
-            return stale_data
-        raise
+
+    # Try to fetch from providers
+    if provider_idx >= 0:
+        # Single provider specified
+        p = get_provider_by_index(provider_idx)
+        if not p:
+            raise HTTPException(400, f"Provider index {provider_idx} out of range")
+        try:
+            data = await _fetch_single_provider(p, action, **params)
+        except HTTPException as e:
+            log.warning(f"cached_fetch: {key} failed on provider {p.name} ({e})")
+            if scoped_key in _cache:
+                stale_data = _cache[scoped_key][1]
+                log.warning(f"Falling back to stale cache for {scoped_key}")
+                return stale_data
+            raise
+    else:
+        # Try all enabled providers in order
+        data = None
+        last_error = None
+        for p in providers:
+            try:
+                data = await _fetch_single_provider(p, action, **params)
+                if data is not None:
+                    if p != providers[0]:
+                        log.info(f"cached_fetch: using failover provider '{p.name}' for {key}")
+                    break
+            except HTTPException as e:
+                last_error = e
+                log.warning(f"cached_fetch: provider '{p.name}' failed for {key}: {e}")
+                continue
+
+        if data is None:
+            log.warning(f"cached_fetch: all providers failed for {key}")
+            if scoped_key in _cache:
+                stale_data = _cache[scoped_key][1]
+                log.warning(f"Falling back to stale cache for {scoped_key}")
+                return stale_data
+            raise last_error or HTTPException(502, f"All IPTV providers failed for {key}")
+
+    # Validate and cache
     if isinstance(data, list) and len(data) == 0:
         log.warning(f"cached_fetch: {key} returned empty list, not caching")
-        if key in _cache:
-            stale_data = _cache[key][1]
-            log.warning(f"cached_fetch: falling back to stale cache for {key} ({len(stale_data)} entries)")
+        if scoped_key in _cache:
+            stale_data = _cache[scoped_key][1]
+            log.warning(f"Falling back to stale cache for {scoped_key}")
             return stale_data
         return data
-    _cache[key] = (now, data)
+
+    _cache[scoped_key] = (now, data)
     return data
+
+
+
+def _update_provider_health(provider: ProviderConfig, success: bool, error: str = ""):
+    """Update provider health tracking in state."""
+    try:
+        from state import _provider_health
+        enabled = get_enabled_providers()
+        for h_idx, h_p in enumerate(enabled):
+            if h_p.name == provider.name:
+                if h_idx not in _provider_health:
+                    _provider_health[h_idx] = {"last_ok": None, "last_error": None, "error_count": 0, "ok_count": 0}
+                if success:
+                    _provider_health[h_idx]["last_ok"] = time.time()
+                    _provider_health[h_idx]["ok_count"] += 1
+                else:
+                    _provider_health[h_idx]["last_error"] = time.time()
+                    _provider_health[h_idx]["error_count"] += 1
+                    if error:
+                        _provider_health[h_idx]["last_error_msg"] = error
+                break
+    except Exception:
+        pass  # health tracking is best-effort
+
+
+async def _fetch_single_provider(provider: ProviderConfig, action: str, **params) -> dict | list:
+    """Fetch from a single provider. Raises HTTPException on failure."""
+    # Decrypt password if encrypted at rest
+    if provider.password and provider.password.startswith("enc:"):
+        from crypto_utils import decrypt
+        provider.password = decrypt(provider.password)
+    url = iptv_url(action, provider=provider, **params)
+    try:
+        pclient = _get_provider_client(provider)
+        resp = await pclient.get(url)
+        resp.raise_for_status()
+        data = resp.json()
+        # Update health on success
+        _update_provider_health(provider, success=True)
+        return data
+    except (httpx.HTTPError, httpx.TimeoutException, json.JSONDecodeError) as e:
+        log.error(f"Provider '{provider.name}' API error ({action}): {e}")
+        # Update health on failure
+        _update_provider_health(provider, success=False, error=str(e))
+        raise HTTPException(502, f"IPTV provider '{provider.name}' error: {e}")
+
+# ── Backward-compatible aliases ──────────────────────────────────────────────
+# These are imported by older route modules. They delegate to provider-aware functions.
+
+def vod_url(stream_id: int, media_type: str = "movie",
+            provider: Optional[ProviderConfig] = None) -> str:
+    """Backward-compatible alias for iptv_vod_url()."""
+    return iptv_vod_url(stream_id, media_type, provider=provider)
+
+def build_timeshift_url(stream_id: int, duration_seconds: int,
+                        provider: Optional[ProviderConfig] = None) -> str:
+    """Backward-compatible alias for iptv_timeshift_url()."""
+    return iptv_timeshift_url(stream_id, duration_seconds, provider=provider)

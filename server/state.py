@@ -118,6 +118,11 @@ def _save_progress_store():
     except OSError:
         pass
 
+
+# ── Provider Health Tracking ─────────────────────────────────────────────
+# Keeps track of per-provider success/failure counts for admin UI.
+_provider_health: dict[int, dict] = {}
+
 # ── Cache Warming ─────────────────────────────────────────────────────────
 _warm_task: Optional[asyncio.Task] = None
 
