@@ -8,7 +8,7 @@ import time
 from fastapi import APIRouter, HTTPException, Request
 from auth import (
     create_profile, verify_profile_pin, get_profile,
-    list_profiles, delete_profile,
+    list_profiles, delete_profile, _load_profiles, _save_profiles,
 )
 
 log = logging.getLogger("spacetime-tv")
@@ -77,3 +77,39 @@ async def api_delete_profile(profile_id: str, request: Request):
     if not delete_profile(profile_id):
         raise HTTPException(404, "Profile not found")
     return {"status": "ok", "detail": "Profile deleted"}
+
+
+@router.get("/profiles/{profile_id}/progress")
+async def api_get_profile_progress(profile_id: str):
+    """Get watch progress for a profile."""
+    profiles = _load_profiles()
+    p = profiles.get(profile_id)
+    if not p:
+        raise HTTPException(404, "Profile not found")
+    return {"progress": p.get("progress", {})}
+
+
+@router.put("/profiles/{profile_id}/progress")
+async def api_put_profile_progress(profile_id: str, payload: dict):
+    """Set watch progress for a profile. Merges with existing progress."""
+    profiles = _load_profiles()
+    if profile_id not in profiles:
+        raise HTTPException(404, "Profile not found")
+    watch_key = payload.get("watchKey")
+    pos = payload.get("position")
+    if not watch_key or pos is None:
+        raise HTTPException(400, "Missing watchKey or position")
+    if "progress" not in profiles[profile_id]:
+        profiles[profile_id]["progress"] = {}
+    profiles[profile_id]["progress"][watch_key] = {
+        "position": pos,
+        "timestamp": time.time(),
+        "seriesData": payload.get("seriesData"),
+        "movieData": payload.get("movieData"),
+    }
+    # Remove None keys
+    for k in ("seriesData", "movieData"):
+        if profiles[profile_id]["progress"][watch_key].get(k) is None:
+            del profiles[profile_id]["progress"][watch_key][k]
+    _save_profiles(profiles)
+    return {"status": "ok"}

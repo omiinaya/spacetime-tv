@@ -21,6 +21,7 @@ os.environ.setdefault("CACHE_WARM_ENABLED", "false")
 os.environ.setdefault("CACHE_WARM_CATEGORIES", "")
 os.environ.setdefault("CLEANUP_INTERVAL", "3600")
 os.environ.setdefault("CACHE_TTL_HOURS", "0")
+os.environ.setdefault("ENFORCE_HTTPS", "false")
 os.environ.setdefault("ADMIN_API_KEY", "test-admin-key-insecure")
 
 # Add server dir to Python path so `from main import ...` works

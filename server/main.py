@@ -93,7 +93,7 @@ async def auth_middleware(request: Request, call_next):
     """
     path = request.url.path
     # Allow health, error reporting, and non-API paths
-    if path in ("/api/health", "/api/error") or path.startswith("/api/health") or path.startswith("/api/v1/cloud/backup"):
+    if path in ("/api/health", "/api/error") or path.startswith("/api/health") or path.startswith("/api/v1/cloud/backup") or path.startswith("/api/v1/profiles"):
         return await call_next(request)
     if not path.startswith("/api/"):
         return await call_next(request)

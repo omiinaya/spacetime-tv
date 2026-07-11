@@ -19,7 +19,11 @@ router = APIRouter(tags=["stream"])
 async def stream_live(stream_id: int, request: Request):
     """Proxy live TV stream (raw MPEG-TS). Closes upstream fast on disconnect."""
     track_hit("live", stream_id)
-    url = await build_stream_url(stream_id, "live")
+    try:
+        url = await build_stream_url(stream_id, "live")
+    except RuntimeError as e:
+        log.error(f"Stream URL build error (id={stream_id}): {e}")
+        return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
     log.info(f"STREAM LIVE START id={stream_id}")
 
     try:
@@ -50,7 +54,11 @@ async def stream_live(stream_id: int, request: Request):
 @router.get("/stream/live/{stream_id}/transcode")
 async def stream_live_transcode(stream_id: int):
     """Proxy live TV stream with HEVC→H.264 transcoding via ffmpeg."""
-    url = await build_stream_url(stream_id, "live")
+    try:
+        url = await build_stream_url(stream_id, "live")
+    except RuntimeError as e:
+        log.error(f"Timeshift URL build error (id={stream_id}): {e}")
+        return JSONResponse(status_code=502, content={"detail": "Timeshift stream unavailable"})
     try:
         return StreamingResponse(
             stream_bytes_transcode(url),
@@ -103,7 +111,11 @@ async def stream_live_timeshift(request: Request, stream_id: int, duration: int 
 @router.get("/stream/live/{stream_id}/quality/{height}")
 async def stream_live_quality(stream_id: int, height: int):
     """Proxy live TV stream transcoded to a specific height (360, 720, 1080)."""
-    url = await build_stream_url(stream_id, "live")
+    try:
+        url = await build_stream_url(stream_id, "live")
+    except RuntimeError as e:
+        log.error(f"Timeshift URL build error (id={stream_id}): {e}")
+        return JSONResponse(status_code=502, content={"detail": "Timeshift stream unavailable"})
     try:
         return StreamingResponse(
             stream_bytes_transcode(url, target_height=height),

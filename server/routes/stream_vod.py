@@ -118,7 +118,11 @@ async def stream_vod_transcode(url: str):
 @router.get("/stream/movie/{stream_id}/remux")
 async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
     """Remux movie MKV→MPEG-TS for browser playback (mpegts.js)."""
-    url = await build_stream_url(stream_id, "movie")
+    try:
+        url = await build_stream_url(stream_id, "movie")
+    except RuntimeError as e:
+        log.error(f"VOD remux URL build error (movie {stream_id}): {e}")
+        return JSONResponse(status_code=502, content={"detail": "Remux failed"})
     try:
         return StreamingResponse(
             stream_vod_mpegts(url, start),
@@ -133,7 +137,11 @@ async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
 @router.get("/stream/series/{series_id}/{episode_id}/remux")
 async def stream_series_remux(series_id: int, episode_id: int, start: Optional[float] = None):
     """Remux series episode MKV→MPEG-TS for browser playback (mpegts.js)."""
-    url = await build_stream_url(episode_id, "series")
+    try:
+        url = await build_stream_url(episode_id, "series")
+    except RuntimeError as e:
+        log.error(f"VOD remux URL build error (series {episode_id}): {e}")
+        return JSONResponse(status_code=502, content={"detail": "Remux failed"})
     try:
         return StreamingResponse(
             stream_vod_mpegts(url, start),
@@ -148,7 +156,11 @@ async def stream_series_remux(series_id: int, episode_id: int, start: Optional[f
 @router.get("/stream/movie/{stream_id}/transcode")
 async def stream_movie_transcode(stream_id: int):
     """Transcode a HEVC movie to H.264 on-the-fly."""
-    url = await build_stream_url(stream_id, "movie")
+    try:
+        url = await build_stream_url(stream_id, "movie")
+    except RuntimeError as e:
+        log.error(f"VOD remux URL build error (movie {stream_id}): {e}")
+        return JSONResponse(status_code=502, content={"detail": "Remux failed"})
     try:
         return StreamingResponse(
             stream_vod_transcode(url),
@@ -163,7 +175,11 @@ async def stream_movie_transcode(stream_id: int):
 @router.get("/stream/series/{series_id}/{episode_id}/transcode")
 async def stream_series_transcode(series_id: int, episode_id: int):
     """Transcode a HEVC series episode to H.264 on-the-fly."""
-    url = await build_stream_url(episode_id, "series")
+    try:
+        url = await build_stream_url(episode_id, "series")
+    except RuntimeError as e:
+        log.error(f"VOD remux URL build error (series {episode_id}): {e}")
+        return JSONResponse(status_code=502, content={"detail": "Remux failed"})
     try:
         return StreamingResponse(
             stream_vod_transcode(url),

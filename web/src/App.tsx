@@ -23,6 +23,9 @@ import OfflineBanner from "@/components/OfflineBanner";
 import WatchlistPopover from "@/components/WatchlistPopover";
 import { BackToTop } from "@/components/BackToTop";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useProfile, Profile } from "@/hooks/useProfile";
+import ProfilePicker from "@/components/ProfilePicker";
+
 
 // Lazy-loaded pages for code splitting
 const HomePage = lazy(() => import("@/pages/HomePage"));
@@ -91,6 +94,22 @@ const NAV_ITEMS = [
 ];
 
 function AppLayout() {
+  const { profile, profiles, loading, setProfile, refreshProfiles } = useProfile();
+
+  // Show profile picker if no profile is selected
+  const [profileGate, setProfileGate] = useState(!profile);
+  
+  useEffect(() => {
+    setProfileGate(!profile);
+  }, [profile]);
+
+  // Allow switching profiles from sidebar
+  const [showProfileSwitcher, setShowProfileSwitcher] = useState(false);
+
+  if (profileGate) {
+    return <ProfilePicker profiles={profiles} loading={loading} onSelect={(p) => { setProfile(p); }} onRefresh={refreshProfiles} />;
+  }
+
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -227,8 +246,21 @@ function AppLayout() {
         )}
       </nav>
 
-      {/* Bottom section: Settings + Footer */}
+      {/* Bottom section: Profile + Settings + Footer */}
       <div className="border-t border-border">
+        {/* Profile badge */}
+        {profile && (
+          <button
+            onClick={() => { setShowProfileSwitcher(true); setProfileGate(true); }}
+            className="w-full flex items-center gap-2.5 px-5 py-2 text-xs transition-colors text-left text-muted-foreground hover:text-foreground hover:bg-muted"
+            aria-label="Switch profile"
+          >
+            <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+              {profile.name.charAt(0).toUpperCase()}
+            </div>
+            <span className="truncate">{profile.name}</span>
+          </button>
+        )}
         <button
           onClick={() => navigate("/settings")}
           className={cn(

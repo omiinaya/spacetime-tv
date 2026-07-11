@@ -133,6 +133,7 @@ def create_profile(name: str, pin: str, avatar: str = "") -> dict:
         "created": time.time(),
         "favorites": [],
         "watchlist": {},
+        "progress": {},
         "settings": {},
         "restrictions": {},
     }
