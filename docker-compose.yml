@@ -27,6 +27,7 @@ services:
     container_name: stv-frontend
     ports:
       - "8722:80"
+      - "443:443"
     depends_on:
       backend:
         condition: service_healthy

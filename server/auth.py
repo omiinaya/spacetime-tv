@@ -40,6 +40,25 @@ def verify_device_token(request: Request, device_id: str) -> bool:
         return False
     return hmac.compare_digest(hash_token(token), stored_hash)
 
+def verify_device_token_generic(token: str) -> bool:
+    """Verify a device token against any stored backup (not device-specific).
+    
+    Returns True if token matches any device's stored hash.
+    Used by the global auth middleware for non-device-specific endpoints.
+    """
+    if not token or len(token) < 8:
+        return False
+    token_hash = hash_token(token)
+    try:
+        from routes.cloud_sync import _read_backups
+        backups = _read_backups()
+        for entry in backups.values():
+            if entry.get("_token_hash", "") == token_hash:
+                return True
+    except (ImportError, OSError, json.JSONDecodeError):
+        pass
+    return False
+
 # ── Auth dependency for all API endpoints ────────────────────────────────
 
 async def require_auth(request: Request):

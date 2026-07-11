@@ -24,6 +24,7 @@ from config import (
     ROOT, STATIC_DIR, TMDB_API_KEY, TMDB_BASE, UA_STR,
     CORS_ORIGINS,
     RATE_WINDOW, RATE_SEARCH_LIMIT, RATE_DEFAULT_LIMIT,
+    ENFORCE_HTTPS,
 )
 from state import SERVER_START_TIME, _load_stream_hits, _cache  # re-exported for tests
 
@@ -85,21 +86,30 @@ app.include_router(profiles_router, prefix="/api/v1")
 # ── Auth middleware: enforce X-Device-Token or X-Admin-Key ───────
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
-    """Check auth for all /api/ endpoints except health/error."""
+    """Check auth for all /api/ endpoints except health/error.
+    
+    Verifies X-Admin-Key or X-Device-Token. Device tokens are verified
+    against stored SHA-256 hashes (same pattern as cloud_sync).
+    """
     path = request.url.path
     # Allow health, error reporting, and non-API paths
-    if path in ("/api/health", "/api/error") or path.startswith("/api/health"):
+    if path in ("/api/health", "/api/error") or path.startswith("/api/health") or path.startswith("/api/v1/cloud/backup"):
         return await call_next(request)
     if not path.startswith("/api/"):
         return await call_next(request)
-    # Check auth header
+    # Check admin key first (fast path)
     admin_key = request.headers.get("X-Admin-Key", "")
     from config import ADMIN_API_KEY
     if admin_key and admin_key == ADMIN_API_KEY:
         return await call_next(request)
+    # Check device token
     device_token = request.headers.get("X-Device-Token", "")
     if device_token and len(device_token) >= 8:
-        return await call_next(request)
+        # Extract device_id from path or query params (typically /api/v1/cloud/backup/{device_id})
+        # For generic endpoints, verify token exists in any known backup
+        from auth import verify_device_token_generic
+        if verify_device_token_generic(device_token):
+            return await call_next(request)
     from fastapi.responses import JSONResponse
     return JSONResponse(
         status_code=401,
@@ -226,7 +236,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "base-uri 'self'"
         )
         # HSTS — only in production (ADMIN_API_KEY set is a reasonable proxy)
-        if os.getenv("ADMIN_API_KEY"):
+        if os.getenv("ADMIN_API_KEY") or ENFORCE_HTTPS:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
         return response
 

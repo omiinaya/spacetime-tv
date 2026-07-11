@@ -125,7 +125,7 @@ CORS_ORIGINS = os.getenv("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",")
 
 # HTTPS enforcement
 # Set to "true" to redirect all HTTP to HTTPS
-ENFORCE_HTTPS = os.getenv("ENFORCE_HTTPS", "false").lower() == "true"
+ENFORCE_HTTPS = os.getenv("ENFORCE_HTTPS", "true").lower() == "true"
 
 # Rate limiting (env-configurable)
 RATE_WINDOW = int(os.getenv("RATE_WINDOW", "60"))           # seconds
