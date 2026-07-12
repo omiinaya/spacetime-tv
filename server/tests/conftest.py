@@ -24,6 +24,8 @@ os.environ.setdefault("CACHE_TTL_HOURS", "0")
 os.environ.setdefault("ENFORCE_HTTPS", "false")
 os.environ.setdefault("ADMIN_API_KEY", "test-admin-key-insecure")
 os.environ.setdefault("ENCRYPT_CREDENTIALS", "false")
+os.environ.setdefault("TMDB_API_KEY", "test-tmdb-key")
+os.environ.setdefault("TMDB_BASE", "https://api.themoviedb.org/3")
 
 # Add server dir to Python path so `from main import ...` works
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
