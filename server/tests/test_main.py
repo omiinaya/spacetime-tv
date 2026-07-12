@@ -543,7 +543,7 @@ class TestCleanupLoop:
         async def mock_cleanup():
             nonlocal call_count
             call_count += 1
-            raise Exception("Cleanup failed")
+            raise OSError("Cleanup failed")
 
         sleep_count = 0
 
