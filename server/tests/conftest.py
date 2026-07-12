@@ -105,14 +105,19 @@ def client():
     Patches cached_fetch in iptv_client so ALL route modules see the mock.
     """
     async def mock_cached_fetch(key, action, **params):
-        """Default stub: return empty list for any upstream call.
-        Respects pre-populated cache so cache-hit tests still work.
+        """Mock cached_fetch that:
+        - Returns fresh cache data if available
+        - Returns stale cache data as fallback (upstream always fails in tests)
+        - Returns [] on cache miss (upstream unavailable)
         """
         from state import _cache, CACHE_TTL
         import time
         now = time.time()
-        if key in _cache and (now - _cache[key][0]) < CACHE_TTL:
-            return _cache[key][1]
+        if key in _cache:
+            ts, cached_data = _cache[key]
+            if (now - ts) < CACHE_TTL:
+                return cached_data  # fresh hit
+            return cached_data  # stale fallback (upstream unavailable in tests)
         return []
 
     # Patch all route modules that import cached_fetch from iptv_client
@@ -143,8 +148,11 @@ def client_with_cache():
         from state import _cache, CACHE_TTL
         import time
         now = time.time()
-        if key in _cache and (now - _cache[key][0]) < CACHE_TTL:
-            return _cache[key][1]
+        if key in _cache:
+            ts, cached_data = _cache[key]
+            if (now - ts) < CACHE_TTL:
+                return cached_data
+            return cached_data  # stale fallback
         return []
 
     # Patch all route modules that import cached_fetch from iptv_client
