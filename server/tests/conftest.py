@@ -72,7 +72,7 @@ def reset_shared_state():
     from state import _search_queries
     _search_queries.clear()
     # Clear provider HTTP clients to avoid stale loop references
-    from iptv_client import _provider_clients
+    from iptv_client import _provider_clients, client as _global_client
     for k, c in list(_provider_clients.items()):
         import asyncio
         try:
@@ -80,6 +80,12 @@ def reset_shared_state():
         except Exception:
             pass
     _provider_clients.clear()
+    try:
+        import asyncio
+        if _global_client and not _global_client.is_closed:
+            _global_client.aclose()
+    except Exception:
+        pass
     # Clear stream hit counters
     from state import _stream_hits
     _stream_hits.clear()

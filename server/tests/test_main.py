@@ -267,7 +267,7 @@ class TestWarmCache:
                 if "live" in action:
                     return []
                 if "vod_categories" in action:
-                    raise Exception("VOD upstream down")
+                    from fastapi import HTTPException; raise HTTPException(502, "VOD upstream down")
                 if "series_categories" in action:
                     return [{"category_id": 10}]
                 if "series" in action:
