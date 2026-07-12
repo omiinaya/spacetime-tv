@@ -146,24 +146,25 @@ class TestWarmCache:
     """Cover warm_cache (main.py lines 120-217)."""
 
     async def test_warm_cache_disabled_returns_early(self):
-        """When CACHE_WARM_ENABLED=False, warm_cache returns immediately."""
+        """When cw.CACHE_WARM_ENABLED=False, warm_cache returns immediately."""
         import main as m
-        old = m.CACHE_WARM_ENABLED
+        old = cw.CACHE_WARM_ENABLED
         try:
-            m.CACHE_WARM_ENABLED = False
+            cw.CACHE_WARM_ENABLED = False
             await warm_cache()
         finally:
-            m.CACHE_WARM_ENABLED = old
+            cw.CACHE_WARM_ENABLED = old
 
     async def test_warm_cache_runs_all_phases(self):
         """warm_cache with mocked upstream warms live + VOD + series + EPG."""
         import main as m
+        import routes.cache_warmer as cw
 
-        old_enabled = m.CACHE_WARM_ENABLED
-        old_cats = m.CACHE_WARM_CATEGORIES
+        old_enabled = cw.CACHE_WARM_ENABLED
+        old_cats = cw.CACHE_WARM_CATEGORIES
         try:
-            m.CACHE_WARM_ENABLED = True
-            m.CACHE_WARM_CATEGORIES = ""
+            cw.CACHE_WARM_ENABLED = True
+            cw.CACHE_WARM_CATEGORIES = ""
 
             async def mock_cached_fetch(key, action, **params):
                 if "get_vod_categories" in action:
@@ -182,18 +183,19 @@ class TestWarmCache:
 
             mock_epg.assert_called_once()
         finally:
-            m.CACHE_WARM_ENABLED = old_enabled
-            m.CACHE_WARM_CATEGORIES = old_cats
+            cw.CACHE_WARM_ENABLED = old_enabled
+            cw.CACHE_WARM_CATEGORIES = old_cats
 
     async def test_warm_cache_with_category_filter(self):
-        """CACHE_WARM_CATEGORIES filters which categories get warmed."""
+        """cw.CACHE_WARM_CATEGORIES filters which categories get warmed."""
         import main as m
+        import routes.cache_warmer as cw
 
-        old_enabled = m.CACHE_WARM_ENABLED
-        old_cats = m.CACHE_WARM_CATEGORIES
+        old_enabled = cw.CACHE_WARM_ENABLED
+        old_cats = cw.CACHE_WARM_CATEGORIES
         try:
-            m.CACHE_WARM_ENABLED = True
-            m.CACHE_WARM_CATEGORIES = "1, 3"
+            cw.CACHE_WARM_ENABLED = True
+            cw.CACHE_WARM_CATEGORIES = "1, 3"
 
             fetched_vod_cats = []
 
@@ -217,18 +219,19 @@ class TestWarmCache:
 
             assert set(fetched_vod_cats) == {1, 3}, f"Expected {{1,3}}, got {set(fetched_vod_cats)}"
         finally:
-            m.CACHE_WARM_ENABLED = old_enabled
-            m.CACHE_WARM_CATEGORIES = old_cats
+            cw.CACHE_WARM_ENABLED = old_enabled
+            cw.CACHE_WARM_CATEGORIES = old_cats
 
     async def test_warm_cache_live_failure_non_fatal(self):
         """A failing live warm does not crash the warmer."""
         import main as m
+        import routes.cache_warmer as cw
 
-        old_enabled = m.CACHE_WARM_ENABLED
-        old_cats = m.CACHE_WARM_CATEGORIES
+        old_enabled = cw.CACHE_WARM_ENABLED
+        old_cats = cw.CACHE_WARM_CATEGORIES
         try:
-            m.CACHE_WARM_ENABLED = True
-            m.CACHE_WARM_CATEGORIES = ""
+            cw.CACHE_WARM_ENABLED = True
+            cw.CACHE_WARM_CATEGORIES = ""
 
             async def mock_cached_fetch(key, action, **params):
                 if "live" in action.lower():
@@ -245,18 +248,19 @@ class TestWarmCache:
                 with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     await warm_cache()  # Should not raise
         finally:
-            m.CACHE_WARM_ENABLED = old_enabled
-            m.CACHE_WARM_CATEGORIES = old_cats
+            cw.CACHE_WARM_ENABLED = old_enabled
+            cw.CACHE_WARM_CATEGORIES = old_cats
 
     async def test_warm_cache_vod_failure_non_fatal(self):
         """A failing VOD warm does not crash the warmer."""
         import main as m
+        import routes.cache_warmer as cw
 
-        old_enabled = m.CACHE_WARM_ENABLED
-        old_cats = m.CACHE_WARM_CATEGORIES
+        old_enabled = cw.CACHE_WARM_ENABLED
+        old_cats = cw.CACHE_WARM_CATEGORIES
         try:
-            m.CACHE_WARM_ENABLED = True
-            m.CACHE_WARM_CATEGORIES = ""
+            cw.CACHE_WARM_ENABLED = True
+            cw.CACHE_WARM_CATEGORIES = ""
 
             async def mock_cached_fetch(key, action, **params):
                 if "live" in action:
@@ -273,18 +277,19 @@ class TestWarmCache:
                 with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     await warm_cache()
         finally:
-            m.CACHE_WARM_ENABLED = old_enabled
-            m.CACHE_WARM_CATEGORIES = old_cats
+            cw.CACHE_WARM_ENABLED = old_enabled
+            cw.CACHE_WARM_CATEGORIES = old_cats
 
     async def test_warm_cache_vod_retry_on_first_failure(self):
         """VOD category fetches retry once on first failure."""
         import main as m
+        import routes.cache_warmer as cw
 
-        old_enabled = m.CACHE_WARM_ENABLED
-        old_cats = m.CACHE_WARM_CATEGORIES
+        old_enabled = cw.CACHE_WARM_ENABLED
+        old_cats = cw.CACHE_WARM_CATEGORIES
         try:
-            m.CACHE_WARM_ENABLED = True
-            m.CACHE_WARM_CATEGORIES = ""
+            cw.CACHE_WARM_ENABLED = True
+            cw.CACHE_WARM_CATEGORIES = ""
             call_count = {"count": 0}
 
             async def mock_cached_fetch(key, action, **params):
@@ -310,18 +315,19 @@ class TestWarmCache:
 
             assert call_count["count"] == 2
         finally:
-            m.CACHE_WARM_ENABLED = old_enabled
-            m.CACHE_WARM_CATEGORIES = old_cats
+            cw.CACHE_WARM_ENABLED = old_enabled
+            cw.CACHE_WARM_CATEGORIES = old_cats
 
     async def test_warm_cache_empty_vod_categories(self):
         """Empty VOD categories logs a warning and continues."""
         import main as m
+        import routes.cache_warmer as cw
 
-        old_enabled = m.CACHE_WARM_ENABLED
-        old_cats = m.CACHE_WARM_CATEGORIES
+        old_enabled = cw.CACHE_WARM_ENABLED
+        old_cats = cw.CACHE_WARM_CATEGORIES
         try:
-            m.CACHE_WARM_ENABLED = True
-            m.CACHE_WARM_CATEGORIES = ""
+            cw.CACHE_WARM_ENABLED = True
+            cw.CACHE_WARM_CATEGORIES = ""
 
             async def mock_cached_fetch(key, action, **params):
                 if "live" in action:
@@ -338,18 +344,19 @@ class TestWarmCache:
                 with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     await warm_cache()
         finally:
-            m.CACHE_WARM_ENABLED = old_enabled
-            m.CACHE_WARM_CATEGORIES = old_cats
+            cw.CACHE_WARM_ENABLED = old_enabled
+            cw.CACHE_WARM_CATEGORIES = old_cats
 
     async def test_warm_cache_epg_failure_non_fatal(self):
         """A failing EPG warm does not crash the warmer."""
         import main as m
+        import routes.cache_warmer as cw
 
-        old_enabled = m.CACHE_WARM_ENABLED
-        old_cats = m.CACHE_WARM_CATEGORIES
+        old_enabled = cw.CACHE_WARM_ENABLED
+        old_cats = cw.CACHE_WARM_CATEGORIES
         try:
-            m.CACHE_WARM_ENABLED = True
-            m.CACHE_WARM_CATEGORIES = ""
+            cw.CACHE_WARM_ENABLED = True
+            cw.CACHE_WARM_CATEGORIES = ""
 
             async def mock_cached_fetch(key, action, **params):
                 if "live" in action:
@@ -367,8 +374,8 @@ class TestWarmCache:
                     mock_epg.side_effect = Exception("EPG file corrupt")
                     await warm_cache()
         finally:
-            m.CACHE_WARM_ENABLED = old_enabled
-            m.CACHE_WARM_CATEGORIES = old_cats
+            cw.CACHE_WARM_ENABLED = old_enabled
+            cw.CACHE_WARM_CATEGORIES = old_cats
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -426,10 +433,10 @@ class TestStartCacheWarmer:
         import main as m
 
         old_task = cw._warm_task
-        old_enabled = m.CACHE_WARM_ENABLED
+        old_enabled = cw.CACHE_WARM_ENABLED
         try:
             cw._warm_task = None
-            m.CACHE_WARM_ENABLED = False
+            cw.CACHE_WARM_ENABLED = False
 
             start_cache_warmer()
 
@@ -439,7 +446,7 @@ class TestStartCacheWarmer:
             await cw._warm_task
         finally:
             cw._warm_task = old_task
-            m.CACHE_WARM_ENABLED = old_enabled
+            cw.CACHE_WARM_ENABLED = old_enabled
 
     async def test_replaces_done_task(self):
         """start_cache_warmer replaces a done task with a new one."""
@@ -447,9 +454,9 @@ class TestStartCacheWarmer:
         import main as m
 
         old_task = cw._warm_task
-        old_enabled = m.CACHE_WARM_ENABLED
+        old_enabled = cw.CACHE_WARM_ENABLED
         try:
-            m.CACHE_WARM_ENABLED = False
+            cw.CACHE_WARM_ENABLED = False
 
             async def dummy():
                 pass
@@ -464,7 +471,7 @@ class TestStartCacheWarmer:
             await cw._warm_task
         finally:
             cw._warm_task = old_task
-            m.CACHE_WARM_ENABLED = old_enabled
+            cw.CACHE_WARM_ENABLED = old_enabled
 
     async def test_noop_when_task_running(self):
         """start_cache_warmer does nothing when _warm_task is still running."""
@@ -632,12 +639,13 @@ class TestWarmCacheSeries:
     async def test_warm_cache_series_retry_on_first_failure(self):
         """Series category fetches retry once on first failure."""
         import main as m
+        import routes.cache_warmer as cw
 
-        old_enabled = m.CACHE_WARM_ENABLED
-        old_cats = m.CACHE_WARM_CATEGORIES
+        old_enabled = cw.CACHE_WARM_ENABLED
+        old_cats = cw.CACHE_WARM_CATEGORIES
         try:
-            m.CACHE_WARM_ENABLED = True
-            m.CACHE_WARM_CATEGORIES = ""
+            cw.CACHE_WARM_ENABLED = True
+            cw.CACHE_WARM_CATEGORIES = ""
             call_count = {"count": 0}
 
             async def mock_cached_fetch(key, action, **params):
@@ -663,18 +671,19 @@ class TestWarmCacheSeries:
 
             assert call_count["count"] == 2
         finally:
-            m.CACHE_WARM_ENABLED = old_enabled
-            m.CACHE_WARM_CATEGORIES = old_cats
+            cw.CACHE_WARM_ENABLED = old_enabled
+            cw.CACHE_WARM_CATEGORIES = old_cats
 
     async def test_warm_cache_empty_series_categories(self):
         """Empty series categories logs a warning and continues."""
         import main as m
+        import routes.cache_warmer as cw
 
-        old_enabled = m.CACHE_WARM_ENABLED
-        old_cats = m.CACHE_WARM_CATEGORIES
+        old_enabled = cw.CACHE_WARM_ENABLED
+        old_cats = cw.CACHE_WARM_CATEGORIES
         try:
-            m.CACHE_WARM_ENABLED = True
-            m.CACHE_WARM_CATEGORIES = ""
+            cw.CACHE_WARM_ENABLED = True
+            cw.CACHE_WARM_CATEGORIES = ""
 
             async def mock_cached_fetch(key, action, **params):
                 if "live" in action:
@@ -691,18 +700,19 @@ class TestWarmCacheSeries:
                 with patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
                     await warm_cache()
         finally:
-            m.CACHE_WARM_ENABLED = old_enabled
-            m.CACHE_WARM_CATEGORIES = old_cats
+            cw.CACHE_WARM_ENABLED = old_enabled
+            cw.CACHE_WARM_CATEGORIES = old_cats
 
     async def test_warm_cache_vod_double_failure_still_returns_none(self):
         """VOD category that fails both attempts returns None (not Exception)."""
         import main as m
+        import routes.cache_warmer as cw
 
-        old_enabled = m.CACHE_WARM_ENABLED
-        old_cats = m.CACHE_WARM_CATEGORIES
+        old_enabled = cw.CACHE_WARM_ENABLED
+        old_cats = cw.CACHE_WARM_CATEGORIES
         try:
-            m.CACHE_WARM_ENABLED = True
-            m.CACHE_WARM_CATEGORIES = ""
+            cw.CACHE_WARM_ENABLED = True
+            cw.CACHE_WARM_CATEGORIES = ""
             call_count = {"count": 0}
 
             async def mock_cached_fetch(key, action, **params):
@@ -724,5 +734,5 @@ class TestWarmCacheSeries:
 
             assert call_count["count"] == 2
         finally:
-            m.CACHE_WARM_ENABLED = old_enabled
-            m.CACHE_WARM_CATEGORIES = old_cats
+            cw.CACHE_WARM_ENABLED = old_enabled
+            cw.CACHE_WARM_CATEGORIES = old_cats
