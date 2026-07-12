@@ -46,7 +46,7 @@ class TestCachedFetch:
         async def mock_fetch(action, **params):
             return upstream_data
 
-        with patch("iptv_client.fetch_iptv", mock_fetch):
+        with patch("iptv_client._fetch_single_provider", mock_fetch):
             result = await cached_fetch("miss_key", "test_action")
 
         assert result == upstream_data
@@ -61,7 +61,7 @@ class TestCachedFetch:
         async def mock_fetch(action, **params):
             return []
 
-        with patch("iptv_client.fetch_iptv", mock_fetch):
+        with patch("iptv_client._fetch_single_provider", mock_fetch):
             result = await cached_fetch("empty_key", "test_action")
 
         assert result == []
@@ -77,7 +77,7 @@ class TestCachedFetch:
         async def mock_fetch(action, **params):
             return []
 
-        with patch("iptv_client.fetch_iptv", mock_fetch):
+        with patch("iptv_client._fetch_single_provider", mock_fetch):
             result = await cached_fetch("empty_stale_key", "test_action")
 
         assert result == stale_data, "Stale data should be returned when upstream returns empty"
@@ -92,7 +92,7 @@ class TestCachedFetch:
         async def mock_fetch(action, **params):
             raise Exception("Upstream unreachable")
 
-        with patch("iptv_client.fetch_iptv", mock_fetch):
+        with patch("iptv_client._fetch_single_provider", mock_fetch):
             result = await cached_fetch("fail_stale_key", "test_action")
 
         assert result == stale_data
@@ -105,7 +105,7 @@ class TestCachedFetch:
         async def mock_fetch(action, **params):
             raise Exception("Upstream down")
 
-        with patch("iptv_client.fetch_iptv", mock_fetch):
+        with patch("iptv_client._fetch_single_provider", mock_fetch):
             with pytest.raises(Exception, match="Upstream down"):
                 await cached_fetch("raise_key", "test_action")
 
@@ -133,7 +133,7 @@ class TestCachedFetch:
         async def mock_fetch(action, **params):
             return {"id": 1}
 
-        with patch("iptv_client.fetch_iptv", mock_fetch):
+        with patch("iptv_client._fetch_single_provider", mock_fetch):
             await cached_fetch("miss_counter_key", "test_action")
 
         assert ic._cache_misses == start_misses + 1
