@@ -148,6 +148,7 @@ class TestWarmCache:
     async def test_warm_cache_disabled_returns_early(self):
         """When cw.CACHE_WARM_ENABLED=False, warm_cache returns immediately."""
         import main as m
+        import routes.cache_warmer as cw
         old = cw.CACHE_WARM_ENABLED
         try:
             cw.CACHE_WARM_ENABLED = False
@@ -431,6 +432,7 @@ class TestStartCacheWarmer:
         """start_cache_warmer creates a new asyncio.Task when _warm_task is None."""
         import routes.cache_warmer as cw
         import main as m
+        import routes.cache_warmer as cw
 
         old_task = cw._warm_task
         old_enabled = cw.CACHE_WARM_ENABLED
@@ -452,6 +454,7 @@ class TestStartCacheWarmer:
         """start_cache_warmer replaces a done task with a new one."""
         import routes.cache_warmer as cw
         import main as m
+        import routes.cache_warmer as cw
 
         old_task = cw._warm_task
         old_enabled = cw.CACHE_WARM_ENABLED
