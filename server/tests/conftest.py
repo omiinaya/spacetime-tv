@@ -26,6 +26,11 @@ os.environ.setdefault("ADMIN_API_KEY", "test-admin-key-insecure")
 os.environ.setdefault("ENCRYPT_CREDENTIALS", "false")
 os.environ.setdefault("TMDB_API_KEY", "test-tmdb-key")
 os.environ.setdefault("TMDB_BASE", "https://api.themoviedb.org/3")
+os.environ.setdefault("ENCRYPT_CREDENTIALS", "false")
+os.environ.setdefault("TMDB_API_KEY", "test-tmdb-key")
+os.environ.setdefault("TMDB_BASE", "https://api.themoviedb.org/3")
+os.environ.setdefault("TMDB_API_KEY", "test-tmdb-key")
+os.environ.setdefault("TMDB_BASE", "https://api.themoviedb.org/3")
 
 # Add server dir to Python path so `from main import ...` works
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -69,8 +74,9 @@ def reset_shared_state():
     from main import _rate_limits
     _rate_limits.clear()
     # Clear search query log so admin stats test doesn't leak
-    from state import _search_queries
+    from state import _search_queries, _stream_hits
     _search_queries.clear()
+    _stream_hits.clear()
     # Clear provider HTTP clients to avoid stale loop references
     from iptv_client import _provider_clients, client as _global_client
     for k, c in list(_provider_clients.items()):

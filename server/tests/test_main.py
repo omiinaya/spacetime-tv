@@ -372,7 +372,7 @@ class TestWarmCache:
 
             with patch("iptv_client.cached_fetch", mock_cached_fetch):
                 with patch("routes.guide.load_epg", new_callable=AsyncMock) as mock_epg:
-                    mock_epg.side_effect = Exception("EPG file corrupt")
+                    mock_epg.side_effect = OSError("EPG file corrupt")
                     await warm_cache()
         finally:
             cw.CACHE_WARM_ENABLED = old_enabled
