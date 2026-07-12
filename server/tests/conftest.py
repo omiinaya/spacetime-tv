@@ -138,7 +138,29 @@ def client():
 
 @pytest.fixture
 def client_with_cache():
-    """App TestClient with real cached_fetch — for tests that pre-populate _cache."""
+    """App TestClient with cached_fetch that respects pre-populated cache but prevents upstream calls."""
+    async def mock_cached_fetch(key, action, **params):
+        from state import _cache, CACHE_TTL
+        import time
+        now = time.time()
+        if key in _cache and (now - _cache[key][0]) < CACHE_TTL:
+            return _cache[key][1]
+        return []
+
+    # Patch all route modules that import cached_fetch from iptv_client
+    routes = ["live", "vod", "search", "guide", "guide_epg", "guide_routes"]
+    patchers = []
+    for r in routes:
+        p = _cached_fetch_patch(f"routes.{r}.cached_fetch", mock_cached_fetch)
+        p.start()
+        patchers.append(p)
+    p = _cached_fetch_patch("iptv_client.cached_fetch", mock_cached_fetch)
+    p.start()
+    patchers.append(p)
+
     with TestClient(app) as c:
         c.headers.setdefault("X-Admin-Key", "test-admin-key-insecure")
         yield c
+
+    for p in patchers:
+        p.stop()

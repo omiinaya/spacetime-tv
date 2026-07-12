@@ -31,15 +31,15 @@ from state import _cache
 class TestRateLimiter:
     """Cover RateLimitMiddleware (main.py lines 78-96)."""
 
-    def test_allows_request_under_limit(self):
+    def test_allows_request_under_limit(self, client):
         """First request from an IP gets through."""
         from main import _rate_limits
         _rate_limits.clear()
-        c = TestClient(app)
+        c = client  # use fixture
         r = c.get("/api/v1/health")
         assert r.status_code == 200
 
-    def test_blocks_after_exceeding_limit(self):
+    def test_blocks_after_exceeding_limit(self, client):
         """After RATE_DEFAULT_LIMIT requests, subsequent ones get 429."""
         import main as m
         from main import _rate_limits
@@ -59,7 +59,7 @@ class TestRateLimiter:
         assert "Too many requests" in r.text
         assert "Retry-After" in r.headers
 
-    def test_window_resets_after_expiry(self):
+    def test_window_resets_after_expiry(self, client):
         """After RATE_WINDOW seconds, the counter resets."""
         import main as m
         from main import _rate_limits
@@ -83,7 +83,7 @@ class TestRateLimiter:
         r = c.get("/api/v1/health")
         assert r.status_code == 200, f"Expected 200 after window reset, got {r.status_code}"
 
-    def test_search_endpoint_uses_search_limit(self):
+    def test_search_endpoint_uses_search_limit(self, client):
         """Search/image-proxy paths use the lower RATE_SEARCH_LIMIT."""
         import main as m
         from main import _rate_limits
@@ -98,7 +98,7 @@ class TestRateLimiter:
         r = c.get("/api/v1/search")
         assert r.status_code == 429
 
-    def test_image_proxy_uses_search_limit(self):
+    def test_image_proxy_uses_search_limit(self, client):
         """Image proxy paths use RATE_SEARCH_LIMIT."""
         import main as m
         from main import _rate_limits
@@ -113,7 +113,7 @@ class TestRateLimiter:
         r = c.get("/api/v1/image-proxy")
         assert r.status_code == 429
 
-    def test_different_ips_have_separate_limits(self):
+    def test_different_ips_have_separate_limits(self, client):
         """Different IPs get independent rate limit buckets."""
         import main as m
         from main import _rate_limits
@@ -586,7 +586,7 @@ class TestTouchAccess:
                 else:
                     f.unlink(missing_ok=True)
 
-    def test_touch_access_creates_stamp(self):
+    def test_touch_access_creates_stamp(self, client):
         """touch_access writes a timestamp file."""
         key = "_test_touch_stamp"
         stamp = CACHE_DIR / f".{key}.accessed"
@@ -598,7 +598,7 @@ class TestTouchAccess:
         t = float(stamp.read_text().strip())
         assert t > 0
 
-    def test_get_last_access_returns_float(self):
+    def test_get_last_access_returns_float(self, client):
         """get_last_access returns the timestamp as a float."""
         key = "_test_touch_get_last"
         now = time.time()
@@ -609,12 +609,12 @@ class TestTouchAccess:
         assert isinstance(result, float)
         assert abs(result - now) < 1
 
-    def test_get_last_access_missing_file_returns_none(self):
+    def test_get_last_access_missing_file_returns_none(self, client):
         """get_last_access returns None when the stamp file doesn't exist."""
         result = get_last_access("_test_touch_nonexistent")
         assert result is None
 
-    def test_get_last_access_corrupt_file_returns_none(self):
+    def test_get_last_access_corrupt_file_returns_none(self, client):
         """get_last_access returns None when the stamp file has bad data."""
         key = "_test_touch_corrupt"
         stamp = CACHE_DIR / f".{key}.accessed"
