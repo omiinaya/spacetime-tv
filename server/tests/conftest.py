@@ -116,7 +116,7 @@ def client():
         return []
 
     # Patch all route modules that import cached_fetch from iptv_client
-    routes = ["live", "vod", "search", "guide", "stream_probe", "guide_epg"]
+    routes = ["live", "vod", "search", "guide", "guide_epg", "guide_routes"]
     patchers = []
     for r in routes:
         p = _cached_fetch_patch(f"routes.{r}.cached_fetch", mock_cached_fetch)
