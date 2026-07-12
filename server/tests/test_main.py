@@ -303,7 +303,7 @@ class TestWarmCache:
                 if "vod_streams" in action:
                     call_count["count"] += 1
                     if call_count["count"] == 1:
-                        raise Exception("Temporary failure")
+                        from fastapi import HTTPException; raise HTTPException(502, "Temporary failure")
                     return [{"id": 1}]
                 if "series" in action:
                     return [{"id": 1}]
@@ -663,7 +663,7 @@ class TestWarmCacheSeries:
                 if "get_series" in action:
                     call_count["count"] += 1
                     if call_count["count"] == 1:
-                        raise Exception("Temporary failure")
+                        from fastapi import HTTPException; raise HTTPException(502, "Temporary failure")
                     return [{"id": 1}]
                 return []
 
