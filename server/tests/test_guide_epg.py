@@ -184,7 +184,7 @@ class TestLoadEpg:
         epg_cache["fetched"] = time.time() - 99999
 
         mock_cache_file.exists.return_value = False
-        mock_client.get.side_effect = Exception("Connection refused")
+        mock_client.get.side_effect = httpx.ConnectError("Connection refused")
 
         result = await load_epg()
 
@@ -202,7 +202,7 @@ class TestLoadEpg:
         epg_cache["fetched"] = 0
 
         mock_cache_file.exists.return_value = False
-        mock_client.get.side_effect = Exception("Network error")
+        mock_client.get.side_effect = httpx.ConnectError("Network error")
 
         result = await load_epg()
 

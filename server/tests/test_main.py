@@ -236,7 +236,7 @@ class TestWarmCache:
 
             async def mock_cached_fetch(key, action, **params):
                 if "live" in action.lower():
-                    raise Exception("Live upstream down")
+                    from fastapi import HTTPException; raise HTTPException(502, "Live upstream down")
                 if "vod_categories" in action:
                     return [{"category_id": 1}]
                 if "series_categories" in action:
@@ -727,7 +727,7 @@ class TestWarmCacheSeries:
                     return []
                 if "vod_streams" in action:
                     call_count["count"] += 1
-                    raise Exception("Persistent failure")
+                    from fastapi import HTTPException; raise HTTPException(502, "Persistent failure")
                 return []
 
             with patch("iptv_client.cached_fetch", mock_cached_fetch):
