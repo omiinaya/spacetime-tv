@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from unittest.mock import AsyncMock, patch as _cached_fetch_patch
 import asyncio
+from asyncio import new_event_loop, set_event_loop
 import pytest
 from fastapi.testclient import TestClient
 
