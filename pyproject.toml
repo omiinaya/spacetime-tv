@@ -1,0 +1,48 @@
+[tool.ruff]
+# Target Python version
+target-version = "py310"
+
+# Select strict rules
+select = ["E", "W", "F", "I", "N", "D", "UP", "YTT", "ANN", "ASYNC", "BLE", "B", "A", "C4", "DTZ", "T10", "EM", "ERA", "EXE", "FBT", "FLY", "INT", "ISC", "ICN", "LOG", "NPY", "PD", "PERF", "PGH", "PLC", "PLE", "PLR", "PLW", "PT", "PTH", "PYI", "Q", "RET", "RSE", "RUF", "S", "SIM", "SLF", "SLOT", "TCH", "TD", "TID", "TRY", "FL", "G", "INP", "PIE", "SE", "FA", "AIR", "CPY"]
+
+# Ignore specific rules that might be too strict for existing code
+ignore = [
+    "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107",  # docstrings
+    "ANN101", "ANN102", "ANN401",  # type annotations
+    "S101",  # assert
+    "S311",  # random
+    "PLR2004",  # magic values
+    "PLR0913",  # too many args
+    "PLR0904",  # too many methods
+    "PLR0911",  # too many returns
+    "PLR0912",  # too many branches
+    "PLR0915",  # too many statements
+    "ISC001",  # single line if
+    "C408",  # dict/list/tuple literal
+]
+
+# Allow unused variables when prefixed with _
+dummy-variable-rgx = "^(_+|_(_[a-zA-Z0-9_]*)?)$"
+
+# Exclude certain directories
+exclude = [
+    ".git",
+    "node_modules",
+    "__pycache__",
+    "build",
+    "dist",
+    ".pytest_cache",
+    "migrations",
+]
+
+[per-file-ignores]
+"tests/*" = ["S", "ANN", "D", "TRY", "RSE", "PLR"]
+
+[tool.ruff.mccabe]
+max-complexity = 15
+
+[tool.ruff.flake8-import-order]
+style = "google"
+
+[tool.ruff.isort]
+known-first-party = ["app", "backend"]

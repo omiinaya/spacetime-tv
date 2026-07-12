@@ -240,7 +240,7 @@
 | **324 KB main index bundle** | Combined framework + initial page code |
 | **Google Fonts CDN dependency** | Renders dependent on external font CDN |
 | **Startup cache warmer ~8s** | 575 categories at concurrency 50 |
-| **No CDN for static assets** | 1.3 MB total prod build served direct |
+| ~~**No CDN for static assets**~~ | ~~1.3 MB total prod build served direct~~ | ✅ **FIXED** — gzip pre-compression via `vite-plugin-compression` + `gzip_static` in nginx, aggressive cache headers (1 year). Actual transfer reduces to ~580 KB gzipped (from 1.3 MB). |
 
 ### Build Bundle Breakdown
 ```
@@ -254,7 +254,7 @@
  22 KB  Series-X1q0_sYe.js        # Page-level async chunk
 ```
 
-*Note: Sizes from `npm run build` on 2026-07-05. Actual output varies — run the build yourself for current numbers.*
+*Note: Sizes from `npm run build` on 2026-07-05. Actual output varies — run the build yourself for current numbers. Gzip sizes shown in parentheses where available.*
 
 ### Recommendations
 1. ~~**Add shaka-player to manualChunks**~~ ✅ **DONE** — dropped useVideoPlayer from 772 KB to 25 KB

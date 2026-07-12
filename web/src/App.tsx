@@ -23,7 +23,7 @@ import OfflineBanner from "@/components/OfflineBanner";
 import WatchlistPopover from "@/components/WatchlistPopover";
 import { BackToTop } from "@/components/BackToTop";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { useProfile, Profile } from "@/hooks/useProfile";
+import { useProfile } from "@/hooks/useProfile";
 import ProfilePicker from "@/components/ProfilePicker";
 
 
@@ -104,7 +104,7 @@ function AppLayout() {
   }, [profile]);
 
   // Allow switching profiles from sidebar
-  const [showProfileSwitcher, setShowProfileSwitcher] = useState(false);
+  const [, setShowProfileSwitcher] = useState(false);
 
   if (profileGate) {
     return <ProfilePicker profiles={profiles} loading={loading} onSelect={(p) => { setProfile(p); }} onRefresh={refreshProfiles} />;

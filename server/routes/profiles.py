@@ -113,3 +113,45 @@ async def api_put_profile_progress(profile_id: str, payload: dict):
             del profiles[profile_id]["progress"][watch_key][k]
     _save_profiles(profiles)
     return {"status": "ok"}
+
+
+@router.post("/profiles/{profile_id}/history")
+async def api_add_profile_history(profile_id: str, payload: dict):
+    """Add a watch history entry for a profile."""
+    watch_key = payload.get("watchKey")
+    title = payload.get("title", "")
+    content_type = payload.get("contentType", "")
+    position = payload.get("position", 0)
+    duration = payload.get("duration", 0)
+    metadata = payload.get("metadata", {})
+
+    if not watch_key:
+        raise HTTPException(400, "Missing watchKey")
+
+    entry = {
+        "watchKey": watch_key,
+        "title": title,
+        "contentType": content_type,
+        "position": position,
+        "duration": duration,
+        "metadata": metadata,
+    }
+    if not add_profile_history(profile_id, entry):
+        raise HTTPException(404, "Profile not found")
+    return {"status": "ok"}
+
+
+@router.get("/profiles/{profile_id}/history")
+async def api_get_profile_history(profile_id: str, limit: int = 50, offset: int = 0):
+    """Get watch history for a profile."""
+    history = get_profile_history(profile_id, limit, offset)
+    return {"history": history}
+
+
+@router.delete("/profiles/{profile_id}/history")
+async def api_clear_profile_history(profile_id: str):
+    """Clear all watch history for a profile."""
+    if not clear_profile_history(profile_id):
+        raise HTTPException(404, "Profile not found")
+    return {"status": "ok"}
+
