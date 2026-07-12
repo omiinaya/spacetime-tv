@@ -50,7 +50,7 @@ class TestCachedFetch:
             result = await cached_fetch("miss_key", "test_action")
 
         assert result == upstream_data
-        assert "miss_key" in _cache
+        assert "Default:miss_key" in _cache
         assert _cache["Default:miss_key"][1] == upstream_data
 
     @pytest.mark.asyncio
@@ -65,7 +65,7 @@ class TestCachedFetch:
             result = await cached_fetch("empty_key", "test_action")
 
         assert result == []
-        assert "empty_key" not in _cache, "Empty list should not be cached"
+        assert "Default:empty_key" not in _cache, "Empty list should not be cached"
 
     @pytest.mark.asyncio
     async def test_stale_fallback_on_empty_list(self):
@@ -89,8 +89,10 @@ class TestCachedFetch:
         stale_data = {"fallback": "data"}
         _cache["Default:fail_stale_key"] = (1.0, stale_data)
 
+        from fastapi import HTTPException
+
         async def mock_fetch(provider, action, **params):
-            raise Exception("Upstream unreachable")
+            raise HTTPException(502, "Upstream unreachable")
 
         with patch("iptv_client._fetch_single_provider", mock_fetch):
             result = await cached_fetch("fail_stale_key", "test_action")
@@ -102,12 +104,15 @@ class TestCachedFetch:
         """When upstream fails and no stale data exists, the exception propagates (line 145)."""
         _cache.clear()
 
+        from fastapi import HTTPException
+
         async def mock_fetch(provider, action, **params):
-            raise Exception("Upstream down")
+            raise HTTPException(502, "Upstream down")
 
         with patch("iptv_client._fetch_single_provider", mock_fetch):
-            with pytest.raises(Exception, match="Upstream down"):
+            with pytest.raises(HTTPException) as exc_info:
                 await cached_fetch("raise_key", "test_action")
+            assert "Upstream down" in str(exc_info.value.detail)
 
     @pytest.mark.asyncio
     async def test_cache_hit_increments_counter(self):
@@ -117,7 +122,7 @@ class TestCachedFetch:
         # Record the starting value (which may have been bumped by prior tests)
         start_hits = ic._cache_hits
         _cache.clear()
-        _cache["hit_counter_key"] = (9999999999.0, "data")
+        _cache["Default:hit_counter_key"] = (9999999999.0, "data")
 
         await cached_fetch("hit_counter_key", "unused")
         assert ic._cache_hits == start_hits + 1
