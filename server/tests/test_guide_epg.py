@@ -421,7 +421,7 @@ class TestBuildGuideCache:
         mock_load_bg.return_value = epg_data
 
         # cached_fetch raises exception for stream mapping
-        mock_cached_fetch.side_effect = Exception("API unavailable")
+        mock_cached_fetch.side_effect = httpx.HTTPError("API unavailable")
 
         channel_groups, total = await _build_guide_cache()
 
@@ -673,7 +673,7 @@ class TestEpgBroadcastLoop:
         from routes.guide_epg import log as epg_log
 
         mock_sleep.side_effect = [None, asyncio.CancelledError()]
-        mock_load_epg.side_effect = Exception("EPG refresh error")
+        mock_load_epg.side_effect = RuntimeError("EPG refresh error")
 
         with patch.object(epg_log, "error") as mock_err:
             with pytest.raises(asyncio.CancelledError):
