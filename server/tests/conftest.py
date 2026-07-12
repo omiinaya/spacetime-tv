@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from unittest.mock import AsyncMock, patch as _cached_fetch_patch
 import asyncio
-from asyncio import new_event_loop, set_event_loop
+import asyncio
 import pytest
 from fastapi.testclient import TestClient
 
@@ -71,6 +71,15 @@ def reset_shared_state():
     # Clear search query log so admin stats test doesn't leak
     from state import _search_queries
     _search_queries.clear()
+    # Clear provider HTTP clients to avoid stale loop references
+    from iptv_client import _provider_clients
+    for k, c in list(_provider_clients.items()):
+        import asyncio
+        try:
+            c.aclose()
+        except Exception:
+            pass
+    _provider_clients.clear()
     # Clear stream hit counters
     from state import _stream_hits
     _stream_hits.clear()
