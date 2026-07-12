@@ -209,7 +209,7 @@ class TestLookupExtension:
 
     @pytest.mark.asyncio
     async def test_movie_found_in_cache(self):
-        _cache["vod_1"] = (time.time(), [{"stream_id": 999, "container_extension": "mp4"}])
+        _cache["Default:ext_lookup_movie_999"] = (time.time(), [{"stream_id": 999, "container_extension": "mp4"}])
         assert await _lookup_extension(999, "movie") == "mp4"
 
     @pytest.mark.asyncio
@@ -218,7 +218,7 @@ class TestLookupExtension:
 
     @pytest.mark.asyncio
     async def test_series_found_in_cache(self):
-        _cache["series_1"] = (time.time(), [{"series_id": 555, "container_extension": "avi"}])
+        _cache["Default:ext_lookup_series_555"] = (time.time(), [{"series_id": 555, "container_extension": "avi"}])
         assert await _lookup_extension(555, "series") == "avi"
 
     @pytest.mark.asyncio
@@ -227,29 +227,29 @@ class TestLookupExtension:
 
     @pytest.mark.asyncio
     async def test_empty_list_in_cache(self):
-        _cache["vod_1"] = (time.time(), [])
+        _cache["Default:ext_lookup_movie_999"] = (time.time(), [])
         assert await _lookup_extension(999, "movie") == "mkv"
 
     @pytest.mark.asyncio
     async def test_movie_with_none_extension_returns_mp4(self):
-        _cache["vod_1"] = (time.time(), [{"stream_id": 999, "container_extension": None}])
+        _cache["Default:ext_lookup_movie_999"] = (time.time(), [{"stream_id": 999, "container_extension": None}])
         assert await _lookup_extension(999, "movie") == "mp4"
 
     @pytest.mark.asyncio
     async def test_movie_with_empty_extension_returns_mp4(self):
-        _cache["vod_1"] = (time.time(), [{"stream_id": 999, "container_extension": ""}])
+        _cache["Default:ext_lookup_movie_999"] = (time.time(), [{"stream_id": 999, "container_extension": ""}])
         assert await _lookup_extension(999, "movie") == "mp4"
 
     @pytest.mark.asyncio
     async def test_multiple_cache_entries(self):
-        _cache["vod_1"] = (time.time(), [{"stream_id": 1, "container_extension": "mp4"}])
-        _cache["vod_2"] = (time.time(), [{"stream_id": 2, "container_extension": "avi"}])
+        _cache["Default:ext_lookup_movie_1"] = (time.time(), [{"stream_id": 1, "container_extension": "mp4"}])
+        _cache["Default:ext_lookup_movie_2"] = (time.time(), [{"stream_id": 2, "container_extension": "avi"}])
         assert await _lookup_extension(1, "movie") == "mp4"
         assert await _lookup_extension(2, "movie") == "avi"
 
     @pytest.mark.asyncio
     async def test_with_series_prefix(self):
-        _cache["series_1"] = (time.time(), [{"series_id": 777, "container_extension": "webm"}])
+        _cache["Default:ext_lookup_series_777"] = (time.time(), [{"series_id": 777, "container_extension": "webm"}])
         assert await _lookup_extension(777, "series") == "webm"
 
 
