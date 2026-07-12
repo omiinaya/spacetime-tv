@@ -86,8 +86,15 @@ def test_search_unicode(client_with_cache):
 
 def test_search_vod_fallback_path(client):
     """When VOD caches aren't warm, search falls back to cached_fetch."""
+    import time
+    from state import _cache
     from routes import search as search_module
     original = search_module.cached_fetch
+
+    # Pre-populate cache so _search_all finds data (it scans _cache directly)
+    now = time.time()
+    _cache["vod_categories"] = (now, [{"category_id": 10, "category_name": "Action"}])
+    _cache["vod_10"] = (now, [{"stream_id": 100, "name": "Die Hard", "stream_icon": "", "container_extension": "mp4"}])
 
     async def mock_vod_fetch(key, action, **params):
         if key == "vod_categories":
