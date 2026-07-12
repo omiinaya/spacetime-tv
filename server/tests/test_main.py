@@ -110,22 +110,24 @@ class TestRateLimiter:
 
     def test_different_ips_have_separate_limits(self, client):
         """Each client IP gets its own rate limit counter."""
+        import main as m
         from main import _rate_limits
 
         _rate_limits.clear()
-        c2 = TestClient(app)
-        c2.headers["X-Admin-Key"] = "test-admin-key-insecure"
-        limit = 60  # RATE_DEFAULT_LIMIT
+        limit = m.RATE_DEFAULT_LIMIT
 
-        # Exhaust c1
+        # Exhaust client's limit
         for _ in range(limit):
             client.get("/api/v1/health")
 
-        # c1 should be blocked
+        # client should be blocked
         r = client.get("/api/v1/health")
         assert r.status_code == 429
 
-        # c2 should still be allowed
+        # Create a second client with different device token (different rate-limit key)
+        c2 = TestClient(app)
+        c2.headers["X-Admin-Key"] = "test-admin-key-insecure"
+        c2.headers["X-Device-Token"] = "different-device-token-12345"
         r = c2.get("/api/v1/health")
         assert r.status_code == 200
 
