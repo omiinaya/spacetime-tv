@@ -257,7 +257,10 @@ def test_guide_now_unknown_stream_id_returns_null(client_with_cache):
 
 def test_guide_now_with_empty_epg_returns_unknown(client):
     """Even with empty EPG, /api/guide/now should return keys for queried IDs."""
-    # EPG cache is empty by default from conftest clear_cache
+    from routes.guide_epg import EPG_CACHE_FILE
+    # Ensure the on-disk EPG cache is also cleared to force empty EPG
+    if EPG_CACHE_FILE.exists():
+        EPG_CACHE_FILE.unlink()
     resp = client.get("/api/v1/guide/now?stream_ids=101,201")
     assert resp.status_code == 200
     data = resp.json()
