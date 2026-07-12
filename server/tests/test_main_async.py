@@ -43,7 +43,7 @@ class TestCachedFetch:
         _cache.clear()
         upstream_data = [{"id": 1, "name": "via_upstream"}]
 
-        async def mock_fetch(action, **params):
+        async def mock_fetch(provider, action, **params):
             return upstream_data
 
         with patch("iptv_client._fetch_single_provider", mock_fetch):
@@ -58,7 +58,7 @@ class TestCachedFetch:
         """Empty list from upstream should be returned but NOT stored in cache (line 146-148, 152)."""
         _cache.clear()
 
-        async def mock_fetch(action, **params):
+        async def mock_fetch(provider, action, **params):
             return []
 
         with patch("iptv_client._fetch_single_provider", mock_fetch):
@@ -74,7 +74,7 @@ class TestCachedFetch:
         stale_data = [{"id": "stale"}]
         _cache["Default:empty_stale_key"] = (1.0, stale_data)  # Expired timestamp
 
-        async def mock_fetch(action, **params):
+        async def mock_fetch(provider, action, **params):
             return []
 
         with patch("iptv_client._fetch_single_provider", mock_fetch):
@@ -89,7 +89,7 @@ class TestCachedFetch:
         stale_data = {"fallback": "data"}
         _cache["Default:fail_stale_key"] = (1.0, stale_data)
 
-        async def mock_fetch(action, **params):
+        async def mock_fetch(provider, action, **params):
             raise Exception("Upstream unreachable")
 
         with patch("iptv_client._fetch_single_provider", mock_fetch):
@@ -102,7 +102,7 @@ class TestCachedFetch:
         """When upstream fails and no stale data exists, the exception propagates (line 145)."""
         _cache.clear()
 
-        async def mock_fetch(action, **params):
+        async def mock_fetch(provider, action, **params):
             raise Exception("Upstream down")
 
         with patch("iptv_client._fetch_single_provider", mock_fetch):
@@ -130,7 +130,7 @@ class TestCachedFetch:
         start_misses = ic._cache_misses
         _cache.clear()
 
-        async def mock_fetch(action, **params):
+        async def mock_fetch(provider, action, **params):
             return {"id": 1}
 
         with patch("iptv_client._fetch_single_provider", mock_fetch):
@@ -157,10 +157,12 @@ class TestFetchIptv:
         mock_resp = MagicMock()
         mock_resp.raise_for_status.side_effect = Exception("Connection refused")
 
-        mock_client = AsyncMock()
-        mock_client.get.return_value = mock_resp
+        async def mock_fetch(provider, action, **params):
+            raise HTTPException(502, "IPTV provider error: Connection refused")
 
-        with patch("main.client", mock_client):
+        from fastapi import HTTPException
+
+        with patch("iptv_client._fetch_single_provider", mock_fetch):
             with pytest.raises(HTTPException) as exc_info:
                 await fetch_iptv("test_action")
 
