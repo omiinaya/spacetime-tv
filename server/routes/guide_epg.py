@@ -74,9 +74,8 @@ async def _refresh_epg_background():
     """Refresh EPG in background task — logs failures but never raises."""
     try:
         await load_epg()
-    except OSError as e:
+    except Exception as e:
         log.warning(f"Background EPG refresh failed: {e}")
-        # OSError from EPG_CACHE_FILE.write_text in load_epg — all other errors are caught internally
 
 
 # ── EPG Broadcast (SSE refresh loop) ───────────────────────────────────
