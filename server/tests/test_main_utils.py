@@ -214,6 +214,7 @@ class TestLookupExtension:
 
     @pytest.mark.asyncio
     async def test_movie_not_found_returns_mkv(self):
+        _cache.clear()
         assert await _lookup_extension(999, "movie") == "mkv"
 
     @pytest.mark.asyncio
@@ -223,6 +224,7 @@ class TestLookupExtension:
 
     @pytest.mark.asyncio
     async def test_series_not_found_returns_mkv(self):
+        _cache.clear()
         assert await _lookup_extension(555, "series") == "mkv"
 
     @pytest.mark.asyncio

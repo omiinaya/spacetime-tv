@@ -58,9 +58,10 @@ async def _lookup_extension(stream_id: int, stream_type: str) -> str:
                 sid = item.get("stream_id") if stream_type in ("live", "movie") else item.get("series_id")
                 if sid == stream_id:
                     ext = item.get("container_extension", "mp4")
-                    if ext:
-                        log.info(f"Looked up extension for {stream_type} {stream_id}: {ext} (cached)")
-                        return ext if ext else "mp4"
+                    # Return mp4 for None/empty, actual ext for truthy values
+                    resolved = ext if ext else "mp4"
+                    log.info(f"Looked up extension for {stream_type} {stream_id}: {resolved} (cached)")
+                    return resolved
     except (HTTPException, KeyError, TypeError, IndexError) as e:
         log.warning(f"Extension lookup cache failed for {stream_type} {stream_id}: {e}")
 
