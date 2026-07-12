@@ -23,6 +23,7 @@ os.environ.setdefault("CLEANUP_INTERVAL", "3600")
 os.environ.setdefault("CACHE_TTL_HOURS", "0")
 os.environ.setdefault("ENFORCE_HTTPS", "false")
 os.environ.setdefault("ADMIN_API_KEY", "test-admin-key-insecure")
+os.environ.setdefault("ENCRYPT_CREDENTIALS", "false")
 
 # Add server dir to Python path so `from main import ...` works
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -67,6 +68,9 @@ def reset_shared_state():
     # Clear search query log so admin stats test doesn't leak
     from state import _search_queries
     _search_queries.clear()
+    # Clear stream hit counters
+    from state import _stream_hits
+    _stream_hits.clear()
     yield
 
 
@@ -88,7 +92,7 @@ def client():
         return []
 
     # Patch all route modules that import cached_fetch from iptv_client
-    routes = ["live", "vod", "search", "guide"]
+    routes = ["live", "vod", "search", "guide", "stream_core", "stream_probe", "guide_epg", "cache_warmer"]
     patchers = []
     for r in routes:
         p = _cached_fetch_patch(f"routes.{r}.cached_fetch", mock_cached_fetch)

@@ -32,7 +32,7 @@ class TestCachedFetch:
     async def test_fresh_cache_returns_cached(self):
         """When cache has fresh data (within TTL), return it without calling upstream."""
         _cache.clear()
-        _cache["fresh_key"] = (9999999999.0, "cached_value")
+        _cache["Default:fresh_key"] = (9999999999.0, "cached_value")
 
         result = await cached_fetch("fresh_key", "some_action")
         assert result == "cached_value"
@@ -51,7 +51,7 @@ class TestCachedFetch:
 
         assert result == upstream_data
         assert "miss_key" in _cache
-        assert _cache["miss_key"][1] == upstream_data
+        assert _cache["Default:miss_key"][1] == upstream_data
 
     @pytest.mark.asyncio
     async def test_empty_list_not_cached(self):
@@ -72,7 +72,7 @@ class TestCachedFetch:
         """When upstream returns empty list but stale cache exists, the stale data is returned (lines 148-151)."""
         _cache.clear()
         stale_data = [{"id": "stale"}]
-        _cache["empty_stale_key"] = (1.0, stale_data)  # Expired timestamp
+        _cache["Default:empty_stale_key"] = (1.0, stale_data)  # Expired timestamp
 
         async def mock_fetch(action, **params):
             return []
@@ -87,7 +87,7 @@ class TestCachedFetch:
         """When upstream raises but stale data exists, stale data is returned (lines 139-144)."""
         _cache.clear()
         stale_data = {"fallback": "data"}
-        _cache["fail_stale_key"] = (1.0, stale_data)
+        _cache["Default:fail_stale_key"] = (1.0, stale_data)
 
         async def mock_fetch(action, **params):
             raise Exception("Upstream unreachable")

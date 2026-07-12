@@ -19,6 +19,7 @@ os.environ.setdefault("IPTV_BASE", "http://test-iptv.live")
 os.environ.setdefault("IPTV_USER", "test_user")
 os.environ.setdefault("IPTV_PASS", "test_pass")
 os.environ.setdefault("CACHE_WARM_ENABLED", "false")
+os.environ.setdefault("ENCRYPT_CREDENTIALS", "false")
 
 from main import (
     get_last_access,
