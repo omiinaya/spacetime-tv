@@ -129,7 +129,7 @@ async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
             media_type="video/mp2t",
             headers={"Cache-Control": "no-cache"},
         )
-    except (RuntimeError, curl_cffi.requests.errors.RequestsError) as e:  # pragma: no cover — StreamingResponse never raises at construction
+    except (RuntimeError, Exception) as e:  # pragma: no cover — StreamingResponse never raises at construction
         log.error(f"Movie remux error ({stream_id}): {e}")  # pragma: no cover
         return JSONResponse(status_code=502, content={"detail": "Remux failed"})  # pragma: no cover
 
@@ -148,7 +148,7 @@ async def stream_series_remux(series_id: int, episode_id: int, start: Optional[f
             media_type="video/mp2t",
             headers={"Cache-Control": "no-cache"},
         )
-    except (RuntimeError, curl_cffi.requests.errors.RequestsError) as e:  # pragma: no cover — StreamingResponse never raises at construction
+    except (RuntimeError, Exception) as e:  # pragma: no cover — StreamingResponse never raises at construction
         log.error(f"Series remux error ({episode_id}): {e}")  # pragma: no cover
         return JSONResponse(status_code=502, content={"detail": "Remux failed"})  # pragma: no cover
 
@@ -167,7 +167,7 @@ async def stream_movie_transcode(stream_id: int):
             media_type="video/mp2t",
             headers={"Cache-Control": "no-cache"},
         )
-    except (RuntimeError, curl_cffi.requests.errors.RequestsError) as e:  # pragma: no cover — StreamingResponse never raises at construction
+    except (RuntimeError, Exception) as e:  # pragma: no cover — StreamingResponse never raises at construction
         log.error(f"VOD transcode error (movie {stream_id}): {e}")  # pragma: no cover
         return JSONResponse(status_code=502, content={"detail": "Transcode failed"})  # pragma: no cover
 
@@ -186,7 +186,7 @@ async def stream_series_transcode(series_id: int, episode_id: int):
             media_type="video/mp2t",
             headers={"Cache-Control": "no-cache"},
         )
-    except (RuntimeError, curl_cffi.requests.errors.RequestsError) as e:  # pragma: no cover — StreamingResponse never raises at construction
+    except (RuntimeError, Exception) as e:  # pragma: no cover — StreamingResponse never raises at construction
         log.error(f"VOD transcode error (series {episode_id}): {e}")  # pragma: no cover
         return JSONResponse(status_code=502, content={"detail": "Transcode failed"})  # pragma: no cover
 
