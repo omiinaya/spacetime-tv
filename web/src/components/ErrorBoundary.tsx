@@ -5,6 +5,7 @@ import { reportRenderError } from "./ErrorReporter";
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  name?: string;
 }
 
 interface State {
@@ -23,8 +24,9 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("[ErrorBoundary] Uncaught error:", error);
-    console.error("[ErrorBoundary] Component stack:", info.componentStack);
+    const section = this.props.name ? `[${this.props.name}]` : "";
+    console.error(`${section} [ErrorBoundary] Uncaught error:`, error);
+    console.error(`${section} [ErrorBoundary] Component stack:`, info.componentStack);
     reportRenderError(error, info.componentStack ?? "");
   }
 
@@ -46,14 +48,15 @@ export default class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <div className="max-w-md mx-auto p-8 text-center">
+        <div className="flex items-center justify-center min-h-[60vh] bg-background/50 rounded-lg border border-border p-8 m-2">
+          <div className="max-w-md mx-auto text-center">
             <div className="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-5">
               <AlertTriangle className="h-7 w-7 text-destructive" />
             </div>
             <h1 className="text-lg font-semibold mb-2">Something went wrong</h1>
             <p className="text-sm text-muted-foreground mb-6">
-              An unexpected error occurred. Try refreshing the page or going home.
+              {this.props.name ? <>Error in <strong>{this.props.name}</strong> section.</> : "An unexpected error occurred."}
+              Try refreshing the page or going home.
             </p>
             <div className="flex items-center justify-center gap-3">
               <button
