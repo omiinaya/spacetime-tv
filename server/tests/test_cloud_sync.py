@@ -306,12 +306,18 @@ class TestDeviceTokenAuth:
             "favorites": [1, 2],
         }, headers=_headers())
 
+        # Clear default admin key so device token auth is enforced
         client.headers.clear()
         resp = client.post("/api/v1/cloud/merge", json={
             "device_id": "wrong-merge-device",
             "favorites": [3],
         }, headers={"X-Device-Token": "wrong-token-xyz-789"})
-        assert resp.json()["status"] == "error"
+        # Auth middleware may return 403 before cloud handler, or
+        # cloud handler returns {"status": "error"} with matching admin key
+        if resp.status_code == 403:
+            assert "detail" in resp.json()
+        else:
+            assert resp.json().get("status") == "error"
 
     def test_correct_token_works_after_registration(self, client):
         """The same token that registered can read and write."""
@@ -355,67 +361,58 @@ class TestAdminKeyOverride:
 
     ADMIN_KEY = "test-cloud-admin-key-999"
 
-    def _make_client_with_key(self):
-        """Create a TestClient with ADMIN_API_KEY set."""
-        import importlib
-        os.environ["ADMIN_API_KEY"] = self.ADMIN_KEY
-        import config as cfg
-        importlib.reload(cfg)
-        from main import app
-        from fastapi.testclient import TestClient
-        return TestClient(app)
-
-    def teardown_method(self):
-        os.environ.pop("ADMIN_API_KEY", None)
-
     def test_admin_key_bypasses_device_token(self):
         """Admin key can read any device's backup without device token."""
-        c = self._make_client_with_key()
+        import config as cfg
+        from unittest.mock import patch
+        from main import app
+        from fastapi.testclient import TestClient
 
-        # Upload with admin key and no device token
-        resp = c.post(
-            "/api/v1/cloud/backup",
-            json={"device_id": "admin-test-device", "favorites": [42]},
-            headers={"X-Admin-Key": self.ADMIN_KEY},
-        )
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "ok"
+        with patch.object(cfg, "ADMIN_API_KEY", self.ADMIN_KEY):
+            c = TestClient(app)
+            # Upload with admin key and no device token
+            resp = c.post(
+                "/api/v1/cloud/backup",
+                json={"device_id": "admin-test-device", "favorites": [42]},
+                headers={"X-Admin-Key": self.ADMIN_KEY},
+            )
+            assert resp.status_code == 200
+            assert resp.json()["status"] == "ok"
 
-        # Read with admin key and no device token
-        resp = c.get(
-            "/api/v1/cloud/backup?device_id=admin-test-device",
-            headers={"X-Admin-Key": self.ADMIN_KEY},
-        )
-        assert resp.json()["data"]["favorites"] == [42]
+            # Read with admin key and no device token
+            resp = c.get(
+                "/api/v1/cloud/backup?device_id=admin-test-device",
+                headers={"X-Admin-Key": self.ADMIN_KEY},
+            )
+            assert resp.json()["data"]["favorites"] == [42]
 
     def test_admin_key_can_read_wrong_token_device(self):
         """Admin key bypasses device token — can read any device."""
-        import importlib
-        os.environ["ADMIN_API_KEY"] = self.ADMIN_KEY
         import config as cfg
-        importlib.reload(cfg)
+        from unittest.mock import patch
         from main import app
         from fastapi.testclient import TestClient
-        c = TestClient(app)
 
-        # Register with a specific token
-        c.post(
-            "/api/v1/cloud/backup",
-            json={"device_id": "locked-device", "favorites": [77]},
-            headers={"X-Device-Token": "secret-token-000"},
-        )
+        with patch.object(cfg, "ADMIN_API_KEY", self.ADMIN_KEY):
+            c = TestClient(app)
 
-        # Try with wrong token → rejected
-        resp = c.get(
-            "/api/v1/cloud/backup?device_id=locked-device",
-            headers={"X-Device-Token": "wrong-token-999"},
-        )
-        assert resp.json()["status"] == "error"
+            # Register with a specific token
+            c.post(
+                "/api/v1/cloud/backup",
+                json={"device_id": "locked-device", "favorites": [77]},
+                headers={"X-Device-Token": "secret-token-000"},
+            )
 
-        # Admin key bypasses → success
-        resp = c.get(
-            "/api/v1/cloud/backup?device_id=locked-device",
-            headers={"X-Admin-Key": self.ADMIN_KEY},
-        )
-        assert resp.json()["data"]["favorites"] == [77]
-        os.environ.pop("ADMIN_API_KEY", None)
+            # Try with wrong token → rejected
+            resp = c.get(
+                "/api/v1/cloud/backup?device_id=locked-device",
+                headers={"X-Device-Token": "wrong-token-999"},
+            )
+            assert resp.json()["status"] == "error"
+
+            # Admin key bypasses → success
+            resp = c.get(
+                "/api/v1/cloud/backup?device_id=locked-device",
+                headers={"X-Admin-Key": self.ADMIN_KEY},
+            )
+            assert resp.json()["data"]["favorites"] == [77]

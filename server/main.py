@@ -116,6 +116,20 @@ async def auth_middleware(request: Request, call_next):
         from auth import verify_device_token_generic
         if verify_device_token_generic(device_token):
             return await call_next(request)
+        # Device token provided but invalid — 403
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Invalid device token."},
+        )
+    # Auth credential provided but wrong — 403
+    if admin_key or device_token:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Invalid authentication credentials."},
+        )
+    # No auth provided at all — 401
     from fastapi.responses import JSONResponse
     return JSONResponse(
         status_code=401,
@@ -123,7 +137,6 @@ async def auth_middleware(request: Request, call_next):
     )
 
 # ── HTTPS redirect middleware (when ENFORCE_HTTPS=true) ──────────
-@app.middleware("http")
 @app.middleware("http")
 async def https_redirect_middleware(request: Request, call_next):
     """Redirect HTTP to HTTPS when ENFORCE_HTTPS is enabled.

@@ -71,6 +71,11 @@ def test_admin_stats_returns_structure(client: TestClient):
 def test_admin_stats_cache_empty_on_fresh_start(client: TestClient):
     """Fresh start should show 0 cache entries and 0 hits/misses."""
     from main import app
+    from state import _stream_hits, _search_queries, _error_log
+    # Explicitly clear shared state to prevent test-ordering leaks
+    _stream_hits.clear()
+    _search_queries.clear()
+    _error_log.clear()
 
     with _admin_client() as c:
         resp = c.get("/api/v1/admin/stats")
@@ -409,37 +414,22 @@ def test_admin_warm_cache_already_in_progress(client: TestClient):
 # ── Admin Key Auth Tests ─────────────────────────────────────────
 
 
-def _make_app_with_key(key: str):
-    """Create a fresh app with ADMIN_API_KEY set to the given value."""
-    import os
-    import importlib
-    os.environ["ADMIN_API_KEY"] = key
-    # Force re-import of config (clears Python cache)
-    import config as cfg
-    importlib.reload(cfg)
-    from main import app
-    return app
-
-
 def test_admin_key_required_when_set(client: TestClient):
     """When ADMIN_API_KEY is set, requests without the key get 403."""
-    import os
-    old = os.environ.get("ADMIN_API_KEY", "")
-    try:
-        os.environ["ADMIN_API_KEY"] = "test-admin-key-123"
-        import config as cfg
-        import importlib
-        importlib.reload(cfg)
-        from main import app
+    import config as cfg
+    from unittest.mock import patch
 
+    # The conftest's TestClient sends "test-admin-key-insecure" by default.
+    # Patch ADMIN_API_KEY to a different value so the default header is wrong.
+    with patch.object(cfg, "ADMIN_API_KEY", "test-admin-key-123"):
         with _admin_client() as c:
-            # No key
+            # Default header is "test-admin-key-insecure" — wrong for "test-admin-key-123"
             r = c.get("/api/v1/admin/stats")
             assert r.status_code == 403
             data = r.json()
             assert "detail" in data
 
-            # Wrong key
+            # Wrong key explicitly
             r = c.get("/api/v1/admin/stats", headers={"X-Admin-Key": "wrong"})
             assert r.status_code == 403
 
@@ -448,33 +438,32 @@ def test_admin_key_required_when_set(client: TestClient):
             assert r.status_code == 200
             data = r.json()
             assert "uptime" in data
-    finally:
-        os.environ["ADMIN_API_KEY"] = old
-        import importlib
-        import config as cfg
-        importlib.reload(cfg)
 
 
 def test_admin_key_auto_generates_when_empty(client: TestClient):
     """When ADMIN_API_KEY is empty (dev mode), a random key is auto-generated.
     Admin endpoints are always protected, even on first run.
     """
+    import importlib
+    import config as cfg
     import os
-    old = os.environ.get("ADMIN_API_KEY", "")
-    try:
-        os.environ["ADMIN_API_KEY"] = ""
-        import config as cfg
-        import importlib
-        importlib.reload(cfg)
-        from main import app
 
-        # Auto-gen means a random key is set — test key won't match
+    # Save the original ADMIN_API_KEY
+    old_key = os.environ.get("ADMIN_API_KEY", "")
+    old_cfg_key = cfg.ADMIN_API_KEY
+    try:
+        # Simulate auto-gen: set empty, reload config
+        os.environ["ADMIN_API_KEY"] = ""
+        importlib.reload(cfg)
+
+        # Now config.ADMIN_API_KEY is auto-generated (random hex)
+        from main import app
         c = TestClient(app)
         r = c.get("/api/v1/admin/stats")
-        assert r.status_code == 403
+        # No key sent → 401 (no credentials provided)
+        assert r.status_code == 401
         assert "detail" in r.json()
     finally:
-        os.environ["ADMIN_API_KEY"] = old
-        import importlib
-        import config as cfg
-        importlib.reload(cfg)
+        # Restore env and config
+        os.environ["ADMIN_API_KEY"] = old_key
+        cfg.ADMIN_API_KEY = old_cfg_key

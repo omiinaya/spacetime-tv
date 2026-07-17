@@ -26,11 +26,12 @@ os.environ.setdefault("ADMIN_API_KEY", "test-admin-key-insecure")
 os.environ.setdefault("ENCRYPT_CREDENTIALS", "false")
 os.environ.setdefault("TMDB_API_KEY", "test-tmdb-key")
 os.environ.setdefault("TMDB_BASE", "https://api.themoviedb.org/3")
-os.environ.setdefault("ENCRYPT_CREDENTIALS", "false")
-os.environ.setdefault("TMDB_API_KEY", "test-tmdb-key")
-os.environ.setdefault("TMDB_BASE", "https://api.themoviedb.org/3")
-os.environ.setdefault("TMDB_API_KEY", "test-tmdb-key")
-os.environ.setdefault("TMDB_BASE", "https://api.themoviedb.org/3")
+
+# Wipe persistent state files to prevent cross-session contamination
+_state_dir = Path(__file__).resolve().parent.parent / "server" / "data"
+_hits_file = _state_dir / "stream_hits.json"
+if _hits_file.exists():
+    _hits_file.unlink()
 
 # Add server dir to Python path so `from main import ...` works
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -95,6 +96,9 @@ def reset_shared_state():
     # Clear stream hit counters
     from state import _stream_hits
     _stream_hits.clear()
+    # Clear probe cache to prevent test ordering leaks
+    from routes.stream_core import _probe_cache
+    _probe_cache.clear()
     yield
 
 
