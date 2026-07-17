@@ -33,19 +33,16 @@ async def lifespan(app: FastAPI):
         log.info(f"🔑 Admin API key auto-generated: {ADMIN_API_KEY}")
         log.info("   Set ADMIN_API_KEY in server/.env to use a fixed key")
     start_cleanup_task()
-
-
-# ── Ensure default profile on startup ────────────────────────────
-try:
-    from auth import ensure_default_profile
-    result = ensure_default_profile()
-    if result:
-        log.info(f"[PROFILES] Created default profile: {result['name']} ({result['profile_id']})")
-    else:
-        log.debug("[PROFILES] Profiles exist, no default needed")
-except Exception as e:
-    log.warning(f"[PROFILES] Could not ensure default profile: {e}")
-
+    # ── Ensure default profile on startup ────────────────────────────
+    try:
+        from auth import ensure_default_profile
+        result = ensure_default_profile()
+        if result:
+            log.info(f"[PROFILES] Created default profile: {result['name']} ({result['profile_id']})")
+        else:
+            log.debug("[PROFILES] Profiles exist, no default needed")
+    except Exception as e:
+        log.warning(f"[PROFILES] Could not ensure default profile: {e}")
     start_cache_warmer()
     _epg_broadcast_task = asyncio.create_task(_epg_broadcast_loop())
     yield

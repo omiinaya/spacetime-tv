@@ -5,7 +5,7 @@ Extracted from main.py during P1.1 Phase 6 decomposition.
 import logging
 import time
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from state import _progress_store, _save_progress_store
 
