@@ -339,26 +339,26 @@ function AppLayout() {
         <div className={isWatchRoute ? "" : "p-4 md:p-6 lg:p-8"}>
           <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="/" element={<ErrorBoundary><HomePage /></ErrorBoundary>} />
-            <Route path="/live" element={<ErrorBoundary><LiveTV /></ErrorBoundary>} />
-            <Route path="/guide" element={<ErrorBoundary><Guide /></ErrorBoundary>} />
-            <Route path="/movies" element={<ErrorBoundary><Movies /></ErrorBoundary>} />
-            <Route path="/series" element={<ErrorBoundary><Series /></ErrorBoundary>} />
-            <Route path="/search" element={<ErrorBoundary><SearchPage /></ErrorBoundary>} />
-            <Route path="/watchlist" element={<ErrorBoundary><WatchlistPage /></ErrorBoundary>} />
-            <Route path="/history" element={<ErrorBoundary><HistoryPage /></ErrorBoundary>} />
-            <Route path="/recordings" element={<ErrorBoundary><RecordingsPage /></ErrorBoundary>} />
-            <Route path="/person/:encodedName" element={<ErrorBoundary><PersonPage /></ErrorBoundary>} />
-            <Route path="/settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
-            <Route path="/admin" element={<ErrorBoundary><AdminDashboard /></ErrorBoundary>} />
-            <Route path="/watch/live/:id" element={<ErrorBoundary><Player type="live" /></ErrorBoundary>} />
-            <Route path="/watch/movie/:id" element={<ErrorBoundary><Player type="movie" /></ErrorBoundary>} />
-            <Route path="/watch/recording/:id" element={<ErrorBoundary><WatchRecording /></ErrorBoundary>} />
+            <Route path="/" element={<ErrorBoundary name="Home"><HomePage /></ErrorBoundary>} />
+            <Route path="/live" element={<ErrorBoundary name="Live TV"><LiveTV /></ErrorBoundary>} />
+            <Route path="/guide" element={<ErrorBoundary name="Guide"><Guide /></ErrorBoundary>} />
+            <Route path="/movies" element={<ErrorBoundary name="Movies"><Movies /></ErrorBoundary>} />
+            <Route path="/series" element={<ErrorBoundary name="Series"><Series /></ErrorBoundary>} />
+            <Route path="/search" element={<ErrorBoundary name="Search"><SearchPage /></ErrorBoundary>} />
+            <Route path="/watchlist" element={<ErrorBoundary name="Watchlist"><WatchlistPage /></ErrorBoundary>} />
+            <Route path="/history" element={<ErrorBoundary name="History"><HistoryPage /></ErrorBoundary>} />
+            <Route path="/recordings" element={<ErrorBoundary name="Recordings"><RecordingsPage /></ErrorBoundary>} />
+            <Route path="/person/:encodedName" element={<ErrorBoundary name="Person"><PersonPage /></ErrorBoundary>} />
+            <Route path="/settings" element={<ErrorBoundary name="Settings"><SettingsPage /></ErrorBoundary>} />
+            <Route path="/admin" element={<ErrorBoundary name="Admin"><AdminDashboard /></ErrorBoundary>} />
+            <Route path="/watch/live/:id" element={<ErrorBoundary name="Player (live)"><Player type="live" /></ErrorBoundary>} />
+            <Route path="/watch/movie/:id" element={<ErrorBoundary name="Player (movie)"><Player type="movie" /></ErrorBoundary>} />
+            <Route path="/watch/recording/:id" element={<ErrorBoundary name="Recording Player"><WatchRecording /></ErrorBoundary>} />
             <Route
               path="/watch/series/:seriesId/:epId"
-              element={<ErrorBoundary><Player type="series" /></ErrorBoundary>}
+              element={<ErrorBoundary name="Player (series)"><Player type="series" /></ErrorBoundary>}
             />
-            <Route path="*" element={<ErrorBoundary><NotFound /></ErrorBoundary>} />
+            <Route path="*" element={<ErrorBoundary name="Page Not Found"><NotFound /></ErrorBoundary>} />
           </Routes>
           </Suspense>
         </div>
