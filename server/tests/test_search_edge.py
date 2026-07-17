@@ -1,8 +1,5 @@
 """Tests for /api/search — special characters, fallback paths, enrichment edge cases."""
 
-import json
-import os
-from unittest.mock import patch, MagicMock, AsyncMock
 
 
 def test_search_special_chars(client_with_cache):
@@ -87,8 +84,9 @@ def test_search_unicode(client_with_cache):
 def test_search_vod_fallback_path(client):
     """When VOD caches aren't warm, search falls back to cached_fetch."""
     import time
-    from state import _cache
+
     from routes import search as search_module
+    from state import _cache
     original = search_module.cached_fetch
 
     # Pre-populate cache so _search_all finds data (it scans _cache directly)

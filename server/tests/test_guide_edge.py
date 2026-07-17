@@ -1,15 +1,12 @@
 """Tests for EPG guide cache fallback, background refresh, and edge cases."""
 
 import time
-import json
-from pathlib import Path
-from datetime import datetime, timedelta, timezone
-from unittest.mock import patch, MagicMock, PropertyMock
+from datetime import UTC, datetime, timedelta
 
 
 def _epg_timestamp(dt=None):
     if dt is None:
-        dt = datetime.now(timezone.utc)
+        dt = datetime.now(UTC)
     return dt.strftime("%Y%m%d%H%M%S") + " +0000"
 
 
@@ -21,8 +18,8 @@ SAMPLE_EPG_DATA = {
     "programmes": [
         {
             "channel": "BBC1.uk",
-            "start": _epg_timestamp(datetime.now(timezone.utc) - timedelta(hours=1)),
-            "stop": _epg_timestamp(datetime.now(timezone.utc) + timedelta(hours=1)),
+            "start": _epg_timestamp(datetime.now(UTC) - timedelta(hours=1)),
+            "stop": _epg_timestamp(datetime.now(UTC) + timedelta(hours=1)),
             "title": "Morning News",
             "subtitle": "",
             "desc": "Morning news programme",
@@ -69,8 +66,7 @@ def test_guide_empty_epg(client):
 
 def test_guide_now_with_partial_ids(client_with_cache):
     """/api/v1/guide/now should handle partial stream ID matches."""
-    from state import epg_cache
-    from state import _cache
+    from state import _cache, epg_cache
     epg_cache["data"] = SAMPLE_EPG_DATA
     epg_cache["fetched"] = time.time()
     _cache["live_all"] = (1000.0, [

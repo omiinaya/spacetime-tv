@@ -21,15 +21,13 @@ Endpoints:
 import hashlib
 import json
 import logging
-import secrets
 import time
-from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Request
+
 from config import DATA_DIR
 
 # Reuse the admin auth dependency for admin-level access
-from routes.admin import require_admin_key
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["cloud"])
@@ -85,9 +83,7 @@ def _verify_device_access(
     # Reject only if a token was provided but is too short (< 8 chars)
     if entry is None:
         token = request.headers.get("X-Device-Token", None)
-        if token is not None and len(token) < 8:
-            return False
-        return True
+        return not (token is not None and len(token) < 8)
 
     # Check admin key first (bypasses device token check)
     from config import ADMIN_API_KEY

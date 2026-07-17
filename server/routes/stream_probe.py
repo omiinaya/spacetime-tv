@@ -6,15 +6,15 @@ import asyncio
 import json
 import logging
 import time
-from typing import Optional
 
-import httpx
 import curl_cffi.requests as CurlReq
+import httpx
 from fastapi import APIRouter
 
 from config import UA_STR
 from iptv_client import iptv_referer
-from .stream_core import _lookup_extension, _probe_cache, PROBE_CACHE_TTL, build_stream_url
+
+from .stream_core import PROBE_CACHE_TTL, _lookup_extension, _probe_cache, build_stream_url
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["stream"])
@@ -57,7 +57,7 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
         )
         stdout, stderr_bytes = await asyncio.wait_for(proc.communicate(), timeout=10.0)
         stderr_text = stderr_bytes.decode() if stderr_bytes else ""
-    except (OSError, asyncio.TimeoutError) as e:
+    except (TimeoutError, OSError) as e:
         log.warning(f"ffprobe failed for {stream_id}: {e}")
         return {"codec": "unknown", "error": str(e)}
     except (ValueError, RuntimeError) as e:

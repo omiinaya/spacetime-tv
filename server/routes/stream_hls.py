@@ -5,8 +5,8 @@ Extracted from stream.py during decomposition of the 1105-line monolithic file.
 import asyncio
 import logging
 from pathlib import Path
-from typing import Optional
 
+import httpx
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
@@ -24,7 +24,7 @@ _hls_procs: dict[str, asyncio.subprocess.Process] = {}
 _mkv_downloaders: dict[str, asyncio.subprocess.Process] = {}
 
 
-async def download_mkv(stream_id: str, stream_type: str, cache_key: str) -> Optional[Path]:
+async def download_mkv(stream_id: str, stream_type: str, cache_key: str) -> Path | None:
     """Download MKV from CDN to disk with retries."""
     mkv_path = CACHE_DIR / f"{cache_key}.mkv"
     if mkv_path.exists() and mkv_path.stat().st_size > 0:
@@ -119,7 +119,7 @@ async def ensure_hls(stream_id: str, stream_type: str, seek_seconds: float = 0) 
 @router.get("/movie/hls/{stream_id}")
 async def movie_hls_start(stream_id: int, start: float = 0):
     """Start HLS streaming for a movie."""
-    ready = await ensure_hls(str(stream_id), "movie", start)
+    await ensure_hls(str(stream_id), "movie", start)
     cache_key = f"movie_{stream_id}"
     pl_path = HLS_DIR / cache_key / "playlist.m3u8"
     if pl_path.exists():
@@ -130,7 +130,7 @@ async def movie_hls_start(stream_id: int, start: float = 0):
 @router.get("/series/hls/{series_id}/{episode_id}")
 async def series_hls_start(series_id: int, episode_id: int, start: float = 0):
     """Start HLS streaming for a series episode."""
-    ready = await ensure_hls(str(episode_id), "series", start)
+    await ensure_hls(str(episode_id), "series", start)
     cache_key = f"series_{episode_id}"
     pl_path = HLS_DIR / cache_key / "playlist.m3u8"
     if pl_path.exists():

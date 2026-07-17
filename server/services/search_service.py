@@ -3,8 +3,9 @@ import asyncio
 import logging
 
 from fastapi import HTTPException
+
 from iptv_client import cached_fetch
-from state import CACHE_VOD_CATEGORIES, CACHE_VOD_CAT, CACHE_SERIES_CATEGORIES, CACHE_SERIES_CAT
+from state import CACHE_SERIES_CAT, CACHE_SERIES_CATEGORIES, CACHE_VOD_CAT, CACHE_VOD_CATEGORIES
 
 log = logging.getLogger("spacetime-tv")
 
@@ -30,7 +31,7 @@ async def search_all_vod(query: str) -> list:
                     if query in s.get("name", "").lower():
                         out.append(s)
         return out
-    except (HTTPException, asyncio.TimeoutError) as e:
+    except (TimeoutError, HTTPException) as e:
         log.error(f"VOD search error: {e}")
         return []
 
@@ -58,6 +59,6 @@ async def search_all_series(query: str) -> list:
                     if query in name or query in plot:
                         out.append(s)
         return out
-    except (HTTPException, asyncio.TimeoutError) as e:
+    except (TimeoutError, HTTPException) as e:
         log.error(f"Series search error: {e}")
         return []

@@ -80,8 +80,9 @@ def test_warm_cache_returns_cached(client_with_cache):
 
 def test_stale_cache_served_on_upstream_failure(client_with_cache):
     """When upstream fails but stale cache exists, stale data is returned."""
-    from state import _cache
     import time
+
+    from state import _cache
 
     stale_time = time.time() - 1000  # Well past TTL
     _cache["live_cats"] = (stale_time, [{"category_id": 1, "category_name": "StaleNews"}])
@@ -96,7 +97,7 @@ def test_stale_cache_served_on_upstream_failure(client_with_cache):
 
 def test_cache_miss_returns_error(client_with_cache):
     """Cold cache + upstream failure should return 502."""
-    resp = client_with_cache.get("/api/v1/movies/categories?category_id=nonexistent")
+    client_with_cache.get("/api/v1/movies/categories?category_id=nonexistent")
     pass
 
 

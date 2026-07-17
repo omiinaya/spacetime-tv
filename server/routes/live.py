@@ -4,10 +4,11 @@ Extracted from main.py during P1.1 Phase 6 decomposition.
 """
 import logging
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from iptv_client import cached_fetch
-from state import CACHE_LIVE_ALL, CACHE_LIVE_CATS
+from state import CACHE_LIVE_CATS
+
 # live_{category_id} is fetched on-demand (not pre-warmed), so no constant needed for it
 
 log = logging.getLogger("spacetime-tv")

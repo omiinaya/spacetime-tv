@@ -5,10 +5,20 @@ per device, each with their own PIN for access control.
 """
 import logging
 import time
+
 from fastapi import APIRouter, HTTPException, Request
+
 from auth import (
-    create_profile, verify_profile_pin, get_profile,
-    list_profiles, delete_profile, _load_profiles, _save_profiles,
+    _load_profiles,
+    _save_profiles,
+    add_profile_history,
+    clear_profile_history,
+    create_profile,
+    delete_profile,
+    get_profile,
+    get_profile_history,
+    list_profiles,
+    verify_profile_pin,
 )
 
 log = logging.getLogger("spacetime-tv")

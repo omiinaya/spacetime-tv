@@ -4,11 +4,9 @@ Tests _mime_from_url, generate_live_mpd, generate_vod_mpd,
 serve_cached_mp4, and related pure/isolatable helpers.
 """
 
-import json
 from pathlib import Path
 
 import pytest
-
 
 # ── _mime_from_url ─────────────────────────────────────────────────────────────
 
@@ -113,9 +111,9 @@ def test_generate_vod_mpd_xml_escaping():
 
 def test_serve_cached_mp4_no_range(tmp_path, monkeypatch):
     """serve_cached_mp4 returns FileResponse with full file when no Range header."""
-    from routes.stream import serve_cached_mp4
     from fastapi import Request
-    from starlette.datastructures import Headers
+
+    from routes.stream import serve_cached_mp4
 
     # Create a small test file
     test_file = tmp_path / "test.mp4"
@@ -139,9 +137,9 @@ def test_serve_cached_mp4_no_range(tmp_path, monkeypatch):
 
 def test_serve_cached_mp4_with_range(tmp_path, monkeypatch):
     """serve_cached_mp4 returns StreamingResponse with 206 when Range header present."""
-    from routes.stream import serve_cached_mp4
     from fastapi import Request
-    from starlette.datastructures import Headers
+
+    from routes.stream import serve_cached_mp4
 
     test_file = tmp_path / "test.mp4"
     content = bytes(range(256))  # 256 bytes
@@ -167,8 +165,9 @@ def test_serve_cached_mp4_with_range(tmp_path, monkeypatch):
 
 def test_serve_cached_mp4_range_open_ended(tmp_path):
     """Range without end serves from start to end of file."""
-    from routes.stream import serve_cached_mp4
     from fastapi import Request
+
+    from routes.stream import serve_cached_mp4
 
     test_file = tmp_path / "test.mp4"
     content = bytes(range(100))

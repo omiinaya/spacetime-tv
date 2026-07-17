@@ -6,13 +6,14 @@ import asyncio
 import json
 import logging
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
-from iptv_client import cached_fetch, client, iptv_xmltv_url
 
 from config import EPG_CACHE_FILE, EPG_CACHE_TTL
-from state import _epg_clients, epg_cache, _epg_refresh_task, _guide_cache, CACHE_LIVE_ALL
+from iptv_client import cached_fetch, client, iptv_xmltv_url
+from state import CACHE_LIVE_ALL, _epg_clients, _epg_refresh_task, _guide_cache, epg_cache
+
 from .guide_core import parse_xmltv
 
 log = logging.getLogger("spacetime-tv")
@@ -51,7 +52,7 @@ async def load_epg() -> dict:
         EPG_CACHE_FILE.write_text(json.dumps({"data": data, "fetched": now}))
         log.info(f"EPG parsed: {len(data.get('programmes', []))} programmes")
         return data
-    except (httpx.HTTPError, httpx.TimeoutException, asyncio.TimeoutError, json.JSONDecodeError) as e:
+    except (TimeoutError, httpx.HTTPError, httpx.TimeoutException, json.JSONDecodeError) as e:
         log.error(f"EPG fetch failed: {e}")
         if epg_cache["data"]:
             return epg_cache["data"]
@@ -133,7 +134,7 @@ async def _build_guide_cache() -> tuple[list[dict], int]:
     except (httpx.HTTPError, KeyError, IndexError) as e:
         log.warning(f"EPG: Failed to load live_all for stream mapping: {e}")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cutoff_past = now - timedelta(minutes=30)
     cutoff_future = now + timedelta(hours=4)
 

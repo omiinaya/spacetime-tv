@@ -26,20 +26,19 @@ from routes.stream_core import (
     get_content_length,
     stream_proxy,
 )
-from routes.stream_dash import generate_live_mpd, generate_vod_mpd
-from routes.stream_probe import probe_stream
-from routes.stream_convert import _converting, CACHE_DIR, serve_cached_mp4
-from routes.stream_hls import serve_hls_file
+from routes.stream_convert import CACHE_DIR, _converting, serve_cached_mp4  # noqa: F401
+from routes.stream_convert import router as _convert_router
+from routes.stream_dash import generate_live_mpd, generate_vod_mpd  # noqa: F401
+from routes.stream_dash import router as _dash_router
+from routes.stream_hls import serve_hls_file  # noqa: F401
+from routes.stream_hls import router as _hls_router
+from routes.stream_live import router as _live_router
+from routes.stream_probe import probe_stream  # noqa: F401
+from routes.stream_probe import router as _probe_router
+from routes.stream_vod import router as _vod_router
 
 # Aggregated router — includes all sub-routers so main.py's
 # ``from routes.stream import router`` picks up every route.
-from routes.stream_live import router as _live_router
-from routes.stream_vod import router as _vod_router
-from routes.stream_convert import router as _convert_router
-from routes.stream_hls import router as _hls_router
-from routes.stream_dash import router as _dash_router
-from routes.stream_probe import router as _probe_router
-
 router = APIRouter(tags=["stream"])
 router.include_router(_live_router)
 router.include_router(_vod_router)

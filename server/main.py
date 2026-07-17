@@ -1,18 +1,13 @@
 """Spacetime-TV Backend — IPTV proxy + EPG parser."""
 import asyncio
-import json
 import logging
 import os
 import time
-import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
-from typing import Optional
-
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Query, Request
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
 logging.basicConfig(level=logging.INFO)
@@ -20,25 +15,25 @@ log = logging.getLogger("spacetime-tv")
 
 # ── Config (imported from config.py to avoid duplication) ─────────────────
 from config import (
-    IPTV_BASE, IPTV_USER, IPTV_PASS, EPG_CACHE_FILE, EPG_CACHE_TTL,
-    ROOT, STATIC_DIR, TMDB_API_KEY, TMDB_BASE, UA_STR,
     CORS_ORIGINS,
-    RATE_WINDOW, RATE_SEARCH_LIMIT, RATE_DEFAULT_LIMIT,
     ENFORCE_HTTPS,
+    RATE_DEFAULT_LIMIT,
+    RATE_SEARCH_LIMIT,
+    RATE_WINDOW,
+    STATIC_DIR,
 )
-from state import SERVER_START_TIME, _load_stream_hits, _cache  # re-exported for tests
+from state import _load_stream_hits  # re-exported for tests
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _load_stream_hits()
-    from config import ADMIN_API_KEY, _AUTO_GEN_KEY
+    from config import _AUTO_GEN_KEY, ADMIN_API_KEY
     if _AUTO_GEN_KEY:
         log.info(f"🔑 Admin API key auto-generated: {ADMIN_API_KEY}")
         log.info("   Set ADMIN_API_KEY in server/.env to use a fixed key")
     start_cleanup_task()
     start_cache_warmer()
-    from routes.guide import _epg_broadcast_loop
     _epg_broadcast_task = asyncio.create_task(_epg_broadcast_loop())
     yield
 
@@ -47,23 +42,26 @@ app = FastAPI(title="Spacetime-TV", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 # GZip compression for API responses — JSON payloads compress 5-10x
 from fastapi.middleware.gzip import GZipMiddleware
+
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # ── Route modules ─────────────────────────────────────────────────────────
-from routes.health import router as health_router
 from routes.admin import router as admin_router
-from routes.tmdb import router as tmdb_router
-from routes.stream import router as stream_router
-from routes.search import router as search_router
-from routes.guide import router as guide_router, _epg_broadcast_loop
-from routes.watchlist import router as watchlist_router
-from routes.live import router as live_router
-from routes.vod import router as vod_router
-from routes.media import router as media_router
-from routes.record import router as record_router
 from routes.cloud_sync import router as cloud_sync_router
+from routes.guide import _epg_broadcast_loop
+from routes.guide import router as guide_router
+from routes.health import router as health_router
+from routes.live import router as live_router
+from routes.media import router as media_router
 from routes.misc import router as misc_router
 from routes.profiles import router as profiles_router
+from routes.record import router as record_router
+from routes.search import router as search_router
+from routes.stream import router as stream_router
+from routes.tmdb import router as tmdb_router
+from routes.vod import router as vod_router
+from routes.watchlist import router as watchlist_router
+
 app.include_router(health_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 app.include_router(tmdb_router, prefix="/api/v1")
@@ -164,6 +162,7 @@ async def https_redirect_middleware(request: Request, call_next):
 # resolution — it only triggers for paths that hit 404 at /api/... but exist
 # under /api/v1/... (or any /api/... path that needs redirecting).
 from fastapi.responses import RedirectResponse
+
 
 @app.middleware("http")
 async def api_redirect_middleware(request: Request, call_next):
@@ -282,17 +281,20 @@ app.add_middleware(SecurityHeadersMiddleware)
 # ── Cache Warming ───────────────────────────────────────────────────────────
 # warm_cache() moved to routes/cache_warmer.py -- admin.py and routes import
 # from there directly, eliminating circular import of main.py.
-from routes.cache_warmer import is_warm_running, start_cache_warmer, warm_cache
-from routes.cache_warmer import CACHE_WARM_ENABLED, CACHE_WARM_CATEGORIES  # noqa: F401 — re-exported for tests
-
 # ── Disk Cache (for VOD MP4, HLS, DASH — persistent across restarts) ────
 from config import CACHE_DIR
+from routes.cache_warmer import (  # noqa: F401 — re-exported for tests
+    CACHE_WARM_CATEGORIES,
+    CACHE_WARM_ENABLED,
+    start_cache_warmer,
+)
+
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Cache TTL / Auto-cleanup ────────────────────────────────────────────────
 CLEANUP_TTL_HOURS = 2  # Delete stale cache entries older than this (env: CACHE_TTL_HOURS for backward compat)
 CLEANUP_INTERVAL = 600
-_cleanup_task: Optional[asyncio.Task] = None
+_cleanup_task: asyncio.Task | None = None
 
 
 def touch_access(cache_key: str):
@@ -300,7 +302,7 @@ def touch_access(cache_key: str):
     stamp_path.write_text(str(time.time()))
 
 
-def get_last_access(cache_key: str) -> Optional[float]:
+def get_last_access(cache_key: str) -> float | None:
     stamp_path = CACHE_DIR / f".{cache_key}.accessed"
     try:
         return float(stamp_path.read_text().strip())

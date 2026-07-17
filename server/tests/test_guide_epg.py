@@ -8,12 +8,11 @@ Covers all uncovered paths identified by coverage analysis:
   - _parse_ts(): valid/invalid timestamps
 """
 
+import asyncio
 import json
 import time
-import asyncio
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch, mock_open
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -22,7 +21,7 @@ import pytest
 def _epg_timestamp(dt=None):
     """Format a datetime to EPG XMLTV timestamp format: YYYYMMDDhhmmss +0000"""
     if dt is None:
-        dt = datetime.now(timezone.utc)
+        dt = datetime.now(UTC)
     return dt.strftime("%Y%m%d%H%M%S") + " +0000"
 
 
@@ -48,7 +47,7 @@ class TestParseTs:
         from routes.guide_epg import _parse_ts
         ts = "20240704081530 +0000"
         dt = _parse_ts(ts)
-        assert dt == datetime(2024, 7, 4, 8, 15, 30, tzinfo=timezone.utc)
+        assert dt == datetime(2024, 7, 4, 8, 15, 30, tzinfo=UTC)
 
     def test_parse_ts_midnight(self):
         """Parse a midnight timestamp."""
@@ -114,8 +113,8 @@ class TestLoadEpg:
     async def test_load_epg_disk_cache_corrupted(self, mock_parse, mock_cache_file, mock_client):
         """When disk cache is corrupted, log warning and fall through to HTTP fetch."""
         from routes.guide_epg import load_epg
-        from state import epg_cache
         from routes.guide_epg import log as epg_log
+        from state import epg_cache
 
         old_data = {"old": "stale"}
         epg_cache["data"] = old_data
@@ -147,7 +146,7 @@ class TestLoadEpg:
     async def test_load_epg_http_fetch_success(self, mock_parse, mock_cache_file, mock_client):
         """Successful HTTP fetch parses XMLTV, saves to disk, invalidates guide cache."""
         from routes.guide_epg import load_epg
-        from state import epg_cache, _guide_cache
+        from state import _guide_cache, epg_cache
 
         epg_cache["data"] = None
         epg_cache["fetched"] = 0
@@ -245,7 +244,7 @@ class TestLoadEpgBackground:
     async def test_load_epg_background_fresh_data(self, mock_load_epg):
         """When data is fresh, return it and don't create background task."""
         from routes.guide_epg import load_epg_background
-        from state import epg_cache, _epg_refresh_task
+        from state import _epg_refresh_task, epg_cache
 
         now = time.time()
         epg_cache["data"] = {"channels": [], "programmes": []}
@@ -263,11 +262,10 @@ class TestLoadEpgBackground:
     @patch("routes.guide_epg.load_epg")
     async def test_load_epg_background_stale_triggers_refresh(self, mock_load_epg):
         """When data is stale, return stale data immediately and start background refresh."""
-        from routes.guide_epg import load_epg_background
-        from state import epg_cache, _epg_refresh_task
-
         # Ensure clean state — force None so condition triggers
         import routes.guide_epg as _ge
+        from routes.guide_epg import load_epg_background
+        from state import epg_cache
         _ge._epg_refresh_task = None
 
         old_time = time.time() - 99999
@@ -340,7 +338,7 @@ class TestBuildGuideCache:
         """When live_all has valid epg_channel_id mappings, stream_id is correctly populated."""
         from routes.guide_epg import _build_guide_cache
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         epg_data = {
             "channels": [{"id": "BBC1.uk", "name": "BBC One", "icon": ""}],
             "programmes": [{
@@ -372,7 +370,7 @@ class TestBuildGuideCache:
         """When multiple streams share the same epg_channel_id, only first mapping is kept."""
         from routes.guide_epg import _build_guide_cache
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         epg_data = {
             "channels": [{"id": "BBC1.uk", "name": "BBC One", "icon": ""}],
             "programmes": [{
@@ -403,9 +401,8 @@ class TestBuildGuideCache:
     async def test_build_guide_cache_stream_mapping_failure(self, mock_load_bg, mock_cached_fetch):
         """When live_all fetch fails, stream_id mapping gracefully degrades."""
         from routes.guide_epg import _build_guide_cache
-        from state import epg_cache, _guide_cache
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         epg_data = {
             "channels": [{"id": "C1", "name": "Chan1", "icon": ""}],
             "programmes": [{
@@ -436,7 +433,7 @@ class TestBuildGuideCache:
         """Programmes ending before cutoff_past should be filtered out."""
         from routes.guide_epg import _build_guide_cache
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         epg_data = {
             "channels": [{"id": "C1", "name": "Chan1", "icon": ""}],
             "programmes": [
@@ -476,7 +473,7 @@ class TestBuildGuideCache:
         """Programmes starting after cutoff_future should be filtered out."""
         from routes.guide_epg import _build_guide_cache
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         epg_data = {
             "channels": [{"id": "C1", "name": "Chan1", "icon": ""}],
             "programmes": [
@@ -516,7 +513,7 @@ class TestBuildGuideCache:
         """Programmes with malformed timestamps are skipped."""
         from routes.guide_epg import _build_guide_cache
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         epg_data = {
             "channels": [{"id": "C1", "name": "Chan1", "icon": ""}],
             "programmes": [
@@ -570,7 +567,7 @@ class TestBuildGuideCache:
         """Multiple channels are sorted alphabetically."""
         from routes.guide_epg import _build_guide_cache
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         epg_data = {
             "channels": [
                 {"id": "Z.ch", "name": "Z Channel", "icon": ""},

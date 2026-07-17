@@ -6,15 +6,15 @@ import asyncio
 import json
 import logging
 import time
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 
 from config import TMDB_ENRICH_PATH as _TMDB_ENRICH
-from state import _epg_clients, _guide_cache, epg_cache, CACHE_LIVE_ALL
 from iptv_client import cached_fetch
+from state import CACHE_LIVE_ALL, _epg_clients, _guide_cache, epg_cache
+
 from .guide_core import _EPG_ENRICH_CACHE, _EPG_ENRICH_TTL
 from .guide_epg import _build_guide_cache, _parse_ts, load_epg_background
 
@@ -30,7 +30,7 @@ router = APIRouter(tags=["guide"])
 # ── Route: TV Guide ─────────────────────────────────────────────────────
 @router.get("/guide")
 async def tv_guide(
-    channel: Optional[str] = None,
+    channel: str | None = None,
     offset: int = Query(0, ge=0),
     limit: int = Query(60, ge=1, le=200),
 ):
@@ -41,7 +41,7 @@ async def tv_guide(
     Returns: { channel_groups: [...], total_channels: N }
     """
     # Use cached guide if available and EPG hasn't been refreshed since
-    now = time.time()
+    time.time()
     use_cache = (
         _guide_cache["channel_groups"] is not None
         and _guide_cache["built_at"] >= epg_cache["fetched"]
@@ -58,7 +58,7 @@ async def tv_guide(
         total = len(channel_groups)
 
     # Recompute is_live labels for the paginated slice (time-sensitive)
-    now_dt = datetime.now(timezone.utc)
+    now_dt = datetime.now(UTC)
     page = channel_groups[offset:offset + limit]
     for group in page:
         for prog in group["programmes"]:
@@ -94,7 +94,7 @@ async def epg_sse(request: Request):
                 try:
                     msg = await asyncio.wait_for(q.get(), timeout=30.0)
                     yield f"event: {msg}\ndata: refreshed\n\n"
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     ts = int(time.time())
                     yield f"event: ping\ndata: {ts}\n\n"
         finally:
@@ -143,7 +143,7 @@ async def guide_now(
     except HTTPException as e:
         log.warning(f"[GUIDE/NOW] Failed to load live_all: {e}")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cutoff_past = now - timedelta(minutes=30)
 
     result: dict[str, dict | None] = {}
@@ -215,7 +215,7 @@ async def guide_enrich(
         if result:
             _EPG_ENRICH_CACHE[cache_key] = (now, result)
             return {"enabled": True, "result": result}
-    except asyncio.TimeoutError:
+    except TimeoutError:
         log.warning(f"tmdb-enrich timed out for: {q[:50]}")
     except (OSError, json.JSONDecodeError) as e:
         log.warning(f"tmdb-enrich error for '{q[:50]}': {e}")
@@ -238,7 +238,7 @@ async def guide_catchup(
     """
     epg = await load_epg_background()
     programmes = epg.get("programmes", [])
-    channels = epg.get("channels", [])
+    epg.get("channels", [])
 
     # Map stream_id → epg_channel_id
     ch_id = None
@@ -255,7 +255,7 @@ async def guide_catchup(
         return {"programmes": [], "channel_id": None}
 
     # Find channel programmes within the time window
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     window_start = now - timedelta(hours=hours)
 
     results = []
@@ -312,7 +312,7 @@ async def guide_search(
     ch_map = {c["id"]: c.get("name", c["id"]) for c in channels}
 
     query = q.lower().strip()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     results = []
     for p in programmes:

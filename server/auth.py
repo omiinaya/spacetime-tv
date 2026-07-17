@@ -5,9 +5,16 @@ on all API endpoints. Extends the pattern from cloud_sync.py.
 
 Also handles per-user profiles with PIN codes (Smarter-compatible).
 """
-import hashlib, hmac, json, logging, os, secrets, time
-from typing import Optional
-from fastapi import Depends, HTTPException, Request, status
+import hashlib
+import hmac
+import json
+import logging
+import os
+import secrets
+import time
+
+from fastapi import HTTPException, Request, status
+
 from config import ADMIN_API_KEY
 
 log = logging.getLogger("spacetime-tv")
@@ -104,7 +111,7 @@ def _load_profiles() -> dict:
     path = _get_profiles_path()
     try:
         if os.path.exists(path):
-            with open(path, "r") as f:
+            with open(path) as f:
                 return json.load(f)
     except (json.JSONDecodeError, OSError) as e:
         log.warning(f"Failed to load profiles: {e}")
@@ -148,7 +155,7 @@ def verify_profile_pin(profile_id: str, pin: str) -> bool:
         return False
     return hmac.compare_digest(profile.get("pin", ""), pin)
 
-def get_profile(profile_id: str) -> Optional[dict]:
+def get_profile(profile_id: str) -> dict | None:
     """Get a profile by ID (without exposing PIN)."""
     profiles = _load_profiles()
     profile = profiles.get(profile_id)

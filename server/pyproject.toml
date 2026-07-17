@@ -1,0 +1,48 @@
+[project]
+name = "spacetime-tv-server"
+description = "SpacetimeTV FastAPI backend"
+requires-python = ">=3.11"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "I",  # isort
+    "N",  # pep8-naming
+    "UP", # pyupgrade
+    "B",  # bugbear
+    "SIM", # simplify
+    "T20", # flake8-print
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "E731",   # lambda assignment (used in tests)
+    "N802",   # function names (test fixtures)
+    "N803",   # argument names
+    "N806",   # variable names
+    "B028",   # no explicit stacklevel
+    "B904",   # raise-without-from-inside-except
+    "SIM108", # ternary instead of if-else
+    "SIM117", # multiple-with
+]
+
+[tool.ruff.lint.per-file-ignores]
+"routes/stream.py" = [
+    "F401",   # re-exports for backward compat
+    "I002",   # noqa comments prevent auto-sort
+]
+"tests/*" = [
+    "N801",   # class names
+    "T20",    # print statements
+]
+"routes/stream_probe.py" = [
+    "T20",    # print statements
+]
+
+[tool.ruf.pytest]
+[isort]
+force-single-line = false

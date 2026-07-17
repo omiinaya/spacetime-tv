@@ -4,6 +4,7 @@ Mocks all network/ffmpeg calls so tests run offline.
 """
 
 import os
+
 os.environ["ENFORCE_HTTPS"] = "false"
 import time
 from unittest.mock import patch
@@ -12,9 +13,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import app
-from routes.stream_core import stream_bytes, _ffmpeg_pipe
-from routes.stream_vod import stream_vod_transcode
-
 
 # ── Mock async generators ────────────────────────────────────────────────
 

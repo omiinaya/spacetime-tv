@@ -10,9 +10,7 @@ Covers:
   - Token hash verification (wrong token is rejected after registration)
 """
 
-import os
 from config import DATA_DIR
-from pathlib import Path
 
 BACKUP_FILE = DATA_DIR / "cloud_backup.json"
 
@@ -363,10 +361,12 @@ class TestAdminKeyOverride:
 
     def test_admin_key_bypasses_device_token(self):
         """Admin key can read any device's backup without device token."""
-        import config as cfg
         from unittest.mock import patch
-        from main import app
+
         from fastapi.testclient import TestClient
+
+        import config as cfg
+        from main import app
 
         with patch.object(cfg, "ADMIN_API_KEY", self.ADMIN_KEY):
             c = TestClient(app)
@@ -388,10 +388,12 @@ class TestAdminKeyOverride:
 
     def test_admin_key_can_read_wrong_token_device(self):
         """Admin key bypasses device token — can read any device."""
-        import config as cfg
         from unittest.mock import patch
-        from main import app
+
         from fastapi.testclient import TestClient
+
+        import config as cfg
+        from main import app
 
         with patch.object(cfg, "ADMIN_API_KEY", self.ADMIN_KEY):
             c = TestClient(app)

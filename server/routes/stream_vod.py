@@ -4,16 +4,15 @@ Extracted from stream.py during decomposition of the 1105-line monolithic file.
 """
 import logging
 from functools import partial
-from typing import Optional
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from state import track_hit
+
 from .stream_core import (
     _ffmpeg_pipe,
     _http_feed_stdin,
-    _lookup_extension,
     _mime_from_url,
     build_stream_url,
     stream_vod_bytes,
@@ -59,7 +58,7 @@ async def handle_vod_request(req: Request, stream_id: int, stream_type: str,
     )
 
 
-async def stream_vod_mpegts(url: str, start_time: Optional[float] = None):
+async def stream_vod_mpegts(url: str, start_time: float | None = None):
     """Remux VOD (any container) → MPEG-TS with -c copy (no re-encode).
 
     Uses curl_cffi to download from the CDN (bypasses Cloudflare's bot
@@ -116,7 +115,7 @@ async def stream_vod_transcode(url: str):
 # ── VOD stream routes ───────────────────────────────────────────────────────
 
 @router.get("/stream/movie/{stream_id}/remux")
-async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
+async def stream_movie_remux(stream_id: int, start: float | None = None):
     """Remux movie MKV→MPEG-TS for browser playback (mpegts.js)."""
     try:
         url = await build_stream_url(stream_id, "movie")
@@ -135,7 +134,7 @@ async def stream_movie_remux(stream_id: int, start: Optional[float] = None):
 
 
 @router.get("/stream/series/{series_id}/{episode_id}/remux")
-async def stream_series_remux(series_id: int, episode_id: int, start: Optional[float] = None):
+async def stream_series_remux(series_id: int, episode_id: int, start: float | None = None):
     """Remux series episode MKV→MPEG-TS for browser playback (mpegts.js)."""
     try:
         url = await build_stream_url(episode_id, "series")

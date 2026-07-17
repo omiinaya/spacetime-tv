@@ -10,14 +10,13 @@ import json
 import logging
 import os
 import time
-from typing import Optional
 
 import httpx
 from fastapi import HTTPException
 
 log = logging.getLogger("spacetime-tv")
 
-_warm_task: Optional[asyncio.Task] = None
+_warm_task: asyncio.Task | None = None
 
 
 def start_cache_warmer() -> None:
@@ -36,7 +35,7 @@ def is_warm_running() -> bool:
     return _warm_task is not None and not _warm_task.done()
 
 
-async def get_warm_task() -> Optional[asyncio.Task]:
+async def get_warm_task() -> asyncio.Task | None:
     """FastAPI dependency: returns the current warm task (if any)."""
     return _warm_task
 
@@ -55,8 +54,11 @@ async def warm_cache():
     """
     from iptv_client import cached_fetch
     from state import (
-        CACHE_LIVE_ALL, CACHE_VOD_CATEGORIES, CACHE_VOD_CAT,
-        CACHE_SERIES_CATEGORIES, CACHE_SERIES_CAT, _cache,
+        CACHE_LIVE_ALL,
+        CACHE_SERIES_CAT,
+        CACHE_SERIES_CATEGORIES,
+        CACHE_VOD_CAT,
+        CACHE_VOD_CATEGORIES,
     )
 
     if not CACHE_WARM_ENABLED:
@@ -145,7 +147,7 @@ async def warm_cache():
         channels = epg_data.get("channels", [])
         programmes = epg_data.get("programmes", [])
         log.info(f"[WARMER] EPG: {len(channels)} channels, {len(programmes)} programmes")
-    except (httpx.HTTPError, httpx.TimeoutException, asyncio.TimeoutError, OSError, json.JSONDecodeError) as e:
+    except (TimeoutError, httpx.HTTPError, httpx.TimeoutException, OSError, json.JSONDecodeError) as e:
         log.warning(f"[WARMER] EPG warm failed (non-fatal): {e}")
 
     elapsed = time.time() - start

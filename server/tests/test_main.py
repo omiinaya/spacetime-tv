@@ -1,28 +1,20 @@
 """Tests for main.py — rate limiter, cache warmer, cleanup loop, coherence."""
 
 import asyncio
-import os
+import contextlib
 import time
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
-import pytest
-from fastapi.testclient import TestClient as FastAPITestClient
 from starlette.testclient import TestClient
 
-from routes.cache_warmer import warm_cache, start_cache_warmer, _verify_cache_coherence
 from main import (
     CACHE_DIR,
-    CLEANUP_INTERVAL,
-    CLEANUP_TTL_HOURS,
-    cleanup_loop,
-    cleanup_stale_cache,
-    touch_access,
-    get_last_access,
     app,
+    cleanup_loop,
+    get_last_access,
+    touch_access,
 )
-from state import _cache
-
+from routes.cache_warmer import _verify_cache_coherence, start_cache_warmer, warm_cache
 
 # ════════════════════════════════════════════════════════════════════════════
 # RateLimitMiddleware — security-critical, completely untested
@@ -136,7 +128,6 @@ class TestWarmCache:
 
     async def test_warm_cache_disabled_returns_early(self):
         """When cw.CACHE_WARM_ENABLED=False, warm_cache returns immediately."""
-        import main as m
         import routes.cache_warmer as cw
         old = cw.CACHE_WARM_ENABLED
         try:
@@ -147,7 +138,6 @@ class TestWarmCache:
 
     async def test_warm_cache_runs_all_phases(self):
         """warm_cache with mocked upstream warms live + VOD + series + EPG."""
-        import main as m
         import routes.cache_warmer as cw
 
         old_enabled = cw.CACHE_WARM_ENABLED
@@ -178,7 +168,6 @@ class TestWarmCache:
 
     async def test_warm_cache_with_category_filter(self):
         """cw.CACHE_WARM_CATEGORIES filters which categories get warmed."""
-        import main as m
         import routes.cache_warmer as cw
 
         old_enabled = cw.CACHE_WARM_ENABLED
@@ -214,7 +203,6 @@ class TestWarmCache:
 
     async def test_warm_cache_live_failure_non_fatal(self):
         """A failing live warm does not crash the warmer."""
-        import main as m
         import routes.cache_warmer as cw
 
         old_enabled = cw.CACHE_WARM_ENABLED
@@ -243,7 +231,6 @@ class TestWarmCache:
 
     async def test_warm_cache_vod_failure_non_fatal(self):
         """A failing VOD warm does not crash the warmer."""
-        import main as m
         import routes.cache_warmer as cw
 
         old_enabled = cw.CACHE_WARM_ENABLED
@@ -272,7 +259,6 @@ class TestWarmCache:
 
     async def test_warm_cache_vod_retry_on_first_failure(self):
         """VOD category fetches retry once on first failure."""
-        import main as m
         import routes.cache_warmer as cw
 
         old_enabled = cw.CACHE_WARM_ENABLED
@@ -310,7 +296,6 @@ class TestWarmCache:
 
     async def test_warm_cache_empty_vod_categories(self):
         """Empty VOD categories logs a warning and continues."""
-        import main as m
         import routes.cache_warmer as cw
 
         old_enabled = cw.CACHE_WARM_ENABLED
@@ -339,7 +324,6 @@ class TestWarmCache:
 
     async def test_warm_cache_epg_failure_non_fatal(self):
         """A failing EPG warm does not crash the warmer."""
-        import main as m
         import routes.cache_warmer as cw
 
         old_enabled = cw.CACHE_WARM_ENABLED
@@ -377,10 +361,11 @@ class TestVerifyCacheCoherence:
 
     async def test_all_keys_present_no_warnings(self):
         """When all cache keys exist, no warnings are issued."""
-        from state import CACHE_KEY_PATTERNS, _cache as state_cache
+        from state import CACHE_KEY_PATTERNS
+        from state import _cache as state_cache
 
         state_cache.clear()
-        for name, pattern in CACHE_KEY_PATTERNS.items():
+        for _name, pattern in CACHE_KEY_PATTERNS.items():
             if "{id}" in pattern:
                 prefix = pattern.split("{")[0]
                 state_cache[f"{prefix}1"] = (time.time() + 9999, [{"id": 1}])
@@ -391,7 +376,7 @@ class TestVerifyCacheCoherence:
 
     async def test_missing_static_key_warns(self):
         """When a static cache key is missing, a warning is logged."""
-        from state import CACHE_KEY_PATTERNS, _cache as state_cache
+        from state import _cache as state_cache
 
         state_cache.clear()
         state_cache["live_all"] = (time.time() + 9999, [])
@@ -400,10 +385,11 @@ class TestVerifyCacheCoherence:
 
     async def test_empty_template_key_warns(self):
         """When a template key prefix has no entries, a warning is logged."""
-        from state import CACHE_KEY_PATTERNS, _cache as state_cache
+        from state import CACHE_KEY_PATTERNS
+        from state import _cache as state_cache
 
         state_cache.clear()
-        for name, pattern in CACHE_KEY_PATTERNS.items():
+        for _name, pattern in CACHE_KEY_PATTERNS.items():
             if "{id}" not in pattern:
                 state_cache[pattern] = (time.time() + 9999, [])
 
@@ -419,8 +405,6 @@ class TestStartCacheWarmer:
 
     async def test_creates_task_when_none(self):
         """start_cache_warmer creates a new asyncio.Task when _warm_task is None."""
-        import routes.cache_warmer as cw
-        import main as m
         import routes.cache_warmer as cw
 
         old_task = cw._warm_task
@@ -441,8 +425,6 @@ class TestStartCacheWarmer:
 
     async def test_replaces_done_task(self):
         """start_cache_warmer replaces a done task with a new one."""
-        import routes.cache_warmer as cw
-        import main as m
         import routes.cache_warmer as cw
 
         old_task = cw._warm_task
@@ -482,10 +464,8 @@ class TestStartCacheWarmer:
             assert cw._warm_task is task_before
 
             cw._warm_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await cw._warm_task
-            except asyncio.CancelledError:
-                pass
         finally:
             cw._warm_task = old_task
 
@@ -517,10 +497,8 @@ class TestCleanupLoop:
 
         with patch("main.cleanup_stale_cache", mock_cleanup):
             with patch("asyncio.sleep", mock_sleep):
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await cleanup_loop()
-                except asyncio.CancelledError:
-                    pass
 
         assert call_count >= 1
         assert sleep_count >= 1
@@ -544,10 +522,8 @@ class TestCleanupLoop:
 
         with patch("main.cleanup_stale_cache", mock_cleanup):
             with patch("asyncio.sleep", mock_sleep):
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await cleanup_loop()
-                except asyncio.CancelledError:
-                    pass
 
         # cleanup_stale_cache is called after each sleep; error is caught, loop continues
         assert call_count >= 2
@@ -630,7 +606,6 @@ class TestWarmCacheSeries:
 
     async def test_warm_cache_series_retry_on_first_failure(self):
         """Series category fetches retry once on first failure."""
-        import main as m
         import routes.cache_warmer as cw
 
         old_enabled = cw.CACHE_WARM_ENABLED
@@ -668,7 +643,6 @@ class TestWarmCacheSeries:
 
     async def test_warm_cache_empty_series_categories(self):
         """Empty series categories logs a warning and continues."""
-        import main as m
         import routes.cache_warmer as cw
 
         old_enabled = cw.CACHE_WARM_ENABLED
@@ -697,7 +671,6 @@ class TestWarmCacheSeries:
 
     async def test_warm_cache_vod_double_failure_still_returns_none(self):
         """VOD category that fails both attempts returns None (not Exception)."""
-        import main as m
         import routes.cache_warmer as cw
 
         old_enabled = cw.CACHE_WARM_ENABLED

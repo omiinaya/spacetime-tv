@@ -4,13 +4,12 @@ Extracted from main.py during P1.1 Phase 6 decomposition.
 """
 import logging
 import re
-from typing import Optional
 
 from fastapi import APIRouter, Query
 from fastapi.responses import RedirectResponse
 
-from iptv_client import cached_fetch, vod_url as _vod_url
-
+from iptv_client import cached_fetch
+from iptv_client import vod_url as _vod_url
 from state import (
     CACHE_SERIES_CAT,
     CACHE_SERIES_CATEGORIES,
@@ -62,7 +61,7 @@ async def movies_unified(
     # Collect all VOD streams from the in-memory cache
     groups: dict[str, dict] = {}
 
-    for key, (ts, data) in _cache.items():
+    for key, (_ts, data) in _cache.items():
         # Handle both unscoped keys (vod_10) and provider-scoped keys (Default:vod_10)
         # iptv_client.cached_fetch writes scoped keys like "{provider}:{key}"
         base_key = key.split(":", 1)[-1] if ":" in key else key

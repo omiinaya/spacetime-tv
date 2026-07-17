@@ -6,13 +6,14 @@ route handlers, and real IPTV API calls). Requires valid .env credentials.
 Run:  python -m pytest tests/ -m integration -v
 Skip: pytest automatically when IPTV credentials are placeholder values.
 """
-import pytest
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config import IPTV_USER, IPTV_PASS
+from config import IPTV_PASS, IPTV_USER
 
 # Only run if we have real-looking credentials (not test placeholders)
 _has_creds = bool(IPTV_USER and IPTV_PASS) and "test" not in IPTV_USER.lower()
@@ -25,8 +26,9 @@ pytestmark = [
 # Lazy import to avoid loading the app for skip conditions
 @pytest.fixture(scope="module")
 def client():
-    from main import app
     from fastapi.testclient import TestClient
+
+    from main import app
     return TestClient(app)
 
 

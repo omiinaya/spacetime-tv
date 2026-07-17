@@ -7,15 +7,13 @@ manifest at RECORDINGS_DIR / _meta.json. Supports concurrent recordings.
 import asyncio
 import json
 import logging
-import os
-import shutil
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 
 from config import DATA_DIR, UA_STR
 from iptv_client import iptv_referer
@@ -78,7 +76,7 @@ async def start_recording(
 
     rec_id = uuid.uuid4().hex[:12]
     out_path = RECORDINGS_DIR / f"{rec_id}.mp4"
-    started_at = datetime.now(timezone.utc)
+    started_at = datetime.now(UTC)
 
     cmd = [
         "/usr/bin/ffmpeg",
@@ -133,7 +131,7 @@ async def stop_recording(recording_id: str = Query(...)):
         proc.terminate()
         try:
             await asyncio.wait_for(proc.wait(), timeout=5)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             proc.kill()
             await proc.wait()
         _active.pop(recording_id, None)
@@ -142,7 +140,7 @@ async def stop_recording(recording_id: str = Query(...)):
     file_size = file_path.stat().st_size if file_path.exists() else 0
 
     rec["status"] = "completed" if file_size > 0 else "failed"
-    rec["stopped_at"] = datetime.now(timezone.utc).isoformat()
+    rec["stopped_at"] = datetime.now(UTC).isoformat()
     rec["size_bytes"] = file_size
     _save_meta(meta)
 
@@ -163,7 +161,7 @@ async def list_recordings():
             rec = meta.get(rid, {})
             if rec.get("status") == "recording":
                 rec["status"] = "completed"
-                rec["stopped_at"] = datetime.now(timezone.utc).isoformat()
+                rec["stopped_at"] = datetime.now(UTC).isoformat()
                 try:
                     rec["size_bytes"] = Path(rec.get("file", "")).stat().st_size
                 except OSError:
@@ -202,7 +200,7 @@ async def delete_recording(recording_id: str):
             proc.terminate()
             try:
                 await asyncio.wait_for(proc.wait(), timeout=5)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 proc.kill()
                 await proc.wait()
             _active.pop(recording_id, None)

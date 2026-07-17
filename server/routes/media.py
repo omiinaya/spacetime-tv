@@ -3,9 +3,9 @@
 Extracted from main.py during P1.1 Phase 6 decomposition.
 """
 import asyncio
+import contextlib
 import json
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response, StreamingResponse
@@ -53,7 +53,7 @@ async def probe_subtitles(media_type: str, stream_id: int):
                 })
         SUBTITLE_CACHE[cache_key] = tracks
         return {"tracks": tracks, "cached": False}
-    except asyncio.TimeoutError:
+    except TimeoutError:
         return {"tracks": [], "error": "Probe timed out"}
     except (OSError, json.JSONDecodeError, RuntimeError) as e:
         return {"tracks": [], "error": str(e)}
@@ -90,7 +90,7 @@ async def get_subtitles(media_type: str, stream_id: int, track_index: int):
             media_type="text/vtt",
             headers={"Cache-Control": "public, max-age=86400"},
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         raise HTTPException(504, "Subtitle extraction timed out")
     except HTTPException:
         raise
@@ -130,7 +130,7 @@ async def probe_audio(media_type: str, stream_id: int):
                 })
         AUDIO_CACHE[cache_key] = tracks
         return {"tracks": tracks, "cached": False}
-    except asyncio.TimeoutError:
+    except TimeoutError:
         return {"tracks": [], "error": "Probe timed out"}
     except (OSError, json.JSONDecodeError, RuntimeError) as e:
         return {"tracks": [], "error": str(e)}
@@ -164,10 +164,8 @@ async def stream_audio_track(media_type: str, stream_id: int, audio_index: int):
                     yield chunk
             finally:
                 if proc.returncode is None:
-                    try:
+                    with contextlib.suppress(OSError):
                         proc.kill()
-                    except OSError:
-                        pass
 
         return StreamingResponse(
             audio_stream(),

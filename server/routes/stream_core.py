@@ -5,21 +5,16 @@ These helpers are used by stream_live, stream_vod, stream_convert, stream_hls,
 stream_dash, and stream_probe modules.
 """
 import asyncio
-import json
 import logging
-import time
 from functools import partial
-from typing import Optional
 
 import aiohttp
 import httpx
-
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from config import UA_STR
-from iptv_client import build_timeshift_url as _build_timeshift_url, iptv_stream_url, iptv_vod_url, iptv_timeshift_url, get_active_provider
-from config import ProviderConfig
+from iptv_client import get_active_provider, iptv_stream_url, iptv_timeshift_url, iptv_vod_url
 
 log = logging.getLogger("spacetime-tv")
 
@@ -47,7 +42,6 @@ async def _lookup_extension(stream_id: int, stream_type: str) -> str:
     from iptv_client import cached_fetch, get_active_provider
 
     cache_key = f"ext_lookup_{stream_type}_{stream_id}"
-    cached_val = None
 
     # Check primary provider's category listings for the extension
     action = "get_live_streams" if stream_type == "live" else "get_vod_streams" if stream_type == "movie" else "get_series"
@@ -119,7 +113,7 @@ def build_timeshift_url(stream_id: int, duration_seconds: int, provider_idx: int
     provider = stream_core_get_provider(provider_idx)
     return iptv_timeshift_url(stream_id, duration_seconds, provider=provider)
 
-async def get_content_length(url: str) -> Optional[int]:
+async def get_content_length(url: str) -> int | None:
     """Discover Content-Length via Range request (HEAD returns 0 for this CDN)."""
     try:
         async with httpx.AsyncClient(timeout=10.0, follow_redirects=True,
@@ -137,7 +131,7 @@ async def get_content_length(url: str) -> Optional[int]:
 # ── Stream generators (byte-level) ─────────────────────────────────────────
 
 async def _http_iter_chunks(url: str, *,
-                            range_header: Optional[str] = None,
+                            range_header: str | None = None,
                             chunk_size: int = 1048576,
                             status_ok: tuple[int, ...] = (200,),
                             timeout: int = 120):
@@ -200,7 +194,7 @@ async def stream_bytes(url: str):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
 
 async def _http_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
-                           range_header: Optional[str] = None,
+                           range_header: str | None = None,
                            buf_size: int = 1048576,
                            log_prefix: str = ""):
     """Fetch a URL via aiohttp and pipe the data to an ffmpeg process stdin.
@@ -279,7 +273,7 @@ async def _ffmpeg_pipe(cmd: list[str], feed_coro):
             except OSError:
                 pass  # pragma: no cover — wait error, runtime only
 
-async def stream_vod_bytes(url: str, range_header: Optional[str] = None):
+async def stream_vod_bytes(url: str, range_header: str | None = None):
     """Generator that yields VOD bytes via curl_cffi streaming.
     Supports Range/206 for seeking.
     """
@@ -301,7 +295,7 @@ async def stream_proxy(url: str, content_type: str):
         log.error(f"Stream proxy error ({url}): {e}")
         return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
 
-async def stream_bytes_transcode(url: str, target_height: Optional[int] = None):
+async def stream_bytes_transcode(url: str, target_height: int | None = None):
     """Transcode HEVC→H.264 via ffmpeg using curl_cffi download pipe."""
     cmd = [
         "/usr/bin/ffmpeg",

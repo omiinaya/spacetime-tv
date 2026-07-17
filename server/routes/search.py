@@ -5,16 +5,13 @@ Extracted from main.py during P1.1 Phase 4 decomposition.
 import asyncio
 import json
 import logging
-import os
 import time
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
-from iptv_client import cached_fetch
-
 from config import TMDB_API_KEY, TMDB_ENRICH_PATH
-from state import _cache, record_search, CACHE_LIVE_ALL
+from iptv_client import cached_fetch
+from state import CACHE_LIVE_ALL, _cache, record_search
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["search"])
@@ -64,7 +61,7 @@ async def _enrich_tmdb_item(item_type: str, tmdb_id: str) -> dict | None:
                     data = None
             else:
                 data = None
-        except (FileNotFoundError, asyncio.TimeoutError, OSError):
+        except (TimeoutError, FileNotFoundError, OSError):
             data = None
 
     if not data:
@@ -163,7 +160,7 @@ async def search(
         """Scan ALL cache entries for this prefix, return ALL matches."""
         seen: set = set()
         out: list = []
-        for key, (ts, data) in _cache.items():
+        for key, (_ts, data) in _cache.items():
             if not key.startswith(prefix):
                 continue
             if not isinstance(data, list):

@@ -1,8 +1,8 @@
 """Spacetime-TV configuration — environment, paths, constants."""
-import os
 import json
+import os
+from dataclasses import dataclass
 from pathlib import Path
-from dataclasses import dataclass, field
 
 from dotenv import load_dotenv
 
@@ -101,6 +101,7 @@ UA_STR = os.getenv("UA_STR", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36
 # Auto-generates a random key if not set — logs it on first startup.
 # Set ADMIN_API_KEY in .env to disable auto-generation and use a known key.
 import secrets as _secrets
+
 _AUTO_GEN_KEY: str | None = None
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
 if not ADMIN_API_KEY:

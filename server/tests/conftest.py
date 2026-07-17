@@ -36,19 +36,19 @@ if _hits_file.exists():
 # Add server dir to Python path so `from main import ...` works
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from unittest.mock import AsyncMock, patch as _cached_fetch_patch
-import asyncio
-import asyncio
+import contextlib
+from unittest.mock import patch as _cached_fetch_patch
+
 import pytest
 from fastapi.testclient import TestClient
 
 # ══════════════════════════════════════════════════════════════════════════
 # Test configuration and fixtures
 # ══════════════════════════════════════════════════════════════════════════
-
 # Import main AFTER env vars are set
 from main import app
 from state import _cache
+
 
 # ── Lifespan override ──────────────────────────────────────────
 # Override the lifespan context manager to skip background tasks
@@ -67,7 +67,7 @@ def reset_shared_state():
     # Clear main cache so tests don't leak cached data between each other
     # (e.g. test_live_all_with_cache sets _cache["live_all"] which would
     #  otherwise contaminate test_live_info_empty_when_cache_empty)
-    from state import _cache, epg_cache, _progress_store
+    from state import _progress_store, epg_cache
     _cache.clear()
     epg_cache["data"] = None
     epg_cache["fetched"] = 0
@@ -82,16 +82,13 @@ def reset_shared_state():
     _search_queries.clear()
     _stream_hits.clear()
     # Clear provider HTTP clients to avoid stale loop references
-    from iptv_client import _provider_clients, client as _global_client
-    for k, c in list(_provider_clients.items()):
-        import asyncio
-        try:
+    from iptv_client import _provider_clients
+    from iptv_client import client as _global_client
+    for _k, c in list(_provider_clients.items()):
+        with contextlib.suppress(Exception):
             c.aclose()
-        except Exception:
-            pass
     _provider_clients.clear()
     try:
-        import asyncio
         if _global_client and not _global_client.is_closed:
             _global_client.aclose()
     except Exception:
@@ -122,8 +119,9 @@ def client():
         - Returns stale cache data as fallback (upstream always fails in tests)
         - Returns [] on cache miss (upstream unavailable)
         """
-        from state import _cache, CACHE_TTL
         import time
+
+        from state import CACHE_TTL
         now = time.time()
         if key in _cache:
             ts, cached_data = _cache[key]
@@ -157,8 +155,9 @@ def client():
 def client_with_cache():
     """App TestClient with cached_fetch that respects pre-populated cache but prevents upstream calls."""
     async def mock_cached_fetch(key, action, **params):
-        from state import _cache, CACHE_TTL
         import time
+
+        from state import CACHE_TTL
         now = time.time()
         if key in _cache:
             ts, cached_data = _cache[key]

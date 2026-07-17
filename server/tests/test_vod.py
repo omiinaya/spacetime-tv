@@ -5,7 +5,6 @@ client_with_cache fixture (real cached_fetch) from conftest.py.
 """
 import time
 
-
 # ── Movies: /api/movies/categories ────────────────────────────────
 # (basic test lives in test_categories.py; here we confirm structure)
 

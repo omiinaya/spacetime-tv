@@ -3,7 +3,7 @@
 Extracted from stream.py during decomposition of the 1105-line monolithic file.
 """
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter
 from fastapi.responses import Response
@@ -18,7 +18,7 @@ def generate_live_mpd(stream_id: int, stream_url: str) -> str:
     """Generate a dynamic MPD manifest for a live MPEG-TS stream."""
     mime = _mime_from_url(stream_url)
     safe_url = stream_url.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
-    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    now_iso = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     return f'''<?xml version="1.0" encoding="utf-8"?>
 <MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
      xmlns="urn:mpeg:dash:schema:mpd:2011"

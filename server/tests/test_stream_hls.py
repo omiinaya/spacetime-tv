@@ -14,8 +14,8 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from config import DATA_DIR
 
+from config import DATA_DIR
 
 # ── serve_hls_file ────────────────────────────────────────────────────────
 
@@ -27,8 +27,9 @@ def test_serve_hls_file_rejects_dotdot_in_filename(client_with_cache):
     This is a defense-in-depth — FastAPI normalizes URLs before routing,
     so we verify the logic via the serve_hls_file function directly.
     """
-    from routes.stream_hls import serve_hls_file
     import inspect
+
+    from routes.stream_hls import serve_hls_file
     source = inspect.getsource(serve_hls_file)
     assert '".." in filename' in source or "'..' in filename" in source
     assert '"/" in filename' in source
@@ -67,8 +68,9 @@ def test_series_hls_start_route_exists(client_with_cache):
 @pytest.mark.asyncio
 async def test_download_mkv_returns_cached_path():
     """download_mkv returns cached MKV path when file exists with size > 0."""
+    import tempfile
+
     from routes.stream_hls import download_mkv
-    import tempfile, os
 
     with tempfile.NamedTemporaryFile(suffix=".mkv", delete=False) as f:
         f.write(b"x" * 100)
@@ -76,7 +78,7 @@ async def test_download_mkv_returns_cached_path():
 
     try:
         with patch("routes.stream_hls.CACHE_DIR", tmp_path.parent), \
-             patch("routes.stream_hls.build_stream_url") as mock_build:
+             patch("routes.stream_hls.build_stream_url"):
             result = await download_mkv("1", "movie", "cached_test")
             assert result is not None
             # Should find the pre-existing MKV by different key logic
@@ -88,8 +90,8 @@ async def test_download_mkv_returns_cached_path():
 @pytest.mark.asyncio
 async def test_download_mkv_cache_key_path():
     """download_mkv constructs the correct cache key path."""
-    from routes.stream_hls import download_mkv, CACHE_DIR
-    import tempfile, os
+
+    from routes.stream_hls import CACHE_DIR, download_mkv
 
     # Create the file at the expected path
     cache_key = "dl_test_key"
@@ -107,8 +109,8 @@ async def test_download_mkv_cache_key_path():
 @pytest.mark.asyncio
 async def test_download_mkv_empty_file_not_cached():
     """download_mkv does NOT return an empty cached file."""
-    from routes.stream_hls import download_mkv, CACHE_DIR
-    import tempfile, os
+
+    from routes.stream_hls import CACHE_DIR, download_mkv
 
     cache_key = "empty_test"
     mkv_path = CACHE_DIR / f"{cache_key}.mkv"
@@ -123,7 +125,7 @@ async def test_download_mkv_empty_file_not_cached():
                 mock_proc.returncode = 0
                 mock_sub.return_value = mock_proc
 
-                result = await download_mkv("1", "movie", cache_key)
+                await download_mkv("1", "movie", cache_key)
                 # build_stream_url was called (not shortcut from cache)
                 mock_build.assert_called_once_with(1, "movie")
     finally:
@@ -136,8 +138,9 @@ async def test_download_mkv_empty_file_not_cached():
 @pytest.mark.asyncio
 async def test_run_hls_segmenter_creates_segment_dir():
     """run_hls_segmenter creates the segment directory."""
-    from routes.stream_hls import run_hls_segmenter, HLS_DIR
-    import tempfile, os, shutil
+    import shutil
+
+    from routes.stream_hls import HLS_DIR, run_hls_segmenter
 
     cache_key = "seg_test"
     seg_dir = HLS_DIR / cache_key
@@ -174,8 +177,9 @@ async def test_run_hls_segmenter_creates_segment_dir():
 @pytest.mark.asyncio
 async def test_run_hls_segmenter_nonzero_exit():
     """run_hls_segmenter handles non-zero ffmpeg exit gracefully."""
-    from routes.stream_hls import run_hls_segmenter, HLS_DIR
-    import tempfile, os, shutil
+    import shutil
+
+    from routes.stream_hls import HLS_DIR, run_hls_segmenter
 
     cache_key = "seg_fail"
     seg_dir = HLS_DIR / cache_key
@@ -205,8 +209,9 @@ async def test_run_hls_segmenter_nonzero_exit():
 @pytest.mark.asyncio
 async def test_ensure_hls_cached_mp4_triggers_segmenter():
     """ensure_hls triggers segmenter when cached MP4 exists."""
-    from routes.stream_hls import ensure_hls, CACHE_DIR, HLS_DIR
-    import tempfile, os, shutil
+    import shutil
+
+    from routes.stream_hls import CACHE_DIR, HLS_DIR, ensure_hls
 
     cache_key = "movie_1"
     mp4_path = CACHE_DIR / f"{cache_key}.mp4"
@@ -236,8 +241,8 @@ async def test_ensure_hls_cached_mp4_triggers_segmenter():
 @pytest.mark.asyncio
 async def test_ensure_hls_task_already_running():
     """ensure_hls returns False when a task is already in progress."""
-    from routes.stream_hls import ensure_hls, _hls_tasks
-    import tempfile, os
+
+    from routes.stream_hls import _hls_tasks, ensure_hls
 
     cache_key = "movie_2"
 

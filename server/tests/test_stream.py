@@ -4,10 +4,11 @@ Tests DASH manifest endpoints, probe endpoints with mocked cache,
 and error handling paths. Avoids real ffmpeg/curl_cffi calls by
 pre-populating caches and using the mock client fixture."""
 
-import pytest
 import time
+from unittest.mock import MagicMock, patch
+
 import httpx
-from unittest.mock import patch, MagicMock
+import pytest
 
 
 def test_live_dash_manifest_returns_mpd(client_with_cache):
@@ -36,7 +37,7 @@ def test_live_dash_manifest_has_cors_headers(client_with_cache):
          "tv_archive_duration": 0},
     ])
 
-    resp = client_with_cache.get("/api/v1/stream/live/999/manifest.mpd")
+    client_with_cache.get("/api/v1/stream/live/999/manifest.mpd")
 
 
 def test_live_dash_manifest_nonexistent_stream(client_with_cache):
@@ -197,6 +198,7 @@ def test_generate_mpd_escapes_xml_chars():
 def test_lookup_extension_cache_hit_movie(client_with_cache):
     """_lookup_extension returns extension from cache for a movie."""
     import asyncio
+
     from routes.stream import _lookup_extension
     from state import _cache
     _cache["vod_10"] = (1000.0, [
@@ -209,6 +211,7 @@ def test_lookup_extension_cache_hit_movie(client_with_cache):
 def test_lookup_extension_cache_hit_series(client_with_cache):
     """_lookup_extension returns extension from cache for a series."""
     import asyncio
+
     from routes.stream import _lookup_extension
     from state import _cache
     _cache["ext_lookup_series_300"] = (1000.0, [
@@ -221,6 +224,7 @@ def test_lookup_extension_cache_hit_series(client_with_cache):
 def test_lookup_extension_defaults_to_mp4_when_no_ext(client_with_cache):
     """_lookup_extension returns mp4 when container_extension is empty string."""
     import asyncio
+
     from routes.stream import _lookup_extension
     from state import _cache
     _cache["ext_lookup_movie_1"] = (1000.0, [
@@ -233,7 +237,7 @@ def test_lookup_extension_defaults_to_mp4_when_no_ext(client_with_cache):
 def test_lookup_extension_api_fallback_returns_extension(client_with_cache):
     """_lookup_extension falls back to API when cache is empty and returns ext."""
     import asyncio
-    from unittest.mock import patch
+
     from routes.stream import _lookup_extension
 
     mock_resp = MagicMock()
@@ -253,7 +257,7 @@ def test_lookup_extension_api_fallback_returns_extension(client_with_cache):
 def test_lookup_extension_api_fallback_error_returns_mkv(client_with_cache):
     """_lookup_extension returns mkv when API call fails."""
     import asyncio
-    from unittest.mock import patch
+
     from routes.stream import _lookup_extension
 
     class _MockCtxError:
@@ -269,7 +273,7 @@ def test_lookup_extension_api_fallback_error_returns_mkv(client_with_cache):
 def test_lookup_extension_api_series_info_path(client_with_cache):
     """_lookup_extension uses info.container_extension for series API response."""
     import asyncio
-    from unittest.mock import patch
+
     from routes.stream import _lookup_extension
 
     mock_resp = MagicMock()
@@ -291,6 +295,7 @@ def test_lookup_extension_api_series_info_path(client_with_cache):
 def test_build_stream_url_live_uses_ts():
     """build_stream_url returns live TS URL for live streams."""
     import asyncio
+
     from routes.stream import build_stream_url
     url = asyncio.run(build_stream_url(42, "live"))
     assert "live/test_user/test_pass/42.ts" in url or "/live/" in url
@@ -300,6 +305,7 @@ def test_build_stream_url_live_uses_ts():
 def test_build_stream_url_movie(client_with_cache):
     """build_stream_url returns movie URL with extension from cache."""
     import asyncio
+
     from routes.stream import build_stream_url
     from state import _cache
     _cache["vod_10"] = (1000.0, [
@@ -315,7 +321,8 @@ def test_build_stream_url_movie(client_with_cache):
 def test_get_content_length_from_content_range():
     """get_content_length parses Content-Range header correctly."""
     import asyncio
-    from unittest.mock import patch, AsyncMock
+    from unittest.mock import AsyncMock
+
     from routes.stream import get_content_length
 
     resp = AsyncMock()
@@ -337,7 +344,7 @@ def test_get_content_length_from_content_range():
 def test_get_content_length_from_content_length():
     """get_content_length falls back to Content-Length header."""
     import asyncio
-    from unittest.mock import patch
+
     from routes.stream import get_content_length
 
     class _MockCtx:
@@ -355,7 +362,7 @@ def test_get_content_length_from_content_length():
 def test_get_content_length_returns_none_on_missing_headers():
     """get_content_length returns None when neither header is present."""
     import asyncio
-    from unittest.mock import patch
+
     from routes.stream import get_content_length
 
     class _MockCtx:
@@ -373,7 +380,7 @@ def test_get_content_length_returns_none_on_missing_headers():
 def test_get_content_length_handles_exception():
     """get_content_length returns None when request fails."""
     import asyncio
-    from unittest.mock import patch
+
     from routes.stream import get_content_length
 
     class _MockCtxErr:
@@ -391,7 +398,7 @@ def test_get_content_length_handles_exception():
 def test_stream_proxy_returns_502_on_error():
     """stream_proxy returns 502 when underlying stream fails by consuming response."""
     import asyncio
-    from unittest.mock import patch
+
     from routes.stream import stream_proxy
 
     with patch("routes.stream_core.stream_bytes", side_effect=RuntimeError("CDN error")):
@@ -406,6 +413,7 @@ def test_stream_proxy_returns_502_on_error():
 def test_probe_stream_skips_ffprobe_for_mp4(client_with_cache):
     """probe_stream returns native H.264 for mp4/m4v without calling ffprobe."""
     import asyncio
+
     from routes.stream import probe_stream
     from state import _cache
     # Populate cache so extension lookup returns mp4
@@ -421,7 +429,8 @@ def test_probe_stream_cache_hit_returns_cached():
     """probe_stream returns cached result without running any subprocess."""
     import asyncio
     import time
-    from routes.stream import probe_stream, _probe_cache
+
+    from routes.stream import _probe_cache, probe_stream
     cached = {"codec": "hevc", "width": 3840, "height": 2160}
     _probe_cache["live_555"] = (time.time(), cached)
     result = asyncio.run(probe_stream(555, "live"))
@@ -432,7 +441,8 @@ def test_probe_stream_ffprobe_success_returns_codec():
     """probe_stream successfully parses ffprobe JSON output."""
     import asyncio
     import json
-    from unittest.mock import patch, AsyncMock
+    from unittest.mock import AsyncMock
+
     from routes.stream import probe_stream
 
     ffprobe_output = json.dumps({
@@ -457,12 +467,13 @@ def test_probe_stream_ffprobe_success_returns_codec():
 def test_probe_stream_ffprobe_timeout_returns_unknown():
     """probe_stream returns unknown codec when ffprobe times out."""
     import asyncio
-    from unittest.mock import patch, AsyncMock
+    from unittest.mock import AsyncMock
+
     from routes.stream import probe_stream
 
     proc = AsyncMock()
     # simulate TimeoutError on communicate
-    proc.communicate = AsyncMock(side_effect=asyncio.TimeoutError("Timed out"))
+    proc.communicate = AsyncMock(side_effect=TimeoutError("Timed out"))
 
     with patch("asyncio.create_subprocess_exec", return_value=proc):
         result = asyncio.run(probe_stream(777, "live"))
@@ -474,7 +485,8 @@ def test_probe_stream_ffprobe_empty_streams_returns_unknown():
     """probe_stream returns unknown when ffprobe finds no streams."""
     import asyncio
     import json
-    from unittest.mock import patch, AsyncMock
+    from unittest.mock import AsyncMock
+
     from routes.stream import probe_stream
 
     ffprobe_output = json.dumps({"streams": [], "format": {"format_name": "mp4"}})
@@ -490,7 +502,8 @@ def test_probe_stream_ffprobe_empty_streams_returns_unknown():
 def test_probe_stream_nonzero_exit_no_405():
     """probe_stream returns unknown when ffprobe fails without 405."""
     import asyncio
-    from unittest.mock import patch, AsyncMock, MagicMock
+    from unittest.mock import AsyncMock, MagicMock
+
     from routes.stream import probe_stream
 
     proc = AsyncMock()
@@ -514,7 +527,8 @@ def test_probe_stream_nonzero_exit_no_405():
 def test_probe_stream_ffprobe_returns_405_curl_cffi_fallback():
     """probe_stream tries curl_cffi fallback when ffprobe gets 405."""
     import asyncio
-    from unittest.mock import patch, AsyncMock
+    from unittest.mock import AsyncMock
+
     from routes.stream import probe_stream
 
     proc = AsyncMock()
@@ -544,9 +558,12 @@ def test_probe_stream_ffprobe_returns_405_curl_cffi_fallback():
 
 def test_serve_cached_mp4_no_range_returns_200():
     """serve_cached_mp4 returns full file when no Range header."""
-    import tempfile, os
+    import os
+    import tempfile
     from pathlib import Path
+
     from fastapi import Request
+
     from routes.stream import serve_cached_mp4
 
     with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
@@ -564,9 +581,12 @@ def test_serve_cached_mp4_no_range_returns_200():
 
 def test_serve_cached_mp4_range_returns_206():
     """serve_cached_mp4 returns partial content with Range header."""
-    import tempfile, os
+    import os
+    import tempfile
     from pathlib import Path
+
     from fastapi import Request
+
     from routes.stream import serve_cached_mp4
 
     content = b"\x00\x00\x00\x1cmoov" * 100  # 800 bytes
@@ -592,14 +612,12 @@ def test_serve_cached_mp4_range_returns_206():
 
 def test_convert_movie_ready(client_with_cache):
     """convert_movie returns 'ready' when MP4 file already cached."""
-    import tempfile, os
-    from unittest.mock import patch
     from routes.stream import CACHE_DIR
     cache_key = "movie_999999"
     output_path = CACHE_DIR / f"{cache_key}.mp4"
     try:
         output_path.write_text("fake content")
-        resp = client_with_cache.get(f"/api/v1/movie/convert/999999")
+        resp = client_with_cache.get("/api/v1/movie/convert/999999")
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ready"
@@ -615,7 +633,7 @@ def test_convert_movie_converting_lock(client_with_cache):
     lock_path = CACHE_DIR / f"{cache_key}.converting"
     try:
         lock_path.write_text("lock")
-        resp = client_with_cache.get(f"/api/v1/movie/convert/999998")
+        resp = client_with_cache.get("/api/v1/movie/convert/999998")
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "converting"
@@ -635,7 +653,7 @@ def test_convert_movie_new_conversion(client_with_cache):
     if lock_path.exists(): lock_path.unlink()
     _converting.pop(cache_key, None)
 
-    resp = client_with_cache.get(f"/api/v1/movie/convert/999997")
+    resp = client_with_cache.get("/api/v1/movie/convert/999997")
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "converting"
@@ -648,7 +666,7 @@ def test_convert_series_ep_ready(client_with_cache):
     output_path = CACHE_DIR / f"{cache_key}.mp4"
     try:
         output_path.write_text("fake content")
-        resp = client_with_cache.get(f"/api/v1/series/convert/1/777777")
+        resp = client_with_cache.get("/api/v1/series/convert/1/777777")
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "ready"
@@ -665,7 +683,7 @@ def test_convert_series_ep_with_retry(client_with_cache):
     try:
         output_path.write_text("stale")
         _converting.pop(cache_key, None)
-        resp = client_with_cache.get(f"/api/v1/series/convert/1/666666?retry=true")
+        resp = client_with_cache.get("/api/v1/series/convert/1/666666?retry=true")
         assert resp.status_code == 200
         # stale file should be removed by retry
         assert not output_path.exists()
@@ -684,7 +702,7 @@ def test_convert_movie_with_retry(client_with_cache):
         output_path.write_text("stale mp4")
         mkv_path.write_text("stale mkv")
         _converting.pop(cache_key, None)
-        resp = client_with_cache.get(f"/api/v1/movie/convert/555555?retry=true")
+        resp = client_with_cache.get("/api/v1/movie/convert/555555?retry=true")
         assert resp.status_code == 200
         # stale files should be removed by retry
         assert not output_path.exists()
@@ -707,8 +725,10 @@ def test_serve_mp4_not_found_returns_404(client_with_cache):
 def test_hls_path_traversal_returns_400():
     """serve_hls_file rejects path traversal characters in filename."""
     import asyncio
+
     import pytest
     from fastapi import HTTPException
+
     from routes.stream import serve_hls_file
 
     with pytest.raises(HTTPException) as exc_info:
@@ -814,7 +834,8 @@ async def _gather(agen):
 def test_http_iter_chunks_yields_chunks():
     """_http_iter_chunks yields bytes via aiohttp response."""
     import asyncio
-    from unittest.mock import patch, MagicMock, AsyncMock
+    from unittest.mock import AsyncMock, MagicMock
+
     from routes.stream import _http_iter_chunks
 
     mock_resp = MagicMock()
@@ -837,8 +858,10 @@ def test_http_iter_chunks_yields_chunks():
 def test_http_iter_chunks_raises_on_non_200():
     """_http_iter_chunks raises RuntimeError for non-200 status."""
     import asyncio
-    from unittest.mock import patch, MagicMock, AsyncMock
+    from unittest.mock import AsyncMock, MagicMock
+
     import pytest
+
     from routes.stream import _http_iter_chunks
 
     mock_resp = MagicMock()
@@ -858,7 +881,8 @@ def test_http_iter_chunks_raises_on_non_200():
 def test_http_iter_chunks_accepts_206_with_vod():
     """_http_iter_chunks accepts 206 when status_ok includes 206."""
     import asyncio
-    from unittest.mock import patch, MagicMock, AsyncMock
+    from unittest.mock import AsyncMock, MagicMock
+
     from routes.stream import _http_iter_chunks
 
     mock_resp = MagicMock()
@@ -882,7 +906,8 @@ def test_http_iter_chunks_accepts_206_with_vod():
 def test_http_iter_chunks_passes_range_header():
     """_http_iter_chunks passes Range header via aiohttp."""
     import asyncio
-    from unittest.mock import patch, MagicMock, AsyncMock
+    from unittest.mock import AsyncMock, MagicMock
+
     from routes.stream import _http_iter_chunks
 
     captured = {}
@@ -918,7 +943,8 @@ def test_http_iter_chunks_passes_range_header():
 def test_ffmpeg_pipe_yields_stdout():
     """_ffmpeg_pipe yields data from proc.stdout and cleans up."""
     import asyncio
-    from unittest.mock import patch, AsyncMock, MagicMock
+    from unittest.mock import AsyncMock, MagicMock
+
     from routes.stream import _ffmpeg_pipe
 
     proc = AsyncMock()
@@ -960,9 +986,10 @@ def test_stream_live_timeshift_non_existent(client_with_cache):
 
 def test_stream_vod_bytes_accepts_206():
     """stream_vod_bytes should accept 200 OR 206 status codes."""
-    from routes.stream_core import stream_vod_bytes, _http_iter_chunks
     # Thin wrapper test — verify the status_ok tuple includes 206
     import inspect
+
+    from routes.stream_core import stream_vod_bytes
     source = inspect.getsource(stream_vod_bytes)
     assert "status_ok=(200, 206)" in source or "206" in source
 
@@ -971,8 +998,8 @@ def test_stream_vod_bytes_accepts_206():
 
 def test_safe_convert_handles_exception():
     """_safe_convert should catch exceptions and remove from _converting."""
-    from routes.stream_convert import _safe_convert, _converting
-    from unittest.mock import patch, AsyncMock
+
+    from routes.stream_convert import _converting, _safe_convert
 
     _converting["test"] = "placeholder"
 
@@ -989,8 +1016,7 @@ def test_safe_convert_handles_exception():
 @pytest.mark.asyncio
 async def test_convert_to_mp4_returns_early_when_output_exists(tmp_path):
     """convert_to_mp4 returns immediately if output MP4 already exists."""
-    from routes.stream_convert import convert_to_mp4, CACHE_DIR
-    from unittest.mock import patch
+    from routes.stream_convert import convert_to_mp4
 
     output_path = tmp_path / "movie_1.mp4"
     output_path.write_text("fake mp4")
@@ -1003,8 +1029,9 @@ async def test_convert_to_mp4_returns_early_when_output_exists(tmp_path):
 @pytest.mark.asyncio
 async def test_convert_to_mp4_download_fails(tmp_path):
     """convert_to_mp4 handles subprocess download failure gracefully."""
+    from unittest.mock import AsyncMock
+
     from routes.stream_convert import convert_to_mp4
-    from unittest.mock import patch, AsyncMock
 
     proc = AsyncMock()
     proc.returncode = 1
@@ -1021,8 +1048,9 @@ async def test_convert_to_mp4_download_fails(tmp_path):
 @pytest.mark.asyncio
 async def test_convert_to_mp4_ffmpeg_fails(tmp_path):
     """convert_to_mp4 handles ffmpeg conversion failure gracefully."""
+    from unittest.mock import AsyncMock
+
     from routes.stream_convert import convert_to_mp4
-    from unittest.mock import patch, AsyncMock
 
     mkv_path = tmp_path / "movie_3.mkv"
     mkv_path.write_text("fake mkv content")
@@ -1047,7 +1075,7 @@ def test_build_timeshift_url_uses_correct_format():
     from routes.stream_core import build_timeshift_url
     url = build_timeshift_url(42, 3600)
     assert "/live/" in url
-    assert "/42/timeshift/3600.ts" in url or f"/42/timeshift/3600.ts" in url
+    assert "/42/timeshift/3600.ts" in url or "/42/timeshift/3600.ts" in url
 
 
 def test_build_timeshift_url_with_custom_duration():
@@ -1116,8 +1144,9 @@ def test_vod_series_route_accessible(client_with_cache):
 
 def test_stream_vod_mpegts_includes_start_time():
     """stream_vod_mpegts should include -ss when start_time given."""
-    from routes.stream_vod import stream_vod_mpegts
     import inspect
+
+    from routes.stream_vod import stream_vod_mpegts
     source = inspect.getsource(stream_vod_mpegts)
     assert "start_time" in source
     assert "-ss" in source
@@ -1125,8 +1154,9 @@ def test_stream_vod_mpegts_includes_start_time():
 
 def test_stream_vod_transcode_uses_h264():
     """stream_vod_transcode should use libx264 and aac."""
-    from routes.stream_vod import stream_vod_transcode
     import inspect
+
+    from routes.stream_vod import stream_vod_transcode
     source = inspect.getsource(stream_vod_transcode)
     assert "libx264" in source
     assert "aac" in source
@@ -1135,7 +1165,8 @@ def test_stream_vod_transcode_uses_h264():
 def test_ffmpeg_pipe_kills_on_generator_exit():
     """_ffmpeg_pipe kills ffmpeg when generator exits early."""
     import asyncio
-    from unittest.mock import patch, AsyncMock, MagicMock
+    from unittest.mock import AsyncMock, MagicMock
+
     from routes.stream import _ffmpeg_pipe
 
     proc = AsyncMock()
@@ -1152,7 +1183,7 @@ def test_ffmpeg_pipe_kills_on_generator_exit():
     with patch("asyncio.create_subprocess_exec", return_value=proc):
         async def run():
             gen = _ffmpeg_pipe(["/ffmpeg"], fake_feed)
-            async for chunk in gen:
+            async for _chunk in gen:
                 break
         asyncio.run(run())
     assert proc.kill.called
@@ -1161,7 +1192,6 @@ def test_ffmpeg_pipe_kills_on_generator_exit():
 
 def test_stream_live_handles_inner_stream_error(client_with_cache):
     """stream_live returns 502 when stream_bytes raises during iteration."""
-    from unittest.mock import patch
 
     async def mock_fail(_url):
         raise RuntimeError("Stream failed")
@@ -1197,8 +1227,9 @@ def test_stream_live_quality_route_exists(client_with_cache):
 
 def test_stream_live_has_error_handler():
     """stream_live wraps proxying in try/except returning 502 JSON."""
-    from routes.stream_live import stream_live
     import inspect
+
+    from routes.stream_live import stream_live
     source = inspect.getsource(stream_live)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
@@ -1206,8 +1237,9 @@ def test_stream_live_has_error_handler():
 
 def test_stream_live_transcode_has_error_handler():
     """stream_live_transcode wraps streaming in try/except returning 502 JSON."""
-    from routes.stream_live import stream_live_transcode
     import inspect
+
+    from routes.stream_live import stream_live_transcode
     source = inspect.getsource(stream_live_transcode)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
@@ -1215,8 +1247,9 @@ def test_stream_live_transcode_has_error_handler():
 
 def test_stream_live_timeshift_has_error_handler():
     """stream_live_timeshift wraps streaming in try/except returning 502 JSON."""
-    from routes.stream_live import stream_live_timeshift
     import inspect
+
+    from routes.stream_live import stream_live_timeshift
     source = inspect.getsource(stream_live_timeshift)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
@@ -1224,8 +1257,9 @@ def test_stream_live_timeshift_has_error_handler():
 
 def test_stream_live_quality_has_error_handler():
     """stream_live_quality wraps streaming in try/except returning 502 JSON."""
-    from routes.stream_live import stream_live_quality
     import inspect
+
+    from routes.stream_live import stream_live_quality
     source = inspect.getsource(stream_live_quality)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
@@ -1265,8 +1299,9 @@ def test_lookup_extension_skips_non_matching_prefix(client_with_cache):
     _cache["series_1"] = (1000.0, [{"series_id": 1, "container_extension": "mkv"}])
 
     # Asking for a movie (prefix "vod_") should skip series_ keys
-    from routes.stream_core import _lookup_extension
     import asyncio
+
+    from routes.stream_core import _lookup_extension
     result = asyncio.run(_lookup_extension(1, "movie"))
     # No cache hit — falls through to API fallback which fails in tests
     assert isinstance(result, str)  # Should return a string (defaults to "mkv")
@@ -1277,8 +1312,9 @@ def test_lookup_extension_skips_non_list_data(client_with_cache):
     from state import _cache
     _cache["vod_1"] = (1000.0, "not a list")
 
-    from routes.stream_core import _lookup_extension
     import asyncio
+
+    from routes.stream_core import _lookup_extension
     result = asyncio.run(_lookup_extension(1, "movie"))
     assert isinstance(result, str)
 
@@ -1287,8 +1323,9 @@ def test_lookup_extension_skips_non_list_data(client_with_cache):
 
 def test_stream_vod_mpegts_with_start_time_uses_seek():
     """stream_vod_mpegts includes -ss and range_header when start_time > 0."""
-    from routes.stream_vod import stream_vod_mpegts
     import inspect
+
+    from routes.stream_vod import stream_vod_mpegts
     source = inspect.getsource(stream_vod_mpegts)
     assert "-ss" in source
     assert "range_header" in source
@@ -1310,8 +1347,9 @@ def test_movie_proxy_routes_with_range(client_with_cache):
 
 def test_movie_remux_has_error_handler():
     """stream_movie_remux wraps streaming in try/except returning 502 JSON."""
-    from routes.stream_vod import stream_movie_remux
     import inspect
+
+    from routes.stream_vod import stream_movie_remux
     source = inspect.getsource(stream_movie_remux)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
@@ -1319,8 +1357,9 @@ def test_movie_remux_has_error_handler():
 
 def test_series_remux_has_error_handler():
     """stream_series_remux wraps streaming in try/except returning 502 JSON."""
-    from routes.stream_vod import stream_series_remux
     import inspect
+
+    from routes.stream_vod import stream_series_remux
     source = inspect.getsource(stream_series_remux)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
@@ -1328,8 +1367,9 @@ def test_series_remux_has_error_handler():
 
 def test_movie_transcode_has_error_handler():
     """stream_movie_transcode wraps streaming in try/except returning 502 JSON."""
-    from routes.stream_vod import stream_movie_transcode
     import inspect
+
+    from routes.stream_vod import stream_movie_transcode
     source = inspect.getsource(stream_movie_transcode)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
@@ -1337,8 +1377,9 @@ def test_movie_transcode_has_error_handler():
 
 def test_series_transcode_has_error_handler():
     """stream_series_transcode wraps streaming in try/except returning 502 JSON."""
-    from routes.stream_vod import stream_series_transcode
     import inspect
+
+    from routes.stream_vod import stream_series_transcode
     source = inspect.getsource(stream_series_transcode)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
@@ -1350,7 +1391,6 @@ def test_series_transcode_has_error_handler():
 @pytest.mark.asyncio
 async def test_stream_vod_mpegts_start_time_yields_with_mock_ffmpeg():
     """stream_vod_mpegts with start_time yields chunks when ffmpeg produces data."""
-    from unittest.mock import patch
     from routes.stream_vod import stream_vod_mpegts
 
     async def mock_ffmpeg(*args, **kwargs):
@@ -1371,7 +1411,6 @@ async def test_stream_vod_mpegts_start_time_yields_with_mock_ffmpeg():
 @pytest.mark.asyncio
 async def test_stream_vod_mpegts_start_time_zero_no_seek():
     """stream_vod_mpegts without start_time does not add -ss."""
-    from unittest.mock import patch
     from routes.stream_vod import stream_vod_mpegts
 
     async def mock_ffmpeg(*args, **kwargs):
@@ -1463,6 +1502,7 @@ def _make_error_client():
     os.environ["ENFORCE_HTTPS"] = "false"
     os.environ.setdefault("ADMIN_API_KEY", "test-admin-key-insecure")
     from fastapi.testclient import TestClient
+
     from main import app
     client = TestClient(app, raise_server_exceptions=False)
     client.headers.setdefault("X-Admin-Key", "test-admin-key-insecure")
@@ -1476,13 +1516,13 @@ def _make_error_client():
     os.environ.setdefault("CACHE_WARM_ENABLED", "false")
     os.environ.setdefault("ADMIN_API_KEY", "")
     from fastapi.testclient import TestClient
+
     from main import app
     return TestClient(app, raise_server_exceptions=False)
 
 
 def test_live_route_error_on_build_stream_url_failure():
     """stream_live returns 500 when build_stream_url raises (outside try)."""
-    from unittest.mock import patch
     with _make_error_client() as client:
         with patch("routes.stream_live.build_stream_url", side_effect=RuntimeError("build failed")):
             resp = client.get("/api/v1/stream/live/1")
@@ -1491,7 +1531,6 @@ def test_live_route_error_on_build_stream_url_failure():
 
 def test_live_transcode_error_on_build_stream_url_failure():
     """stream_live_transcode returns 500 when build_stream_url raises."""
-    from unittest.mock import patch
     with _make_error_client() as client:
         with patch("routes.stream_live.build_stream_url", side_effect=RuntimeError("build failed")):
             resp = client.get("/api/v1/stream/live/1/transcode")
@@ -1500,7 +1539,6 @@ def test_live_transcode_error_on_build_stream_url_failure():
 
 def test_live_quality_error_on_build_stream_url_failure():
     """stream_live_quality returns 500 when build_stream_url raises."""
-    from unittest.mock import patch
     with _make_error_client() as client:
         with patch("routes.stream_live.build_stream_url", side_effect=RuntimeError("build failed")):
             resp = client.get("/api/v1/stream/live/1/quality/720")
@@ -1509,7 +1547,6 @@ def test_live_quality_error_on_build_stream_url_failure():
 
 def test_vod_movie_remux_error_on_build_stream_url_failure():
     """stream_movie_remux returns 500 when build_stream_url raises."""
-    from unittest.mock import patch
     with _make_error_client() as client:
         with patch("routes.stream_vod.build_stream_url", side_effect=RuntimeError("build failed")):
             resp = client.get("/api/v1/stream/movie/1/remux")
@@ -1518,7 +1555,6 @@ def test_vod_movie_remux_error_on_build_stream_url_failure():
 
 def test_vod_series_remux_error_on_build_stream_url_failure():
     """stream_series_remux returns 500 when build_stream_url raises."""
-    from unittest.mock import patch
     with _make_error_client() as client:
         with patch("routes.stream_vod.build_stream_url", side_effect=RuntimeError("build failed")):
             resp = client.get("/api/v1/stream/series/1/42/remux")
@@ -1527,7 +1563,6 @@ def test_vod_series_remux_error_on_build_stream_url_failure():
 
 def test_vod_movie_transcode_error_on_build_stream_url_failure():
     """stream_movie_transcode returns 500 when build_stream_url raises."""
-    from unittest.mock import patch
     with _make_error_client() as client:
         with patch("routes.stream_vod.build_stream_url", side_effect=RuntimeError("build failed")):
             resp = client.get("/api/v1/stream/movie/1/transcode")
@@ -1536,7 +1571,6 @@ def test_vod_movie_transcode_error_on_build_stream_url_failure():
 
 def test_vod_series_transcode_error_on_build_stream_url_failure():
     """stream_series_transcode returns 500 when build_stream_url raises."""
-    from unittest.mock import patch
     with _make_error_client() as client:
         with patch("routes.stream_vod.build_stream_url", side_effect=RuntimeError("build failed")):
             resp = client.get("/api/v1/stream/series/1/42/transcode")

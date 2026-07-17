@@ -3,24 +3,21 @@
 Targets uncovered lines: 121, 146–154, 261–287, 303–305, 310–311.
 """
 import asyncio
+import contextlib
 import time
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from state import _cache
-from iptv_client import fetch_iptv
+from iptv_client import cached_fetch, fetch_iptv
 from main import (
     CACHE_DIR,
     CLEANUP_TTL_HOURS,
     cleanup_stale_cache,
     start_cleanup_task,
 )
-from iptv_client import fetch_iptv
 from state import _cache
-from iptv_client import cached_fetch
-
 
 # ── cached_fetch edge cases ──────────────────────────────────────────────────
 
@@ -165,7 +162,6 @@ class TestFetchIptv:
         async def mock_fetch(provider, action, **params):
             raise HTTPException(502, "IPTV provider error: Connection refused")
 
-        from fastapi import HTTPException
 
         with patch("iptv_client._fetch_single_provider", mock_fetch):
             with pytest.raises(HTTPException) as exc_info:
@@ -312,10 +308,8 @@ class TestStartCleanupTask:
 
         # Cancel and restore
         created.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await created
-        except asyncio.CancelledError:
-            pass
 
         if old_task is not None and not old_task.done():
             m._cleanup_task = old_task

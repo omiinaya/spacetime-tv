@@ -1,5 +1,4 @@
 """Tests for RequestBodySizeMiddleware — rejects oversized POST/PUT/PATCH bodies."""
-import pytest
 from fastapi.testclient import TestClient
 
 

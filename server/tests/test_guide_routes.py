@@ -8,11 +8,9 @@ Covers uncovered paths from coverage analysis:
   - guide_catchup(): the full endpoint (lines 230-276)
 """
 
-import json
 import time
-import asyncio
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch, ANY
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -20,7 +18,7 @@ from fastapi import HTTPException
 
 def _epg_timestamp(dt=None):
     if dt is None:
-        dt = datetime.now(timezone.utc)
+        dt = datetime.now(UTC)
     return dt.strftime("%Y%m%d%H%M%S") + " +0000"
 
 
@@ -32,8 +30,8 @@ SAMPLE_EPG = {
     "programmes": [
         {
             "channel": "BBC1.uk",
-            "start": _epg_timestamp(datetime.now(timezone.utc) - timedelta(hours=1)),
-            "stop": _epg_timestamp(datetime.now(timezone.utc) + timedelta(hours=2)),
+            "start": _epg_timestamp(datetime.now(UTC) - timedelta(hours=1)),
+            "stop": _epg_timestamp(datetime.now(UTC) + timedelta(hours=2)),
             "title": "Breakfast News",
             "subtitle": "Morning Edition",
             "desc": "Morning news",
@@ -42,8 +40,8 @@ SAMPLE_EPG = {
         },
         {
             "channel": "BBC2.uk",
-            "start": _epg_timestamp(datetime.now(timezone.utc) - timedelta(minutes=30)),
-            "stop": _epg_timestamp(datetime.now(timezone.utc) + timedelta(hours=1)),
+            "start": _epg_timestamp(datetime.now(UTC) - timedelta(minutes=30)),
+            "stop": _epg_timestamp(datetime.now(UTC) + timedelta(hours=1)),
             "title": "Gardeners' World",
             "subtitle": "",
             "desc": "Gardening",
@@ -61,7 +59,7 @@ class TestTvGuideCache:
 
     def test_guide_rebuilds_cache_when_epg_refreshed(self, client):
         """When _guide_cache['built_at'] < epg_cache['fetched'], rebuild cache."""
-        from state import epg_cache, _guide_cache
+        from state import _guide_cache, epg_cache
 
         # Set EPG data fresh but guide cache older
         epg_cache["data"] = SAMPLE_EPG
@@ -86,7 +84,7 @@ class TestTvGuideIsLiveParseError:
 
     def test_guide_is_live_handles_bad_timestamps(self, client):
         """When is_live recomputation encounters bad start/stop, it skips without crashing."""
-        from state import epg_cache, _guide_cache
+        from state import _guide_cache, epg_cache
 
         # Build EPG with one programme that has a bad timestamp
         epg_data = {
@@ -144,10 +142,9 @@ class TestGuideNowParseError:
 
     def test_guide_now_handles_bad_timestamps(self, client_with_cache):
         """When a programme has invalid timestamps, it's skipped without crashing."""
-        from state import epg_cache
-        from state import _cache
+        from state import _cache, epg_cache
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         epg_data = {
             "channels": [{"id": "C1", "name": "Chan1", "icon": ""}],
             "programmes": [
@@ -196,8 +193,7 @@ class TestGuideCatchup:
 
     def test_catchup_returns_timeline(self, client_with_cache):
         """GET /api/guide/catchup returns programme timeline for a stream."""
-        from state import epg_cache
-        from state import _cache
+        from state import _cache, epg_cache
 
         epg_cache["data"] = SAMPLE_EPG
         epg_cache["fetched"] = time.time()
@@ -228,8 +224,7 @@ class TestGuideCatchup:
 
     def test_catchup_unknown_stream_id(self, client_with_cache):
         """Unknown stream_id returns empty programme list."""
-        from state import epg_cache
-        from state import _cache
+        from state import _cache, epg_cache
 
         epg_cache["data"] = SAMPLE_EPG
         epg_cache["fetched"] = time.time()
@@ -262,10 +257,9 @@ class TestGuideCatchup:
 
     def test_catchup_malformed_programme_timestamps(self, client_with_cache):
         """Malformed programme timestamps are skipped in catchup."""
-        from state import epg_cache
-        from state import _cache
+        from state import _cache, epg_cache
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         epg_data = {
             "channels": [{"id": "C1", "name": "Chan1", "icon": ""}],
             "programmes": [
@@ -318,10 +312,9 @@ class TestGuideCatchup:
 
     def test_catchup_filters_outside_window(self, client_with_cache):
         """Programmes outside the catchup window are excluded."""
-        from state import epg_cache
-        from state import _cache
+        from state import _cache, epg_cache
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         epg_data = {
             "channels": [{"id": "C1", "name": "Chan1", "icon": ""}],
             "programmes": [
@@ -369,8 +362,8 @@ class TestGuideEnrich:
 
     def test_enrich_non_zero_exit(self, client_with_cache):
         """Non-zero exit from tmdb-enrich returns enabled=False."""
-        from state import epg_cache
         from routes.guide_routes import asyncio as gr_asyncio
+        from state import epg_cache
 
         epg_cache["data"] = SAMPLE_EPG
         epg_cache["fetched"] = time.time()
@@ -388,15 +381,15 @@ class TestGuideEnrich:
 
     def test_enrich_timeout(self, client_with_cache):
         """Timeout from tmdb-enrich returns enabled=False."""
-        from state import epg_cache
+
         from routes.guide_routes import asyncio as gr_asyncio
-        import asyncio as _real_asyncio
+        from state import epg_cache
 
         epg_cache["data"] = SAMPLE_EPG
         epg_cache["fetched"] = time.time()
 
         mock_proc = AsyncMock()
-        mock_proc.communicate = AsyncMock(side_effect=_real_asyncio.TimeoutError("Timed out"))
+        mock_proc.communicate = AsyncMock(side_effect=TimeoutError("Timed out"))
 
         with patch.object(gr_asyncio, "create_subprocess_exec", return_value=mock_proc):
             resp = client_with_cache.get("/api/v1/guide/enrich?q=test+show")
@@ -406,8 +399,8 @@ class TestGuideEnrich:
 
     def test_enrich_generic_exception(self, client_with_cache):
         """Generic exception from tmdb-enrich returns enabled=False."""
-        from state import epg_cache
         from routes.guide_routes import asyncio as gr_asyncio
+        from state import epg_cache
 
         epg_cache["data"] = SAMPLE_EPG
         epg_cache["fetched"] = time.time()
@@ -420,8 +413,8 @@ class TestGuideEnrich:
 
     def test_enrich_caches_results(self, client_with_cache):
         """Repeated enrich requests with same query use cache (covers cache-hit path)."""
-        from state import epg_cache
         from routes.guide_routes import asyncio as gr_asyncio
+        from state import epg_cache
 
         epg_cache["data"] = SAMPLE_EPG
         epg_cache["fetched"] = time.time()
@@ -449,8 +442,9 @@ class TestGuideEnrichDirect:
 
     async def test_enrich_timeout_direct(self):
         """Timeout in subprocess is caught and returns enabled=False."""
-        from routes.guide_routes import guide_enrich, asyncio as gr_asyncio
         from routes.guide_core import _EPG_ENRICH_CACHE
+        from routes.guide_routes import asyncio as gr_asyncio
+        from routes.guide_routes import guide_enrich
         from state import epg_cache
 
         _EPG_ENRICH_CACHE.clear()
@@ -458,7 +452,7 @@ class TestGuideEnrichDirect:
         epg_cache["fetched"] = time.time()
 
         mock_proc = AsyncMock()
-        mock_proc.communicate = AsyncMock(side_effect=asyncio.TimeoutError("Timed out"))
+        mock_proc.communicate = AsyncMock(side_effect=TimeoutError("Timed out"))
 
         with patch.object(gr_asyncio, "create_subprocess_exec", return_value=mock_proc):
             result = await guide_enrich(q="timedoutshow")
@@ -466,8 +460,9 @@ class TestGuideEnrichDirect:
 
     async def test_enrich_generic_exception_direct(self):
         """Exception in subprocess creation is caught and returns enabled=False."""
-        from routes.guide_routes import guide_enrich, asyncio as gr_asyncio
         from routes.guide_core import _EPG_ENRICH_CACHE
+        from routes.guide_routes import asyncio as gr_asyncio
+        from routes.guide_routes import guide_enrich
         from state import epg_cache
 
         _EPG_ENRICH_CACHE.clear()
@@ -495,8 +490,8 @@ class TestEpgSseStreaming:
 
     def test_sse_has_response_class(self):
         """epg_sse route uses StreamingResponse for SSE."""
+
         from routes.guide_routes import epg_sse
-        from fastapi.responses import StreamingResponse
         # Verify the route handler exists and is callable
         assert callable(epg_sse)
         # The function is a route handler that returns StreamingResponse
@@ -510,8 +505,9 @@ class TestGuideNowLiveAllError:
 
     def test_guide_now_live_all_fetch_error_returns_programmes(self, client):
         """When live_all fetch fails, guide_now still returns programmes dict."""
-        from state import epg_cache
         from unittest.mock import patch
+
+        from state import epg_cache
 
         # Set up EPG data so the endpoint doesn't need live_all for this
         epg_cache["data"] = {
@@ -537,11 +533,11 @@ class TestGuideNowPastProgramme:
 
     def test_guide_now_skips_past_programme(self, client_with_cache):
         """Programme ending before cutoff_past is skipped, current one returned."""
-        from state import epg_cache
-        from state import _cache
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
-        now = datetime.now(timezone.utc)
+        from state import _cache, epg_cache
+
+        now = datetime.now(UTC)
 
         def ts(dt):
             return dt.strftime("%Y%m%d%H%M%S") + " +0000"
@@ -596,8 +592,9 @@ class TestGuideCatchupLiveAllError:
 
     def test_catchup_live_all_fetch_error_returns_empty(self, client):
         """When live_all fetch fails, catchup returns empty programme list."""
-        from state import epg_cache
         from unittest.mock import patch
+
+        from state import epg_cache
 
         epg_cache["data"] = {
             "channels": [{"id": "C1", "name": "Chan1", "icon": ""}],
@@ -620,9 +617,8 @@ class TestGuideEnrichCacheHit:
 
     def test_enrich_cache_hit_with_valid_data(self, client_with_cache):
         """When _EPG_ENRICH_CACHE has fresh non-None data, return it directly."""
-        from routes.guide_core import _EPG_ENRICH_CACHE, _EPG_ENRICH_TTL
-        from routes.guide_routes import guide_enrich
-        import asyncio
+
+        from routes.guide_core import _EPG_ENRICH_CACHE
 
         # Pre-populate cache with valid data
         cached_result = {
@@ -647,7 +643,6 @@ class TestGuideSearch:
 
     def test_search_matches_title(self, client):
         """Search matches programme titles (case-insensitive)."""
-        from routes.guide_epg import load_epg_background
 
         async def mock_load():
             return SAMPLE_EPG
@@ -662,7 +657,6 @@ class TestGuideSearch:
 
     def test_search_case_insensitive(self, client):
         """Search is case-insensitive."""
-        from routes.guide_epg import load_epg_background
 
         async def mock_load():
             return SAMPLE_EPG
@@ -676,7 +670,6 @@ class TestGuideSearch:
 
     def test_search_matches_subtitle(self, client):
         """Search matches programme subtitles."""
-        from routes.guide_epg import load_epg_background
 
         async def mock_load():
             return SAMPLE_EPG
@@ -689,7 +682,6 @@ class TestGuideSearch:
 
     def test_search_matches_description(self, client):
         """Search matches programme descriptions."""
-        from routes.guide_epg import load_epg_background
 
         async def mock_load():
             return SAMPLE_EPG
@@ -702,7 +694,6 @@ class TestGuideSearch:
 
     def test_search_no_match(self, client):
         """Search with no matches returns empty results."""
-        from routes.guide_epg import load_epg_background
 
         async def mock_load():
             return SAMPLE_EPG
@@ -726,7 +717,6 @@ class TestGuideSearch:
 
     def test_search_includes_channel_name(self, client):
         """Search results include channel_name."""
-        from routes.guide_epg import load_epg_background
 
         async def mock_load():
             return SAMPLE_EPG
@@ -740,10 +730,8 @@ class TestGuideSearch:
 
     def test_search_results_sorted_by_start(self, client):
         """Search results are sorted by start time ascending."""
-        from routes.guide_epg import load_epg_background
-        import time
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         multi_epg = {
             "channels": [{"id": "CH1", "name": "Channel One"}],
             "programmes": [
@@ -785,10 +773,8 @@ class TestGuideSearch:
 
     def test_search_future_only_excludes_past(self, client):
         """future_only=True excludes programmes that ended in the past."""
-        from routes.guide_epg import load_epg_background
-        import time
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         past_epg = {
             "channels": [{"id": "CH1", "name": "Channel One"}],
             "programmes": [
@@ -823,10 +809,8 @@ class TestGuideSearch:
 
     def test_search_future_only_false_includes_past(self, client):
         """future_only=False includes past programmes."""
-        from routes.guide_epg import load_epg_background
-        import time
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         mixed_epg = {
             "channels": [{"id": "CH1", "name": "Channel One"}],
             "programmes": [
@@ -852,7 +836,6 @@ class TestGuideSearch:
 
     def test_search_handles_bad_timestamp_gracefully(self, client):
         """Search skips programmes with unparseable timestamps."""
-        from routes.guide_epg import load_epg_background
 
         bad_epg = {
             "channels": [{"id": "CH1", "name": "Channel One"}],
@@ -867,8 +850,8 @@ class TestGuideSearch:
                 },
                 {
                     "channel": "CH1",
-                    "start": _epg_timestamp(datetime.now(timezone.utc) + timedelta(hours=1)),
-                    "stop": _epg_timestamp(datetime.now(timezone.utc) + timedelta(hours=2)),
+                    "start": _epg_timestamp(datetime.now(UTC) + timedelta(hours=1)),
+                    "stop": _epg_timestamp(datetime.now(UTC) + timedelta(hours=2)),
                     "title": "Good Show",
                     "subtitle": "",
                     "desc": "",
@@ -887,7 +870,6 @@ class TestGuideSearch:
 
     def test_search_empty_epg_returns_empty(self, client):
         """Search returns empty when EPG has no programmes."""
-        from routes.guide_epg import load_epg_background
 
         empty_epg = {"channels": [], "programmes": []}
 
@@ -902,7 +884,6 @@ class TestGuideSearch:
 
     def test_search_response_structure(self, client):
         """Search response has expected shape."""
-        from routes.guide_epg import load_epg_background
 
         async def mock_load():
             return SAMPLE_EPG
@@ -918,7 +899,6 @@ class TestGuideSearch:
 
     def test_search_result_structure(self, client):
         """Each search result has expected fields."""
-        from routes.guide_epg import load_epg_background
 
         async def mock_load():
             return SAMPLE_EPG

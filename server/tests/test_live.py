@@ -7,7 +7,6 @@ by default (client fixture), or pre-populated _cache with client_with_cache.
 
 import time
 
-
 # ── /api/live/categories ──────────────────────────────────────────────
 
 def test_live_categories_empty_when_cache_empty(client):

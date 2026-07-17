@@ -232,7 +232,7 @@ def test_rate_limits_dict_populated_after_request(small_limits, client):
 
     # At least one entry should exist
     assert len(_rate_limits) >= 1
-    for ip, (window_start, count) in _rate_limits.items():
+    for _ip, (window_start, count) in _rate_limits.items():
         assert isinstance(window_start, (int, float))
         assert isinstance(count, int)
         assert count >= 1

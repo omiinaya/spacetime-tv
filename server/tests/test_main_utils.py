@@ -7,10 +7,10 @@ get_last_access, serve_cached_mp4, build_stream_url.
 """
 
 import os
-import time
 import tempfile
+import time
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -21,19 +21,10 @@ os.environ.setdefault("IPTV_PASS", "test_pass")
 os.environ.setdefault("CACHE_WARM_ENABLED", "false")
 os.environ.setdefault("ENCRYPT_CREDENTIALS", "false")
 
+from iptv_client import iptv_url
 from main import (
     get_last_access,
     touch_access,
-)
-from state import _cache
-from iptv_client import iptv_url
-from routes.stream import (
-    _lookup_extension,
-    _mime_from_url,
-    generate_live_mpd,
-    generate_vod_mpd,
-    serve_cached_mp4,
-    build_stream_url,
 )
 from routes.misc import (
     _img_cache_key,
@@ -41,7 +32,14 @@ from routes.misc import (
     _img_meta_path,
     _img_stamp_path,
 )
-
+from routes.stream import (
+    _lookup_extension,
+    _mime_from_url,
+    generate_live_mpd,
+    generate_vod_mpd,
+    serve_cached_mp4,
+)
+from state import _cache
 
 # ── _mime_from_url ───────────────────────────────────────────────────────────
 

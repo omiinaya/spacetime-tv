@@ -12,9 +12,8 @@ import httpx
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, Response
 
-from iptv_client import client, iptv_raw_proxy_url
-
 from config import CACHE_DIR, STATIC_DIR
+from iptv_client import client, iptv_raw_proxy_url
 from state import _img_cache
 
 log = logging.getLogger("spacetime-tv")

@@ -18,12 +18,11 @@ import json
 import logging
 import time
 from urllib.parse import urlencode
-from typing import Optional
 
 import httpx
 from fastapi import HTTPException
 
-from config import IPTV_BASE, IPTV_PASS, IPTV_USER, PROVIDERS, ProviderConfig
+from config import PROVIDERS, ProviderConfig
 from state import CACHE_TTL, _cache, _cache_hits, _cache_misses
 
 log = logging.getLogger("spacetime-tv")
@@ -60,13 +59,13 @@ def get_enabled_providers() -> list[ProviderConfig]:
     return [p for p in PROVIDERS if p.enabled]
 
 
-def get_active_provider() -> Optional[ProviderConfig]:
+def get_active_provider() -> ProviderConfig | None:
     """Get the highest-priority (first) enabled provider, or None."""
     providers = get_enabled_providers()
     return providers[0] if providers else None
 
 
-def get_provider_by_index(idx: int) -> Optional[ProviderConfig]:
+def get_provider_by_index(idx: int) -> ProviderConfig | None:
     """Get provider by index in enabled list. Returns None if out of range."""
     providers = get_enabled_providers()
     if 0 <= idx < len(providers):
@@ -74,7 +73,7 @@ def get_provider_by_index(idx: int) -> Optional[ProviderConfig]:
     return None
 
 
-def iptv_url(action: str, provider: Optional[ProviderConfig] = None, **params) -> str:
+def iptv_url(action: str, provider: ProviderConfig | None = None, **params) -> str:
     """Build IPTV API URL (player_api.php) with credentials for a provider."""
     p = provider or get_active_provider()
     if not p:
@@ -86,7 +85,7 @@ def iptv_url(action: str, provider: Optional[ProviderConfig] = None, **params) -
 
 
 def iptv_stream_url(stream_id: int, stream_type: str = "live", ext: str | None = None,
-                    provider: Optional[ProviderConfig] = None) -> str:
+                    provider: ProviderConfig | None = None) -> str:
     """Build a direct stream URL for the IPTV CDN.
 
     Format: {base}/{prefix}/{user}/{pass}/{stream_id}.{ext}
@@ -103,7 +102,7 @@ def iptv_stream_url(stream_id: int, stream_type: str = "live", ext: str | None =
 
 
 def iptv_vod_url(stream_id: int, media_type: str = "movie",
-                 provider: Optional[ProviderConfig] = None) -> str:
+                 provider: ProviderConfig | None = None) -> str:
     """Build a provider MKV URL for ffprobe/ffmpeg (VOD probe context)."""
     p = provider or get_active_provider()
     if not p:
@@ -113,7 +112,7 @@ def iptv_vod_url(stream_id: int, media_type: str = "movie",
 
 
 def iptv_timeshift_url(stream_id: int, duration_seconds: int,
-                       provider: Optional[ProviderConfig] = None) -> str:
+                       provider: ProviderConfig | None = None) -> str:
     """Build a timeshift URL.
 
     Xtream Codes API format:
@@ -128,7 +127,7 @@ def iptv_timeshift_url(stream_id: int, duration_seconds: int,
     return f"{p.base_url}/live/{p.username}/{p.password}/{stream_id}/timeshift/{duration_seconds}.ts"
 
 
-def iptv_xmltv_url(provider: Optional[ProviderConfig] = None) -> str:
+def iptv_xmltv_url(provider: ProviderConfig | None = None) -> str:
     """Build XMLTV URL for EPG data."""
     p = provider or get_active_provider()
     if not p:
@@ -136,7 +135,7 @@ def iptv_xmltv_url(provider: Optional[ProviderConfig] = None) -> str:
     return f"{p.base_url}/xmltv.php?username={p.username}&password={p.password}"
 
 
-def iptv_raw_proxy_url(path: str, provider: Optional[ProviderConfig] = None) -> str:
+def iptv_raw_proxy_url(path: str, provider: ProviderConfig | None = None) -> str:
     """Build a raw proxy URL with credentials appended."""
     p = provider or get_active_provider()
     if not p:
@@ -145,7 +144,7 @@ def iptv_raw_proxy_url(path: str, provider: Optional[ProviderConfig] = None) -> 
     return f"{p.base_url}/{path}?{params}"
 
 
-def iptv_referer(provider: Optional[ProviderConfig] = None) -> str:
+def iptv_referer(provider: ProviderConfig | None = None) -> str:
     """Return the base URL as a referer header value (anti-hotlinking)."""
     p = provider or get_active_provider()
     if not p:
@@ -154,7 +153,7 @@ def iptv_referer(provider: Optional[ProviderConfig] = None) -> str:
 
 
 def iptv_probe_url(stream_id: int, media_type: str = "movie",
-                   provider: Optional[ProviderConfig] = None) -> str:
+                   provider: ProviderConfig | None = None) -> str:
     """Build the provider MKV URL for ffprobe/ffmpeg (VOD subtitle/audio context).
     Alias for iptv_vod_url() for backward compatibility.
     """
@@ -330,11 +329,11 @@ async def _fetch_single_provider(provider: ProviderConfig, action: str, **params
 # These are imported by older route modules. They delegate to provider-aware functions.
 
 def vod_url(stream_id: int, media_type: str = "movie",
-            provider: Optional[ProviderConfig] = None) -> str:
+            provider: ProviderConfig | None = None) -> str:
     """Backward-compatible alias for iptv_vod_url()."""
     return iptv_vod_url(stream_id, media_type, provider=provider)
 
 def build_timeshift_url(stream_id: int, duration_seconds: int,
-                        provider: Optional[ProviderConfig] = None) -> str:
+                        provider: ProviderConfig | None = None) -> str:
     """Backward-compatible alias for iptv_timeshift_url()."""
     return iptv_timeshift_url(stream_id, duration_seconds, provider=provider)

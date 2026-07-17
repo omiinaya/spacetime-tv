@@ -2,6 +2,7 @@
 import asyncio
 import logging
 import time
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 log = logging.getLogger("spacetime-tv")
@@ -24,9 +25,15 @@ router = APIRouter(tags=["admin"], dependencies=[Depends(require_admin_key)])
 async def admin_stats():
     """Admin dashboard: cache stats, popular content, error trends."""
     from state import (
-        _cache, _cache_hits, _cache_misses,
-        epg_cache, SERVER_START_TIME,
-        _stream_hits, _error_log, _search_queries, _epg_clients,
+        SERVER_START_TIME,
+        _cache,
+        _cache_hits,
+        _cache_misses,
+        _epg_clients,
+        _error_log,
+        _search_queries,
+        _stream_hits,
+        epg_cache,
     )
 
     uptime = time.time() - SERVER_START_TIME
@@ -170,7 +177,7 @@ async def admin_warm_full_cache():
 @router.post("/admin/epg/refresh")
 async def admin_epg_refresh():
     """Trigger an immediate EPG refresh in the background."""
-    from state import epg_cache, _epg_refresh_task
+    from state import _epg_refresh_task, epg_cache
 
     already_running = _epg_refresh_task is not None and not _epg_refresh_task.done()
     from routes.guide import _refresh_epg_background

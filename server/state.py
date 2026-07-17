@@ -4,10 +4,10 @@ Extracted from main.py to enable route decomposition into separate modules.
 All module-level mutable state that routes depend on lives here.
 """
 import asyncio
+import contextlib
 import json
 import time
-from pathlib import Path
-from typing import Optional
+
 import config
 
 # ── Cache Keys (single source of truth) ───────────────────────────────────
@@ -54,7 +54,7 @@ CACHE_TTL = 300  # 5 min for API data
 
 # ── EPG Cache ─────────────────────────────────────────────────────────────
 epg_cache: dict = {"data": None, "fetched": 0}
-_epg_refresh_task: Optional[asyncio.Task] = None
+_epg_refresh_task: asyncio.Task | None = None
 
 # ── Guide Cache (pre-processed channel groups, rebuilt on EPG refresh) ──────
 _guide_cache: dict = {"channel_groups": None, "total_channels": 0, "built_at": 0}
@@ -113,10 +113,8 @@ def _load_progress_store():
         _progress_store = {}
 
 def _save_progress_store():
-    try:
+    with contextlib.suppress(OSError):
         PROGRESS_FILE.write_text(json.dumps(_progress_store))
-    except OSError:
-        pass
 
 
 # ── Provider Health Tracking ─────────────────────────────────────────────
@@ -124,7 +122,7 @@ def _save_progress_store():
 _provider_health: dict[int, dict] = {}
 
 # ── Cache Warming ─────────────────────────────────────────────────────────
-_warm_task: Optional[asyncio.Task] = None
+_warm_task: asyncio.Task | None = None
 
 # ── Image Cache (in-memory, TTL-based) ────────────────────────────────────
 _img_cache: dict[str, tuple[float, bytes, str]] = {}  # url → (ts, data, content_type)

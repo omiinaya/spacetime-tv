@@ -3,18 +3,17 @@
 Extracted from stream.py during decomposition of the 1105-line monolithic file.
 """
 import asyncio
+import contextlib
 import logging
 import time
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
-from config import CACHE_DIR
+from config import CACHE_DIR, UA_STR
 
 from .stream_core import build_stream_url
-from config import UA_STR
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["stream"])
@@ -71,8 +70,7 @@ async def convert_to_mp4(stream_id: str, stream_type: str):
     stderr_task = asyncio.create_task(log_stderr())
     await proc.wait()
     stderr_task.cancel()
-    try: await stderr_task
-    except asyncio.CancelledError: pass
+    with contextlib.suppress(asyncio.CancelledError): await stderr_task
     if lock_path.exists(): lock_path.unlink()
     if proc.returncode == 0 and output_path.exists() and mkv_path.exists():
         mkv_path.unlink()  # pragma: no cover — post-convert cleanup, runtime only
@@ -85,7 +83,7 @@ async def convert_to_mp4(stream_id: str, stream_type: str):
 async def _safe_convert(stream_id: str, stream_type: str, cache_key: str):
     try:
         await convert_to_mp4(stream_id, stream_type)
-    except (OSError, asyncio.TimeoutError, HTTPException) as e:
+    except (TimeoutError, OSError, HTTPException) as e:
         log.error(f"Conversion failed for {cache_key}: {e}", exc_info=True)  # pragma: no cover — subprocess error, runtime only
     finally:
         _converting.pop(cache_key, None)  # pragma: no cover — cleanup, runtime only

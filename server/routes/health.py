@@ -2,9 +2,13 @@
 import json
 import logging
 import time
+
 from fastapi import APIRouter, Request
+
 from state import (
-    _cache, epg_cache, SERVER_START_TIME,
+    SERVER_START_TIME,
+    _cache,
+    epg_cache,
 )
 
 log = logging.getLogger("spacetime-tv")
@@ -16,7 +20,7 @@ async def health_check():
     """Server health: status, uptime, cache stats."""
     uptime = time.time() - SERVER_START_TIME
     cache_stats = {}
-    for key, (ts, val) in _cache.items():
+    for key, (_ts, val) in _cache.items():
         if isinstance(val, list):
             cache_stats[key] = len(val)
         elif isinstance(val, dict):

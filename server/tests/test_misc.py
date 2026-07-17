@@ -4,7 +4,9 @@ These routes involve HTTP calls to external services, so we mock
 the `main.client` httpx.AsyncClient where needed.
 """
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import httpx
+
 # ── SPA fallback: /{full_path:path} ───────────────────────────────────
 
 def test_spa_fallback_serves_index(client):
@@ -45,7 +47,7 @@ def test_img_cache_key_different_urls(client):
 
 def test_img_cache_path_and_meta_path(client):
     """_img_cache_path and _img_meta_path should return Path objects."""
-    from routes.misc import _img_cache_path, _img_meta_path, _img_cache_key
+    from routes.misc import _img_cache_key, _img_cache_path, _img_meta_path
 
     key = _img_cache_key("test")
     path = _img_cache_path(key)

@@ -6,12 +6,12 @@ All TMDB endpoints are self-contained with in-memory caching.
 import asyncio
 import json
 import logging
-import os
-from config import TMDB_API_KEY, TMDB_BASE
 import time
 
 import httpx
 from fastapi import APIRouter, Query
+
+from config import TMDB_API_KEY, TMDB_BASE
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["tmdb"])
@@ -241,7 +241,7 @@ async def tmdb_enrich_cli(*args: str) -> dict | None:
             return None
         result = json.loads(stdout.decode())
         return result
-    except asyncio.TimeoutError:
+    except TimeoutError:
         log.warning(f"tmdb-enrich timed out for: {' '.join(args)[:80]}")
         return None
     except (OSError, json.JSONDecodeError) as e:

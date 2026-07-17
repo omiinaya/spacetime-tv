@@ -1,6 +1,10 @@
 """Credentials encryption at rest using Fernet symmetric encryption."""
-import os, base64, logging, binascii
+import base64
+import binascii
+import logging
+import os
 from pathlib import Path
+
 try:
     from cryptography.fernet import Fernet, InvalidToken
 except ImportError:

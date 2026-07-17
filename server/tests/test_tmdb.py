@@ -7,12 +7,12 @@ Tests cover:
 - Edge cases (empty results, missing data, pagination)
 """
 
-import asyncio
 import os
 import time
-import pytest
-import httpx
 from unittest.mock import AsyncMock, patch
+
+import httpx
+import pytest
 
 # ── Fixtures ──────────────────────────────────────────────────────
 
@@ -275,7 +275,6 @@ def test_tmdb_person_details_no_cli(client):
 
 def test_tmdb_trending_with_data(client):
     """GET /api/tmdb/trending returns enabled=True when tmdb_fetch succeeds."""
-    from routes.tmdb import tmdb_fetch, _TMDB_CACHE
     _clear_tmdb_cache()
 
     async def mock_fetch(path):
@@ -294,7 +293,6 @@ def test_tmdb_trending_with_data(client):
 
 def test_tmdb_trending_no_results(client):
     """GET /api/tmdb/trending returns empty list when no results."""
-    from routes.tmdb import _TMDB_CACHE
     _clear_tmdb_cache()
 
     async def mock_fetch(path):
@@ -312,7 +310,6 @@ def test_tmdb_trending_no_results(client):
 
 def test_tmdb_search_with_data(client):
     """GET /api/tmdb/search returns results when tmdb_fetch succeeds."""
-    from routes.tmdb import _TMDB_CACHE
     _clear_tmdb_cache()
 
     async def mock_fetch(path):
@@ -329,7 +326,6 @@ def test_tmdb_search_with_data(client):
 
 def test_tmdb_movie_details_with_data(client):
     """GET /api/tmdb/movie/550 returns details when tmdb_fetch succeeds."""
-    from routes.tmdb import _TMDB_CACHE
     _clear_tmdb_cache()
 
     async def mock_fetch(path):
@@ -346,7 +342,6 @@ def test_tmdb_movie_details_with_data(client):
 
 def test_tmdb_movie_similar_with_data(client):
     """GET /api/tmdb/movie/550/similar returns similar movies."""
-    from routes.tmdb import _TMDB_CACHE
     _clear_tmdb_cache()
 
     async def mock_fetch(path):
@@ -363,7 +358,6 @@ def test_tmdb_movie_similar_with_data(client):
 
 def test_tmdb_configuration_with_data(client):
     """GET /api/tmdb/configuration returns image config when tmdb_fetch succeeds."""
-    from routes.tmdb import _TMDB_CACHE
     _clear_tmdb_cache()
 
     async def mock_fetch(path):
@@ -380,7 +374,6 @@ def test_tmdb_configuration_with_data(client):
 
 def test_tmdb_tv_trending_with_data(client):
     """GET /api/tmdb/tv/trending returns trending TV when tmdb_fetch succeeds."""
-    from routes.tmdb import _TMDB_CACHE
     _clear_tmdb_cache()
 
     async def mock_fetch(path):
@@ -397,7 +390,6 @@ def test_tmdb_tv_trending_with_data(client):
 
 def test_tmdb_tv_search_with_data(client):
     """GET /api/tmdb/tv/search returns TV search results."""
-    from routes.tmdb import _TMDB_CACHE
     _clear_tmdb_cache()
 
     async def mock_fetch(path):
@@ -414,7 +406,6 @@ def test_tmdb_tv_search_with_data(client):
 
 def test_tmdb_tv_details_with_data(client):
     """GET /api/tmdb/tv/1399 returns TV details."""
-    from routes.tmdb import _TMDB_CACHE
     _clear_tmdb_cache()
 
     async def mock_fetch(path):
@@ -431,7 +422,6 @@ def test_tmdb_tv_details_with_data(client):
 
 def test_tmdb_tv_similar_with_data(client):
     """GET /api/tmdb/tv/1399/similar returns similar TV."""
-    from routes.tmdb import _TMDB_CACHE
     _clear_tmdb_cache()
 
     async def mock_fetch(path):
@@ -543,8 +533,9 @@ def test_tmdb_person_details_response_structure(client):
 @pytest.mark.asyncio
 async def test_tmdb_fetch_stale_cache_refetches():
     """When cache entry exists but is stale, tmdb_fetch re-fetches via HTTP."""
-    from routes.tmdb import tmdb_fetch, _TMDB_CACHE
     from unittest.mock import MagicMock
+
+    from routes.tmdb import _TMDB_CACHE, tmdb_fetch
     _TMDB_CACHE.clear()
 
     # Plant a stale cache entry
@@ -574,8 +565,9 @@ async def test_tmdb_fetch_stale_cache_refetches():
 @pytest.mark.asyncio
 async def test_tmdb_fetch_http_error_returns_none():
     """tmdb_fetch returns None when upstream returns non-200."""
-    from routes.tmdb import tmdb_fetch, _TMDB_CACHE
     from unittest.mock import MagicMock
+
+    from routes.tmdb import _TMDB_CACHE, tmdb_fetch
     _TMDB_CACHE.clear()
 
     mock_resp = MagicMock()
@@ -596,8 +588,8 @@ async def test_tmdb_fetch_http_error_returns_none():
 @pytest.mark.asyncio
 async def test_tmdb_fetch_http_exception_returns_none():
     """tmdb_fetch returns None when httpx raises."""
-    from routes.tmdb import tmdb_fetch, _TMDB_CACHE
-    from unittest.mock import MagicMock
+
+    from routes.tmdb import _TMDB_CACHE, tmdb_fetch
     _TMDB_CACHE.clear()
 
     mock_client = AsyncMock()
@@ -618,7 +610,7 @@ async def test_tmdb_fetch_http_exception_returns_none():
 @pytest.mark.asyncio
 async def test_tmdb_fetch_fresh_cache_returns_directly():
     """tmdb_fetch returns from cache without HTTP call when TTL is valid."""
-    from routes.tmdb import tmdb_fetch, _TMDB_CACHE
+    from routes.tmdb import _TMDB_CACHE, tmdb_fetch
     _TMDB_CACHE.clear()
 
     now = time.time()
@@ -640,7 +632,7 @@ async def test_tmdb_fetch_fresh_cache_returns_directly():
 @pytest.mark.asyncio
 async def test_tmdb_enrich_cli_nonzero_exit():
     """tmdb_enrich_cli returns None when CLI exits non-zero."""
-    from routes.tmdb import tmdb_enrich_cli, _TMDB_CACHE
+    from routes.tmdb import tmdb_enrich_cli
 
     mock_proc = AsyncMock()
     mock_proc.returncode = 1
@@ -654,10 +646,10 @@ async def test_tmdb_enrich_cli_nonzero_exit():
 @pytest.mark.asyncio
 async def test_tmdb_enrich_cli_timeout():
     """tmdb_enrich_cli returns None on asyncio.TimeoutError."""
-    from routes.tmdb import tmdb_enrich_cli, _TMDB_CACHE
+    from routes.tmdb import tmdb_enrich_cli
 
     mock_proc = AsyncMock()
-    mock_proc.communicate.side_effect = asyncio.TimeoutError()
+    mock_proc.communicate.side_effect = TimeoutError()
 
     with patch("asyncio.create_subprocess_exec", return_value=mock_proc):
         result = await tmdb_enrich_cli("person", "slow")
@@ -667,7 +659,7 @@ async def test_tmdb_enrich_cli_timeout():
 @pytest.mark.asyncio
 async def test_tmdb_enrich_cli_generic_exception():
     """tmdb_enrich_cli returns None on generic Exception."""
-    from routes.tmdb import tmdb_enrich_cli, _TMDB_CACHE
+    from routes.tmdb import tmdb_enrich_cli
 
     with patch("asyncio.create_subprocess_exec", side_effect=FileNotFoundError("no CLI")):
         result = await tmdb_enrich_cli("person", "nobody")

@@ -9,7 +9,6 @@ which isn't available in tests, so we test structural responses.
 
 import pytest
 
-
 # ── SSE Events (streaming endpoint — verify without consuming body) ──
 
 def test_epg_sse_returns_event_stream(client):
@@ -189,7 +188,8 @@ def test_parse_xmltv_no_channel_icon():
 
 def test_parse_xmltv_malformed_does_not_raise():
     """parse_xmltv raises on truly malformed XML (no root)."""
-    from routes.guide import parse_xmltv
     import xml.etree.ElementTree as ET
+
+    from routes.guide import parse_xmltv
     with pytest.raises(ET.ParseError):
         parse_xmltv("not valid xml")

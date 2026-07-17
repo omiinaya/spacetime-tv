@@ -6,19 +6,19 @@ pagination, and edge cases.
 """
 
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 
 def _epg_timestamp(dt=None):
     """Format a datetime to EPG XMLTV timestamp format: YYYYMMDDhhmmss +0000"""
     if dt is None:
-        dt = datetime.now(timezone.utc)
+        dt = datetime.now(UTC)
     return dt.strftime("%Y%m%d%H%M%S") + " +0000"
 
 
 def _make_sample_epg():
     """Build EPG data with programme times near 'now' so filtering doesn't drop them."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     epg_data = {
         "channels": [
             {"id": "BBC1.uk", "name": "BBC One", "icon": "http://example.com/bbc1.png"},
@@ -224,8 +224,7 @@ def test_guide_now_invalid_ids_ignored(client):
 
 def test_guide_now_with_cache_mapping(client_with_cache):
     """When live_all cache has epg_channel_id mappings, /api/guide/now should resolve programmes."""
-    from state import epg_cache
-    from state import _cache
+    from state import _cache, epg_cache
     _setup_epg_cache(epg_cache)
 
     # Pre-populate live_all with stream-to-EPG-channel mapping
@@ -257,7 +256,8 @@ def test_guide_now_unknown_stream_id_returns_null(client_with_cache):
 
 def test_guide_now_with_empty_epg_returns_unknown(client):
     """Even with empty EPG, /api/guide/now should return keys for queried IDs."""
-    from unittest.mock import patch, AsyncMock
+    from unittest.mock import AsyncMock, patch
+
     import routes.guide_routes
     from routes.guide_epg import EPG_CACHE_FILE
     # Ensure the on-disk EPG cache is also cleared to force empty EPG

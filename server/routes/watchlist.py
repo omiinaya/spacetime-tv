@@ -7,7 +7,7 @@ import time
 
 from fastapi import APIRouter, HTTPException
 
-from state import _progress_store, _load_progress_store, _save_progress_store
+from state import _progress_store, _save_progress_store
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["watchlist"])
