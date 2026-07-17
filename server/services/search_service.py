@@ -1,13 +1,81 @@
 """Service layer for search operations extracted from routes/search.py."""
 import asyncio
+import json
 import logging
+import time
 
 from fastapi import HTTPException
 
+from config import TMDB_API_KEY, TMDB_ENRICH_PATH
 from iptv_client import cached_fetch
 from state import CACHE_SERIES_CAT, CACHE_SERIES_CATEGORIES, CACHE_VOD_CAT, CACHE_VOD_CATEGORIES
 
 log = logging.getLogger("spacetime-tv")
+
+# ── TMDB Enrichment Cache ──────────────────────────────────────────
+_SEARCH_ENRICH_CACHE: dict[str, tuple[float, dict | None]] = {}
+_SEARCH_ENRICH_TTL = 600  # 10 minutes
+
+# Path to tmdb-enrich CLI (browserless SSR extraction) — from config.py / env var
+_TMDB_ENRICH = TMDB_ENRICH_PATH
+
+
+async def enrich_tmdb_item(item_type: str, tmdb_id: str) -> dict | None:
+    """Fetch TMDB details for a single item, with caching.
+
+    Tries TMDB API key path first (richer data), falls back to tmdb-enrich CLI.
+    Used by the search enrichment endpoint to add genres, rating, poster, overview.
+    """
+    cache_key = f"tmdb_enrich_{item_type}_{tmdb_id}"
+    now = time.time()
+    if cache_key in _SEARCH_ENRICH_CACHE:
+        ts, data = _SEARCH_ENRICH_CACHE[cache_key]
+        if now - ts < _SEARCH_ENRICH_TTL:
+            return data
+
+    # Try API-key path first (richer data)
+    if item_type == "movie" and TMDB_API_KEY:
+        from routes.tmdb import tmdb_fetch  # type: ignore[import-unused]
+        data = await tmdb_fetch(f"movie/{tmdb_id}")
+    elif item_type == "tv" and TMDB_API_KEY:
+        from routes.tmdb import tmdb_fetch  # type: ignore[import-unused]
+        data = await tmdb_fetch(f"tv/{tmdb_id}")
+    else:
+        if not _TMDB_ENRICH:
+            _SEARCH_ENRICH_CACHE[cache_key] = (now, None)
+            return None
+        # Fallback: try tmdb-enrich CLI (browserless extraction)
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                _TMDB_ENRICH, "--json", "enrich",
+                f"{'movie' if item_type == 'movie' else 'tv'}/{tmdb_id}",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=20)
+            if proc.returncode == 0:
+                try:
+                    data = json.loads(stdout.decode())
+                except json.JSONDecodeError:
+                    data = None
+            else:
+                data = None
+        except (TimeoutError, FileNotFoundError, OSError):
+            data = None
+
+    if not data:
+        _SEARCH_ENRICH_CACHE[cache_key] = (now, None)
+        return None
+
+    enriched = {
+        "genres": [g["name"] for g in (data.get("genres") or [])],
+        "rating": data.get("vote_average"),
+        "poster": data.get("poster_path"),
+        "overview": data.get("overview"),
+    }
+    _SEARCH_ENRICH_CACHE[cache_key] = (now, enriched)
+    return enriched
+
 
 async def search_all_vod(query: str) -> list:
     """Fetch all VOD streams matching query, using cached fetch per category."""
@@ -34,6 +102,7 @@ async def search_all_vod(query: str) -> list:
     except (TimeoutError, HTTPException) as e:
         log.error(f"VOD search error: {e}")
         return []
+
 
 async def search_all_series(query: str) -> list:
     """Fetch all series matching query, using cached fetch per category."""

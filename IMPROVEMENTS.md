@@ -11,15 +11,16 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-### P4 — Misc catch-all route shadows `HEAD` requests on streaming endpoints
-The `/{full_path:path}` catch-all in misc.py intercepts HEAD requests before
-included-router partial matches resolve, returning 404/SPA index instead of 405.
-Only affects HEAD on GET-only streaming routes (SSE). Low impact but confusing
-for API consumers. Fix: add explicit HEAD handler or reorder route resolution.
+- (no pending items — all known issues addressed
 
 ---
 
 ## Recently Completed
+
+### ✅ P4 — Add explicit HEAD handler to SPA catch-all (Routing)
+Added `@router.head("/{full_path:path}")` to misc.py so HEAD requests to
+GET-only streaming endpoints (SSE) resolve correctly instead of being
+intercepted by the catch-all returning SPA HTML.
 
 ### ✅ P4 — Upgrade @rolldown/binding-linux-x64-gnu ^1.1.3 → ^1.2.0 (Dependency)
 Updated to ^1.2.0 in package.json and lockfile. All 1209 frontend tests pass, TypeScript 0 errors. Commit `09bf92b`.

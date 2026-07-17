@@ -11,7 +11,7 @@ help:  ## Show available targets
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # ── Backend ─────────────────────────────────────────────────────────────
-build:  ## Build everything (install deps, build frontend)
+build: setup-git-hooks ## Build everything (install deps, build frontend)
 	cd server && pip install -r requirements.txt
 	cd web && npm install && npm run build
 
@@ -27,12 +27,20 @@ test-frontend:  ## Run frontend tests only
 
 test-all: test-backend test-frontend  ## Run full test suite
 
-lint:  ## Lint backend (Python) and frontend (TypeScript)
-	cd server && python3 -m flake8 --statistics 2>/dev/null || echo "Install flake8 for Python linting"
-	cd web && npx tsc --noEmit 2>/dev/null || echo "TypeScript type checking needs npx tsc"
+lint: lint-backend lint-frontend  ## Lint all code
 
-fmt:  ## Format all code
-	cd server && python3 -m black . 2>/dev/null || echo "Install black for Python formatting"
+lint-backend:  ## Lint backend Python with ruff
+	cd server && ruff check 2>/dev/null || ~/.local/bin/ruff check 2>/dev/null || echo "ruff not installed — run: pip install ruff"
+
+lint-frontend:  ## Check frontend TypeScript
+	cd web && npx tsc --noEmit 2>/dev/null || echo "TypeScript type checking failed"
+
+fmt: fmt-backend fmt-frontend  ## Format all code
+
+fmt-backend:  ## Format backend Python with ruff
+	cd server && ruff format 2>/dev/null || ~/.local/bin/ruff format 2>/dev/null || echo "ruff not installed — run: pip install ruff"
+
+fmt-frontend:  ## Format frontend with Prettier
 	cd web && npx prettier --write src/ 2>/dev/null || echo "Install prettier for TS formatting"
 
 fix: lint fmt  ## Fix all auto-fixable issues

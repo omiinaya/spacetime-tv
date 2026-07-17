@@ -156,3 +156,17 @@ async def spa_fallback(full_path: str):
     if index.exists():
         return FileResponse(index)
     return {"detail": "Not Found"}
+
+
+@router.head("/{full_path:path}")
+async def spa_fallback_head(full_path: str):
+    """HEAD handler for SPA catch-all.
+
+    Prevents the catch-all from intercepting HEAD requests to GET-only
+    streaming endpoints (SSE). Returns 200 with no body for existing
+    paths, 404 for non-existent ones.
+    """
+    index = STATIC_DIR / "index.html"
+    if index.exists():
+        return Response(status_code=200, headers={"Content-Type": "text/html"})
+    return Response(status_code=404)

@@ -9,86 +9,24 @@ import time
 
 from fastapi import APIRouter, HTTPException, Query
 
-from config import TMDB_API_KEY, TMDB_ENRICH_PATH
+from config import TMDB_ENRICH_PATH
 from iptv_client import cached_fetch
+from services.search_service import enrich_tmdb_item, search_all_series, search_all_vod
 from state import CACHE_LIVE_ALL, _cache, record_search
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["search"])
 
 # ── tmdb-enrich CLI path ──────────────────────────────────────────
-# Path to tmdb-enrich CLI (browserless SSR extraction) — from config.py / env var
 _TMDB_ENRICH = TMDB_ENRICH_PATH
-
-# ── Search Enrichment Cache ───────────────────────────────────────────
-_SEARCH_ENRICH_CACHE: dict[str, tuple[float, dict | None]] = {}
-_SEARCH_ENRICH_TTL = 600  # 10 minutes
-
-
-async def _enrich_tmdb_item(item_type: str, tmdb_id: str) -> dict | None:
-    """Fetch TMDB details for a single item, with caching."""
-    cache_key = f"tmdb_enrich_{item_type}_{tmdb_id}"
-    now = time.time()
-    if cache_key in _SEARCH_ENRICH_CACHE:
-        ts, data = _SEARCH_ENRICH_CACHE[cache_key]
-        if now - ts < _SEARCH_ENRICH_TTL:
-            return data
-
-    # Try API-key path first (richer data)
-    if item_type == "movie" and TMDB_API_KEY:
-        from routes.tmdb import tmdb_fetch  # type: ignore[import-unused]
-        data = await tmdb_fetch(f"movie/{tmdb_id}")
-    elif item_type == "tv" and TMDB_API_KEY:
-        from routes.tmdb import tmdb_fetch  # type: ignore[import-unused]
-        data = await tmdb_fetch(f"tv/{tmdb_id}")
-    else:
-        if not _TMDB_ENRICH:
-            _SEARCH_ENRICH_CACHE[cache_key] = (now, None)
-            return None
-        # Fallback: try tmdb-enrich CLI (browserless extraction)
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                _TMDB_ENRICH, "--json", "enrich",
-                f"{'movie' if item_type == 'movie' else 'tv'}/{tmdb_id}",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=20)
-            if proc.returncode == 0:
-                try:
-                    data = json.loads(stdout.decode())
-                except json.JSONDecodeError:
-                    data = None
-            else:
-                data = None
-        except (TimeoutError, FileNotFoundError, OSError):
-            data = None
-
-    if not data:
-        _SEARCH_ENRICH_CACHE[cache_key] = (now, None)
-        return None
-
-    enriched = {
-        "genres": [g["name"] for g in (data.get("genres") or [])],
-        "rating": data.get("vote_average"),
-        "poster": data.get("poster_path"),
-        "overview": data.get("overview"),
-    }
-    _SEARCH_ENRICH_CACHE[cache_key] = (now, enriched)
-    return enriched
 
 
 @router.post("/search/enrich")
 async def search_enrich(body: dict):
     """Batch enrich search results with TMDB metadata (genres, rating, poster).
 
-    Accepts:
-      { "movies": [{"stream_id": 1, "tmdb_id": "550"}],
-        "series": [{"series_id": 1, "tmdb_id": "1399"}] }
-
-    Returns:
-      { "movies": { "1": {"genres": [...], "rating": 8.2, "poster": "/xyz.jpg", "overview": "..."} },
-        "series": { "1": {...} } }
+    Uses enrich_tmdb_item from the service layer — tries TMDB API key first,
+    falls back to tmdb-enrich CLI.
     """
     result: dict = {"movies": {}, "series": {}}
     tasks = []
@@ -97,34 +35,32 @@ async def search_enrich(body: dict):
         sid = m.get("stream_id")
         tid = m.get("tmdb_id")
         if sid and tid:
-            tasks.append(_enrich_tmdb_item("movie", str(tid)))
+            tasks.append(enrich_tmdb_item("movie", str(tid)))
 
     for s in (body.get("series") or []):
         sid = s.get("series_id")
         tid = s.get("tmdb_id")
         if sid and tid:
-            tasks.append(_enrich_tmdb_item("tv", str(tid)))
+            tasks.append(enrich_tmdb_item("tv", str(tid)))
 
     if not tasks:
         return result
 
     enriched_list = await asyncio.gather(*tasks, return_exceptions=True)
-
     idx = 0
     for m in (body.get("movies") or []):
         sid = m.get("stream_id")
         if sid and m.get("tmdb_id"):
-            val = enriched_list[idx]
-            if val and not isinstance(val, Exception):
-                result["movies"][str(sid)] = val
+            data = enriched_list[idx]
+            if data and not isinstance(data, Exception):
+                result["movies"][str(sid)] = data
             idx += 1
-
     for s in (body.get("series") or []):
         sid = s.get("series_id")
         if sid and s.get("tmdb_id"):
-            val = enriched_list[idx]
-            if val and not isinstance(val, Exception):
-                result["series"][str(sid)] = val
+            data = enriched_list[idx]
+            if data and not isinstance(data, Exception):
+                result["series"][str(sid)] = data
             idx += 1
 
     return result
@@ -140,8 +76,8 @@ async def search(
     """Search across live TV, movies, and series with pagination support.
 
     Returns all three sections when section is omitted, or a single section
-    when loading additional pages.  Always includes 'totals' so the frontend
-    knows if more results are available.
+    when loading additional pages. Uses in-memory cache for fast warm-cache
+    path, falls back to service layer for full scan.
     """
     query = q.lower().strip()
     record_search(query)
@@ -181,11 +117,8 @@ async def search(
 
     # Fallback if caches weren't warm
     if not all_movies:
-        from services.search_service import search_all_vod
         all_movies = await search_all_vod(query)
-
     if not all_series:
-        from services.search_service import search_all_series
         all_series = await search_all_series(query)
 
     totals = {
@@ -194,14 +127,52 @@ async def search(
         "series": len(all_series),
     }
 
-    def _slice(items, sec):
-        return items[offset:offset + limit]
-
     if section is None or section == "live":
-        results["live"] = _slice(all_live, "live")
+        results["live"] = all_live[offset:offset + limit]
     if section is None or section == "movies":
-        results["movies"] = _slice(all_movies, "movies")
+        results["movies"] = all_movies[offset:offset + limit]
     if section is None or section == "series":
-        results["series"] = _slice(all_series, "series")
+        results["series"] = all_series[offset:offset + limit]
 
     return {**results, "totals": totals}
+
+
+@router.post("/search/query")
+async def search_query(body: dict):
+    """Full-text search across movies, series, and live channels."""
+    query = (body.get("query") or "").strip().lower()
+    if len(query) < 2:
+        raise HTTPException(400, "Query must be at least 2 characters")
+
+    # Track search query for analytics
+    record_search(query)
+
+    live_results = []
+    movies = []
+    series = []
+
+    tasks = []
+    tasks.append(search_all_vod(query))
+    tasks.append(search_all_series(query))
+
+    # Live channel search — cached live_all
+    try:
+        all_live = await cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
+        for ch in all_live:
+            name = (ch.get("name") or "").lower()
+            if query in name:
+                live_results.append(ch)
+    except (TimeoutError, HTTPException):
+        pass
+
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    if not isinstance(results[0], Exception):
+        movies = results[0]
+    if not isinstance(results[1], Exception):
+        series = results[1]
+
+    return {
+        "movies": {"results": movies, "total": len(movies)},
+        "series": {"results": series, "total": len(series)},
+        "live": {"results": live_results, "total": len(live_results)},
+    }
