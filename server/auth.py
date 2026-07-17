@@ -16,6 +16,7 @@ import time
 from fastapi import HTTPException, Request, status
 
 from config import ADMIN_API_KEY
+import base64
 
 log = logging.getLogger("spacetime-tv")
 
@@ -221,4 +222,117 @@ def clear_profile_history(profile_id: str) -> bool:
     profiles[profile_id]['history'] = []
     _save_profiles(profiles)
     return True
+
+# ── Profile favorites ────────────────────────────────────────────
+
+def get_profile_favorites(profile_id: str) -> list:
+    """Get favorites list for a profile."""
+    profiles = _load_profiles()
+    profile = profiles.get(profile_id)
+    if not profile:
+        return []
+    return profile.get("favorites", [])
+
+
+def add_profile_favorite(profile_id: str, item: dict) -> bool:
+    """Add an item to profile favorites. Returns False if profile not found."""
+    profiles = _load_profiles()
+    if profile_id not in profiles:
+        return False
+    if "favorites" not in profiles[profile_id]:
+        profiles[profile_id]["favorites"] = []
+    watch_key = item.get("watchKey") or item.get("id", "")
+    profiles[profile_id]["favorites"] = [
+        f for f in profiles[profile_id]["favorites"]
+        if (f.get("watchKey") or f.get("id", "")) != watch_key
+    ]
+    profiles[profile_id]["favorites"].append(item)
+    _save_profiles(profiles)
+    return True
+
+
+def remove_profile_favorite(profile_id: str, watch_key: str) -> bool:
+    """Remove an item from profile favorites by watchKey. Returns False if profile not found."""
+    profiles = _load_profiles()
+    if profile_id not in profiles:
+        return False
+    if "favorites" not in profiles[profile_id]:
+        return False
+    profiles[profile_id]["favorites"] = [
+        f for f in profiles[profile_id]["favorites"]
+        if (f.get("watchKey") or f.get("id", "")) != watch_key
+    ]
+    _save_profiles(profiles)
+    return True
+
+
+# ── Profile session tokens ───────────────────────────────────────
+
+PROFILE_TOKEN_SECRET: str = ""
+
+def _get_token_secret():
+    global PROFILE_TOKEN_SECRET
+    if not PROFILE_TOKEN_SECRET:
+        PROFILE_TOKEN_SECRET = os.getenv("PROFILE_TOKEN_SECRET", secrets.token_hex(32))
+    return PROFILE_TOKEN_SECRET
+
+
+def generate_profile_token(profile_id: str, device_id: str = "") -> str:
+    """Generate a profile session token (HMAC-SHA256 signed, 24h expiry)."""
+    expiry = int(time.time()) + 86400
+    payload = f"{profile_id}:{device_id}:{expiry}"
+    sig = hmac.new(
+        _get_token_secret().encode(),
+        payload.encode(),
+        hashlib.sha256
+    ).hexdigest()[:16]
+    token = base64.urlsafe_b64encode(f"{payload}:{sig}".encode()).decode()
+    return token
+
+
+def verify_profile_token(token: str) -> dict | None:
+    """Verify a profile token. Returns {'profile_id', 'device_id', 'expiry'} or None."""
+    try:
+        decoded = base64.urlsafe_b64decode(token.encode()).decode()
+        parts = decoded.rsplit(":", 3)
+        if len(parts) != 4:
+            return None
+        profile_id, device_id, expiry_str, sig = parts
+        expiry = int(expiry_str)
+        if time.time() > expiry:
+            return None
+        payload = f"{profile_id}:{device_id}:{expiry}"
+        expected = hmac.new(
+            _get_token_secret().encode(),
+            payload.encode(),
+            hashlib.sha256
+        ).hexdigest()[:16]
+        if not hmac.compare_digest(sig, expected):
+            return None
+        return {"profile_id": profile_id, "device_id": device_id, "expiry": expiry}
+    except (ValueError, Exception):
+        return None
+
+
+def ensure_default_profile() -> dict | None:
+    """Create a default profile if no profiles exist. Returns the profile dict or None."""
+    profiles = _load_profiles()
+    if profiles:
+        return None
+    profile_id = secrets.token_hex(8)
+    profiles[profile_id] = {
+        "name": "Main Profile",
+        "pin": "",
+        "avatar": "default",
+        "created": time.time(),
+        "favorites": [],
+        "watchlist": {},
+        "progress": {},
+        "history": [],
+        "settings": {},
+        "restrictions": {},
+    }
+    _save_profiles(profiles)
+    return {"profile_id": profile_id, "name": "Main Profile"}
+
 

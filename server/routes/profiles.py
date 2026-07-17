@@ -11,14 +11,19 @@ from fastapi import APIRouter, HTTPException, Request
 from auth import (
     _load_profiles,
     _save_profiles,
+    add_profile_favorite,
     add_profile_history,
     clear_profile_history,
     create_profile,
     delete_profile,
+    generate_profile_token,
     get_profile,
+    get_profile_favorites,
     get_profile_history,
     list_profiles,
+    remove_profile_favorite,
     verify_profile_pin,
+    verify_profile_token,
 )
 
 log = logging.getLogger("spacetime-tv")
@@ -164,4 +169,107 @@ async def api_clear_profile_history(profile_id: str):
     if not clear_profile_history(profile_id):
         raise HTTPException(404, "Profile not found")
     return {"status": "ok"}
+
+
+# ── Profile favorites ───────────────────────────────────────────
+
+@router.get("/profiles/{profile_id}/favorites")
+async def api_get_profile_favorites(profile_id: str):
+    """Get favorites for a profile."""
+    favorites = get_profile_favorites(profile_id)
+    return {"favorites": favorites}
+
+
+@router.post("/profiles/{profile_id}/favorites")
+async def api_add_profile_favorite(profile_id: str, payload: dict):
+    """Add an item to profile favorites."""
+    watch_key = payload.get("watchKey") or payload.get("id", "")
+    if not watch_key:
+        raise HTTPException(400, "Missing watchKey or id")
+    if not add_profile_favorite(profile_id, payload):
+        raise HTTPException(404, "Profile not found")
+    return {"status": "ok"}
+
+
+@router.delete("/profiles/{profile_id}/favorites/{watch_key}")
+async def api_remove_profile_favorite(profile_id: str, watch_key: str):
+    """Remove an item from profile favorites."""
+    if not remove_profile_favorite(profile_id, watch_key):
+        raise HTTPException(404, "Profile or favorite not found")
+    return {"status": "ok"}
+
+
+# ── Profile authentication / session ────────────────────────────
+
+@router.post("/profiles/{profile_id}/auth")
+async def api_profile_auth(profile_id: str, payload: dict, request: Request):
+    """Verify profile PIN and return a profile session token.
+    
+    Body: {"pin": "1234"}
+    Returns: {"token": "...", "profile": {...}}
+    """
+    pin = payload.get("pin", "").strip()
+    if not pin:
+        raise HTTPException(400, "PIN is required")
+    
+    if not verify_profile_pin(profile_id, pin):
+        raise HTTPException(403, "Invalid PIN")
+    
+    device_id = request.headers.get("X-Device-Token", "device")
+    token = generate_profile_token(profile_id, device_id)
+    profile = get_profile(profile_id)
+    
+    return {"token": token, "profile": profile}
+
+
+@router.get("/profiles/me")
+async def api_get_current_profile(request: Request):
+    """Get current profile from X-Profile-Token header."""
+    token = request.headers.get("X-Profile-Token", "")
+    if not token:
+        raise HTTPException(401, "Missing X-Profile-Token header")
+    result = verify_profile_token(token)
+    if not result:
+        raise HTTPException(401, "Invalid or expired profile token")
+    profile = get_profile(result["profile_id"])
+    if not profile:
+        raise HTTPException(404, "Profile not found")
+    return {"profile": profile}
+
+
+@router.post("/profiles/session")
+async def api_switch_profile(payload: dict, request: Request):
+    """Switch active profile by verifying PIN. Returns new session token.
+    
+    Body: {"profile_id": "...", "pin": "1234"}
+    """
+    profile_id = payload.get("profile_id", "")
+    pin = payload.get("pin", "").strip()
+    if not profile_id or not pin:
+        raise HTTPException(400, "profile_id and pin are required")
+    if not verify_profile_pin(profile_id, pin):
+        raise HTTPException(403, "Invalid PIN")
+    
+    device_id = request.headers.get("X-Device-Token", "device")
+    token = generate_profile_token(profile_id, device_id)
+    profile = get_profile(profile_id)
+    
+    return {"token": token, "profile": profile}
+
+
+@router.post("/profiles/session/refresh")
+async def api_refresh_profile_token(request: Request):
+    """Refresh an existing profile token (extend expiry)."""
+    token = request.headers.get("X-Profile-Token", "")
+    if not token:
+        raise HTTPException(401, "Missing X-Profile-Token header")
+    result = verify_profile_token(token)
+    if not result:
+        raise HTTPException(401, "Invalid or expired profile token")
+    
+    new_token = generate_profile_token(result["profile_id"], result["device_id"])
+    profile = get_profile(result["profile_id"])
+    
+    return {"token": new_token, "profile": profile}
+
 

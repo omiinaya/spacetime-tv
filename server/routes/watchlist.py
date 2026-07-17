@@ -57,3 +57,78 @@ async def get_progress():
     grouped by watchKey with the most recent entries first.
     """
     return {"progress": _progress_store}
+
+
+# ── Profile-aware watchlist/progress ─────────────────────────────
+
+@router.post("/watchlist/profile/sync-progress")
+async def profile_sync_progress(entry: dict, request: Request):
+    """Synch progress for the currently authenticated profile.
+    
+    Uses X-Profile-Token header to identify the profile.
+    Falls back to global progress store if no profile token.
+    """
+    from auth import verify_profile_token, _load_profiles, _save_profiles
+    
+    token = request.headers.get("X-Profile-Token", "")
+    if not token:
+        # Fall back to global progress store
+        return await sync_progress(entry)
+    
+    result = verify_profile_token(token)
+    if not result:
+        raise HTTPException(401, "Invalid or expired profile token")
+    
+    profile_id = result["profile_id"]
+    watch_key = entry.get("watchKey")
+    pos = entry.get("position")
+    
+    if not watch_key or pos is None:
+        raise HTTPException(400, "Missing watchKey or position")
+    
+    profiles = _load_profiles()
+    if profile_id not in profiles:
+        raise HTTPException(404, "Profile not found")
+    
+    if "progress" not in profiles[profile_id]:
+        profiles[profile_id]["progress"] = {}
+    
+    profiles[profile_id]["progress"][watch_key] = {
+        "position": pos,
+        "timestamp": entry.get("timestamp", time.time()),
+        "seriesData": entry.get("seriesData"),
+        "movieData": entry.get("movieData"),
+    }
+    # Clean None keys
+    for k in ("seriesData", "movieData"):
+        if profiles[profile_id]["progress"][watch_key].get(k) is None:
+            del profiles[profile_id]["progress"][watch_key][k]
+    
+    _save_profiles(profiles)
+    return {"status": "ok", "profile_id": profile_id}
+
+
+@router.get("/watchlist/profile/progress")
+async def profile_get_progress(request: Request):
+    """Get progress for the currently authenticated profile.
+    
+    Uses X-Profile-Token header to identify the profile.
+    Falls back to global progress store if no profile token.
+    """
+    from auth import verify_profile_token, _load_profiles
+    
+    token = request.headers.get("X-Profile-Token", "")
+    if not token:
+        return await get_progress()
+    
+    result = verify_profile_token(token)
+    if not result:
+        raise HTTPException(401, "Invalid or expired profile token")
+    
+    profile_id = result["profile_id"]
+    profiles = _load_profiles()
+    if profile_id not in profiles:
+        raise HTTPException(404, "Profile not found")
+    
+    return {"progress": profiles[profile_id].get("progress", {})}
+
