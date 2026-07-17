@@ -64,8 +64,11 @@ def override_lifespan():
 @pytest.fixture(autouse=True)
 def reset_shared_state():
     """Clear all shared mutable state between tests so ordering doesn't matter."""
-    # Clear EPG cache
-    from state import epg_cache, _progress_store
+    # Clear main cache so tests don't leak cached data between each other
+    # (e.g. test_live_all_with_cache sets _cache["live_all"] which would
+    #  otherwise contaminate test_live_info_empty_when_cache_empty)
+    from state import _cache, epg_cache, _progress_store
+    _cache.clear()
     epg_cache["data"] = None
     epg_cache["fetched"] = 0
     # Clear progress store
@@ -96,6 +99,11 @@ def reset_shared_state():
     # Clear stream hit counters
     from state import _stream_hits
     _stream_hits.clear()
+    # Also wipe stream_hits.json on disk to prevent stale loads
+    from config import DATA_DIR as _data_dir
+    _hits_file = _data_dir / "stream_hits.json"
+    if _hits_file.exists():
+        _hits_file.unlink()
     # Clear probe cache to prevent test ordering leaks
     from routes.stream_core import _probe_cache
     _probe_cache.clear()

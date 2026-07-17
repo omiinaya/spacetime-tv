@@ -211,7 +211,7 @@ def test_lookup_extension_cache_hit_series(client_with_cache):
     import asyncio
     from routes.stream import _lookup_extension
     from state import _cache
-    _cache["series_5"] = (1000.0, [
+    _cache["ext_lookup_series_300"] = (1000.0, [
         {"series_id": 300, "name": "Test Series", "container_extension": "mp4"},
     ])
     result = asyncio.run(_lookup_extension(300, "series"))
@@ -223,7 +223,7 @@ def test_lookup_extension_defaults_to_mp4_when_no_ext(client_with_cache):
     import asyncio
     from routes.stream import _lookup_extension
     from state import _cache
-    _cache["vod_1"] = (1000.0, [
+    _cache["ext_lookup_movie_1"] = (1000.0, [
         {"stream_id": 1, "name": "No Ext", "container_extension": ""},
     ])
     result = asyncio.run(_lookup_extension(1, "movie"))
@@ -409,7 +409,7 @@ def test_probe_stream_skips_ffprobe_for_mp4(client_with_cache):
     from routes.stream import probe_stream
     from state import _cache
     # Populate cache so extension lookup returns mp4
-    _cache["vod_10"] = (1000.0, [
+    _cache["ext_lookup_movie_10"] = (1000.0, [
         {"stream_id": 10, "name": "MP4 Movie", "container_extension": "mp4"},
     ])
     result = asyncio.run(probe_stream(10, "movie"))
@@ -812,28 +812,24 @@ async def _gather(agen):
 
 
 def test_http_iter_chunks_yields_chunks():
-    """_http_iter_chunks yields bytes via httpx response."""
+    """_http_iter_chunks yields bytes via aiohttp response."""
     import asyncio
     from unittest.mock import patch, MagicMock, AsyncMock
     from routes.stream import _http_iter_chunks
 
     mock_resp = MagicMock()
-    mock_resp.status_code = 200
+    mock_resp.status = 200
+    mock_content = AsyncMock()
+    mock_content.read = AsyncMock(side_effect=[b"chunk1", b"chunk2", b""])
+    mock_resp.content = mock_content
 
-    async def _fake_aiter_bytes(*a, **kw):
-        for chunk in [b"chunk1", b"chunk2"]:
-            yield chunk
+    mock_session = MagicMock()
+    mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_resp)
+    mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
 
-    mock_resp.aiter_bytes = _fake_aiter_bytes
-
-    async def _fake_get(*a, **kw):
-        return mock_resp
-
-    mock_client = MagicMock()
-    mock_client.get = _fake_get
-
-    with patch("routes.stream_core.httpx.AsyncClient") as mock_async_client:
-        mock_async_client.return_value.__aenter__.return_value = mock_client
+    with patch("routes.stream_core.aiohttp.ClientSession") as MockSession:
+        MockSession.return_value.__aenter__.return_value = mock_session
+        MockSession.return_value.__aexit__.return_value = None
         chunks = asyncio.run(_gather(_http_iter_chunks("http://test/stream")))
     assert chunks == [b"chunk1", b"chunk2"]
 
@@ -841,21 +837,20 @@ def test_http_iter_chunks_yields_chunks():
 def test_http_iter_chunks_raises_on_non_200():
     """_http_iter_chunks raises RuntimeError for non-200 status."""
     import asyncio
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import patch, MagicMock, AsyncMock
     import pytest
     from routes.stream import _http_iter_chunks
 
     mock_resp = MagicMock()
-    mock_resp.status_code = 403
+    mock_resp.status = 403
 
-    async def _fake_get(*a, **kw):
-        return mock_resp
+    mock_session = MagicMock()
+    mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_resp)
+    mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
 
-    mock_client = MagicMock()
-    mock_client.get = _fake_get
-
-    with patch("routes.stream_core.httpx.AsyncClient") as mock_async_client:
-        mock_async_client.return_value.__aenter__.return_value = mock_client
+    with patch("routes.stream_core.aiohttp.ClientSession") as MockSession:
+        MockSession.return_value.__aenter__.return_value = mock_session
+        MockSession.return_value.__aexit__.return_value = None
         with pytest.raises(RuntimeError, match="403"):
             asyncio.run(_gather(_http_iter_chunks("http://test/stream")))
 
@@ -863,59 +858,61 @@ def test_http_iter_chunks_raises_on_non_200():
 def test_http_iter_chunks_accepts_206_with_vod():
     """_http_iter_chunks accepts 206 when status_ok includes 206."""
     import asyncio
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import patch, MagicMock, AsyncMock
     from routes.stream import _http_iter_chunks
 
     mock_resp = MagicMock()
-    mock_resp.status_code = 206
+    mock_resp.status = 206
+    mock_content = AsyncMock()
+    mock_content.read = AsyncMock(side_effect=[b"data", b""])
+    mock_resp.content = mock_content
 
-    async def _fake_aiter_bytes(*a, **kw):
-        yield b"data"
+    mock_session = MagicMock()
+    mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_resp)
+    mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
 
-    mock_resp.aiter_bytes = _fake_aiter_bytes
-
-    async def _fake_get(*a, **kw):
-        return mock_resp
-
-    mock_client = MagicMock()
-    mock_client.get = _fake_get
-
-    with patch("routes.stream_core.httpx.AsyncClient") as mock_async_client:
-        mock_async_client.return_value.__aenter__.return_value = mock_client
+    with patch("routes.stream_core.aiohttp.ClientSession") as MockSession:
+        MockSession.return_value.__aenter__.return_value = mock_session
+        MockSession.return_value.__aexit__.return_value = None
         chunks = asyncio.run(_gather(
             _http_iter_chunks("http://test/stream", status_ok=(200, 206))))
     assert chunks == [b"data"]
 
 
 def test_http_iter_chunks_passes_range_header():
-    """_http_iter_chunks passes Range header via httpx."""
+    """_http_iter_chunks passes Range header via aiohttp."""
     import asyncio
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import patch, MagicMock, AsyncMock
     from routes.stream import _http_iter_chunks
 
     captured = {}
 
-    async def _fake_get(url, *, headers, **kw):
-        captured["range"] = headers.get("Range")
-        captured["url"] = url
-        resp = MagicMock()
-        resp.status_code = 206
-        resp.aiter_bytes = lambda *a, **kw: _async_iter([])
-        return resp
+    def _make_get_side_effect(captured):
+        def side_effect(url, *, headers=None, **kw):
+            captured["range"] = headers.get("Range", None) if headers else None
+            captured["url"] = url
+            mock_resp = MagicMock()
+            mock_resp.status = 206
+            mock_resp.content = AsyncMock()
+            mock_resp.content.read = AsyncMock(return_value=b"")
 
-    async def _async_iter(items):
-        for i in items:
-            yield i
+            cm = MagicMock()
+            cm.__aenter__ = AsyncMock(return_value=mock_resp)
+            cm.__aexit__ = AsyncMock(return_value=None)
+            return cm
+        return side_effect
 
-    mock_client = MagicMock()
-    mock_client.get = _fake_get
+    mock_session = MagicMock()
+    mock_session.get.side_effect = _make_get_side_effect(captured)
 
-    with patch("routes.stream_core.httpx.AsyncClient") as mock_async_client:
-        mock_async_client.return_value.__aenter__.return_value = mock_client
+    with patch("routes.stream_core.aiohttp.ClientSession") as MockSession:
+        MockSession.return_value.__aenter__.return_value = mock_session
+        MockSession.return_value.__aexit__.return_value = None
         asyncio.run(_gather(
             _http_iter_chunks("http://test/stream", range_header="bytes=0-999",
                               status_ok=(200, 206))))
     assert captured.get("range") == "bytes=0-999"
+    assert captured.get("url") == "http://test/stream"
 
 
 def test_ffmpeg_pipe_yields_stdout():
@@ -979,7 +976,7 @@ def test_safe_convert_handles_exception():
 
     _converting["test"] = "placeholder"
 
-    with patch("routes.stream_convert.convert_to_mp4", side_effect=ValueError("test error")):
+    with patch("routes.stream_convert.convert_to_mp4", side_effect=OSError("test error")):
         import asyncio
         asyncio.run(_safe_convert("1", "movie", "test"))
 

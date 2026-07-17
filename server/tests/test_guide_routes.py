@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch, ANY
 
 import pytest
+from fastapi import HTTPException
 
 
 def _epg_timestamp(dt=None):
@@ -519,8 +520,8 @@ class TestGuideNowLiveAllError:
         }
         epg_cache["fetched"] = 9999999999.0
 
-        # Patch cached_fetch TO raise an exception
-        with patch("routes.guide_routes.cached_fetch", side_effect=Exception("API down")):
+        # Patch cached_fetch TO raise an HTTPException (route handlers catch HTTPException, not bare Exception)
+        with patch("routes.guide_routes.cached_fetch", side_effect=HTTPException(status_code=502, detail="API down")):
             resp = client.get("/api/v1/guide/now?stream_ids=101")
         assert resp.status_code == 200
         data = resp.json()
@@ -604,7 +605,7 @@ class TestGuideCatchupLiveAllError:
         }
         epg_cache["fetched"] = 9999999999.0
 
-        with patch("routes.guide_routes.cached_fetch", side_effect=Exception("API down")):
+        with patch("routes.guide_routes.cached_fetch", side_effect=HTTPException(status_code=502, detail="API down")):
             resp = client.get("/api/v1/guide/catchup?stream_id=101&hours=4")
         assert resp.status_code == 200
         data = resp.json()

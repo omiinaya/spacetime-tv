@@ -257,11 +257,22 @@ def test_guide_now_unknown_stream_id_returns_null(client_with_cache):
 
 def test_guide_now_with_empty_epg_returns_unknown(client):
     """Even with empty EPG, /api/guide/now should return keys for queried IDs."""
+    from unittest.mock import patch, AsyncMock
+    import routes.guide_routes
     from routes.guide_epg import EPG_CACHE_FILE
     # Ensure the on-disk EPG cache is also cleared to force empty EPG
     if EPG_CACHE_FILE.exists():
         EPG_CACHE_FILE.unlink()
-    resp = client.get("/api/v1/guide/now?stream_ids=101,201")
+    # Mock EPG fetch to return empty data (prevents real HTTP calls that
+    # fail with "Event loop is closed" when test ordering triggers asyncio issues)
+    # Patch at usage site (guide_routes) not definition site (guide_epg)
+    with patch.object(
+        routes.guide_routes,
+        "load_epg_background",
+        new_callable=AsyncMock,
+        return_value={"programmes": [], "channels": []},
+    ):
+        resp = client.get("/api/v1/guide/now?stream_ids=101,201")
     assert resp.status_code == 200
     data = resp.json()
     programmes = data["programmes"]

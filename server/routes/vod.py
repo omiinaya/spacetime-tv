@@ -63,7 +63,10 @@ async def movies_unified(
     groups: dict[str, dict] = {}
 
     for key, (ts, data) in _cache.items():
-        if not key.startswith("vod_") or key == CACHE_VOD_CATEGORIES:
+        # Handle both unscoped keys (vod_10) and provider-scoped keys (Default:vod_10)
+        # iptv_client.cached_fetch writes scoped keys like "{provider}:{key}"
+        base_key = key.split(":", 1)[-1] if ":" in key else key
+        if not base_key.startswith("vod_") or base_key == CACHE_VOD_CATEGORIES:
             continue
         if not isinstance(data, list):
             continue
