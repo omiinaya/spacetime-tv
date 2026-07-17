@@ -79,8 +79,8 @@ app.include_router(cloud_sync_router, prefix="/api/v1")
 # Static files mount MUST come before catch-all misc router
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
-app.include_router(misc_router)
 app.include_router(profiles_router, prefix="/api/v1")
+app.include_router(misc_router)
 
 
 # ── Auth middleware: enforce X-Device-Token or X-Admin-Key ───────
