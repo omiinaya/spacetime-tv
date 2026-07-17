@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profiles — Spacetime TV</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0a0f;color:#e0e0e0;display:flex;justify-content:center;align-items:center;min-height:100vh}
+.container{max-width:500px;width:100%;padding:2rem}
+h1{font-size:1.5rem;margin-bottom:1.5rem;text-align:center;color:#fff;font-weight:300}
+.profile-list{display:flex;flex-direction:column;gap:0.75rem}
+.profile-item{display:flex;align-items:center;gap:1rem;background:#14141f;border:1px solid #2a2a3a;border-radius:12px;padding:1rem 1.25rem;cursor:pointer;transition:all 0.15s}
+.profile-item:hover{border-color:#4f46e5;background:#1e1e2f}
+.profile-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#fff;font-weight:600;flex-shrink:0}
+.profile-name{flex:1;font-size:1.05rem;font-weight:500}
+.profile-pin-indicator{font-size:0.8rem;color:#888;background:#1e1e2e;padding:0.25rem 0.6rem;border-radius:6px}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);justify-content:center;align-items:center;z-index:100}
+.modal.active{display:flex}
+.modal-content{background:#14141f;border:1px solid #2a2a3a;border-radius:16px;padding:2rem;width:320px}
+.modal-content h2{font-size:1.2rem;margin-bottom:1rem;text-align:center}
+input[type="text"],input[type="password"]{width:100%;padding:0.75rem;font-size:1rem;background:#0a0a0f;border:1px solid #3a3a4a;border-radius:8px;color:#fff;margin-bottom:1rem}
+input:focus{outline:none;border-color:#4f46e5}
+.pin-input{font-size:1.5rem;text-align:center;letter-spacing:0.5rem}
+.btn-group{display:flex;gap:0.75rem;margin-top:0.5rem}
+button{flex:1;padding:0.7rem;border:none;border-radius:8px;font-size:0.95rem;cursor:pointer;transition:opacity 0.15s}
+button:hover{opacity:0.9}
+.btn-primary{background:#4f46e5;color:#fff}
+.btn-secondary{background:#2a2a3a;color:#ccc}
+.error{color:#e53e3e;font-size:0.85rem;text-align:center;margin-bottom:0.75rem;display:none}
+.add-profile{text-align:center;margin-top:1.5rem}
+.add-profile button{background:transparent;border:1px dashed #3a3a4a;color:#888;padding:0.75rem;border-radius:8px;cursor:pointer;width:100%}
+.add-profile button:hover{border-color:#4f46e5;color:#ccc}
+.status{text-align:center;font-size:0.85rem;color:#888;margin-bottom:1rem}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Who's watching?</h1>
+<div id="status" class="status"></div>
+<div id="profile-list" class="profile-list"></div>
+<div class="add-profile">
+<button onclick="showCreateModal()">+ Add Profile</button>
+</div>
+</div>
+<div id="pin-modal" class="modal">
+<div class="modal-content">
+<h2 id="pin-profile-name">Profile</h2>
+<div id="pin-error" class="error">Invalid PIN</div>
+<input type="password" id="pin-input" class="pin-input" placeholder="...." maxlength="6" inputmode="numeric" autocomplete="off">
+<div class="btn-group">
+<button class="btn-secondary" onclick="closePinModal()">Cancel</button>
+<button class="btn-primary" onclick="submitPin()">Unlock</button>
+</div>
+</div>
+</div>
+<div id="create-modal" class="modal">
+<div class="modal-content">
+<h2>New Profile</h2>
+<div id="create-error" class="error"></div>
+<input type="text" id="create-name" placeholder="Profile name (e.g. Kids)" autocomplete="off">
+<input type="password" id="create-pin" class="pin-input" placeholder="PIN" maxlength="6" inputmode="numeric" autocomplete="off">
+<div class="btn-group">
+<button class="btn-secondary" onclick="closeCreateModal()">Cancel</button>
+<button class="btn-primary" onclick="createProfile()">Create</button>
+</div>
+</div>
+</div>
+<script>
+var API = '/api/v1';
+var selectedProfileId = null;
+var currentProfileName = '';
+
+function escape(s) {
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+async function loadProfiles() {
+  try {
+    var res = await fetch(API + '/profiles');
+    if (!res.ok) throw new Error('Failed');
+    var data = await res.json();
+    var profiles = data.profiles || [];
+    render(profiles);
+    document.getElementById('status').textContent = profiles.length + ' profile(s)';
+  } catch(e) {
+    document.getElementById('status').textContent = 'Error: ' + e.message;
+  }
+}
+
+function render(profiles) {
+  var list = document.getElementById('profile-list');
+  if (!profiles.length) {
+    list.innerHTML = '<div style="text-align:center;color:#666;padding:2rem;">No profiles yet.</div>';
+    return;
+  }
+  list.innerHTML = profiles.map(function(p) {
+    var initial = (p.name || '?')[0].toUpperCase();
+    return '<div class="profile-item" onclick="selectProfile(\\'' + p.profile_id + '\\', \\'' + escape(p.name) + '\\')">'
+      + '<div class="profile-avatar">' + initial + '</div>'
+      + '<div class="profile-name">' + escape(p.name) + '</div>'
+      + '<span class="profile-pin-indicator">PIN</span></div>';
+  }).join('');
+}
+
+function selectProfile(id, name) {
+  selectedProfileId = id;
+  currentProfileName = name;
+  document.getElementById('pin-profile-name').textContent = 'PIN for ' + name;
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-error').style.display = 'none';
+  document.getElementById('pin-modal').classList.add('active');
+  setTimeout(function(){document.getElementById('pin-input').focus();}, 100);
+}
+
+function closePinModal() {
+  document.getElementById('pin-modal').classList.remove('active');
+  selectedProfileId = null;
+}
+
+async function submitPin() {
+  var pin = document.getElementById('pin-input').value.trim();
+  if (!pin || pin.length < 4) {
+    document.getElementById('pin-error').textContent = 'PIN must be 4-6 digits';
+    document.getElementById('pin-error').style.display = 'block';
+    return;
+  }
+  try {
+    var res = await fetch(API + '/profiles/' + selectedProfileId + '/auth', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({pin: pin})
+    });
+    if (!res.ok) {
+      var err = await res.json();
+      document.getElementById('pin-error').textContent = err.detail || 'Invalid PIN';
+      document.getElementById('pin-error').style.display = 'block';
+      return;
+    }
+    var data = await res.json();
+    localStorage.setItem('profile_token', data.token);
+    localStorage.setItem('profile_id', selectedProfileId);
+    localStorage.setItem('profile_name', currentProfileName);
+    closePinModal();
+    document.getElementById('status').textContent = 'Logged in as ' + currentProfileName + ' OK';
+  } catch(e) {
+    document.getElementById('pin-error').textContent = 'Network error';
+    document.getElementById('pin-error').style.display = 'block';
+  }
+}
+
+function showCreateModal() {
+  document.getElementById('create-name').value = '';
+  document.getElementById('create-pin').value = '';
+  document.getElementById('create-error').style.display = 'none';
+  document.getElementById('create-modal').classList.add('active');
+  setTimeout(function(){document.getElementById('create-name').focus();}, 100);
+}
+
+function closeCreateModal() {
+  document.getElementById('create-modal').classList.remove('active');
+}
+
+async function createProfile() {
+  var name = document.getElementById('create-name').value.trim();
+  var pin = document.getElementById('create-pin').value.trim();
+  var errDiv = document.getElementById('create-error');
+  if (!name) { errDiv.textContent = 'Name required'; errDiv.style.display = 'block'; return; }
+  if (!pin || pin.length < 4 || pin.length > 6) { errDiv.textContent = 'PIN must be 4-6 digits'; errDiv.style.display = 'block'; return; }
+  try {
+    var res = await fetch(API + '/profiles', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name:name, pin:pin}) });
+    if (!res.ok) { var err = await res.json(); errDiv.textContent = err.detail || 'Failed'; errDiv.style.display='block'; return; }
+    closeCreateModal();
+    loadProfiles();
+  } catch(e) { errDiv.textContent = 'Network error'; errDiv.style.display='block'; }
+}
+
+var storedToken = localStorage.getItem('profile_token');
+if (storedToken) {
+  fetch(API + '/profiles/me', {headers:{'X-Profile-Token':storedToken}}).then(function(r){
+    if (r.ok) document.getElementById('status').textContent = 'Session active';
+  }).catch(function(){});
+}
+
+loadProfiles();
+</script>
+</body>
+</html>

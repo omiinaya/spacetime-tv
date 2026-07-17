@@ -21,6 +21,6 @@ server/data/
 server/venv/
 # Stale repo artifacts
 *.service
-*.html
+# *.html  # removed for profiles.html
 .cursorrules
 .gitmessage
