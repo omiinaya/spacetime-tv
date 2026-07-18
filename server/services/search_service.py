@@ -231,3 +231,42 @@ async def search_all_series(query: str, provider_idx: int = -1) -> list:
     except (TimeoutError, HTTPException) as e:
         log.error(f"Series search error: {e}")
         return []
+
+async def search_from_cache(
+    query: str,
+    prefix: str,
+    id_field: str,
+    name_fields: tuple[str, ...] = ("name",),
+    cache: dict | None = None,
+) -> list:
+    """Scan ALL cache entries with a given prefix, return ALL matches."""
+    if cache is None:
+        from state import _cache
+        cache = _cache
+    seen: set = set()
+    out: list = []
+    for key, (_ts, data) in cache.items():
+        if not key.startswith(prefix):
+            continue
+        if not isinstance(data, list):
+            continue
+        for s in data:
+            sid = s.get(id_field)
+            if not sid or sid in seen:
+                continue
+            seen.add(sid)
+            text = " ".join(str(s.get(f, "") or "") for f in name_fields).lower()
+            if query in text:
+                out.append(s)
+    return out
+
+
+async def search_live_channels(query: str, provider_idx: int = -1) -> list:
+    """Search live channels by name from cache."""
+    from state import CACHE_LIVE_ALL
+    from iptv_client import cached_fetch
+    try:
+        all_live = await cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
+        return [ch for ch in all_live if query in (ch.get("name") or "").lower()]
+    except Exception:
+        return []
