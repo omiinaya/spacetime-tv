@@ -25,12 +25,21 @@ services:
       dockerfile: Dockerfile
     container_name: stv-frontend
     ports:
+      - "80:80"
       - "443:443"
-      - "8722:80"
     depends_on:
       backend:
         condition: service_healthy
+    environment:
+      - ACME_DOMAIN=${ACME_DOMAIN:-}
+      - ACME_EMAIL=${ACME_EMAIL:-}
+      - ACME_STAGING=${ACME_STAGING:-false}
+    volumes:
+      - stv-certificates:/etc/letsencrypt
     restart: unless-stopped
+
+volumes:
+  stv-certificates:
 
 networks:
   default:
