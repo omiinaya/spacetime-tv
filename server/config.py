@@ -202,6 +202,7 @@ def _load_providers_from_file() -> list | None:
         return providers
     except (json.JSONDecodeError, TypeError, KeyError, OSError) as e:
         import logging
+
         logging.getLogger("spacetime-tv").warning(f"Failed to load PROVIDERS_FILE: {e}")
         return None
 
@@ -217,19 +218,22 @@ def _save_providers_to_file(providers: list) -> None:
     try:
         data = []
         for i, p in enumerate(providers):
-            data.append({
-                "name": p.name,
-                "base_url": p.base_url,
-                "username": p.username,
-                "password": p.password if not p.password.startswith("enc:") else f"enc:{p.password[4:]}",
-                "enabled": p.enabled,
-                "order": p.order if hasattr(p, "order") else i,
-            })
+            data.append(
+                {
+                    "name": p.name,
+                    "base_url": p.base_url,
+                    "username": p.username,
+                    "password": p.password if not p.password.startswith("enc:") else f"enc:{p.password[4:]}",
+                    "enabled": p.enabled,
+                    "order": p.order if hasattr(p, "order") else i,
+                }
+            )
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as f:
             json.dump(data, f, indent=2)
     except (OSError, TypeError) as e:
         import logging
+
         logging.getLogger("spacetime-tv").warning(f"Failed to save PROVIDERS_FILE: {e}")
 
 
