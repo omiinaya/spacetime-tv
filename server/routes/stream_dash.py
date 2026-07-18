@@ -13,22 +13,24 @@ def generate_live_mpd(stream_id: int, base_url: str) -> str:
     """Generate a DASH MPD manifest for live TV playback."""
     mime = "video/mp2t"
     safe_url = base_url.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
-    return """<?xml version="1.0" encoding="utf-8"?>
-<MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-     xmlns="urn:mpeg:dash:schema:mpd:2011"
-     profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"
-     type="static">
- <Period>
-    <AdaptationSet mimeType="""" + mime + """" contentType="video" startWithSAP="1">
-      <Representation bandwidth="5000000">
-        <BaseURL>""" + safe_url + """</BaseURL>
-        <SegmentBase indexRangeExact="true">
-          <Initialization range="0-0" />
-        </SegmentBase>
-      </Representation>
-    </AdaptationSet>
- </Period>
-</MPD>"""
+    return (
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        '<MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n'
+        '     xmlns="urn:mpeg:dash:schema:mpd:2011"\n'
+        '     profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"\n'
+        '     type="static">\n'
+        ' <Period>\n'
+        f'    <AdaptationSet mimeType="{mime}" contentType="video" startWithSAP="1">\n'
+        '      <Representation bandwidth="5000000">\n'
+        f'        <BaseURL>{safe_url}</BaseURL>\n'
+        '        <SegmentBase indexRangeExact="true">\n'
+        '          <Initialization range="0-0" />\n'
+        '        </SegmentBase>\n'
+        '      </Representation>\n'
+        '    </AdaptationSet>\n'
+        ' </Period>\n'
+        '</MPD>'
+    )
 
 
 def generate_vod_mpd(stream_id: int, media_type: str, base_url: str) -> str:
@@ -45,22 +47,24 @@ def generate_vod_mpd(stream_id: int, media_type: str, base_url: str) -> str:
     }
     mime = mime_map.get(ext, "video/mp2t")
     safe_url = base_url.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
-    return """<?xml version="1.0" encoding="utf-8"?>
-<MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-     xmlns="urn:mpeg:dash:schema:mpd:2011"
-     profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"
-     type="static">
- <Period>
-    <AdaptationSet mimeType="""" + mime + """" contentType="video" startWithSAP="1">
-      <Representation bandwidth="5000000">
-        <BaseURL>""" + safe_url + """</BaseURL>
-        <SegmentBase indexRangeExact="true">
-          <Initialization range="0-0" />
-        </SegmentBase>
-      </Representation>
-    </AdaptationSet>
- </Period>
-</MPD>"""
+    return (
+        '<?xml version="1.0" encoding="utf-8"?>\n'
+        '<MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n'
+        '     xmlns="urn:mpeg:dash:schema:mpd:2011"\n'
+        '     profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"\n'
+        '     type="static">\n'
+        ' <Period>\n'
+        f'    <AdaptationSet mimeType="{mime}" contentType="video" startWithSAP="1">\n'
+        '      <Representation bandwidth="5000000">\n'
+        f'        <BaseURL>{safe_url}</BaseURL>\n'
+        '        <SegmentBase indexRangeExact="true">\n'
+        '          <Initialization range="0-0" />\n'
+        '        </SegmentBase>\n'
+        '      </Representation>\n'
+        '    </AdaptationSet>\n'
+        ' </Period>\n'
+        '</MPD>'
+    )
 
 
 @router.get("/stream/live/{stream_id}/manifest.mpd")
