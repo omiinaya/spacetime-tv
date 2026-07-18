@@ -142,3 +142,4 @@ async def get_watchlist():
     TODO: implement actual watchlist management per profile.
     """
     return {"watchlist": {}}
+...
