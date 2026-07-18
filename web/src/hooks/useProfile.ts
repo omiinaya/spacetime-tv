@@ -61,7 +61,9 @@ function storeProfile(profile: Profile | null, token?: string | null) {
 
 function authHeaders(): Record<string, string> {
   const token = getStoredToken();
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
   if (token) {
     headers["X-Profile-Token"] = token;
   }
@@ -69,7 +71,9 @@ function authHeaders(): Record<string, string> {
 }
 
 export async function fetchProfiles(token?: string): Promise<Profile[]> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
   if (token) headers["X-Profile-Token"] = token;
   const res = await fetch(`${API_BASE}/profiles`, { headers });
   if (!res.ok) throw new Error("Failed to fetch profiles");
@@ -196,7 +200,10 @@ export async function clearProfileHistory(profileId: string): Promise<boolean> {
 
 // ── Session management ──────────────────────────────────────────────
 
-export async function switchProfile(profileId: string, pin: string): Promise<{token: string; profile: Profile} | null> {
+export async function switchProfile(
+  profileId: string,
+  pin: string,
+): Promise<{ token: string; profile: Profile } | null> {
   const res = await fetch(`${API_BASE}/profiles/session`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

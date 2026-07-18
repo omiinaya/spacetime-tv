@@ -296,3 +296,43 @@ async def api_refresh_profile_token(request: Request):
     profile = get_profile(result["profile_id"])
 
     return {"token": new_token, "profile": profile}
+
+
+
+# ── Profile settings ────────────────────────────────────────────────
+
+@router.get("/profiles/{profile_id}/settings")
+async def api_get_profile_settings(profile_id: str, request: Request):
+    """Get settings for a profile."""
+    _require_profile_access(profile_id, request)
+    profiles = _load_profiles()
+    profile = profiles.get(profile_id)
+    if not profile:
+        raise HTTPException(404, "Profile not found")
+    return {"settings": profile.get("settings", {})}
+
+
+@router.put("/profiles/{profile_id}/settings")
+async def api_update_profile_settings(profile_id: str, payload: dict, request: Request):
+    """Update settings for a profile."""
+    _require_profile_access(profile_id, request)
+    profiles = _load_profiles()
+    if profile_id not in profiles:
+        raise HTTPException(404, "Profile not found")
+    if "settings" not in profiles[profile_id]:
+        profiles[profile_id]["settings"] = {}
+    profiles[profile_id]["settings"].update(payload)
+    _save_profiles(profiles)
+    return {"status": "ok", "settings": profiles[profile_id]["settings"]}
+
+
+@router.delete("/profiles/{profile_id}/settings")
+async def api_clear_profile_settings(profile_id: str, request: Request):
+    """Clear all settings for a profile."""
+    _require_profile_access(profile_id, request)
+    profiles = _load_profiles()
+    if profile_id not in profiles:
+        raise HTTPException(404, "Profile not found")
+    profiles[profile_id]["settings"] = {}
+    _save_profiles(profiles)
+    return {"status": "ok", "detail": "Settings cleared"}
