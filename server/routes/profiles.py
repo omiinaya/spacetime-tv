@@ -27,11 +27,16 @@ from auth import (
     verify_profile_token,
 )
 
+
 def _require_profile_access(profile_id: str, request: Request):
-    """Check that X-Profile-Token matches the requested profile_id."""
+    """Check that X-Profile-Token matches the requested profile_id, or admin key."""
+    admin_key = request.headers.get("X-Admin-Key", "")
+    from config import ADMIN_API_KEY
+    if admin_key and admin_key == ADMIN_API_KEY:
+        return {"profile_id": profile_id, "admin": True}
     token = request.headers.get("X-Profile-Token", "")
     if not token:
-        raise HTTPException(401, "Missing X-Profile-Token header")
+        raise HTTPException(401, "Missing X-Profile-Token or X-Admin-Key header")
     result = verify_profile_token(token)
     if not result:
         raise HTTPException(401, "Invalid or expired profile token")
@@ -101,7 +106,7 @@ async def api_get_profile(profile_id: str):
 
 @router.delete("/profiles/{profile_id}")
 async def api_delete_profile(profile_id: str, request: Request):
-    """Delete a profile. Admin or device auth required."""
+    """Delete a profile. Requires admin key or own profile token."""
     _require_profile_access(profile_id, request)
     if not delete_profile(profile_id):
         raise HTTPException(404, "Profile not found")

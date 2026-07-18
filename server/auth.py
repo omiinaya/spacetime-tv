@@ -154,9 +154,7 @@ def _verify_pin(stored: str, pin: str) -> bool:
     if ":" not in stored:
         return hmac.compare_digest(stored, pin)
     salt, expected = stored.split(":", 1)
-    return hmac.compare_digest(
-        hashlib.sha256((salt + pin).encode()).hexdigest(), expected
-    )
+    return hmac.compare_digest(hashlib.sha256((salt + pin).encode()).hexdigest(), expected)
 
 
 def create_profile(name: str, pin: str, avatar: str = "") -> dict:
