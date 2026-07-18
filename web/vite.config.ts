@@ -7,6 +7,7 @@ import { readFileSync, writeFileSync, unlinkSync } from "fs";
 import compression from "vite-plugin-compression";
 
 export default defineConfig({
+  base: process.env.VITE_CDN_URL || "/",
   plugins: [
     tailwindcss({ inject: false }),
     react(),
