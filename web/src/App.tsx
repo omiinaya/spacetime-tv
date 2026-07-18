@@ -130,8 +130,8 @@ function AppLayout() {
       <ProfilePicker
         profiles={profiles}
         loading={loading}
-        onSelect={(p) => {
-          setProfile(p);
+        onSelect={(p: any) => {
+          setProfile(p, p.token);
         }}
         onRefresh={refreshProfiles}
       />
