@@ -531,13 +531,22 @@ interface ProvidersResponse {
   providers: Provider[];
 }
 
-function ProviderManagementSection({ headers }: { headers: Record<string, string> }) {
+function ProviderManagementSection({
+  headers,
+}: {
+  headers: Record<string, string>;
+}) {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
-  const [formData, setFormData] = useState({ name: "", base_url: "", username: "", password: "" });
+  const [formData, setFormData] = useState({
+    name: "",
+    base_url: "",
+    username: "",
+    password: "",
+  });
   const [msg, setMsg] = useState<string | null>(null);
 
   const fetchProviders = useCallback(async () => {
@@ -563,7 +572,10 @@ function ProviderManagementSection({ headers }: { headers: Record<string, string
 
   const handleToggle = async (idx: number) => {
     try {
-      const r = await fetch(`/api/admin/providers/${idx}/toggle`, { method: "POST", headers });
+      const r = await fetch(`/api/admin/providers/${idx}/toggle`, {
+        method: "POST",
+        headers,
+      });
       if (r.ok) fetchProviders();
     } catch {
       /* ignore */
@@ -573,7 +585,10 @@ function ProviderManagementSection({ headers }: { headers: Record<string, string
   const handleDelete = async (idx: number) => {
     if (!window.confirm("Delete this provider?")) return;
     try {
-      const r = await fetch(`/api/admin/providers/${idx}`, { method: "DELETE", headers });
+      const r = await fetch(`/api/admin/providers/${idx}`, {
+        method: "DELETE",
+        headers,
+      });
       if (r.ok) fetchProviders();
       else setMsg("Delete failed");
     } catch {
@@ -630,7 +645,12 @@ function ProviderManagementSection({ headers }: { headers: Record<string, string
 
   const startEdit = (p: Provider) => {
     setEditingIdx(p.index);
-    setFormData({ name: p.name, base_url: p.base_url, username: p.username, password: "" });
+    setFormData({
+      name: p.name,
+      base_url: p.base_url,
+      username: p.username,
+      password: "",
+    });
     setShowAddForm(false);
   };
 
@@ -658,7 +678,16 @@ function ProviderManagementSection({ headers }: { headers: Record<string, string
             Refresh
           </button>
           <button
-            onClick={() => { setShowAddForm(!showAddForm); setEditingIdx(null); setFormData({ name: "", base_url: "", username: "", password: "" }); }}
+            onClick={() => {
+              setShowAddForm(!showAddForm);
+              setEditingIdx(null);
+              setFormData({
+                name: "",
+                base_url: "",
+                username: "",
+                password: "",
+              });
+            }}
             className="flex items-center gap-1.5 px-2 py-1 rounded bg-primary/20 text-primary text-[10px] hover:bg-primary/30 transition-colors"
           >
             <Plus className="h-3 w-3" />
@@ -677,32 +706,43 @@ function ProviderManagementSection({ headers }: { headers: Record<string, string
             <input
               placeholder="Name (optional)"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               className="px-2 py-1 rounded bg-muted text-xs border border-border/50 focus:outline-none focus:border-primary/30"
             />
             <input
               placeholder="Base URL *"
               value={formData.base_url}
-              onChange={(e) => setFormData({ ...formData, base_url: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, base_url: e.target.value })
+              }
               className="px-2 py-1 rounded bg-muted text-xs border border-border/50 focus:outline-none focus:border-primary/30"
             />
             <input
               placeholder="Username *"
               value={formData.username}
-              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, username: e.target.value })
+              }
               className="px-2 py-1 rounded bg-muted text-xs border border-border/50 focus:outline-none focus:border-primary/30"
             />
             <input
               placeholder="Password"
               type="password"
               value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
               className="px-2 py-1 rounded bg-muted text-xs border border-border/50 focus:outline-none focus:border-primary/30"
             />
           </div>
           <div className="flex gap-2 justify-end">
             <button
-              onClick={() => { setShowAddForm(false); setEditingIdx(null); }}
+              onClick={() => {
+                setShowAddForm(false);
+                setEditingIdx(null);
+              }}
               className="px-2 py-1 rounded bg-muted text-[10px] hover:bg-muted/80 transition-colors"
             >
               Cancel
@@ -732,18 +772,26 @@ function ProviderManagementSection({ headers }: { headers: Record<string, string
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className={`h-2 w-2 rounded-full ${p.enabled ? "bg-green-400" : "bg-gray-500"}`} />
+                  <span
+                    className={`h-2 w-2 rounded-full ${p.enabled ? "bg-green-400" : "bg-gray-500"}`}
+                  />
                   <span className="text-xs font-medium truncate">{p.name}</span>
-                  <span className="text-[10px] text-muted-foreground">#{p.order}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    #{p.order}
+                  </span>
                 </div>
                 <div className="flex gap-3 mt-0.5 text-[10px] text-muted-foreground">
                   <span className="truncate max-w-[200px]">{p.base_url}</span>
                   <span>{p.username}</span>
                   {p.health.error_count > 0 && (
-                    <span className="text-red-400">{p.health.error_count} errors</span>
+                    <span className="text-red-400">
+                      {p.health.error_count} errors
+                    </span>
                   )}
                   {p.health.ok_count > 0 && (
-                    <span className="text-green-400">{p.health.ok_count} ok</span>
+                    <span className="text-green-400">
+                      {p.health.ok_count} ok
+                    </span>
                   )}
                 </div>
               </div>
