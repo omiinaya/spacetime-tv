@@ -120,9 +120,9 @@ async def search(
 
     # Fallback if caches weren't warm
     if not all_movies:
-        all_movies = await search_all_vod(query)
+        all_movies = await search_all_vod(query, provider_idx=provider_idx)
     if not all_series:
-        all_series = await search_all_series(query)
+        all_series = await search_all_series(query, provider_idx=provider_idx)
 
     totals = {
         "live": len(all_live),
@@ -156,8 +156,8 @@ async def search_query(body: dict):
     series = []
 
     tasks = []
-    tasks.append(search_all_vod(query))
-    tasks.append(search_all_series(query))
+    tasks.append(search_all_vod(query, provider_idx=provider_idx))
+    tasks.append(search_all_series(query, provider_idx=provider_idx))
 
     # Live channel search — cached live_all
     try:

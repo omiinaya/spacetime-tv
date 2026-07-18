@@ -77,12 +77,35 @@ async def enrich_tmdb_item(item_type: str, tmdb_id: str) -> dict | None:
     return enriched
 
 
-async def search_all_vod(query: str) -> list:
+async def search_all_vod(query: str, provider_idx: int = -1) -> list:
     """Fetch all VOD streams matching query across all providers."""
     try:
         from iptv_client import get_enabled_providers, fetch_all_providers
         providers = get_enabled_providers()
-        if len(providers) > 1:
+        if provider_idx >= 0 and provider_idx < len(providers):
+            # Specific provider requested
+            from iptv_client import _fetch_single_provider
+            provider = providers[provider_idx]
+            vod_cats = await cached_fetch(CACHE_VOD_CATEGORIES, "get_vod_categories")
+            cat_ids = set(c["category_id"] for c in vod_cats if c.get("category_id"))
+            sem = asyncio.Semaphore(20)
+            async def f(cid):
+                async with sem:
+                    return await _fetch_single_provider(provider, "get_vod_streams", category_id=cid)
+            all_results = await asyncio.gather(*[f(cid) for cid in cat_ids], return_exceptions=True)
+            seen = set()
+            out = []
+            for streams in all_results:
+                if isinstance(streams, Exception):
+                    continue
+                for s in streams:
+                    sid = s.get("stream_id")
+                    if sid and sid not in seen:
+                        seen.add(sid)
+                        if query in s.get("name", "").lower():
+                            out.append(s)
+            return out
+        elif len(providers) > 1:
             # Multi-provider: fetch from all in parallel with dedup
             vod_cats = await cached_fetch(CACHE_VOD_CATEGORIES, "get_vod_categories")
             cat_ids = set(c["category_id"] for c in vod_cats if c.get("category_id"))
@@ -129,12 +152,37 @@ async def search_all_vod(query: str) -> list:
         return []
 
 
-async def search_all_series(query: str) -> list:
+async def search_all_series(query: str, provider_idx: int = -1) -> list:
     """Fetch all series matching query across all providers."""
     try:
         from iptv_client import get_enabled_providers, fetch_all_providers
         providers = get_enabled_providers()
-        if len(providers) > 1:
+        if provider_idx >= 0 and provider_idx < len(providers):
+            # Specific provider requested
+            from iptv_client import _fetch_single_provider
+            provider = providers[provider_idx]
+            cats = await cached_fetch(CACHE_SERIES_CATEGORIES, "get_series_categories")
+            cat_ids = set(c["category_id"] for c in cats if c.get("category_id"))
+            sem = asyncio.Semaphore(20)
+            async def f(cid):
+                async with sem:
+                    return await _fetch_single_provider(provider, "get_series", category_id=cid)
+            all_series_data = await asyncio.gather(*[f(cid) for cid in cat_ids], return_exceptions=True)
+            seen = set()
+            out = []
+            for slist in all_series_data:
+                if isinstance(slist, Exception):
+                    continue
+                for s in slist:
+                    sid = s.get("series_id")
+                    if sid and sid not in seen:
+                        seen.add(sid)
+                        name = (s.get("name") or "").lower()
+                        plot = (s.get("plot") or "").lower()
+                        if query in name or query in plot:
+                            out.append(s)
+            return out
+        elif len(providers) > 1:
             # Multi-provider: aggregate from all providers
             cats = await cached_fetch(CACHE_SERIES_CATEGORIES, "get_series_categories")
             cat_ids = set(c["category_id"] for c in cats if c.get("category_id"))
