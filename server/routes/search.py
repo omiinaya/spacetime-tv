@@ -144,6 +144,7 @@ async def search(
 async def search_query(body: dict):
     """Full-text search across movies, series, and live channels."""
     query = (body.get("query") or "").strip().lower()
+    provider_idx = body.get("provider_idx", -1)
     if len(query) < 2:
         raise HTTPException(400, "Query must be at least 2 characters")
 
