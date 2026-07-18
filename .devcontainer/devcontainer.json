@@ -16,7 +16,10 @@
       ]
     }
   },
-  "postCreateCommand": "cd server && pip install -r requirements.txt && cd ../web && npm install && cd .. && git config core.hooksPath .githooks",
+  "postCreateCommand": [
+    "cd server && pip install -r requirements.txt && cd ../web && npm install",
+    "git config core.hooksPath .githooks"
+  ],
   "forwardPorts": [
     8720,
     5183,
