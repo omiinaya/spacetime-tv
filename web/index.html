@@ -98,7 +98,313 @@
       @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
       .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 
+<<<<<<< Updated upstream
       @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+=======
+      /* ── Scrollbar (prevents scrollbar reflow) ── */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--color-muted);
+        border-radius: 3px;
+      }
+
+      /* ── Critical layout utilities (prevents CLS before full Tailwind CSS loads) ── */
+      /* Display / Flexbox */
+      .flex { display: flex; }
+      .inline-flex { display: inline-flex; }
+      .flex-1 { flex: 1 1 0%; }
+      .flex-col { flex-direction: column; }
+      .flex-wrap { flex-wrap: wrap; }
+      .shrink-0 { flex-shrink: 0; }
+      .items-center { align-items: center; }
+      .items-start { align-items: flex-start; }
+      .justify-center { justify-content: center; }
+      .justify-between { justify-content: space-between; }
+      .block { display: block; }
+      .gap-1 { gap: 0.25rem; }
+      .gap-1\.5 { gap: 0.375rem; }
+      .gap-2 { gap: 0.5rem; }
+      .gap-2\.5 { gap: 0.625rem; }
+      .gap-3 { gap: 0.75rem; }
+      .gap-4 { gap: 1rem; }
+      .space-y-0\.5 > * + * { margin-top: 0.125rem; }
+
+      /* Sizing */
+      .h-screen { height: 100vh; }
+      .h-full { height: 100%; }
+      .h-1 { height: 0.25rem; }
+      .h-2 { height: 0.5rem; }
+      .h-3 { height: 0.75rem; }
+      .h-4 { height: 1rem; }
+      .h-5 { height: 1.25rem; }
+      .h-6 { height: 1.5rem; }
+      .h-7 { height: 1.75rem; }
+      .h-8 { height: 2rem; }
+      .h-9 { height: 2.25rem; }
+      .h-10 { height: 2.5rem; }
+      .h-12 { height: 3rem; }
+      .h-14 { height: 3.5rem; }
+      .w-1 { width: 0.25rem; }
+      .w-2 { width: 0.5rem; }
+      .w-3 { width: 0.75rem; }
+      .w-4 { width: 1rem; }
+      .w-5 { width: 1.25rem; }
+      .w-6 { width: 1.5rem; }
+      .w-7 { width: 1.75rem; }
+      .w-8 { width: 2rem; }
+      .w-10 { width: 2.5rem; }
+      .w-12 { width: 3rem; }
+      .w-64 { width: 16rem; }
+      .w-\[5px\] { width: 5px; }
+      .w-full { width: 100%; }
+      .min-h-\[60vh\] { min-height: 60vh; }
+      .min-h-screen { min-height: 100vh; }
+
+      /* Overflow */
+      .overflow-hidden { overflow: hidden; }
+      .overflow-y-auto { overflow-y: auto; }
+      .overflow-x-auto { overflow-x: auto; }
+
+      /* Display / visibility */
+      .hidden { display: none; }
+      @media (min-width: 768px) {
+        .md\:block { display: block; }
+        .md\:hidden { display: none; }
+        .md\:p-6 { padding: 1.5rem; }
+      }
+      @media (min-width: 1024px) {
+        .lg\:p-8 { padding: 2rem; }
+      }
+
+      /* Position / z-index */
+      .relative { position: relative; }
+      .fixed { position: fixed; }
+      .absolute { position: absolute; }
+      .inset-0 { inset: 0; }
+      .z-10 { z-index: 10; }
+      .z-20 { z-index: 20; }
+      .z-30 { z-index: 30; }
+      .z-40 { z-index: 40; }
+      .z-50 { z-index: 50; }
+
+      /* Typography */
+      .text-xs { font-size: 0.75rem; line-height: 1rem; }
+      .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+      .text-base { font-size: 1rem; line-height: 1.5rem; }
+      .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+      .text-\[10px\] { font-size: 10px; }
+      .font-normal { font-weight: 400; }
+      .font-medium { font-weight: 500; }
+      .font-semibold { font-weight: 600; }
+      .text-left { text-align: left; }
+      .text-center { text-align: center; }
+      .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .whitespace-nowrap { white-space: nowrap; }
+      .sr-only {
+        position: absolute; width: 1px; height: 1px; padding: 0;
+        margin: -1px; overflow: hidden; clip: rect(0,0,0,0);
+        white-space: nowrap; border-width: 0;
+      }
+      .focus\:not-sr-only:focus {
+        position: static; width: auto; height: auto; padding: 0;
+        margin: 0; overflow: visible; clip: auto; white-space: normal;
+      }
+      .focus\:absolute:focus { position: absolute; }
+      .focus\:top-3:focus { top: 0.75rem; }
+      .focus\:left-3:focus { left: 0.75rem; }
+      .focus\:z-\[100\]:focus { z-index: 100; }
+      .focus\:px-4:focus { padding-left: 1rem; padding-right: 1rem; }
+      .focus\:py-2:focus { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+      .focus\:bg-primary:focus { background-color: var(--color-primary); }
+      .focus\:text-primary-foreground:focus { color: var(--color-foreground); }
+      .focus\:rounded-lg:focus { border-radius: 0.5rem; }
+      .focus\:outline-none:focus { outline: none; }
+
+      /* Padding / margin */
+      .p-1 { padding: 0.25rem; }
+      .p-2 { padding: 0.5rem; }
+      .p-3 { padding: 0.75rem; }
+      .p-4 { padding: 1rem; }
+      .px-1 { padding-left: 0.25rem; padding-right: 0.25rem; }
+      .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+      .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+      .px-4 { padding-left: 1rem; padding-right: 1rem; }
+      .px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }
+      .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+      .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+      .py-2\.5 { padding-top: 0.625rem; padding-bottom: 0.625rem; }
+      .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+      .pb-2 { padding-bottom: 0.5rem; }
+      .mb-1 { margin-bottom: 0.25rem; }
+      .mb-2 { margin-bottom: 0.5rem; }
+      .mb-3 { margin-bottom: 0.75rem; }
+
+      /* Borders & radius */
+      .border { border-width: 1px; }
+      .border-0 { border-width: 0; }
+      .border-2 { border-width: 2px; }
+      .border-r { border-right-width: 1px; }
+      .border-b { border-bottom-width: 1px; }
+      .border-t { border-top-width: 1px; }
+      .border-l-2 { border-left-width: 2px; }
+      .border-transparent { border-color: transparent; }
+      .border-blue-500 { border-color: #3b82f6; }
+      .border-border { border-color: var(--color-border); }
+      .border-primary { border-color: var(--color-primary); }
+      .border-t-transparent { border-top-color: transparent; }
+      .rounded { border-radius: 0.25rem; }
+      .rounded-sm { border-radius: 0.125rem; }
+      .rounded-md { border-radius: 0.375rem; }
+      .rounded-lg { border-radius: 0.5rem; }
+      .rounded-xl { border-radius: 0.75rem; }
+      .rounded-full { border-radius: 9999px; }
+
+      /* Colors (background & text) */
+      .bg-sidebar { background-color: var(--color-sidebar); }
+      .bg-card { background-color: var(--color-card); }
+      .bg-primary { background-color: var(--color-primary); }
+      .bg-primary\/10 { background-color: color-mix(in oklch, var(--color-primary) 10%, transparent); }
+      .bg-primary\/20 { background-color: color-mix(in oklch, var(--color-primary) 20%, transparent); }
+      .bg-primary\/30 { background-color: color-mix(in oklch, var(--color-primary) 30%, transparent); }
+      .bg-muted { background-color: var(--color-muted); }
+      .bg-black\/50 { background-color: rgba(0, 0, 0, 0.5); }
+      .bg-gradient-to-br { background-image: linear-gradient(to bottom right, var(--tw-gradient-stops)); }
+      .from-primary { --tw-gradient-from: var(--color-primary); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, oklch(0.37 0 0)); }
+      .to-purple-600 { --tw-gradient-to: #9333ea; }
+      .text-foreground { color: var(--color-foreground); }
+      .text-muted-foreground { color: var(--color-muted-foreground); }
+      .text-primary { color: var(--color-primary); }
+      .text-white { color: #fff; }
+      .text-primary-foreground { color: var(--color-foreground); }
+      .text-muted-foreground\/50 { color: color-mix(in oklch, var(--color-muted-foreground) 50%, transparent); }
+      .text-muted-foreground\/30 { color: color-mix(in oklch, var(--color-muted-foreground) 30%, transparent); }
+      .antialiased { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+      .hover\:text-foreground:hover { color: var(--color-foreground); }
+      .hover\:text-muted-foreground\/60:hover { color: color-mix(in oklch, var(--color-muted-foreground) 60%, transparent); }
+      .hover\:bg-muted:hover { background-color: var(--color-muted); }
+      .hover\:bg-primary\/20:hover { background-color: color-mix(in oklch, var(--color-primary) 20%, transparent); }
+      .active\:bg-primary\/30:active { background-color: color-mix(in oklch, var(--color-primary) 30%, transparent); }
+      .text-destructive { color: var(--color-destructive); }
+
+      /* Cursor */
+      .cursor-pointer { cursor: pointer; }
+      .cursor-ew-resize { cursor: ew-resize; }
+
+      /* Object fit */
+      .object-cover { object-fit: cover; }
+      .object-contain { object-fit: contain; }
+
+      /* Opacity */
+      .opacity-0 { opacity: 0; }
+      .opacity-50 { opacity: 0.5; }
+      .opacity-100 { opacity: 1; }
+
+      /* ── Spinner (for Suspense fallback loader) ── */
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      .animate-spin {
+        animation: spin 1s linear infinite;
+      }
+
+      /* ── Hover effects on channel cards (fade in) ── */
+      .transition-colors { transition-property: color, background-color, border-color, text-decoration-color, fill, stroke; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
+
+      /* ── Channel grid — prevents CLS when full CSS loads ── */
+      .channel-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 0.75rem;
+      }
+      .channel-card {
+        transition: all 0.15s ease;
+      }
+      .channel-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      /* ── Poster grid ── */
+      .poster-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1rem;
+      }
+
+      /* ── Scrollbar hide for horizontal rows ── */
+      .scrollbar-none {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .scrollbar-none::-webkit-scrollbar {
+        display: none;
+      }
+
+      /* ── Video player container — explicit size prevents collapse ── */
+      .video-container {
+        position: relative;
+        width: 100%;
+        max-width: 100%;
+        aspect-ratio: 16 / 9;
+        background: #000;
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      .video-container video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      /* ── Overlay animations (prevents FOUC on modals) ── */
+      @keyframes fade-in {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+      }
+      @keyframes zoom-in-95 {
+        from { transform: scale(0.95); opacity: 0; }
+        to   { transform: scale(1);    opacity: 1; }
+      }
+      @keyframes slide-in-from-bottom-10 {
+        from { transform: translateY(10px); opacity: 0; }
+        to   { transform: translateY(0);    opacity: 1; }
+      }
+      @keyframes slide-in-from-bottom-4 {
+        from { transform: translateY(4px); opacity: 0; }
+        to   { transform: translateY(0);   opacity: 1; }
+      }
+      .animate-in {
+        animation-duration: 200ms;
+        animation-fill-mode: both;
+      }
+      .fade-in {
+        animation-name: fade-in;
+      }
+      .zoom-in-95 {
+        animation-name: zoom-in-95;
+      }
+      .slide-in-from-bottom-10 {
+        animation-name: slide-in-from-bottom-10;
+      }
+      .slide-in-from-bottom-4 {
+        animation-name: slide-in-from-bottom-4;
+      }
+      .duration-300 {
+        animation-duration: 300ms;
+      }
+
+      /* ── Skeleton shimmer (prevents flash of empty space) ── */
+>>>>>>> Stashed changes
       @keyframes shimmer {
         0% { background-position: 200% 0; }
         100% { background-position: -200% 0; }

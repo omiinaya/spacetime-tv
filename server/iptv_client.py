@@ -169,7 +169,7 @@ async def fetch_epg_all_providers() -> list[dict]:
     if not providers:
         raise HTTPException(500, "No IPTV provider configured")
 
-    from .routes.guide_core import parse_xmltv
+    from routes.guide_core import parse_xmltv
 
     async def _fetch_epg(provider: ProviderConfig) -> dict | None:
         try:
