@@ -1,6 +1,7 @@
 """Tests for per-user profile management with PIN-based auth."""
 
 import os
+
 # Must set before importing app
 os.environ["ENFORCE_HTTPS"] = "false"
 os.environ["DISABLE_CACHE"] = "1"
