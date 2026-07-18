@@ -1,10 +1,18 @@
 """Tests for per-user profile management with PIN-based auth."""
 
-import json
 import os
+# Must set before importing app
+os.environ["ENFORCE_HTTPS"] = "false"
+os.environ["DISABLE_CACHE"] = "1"
+
+import json
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
+
+# Ensure conftest doesn't override this
+if os.environ.get("ENFORCE_HTTPS") not in ("false", "False"):
+    os.environ["ENFORCE_HTTPS"] = "false"
 
 
 @pytest.fixture
@@ -21,6 +29,7 @@ def client(temp_profiles_file):
     """Create a test client with profile support."""
     from server.main import app
     from auth import ensure_default_profile
+
     # Ensure default profile doesn't exist yet
     profiles_path = temp_profiles_file
     if profiles_path.exists():
@@ -120,6 +129,7 @@ class TestProfileAPI:
     def test_list_profiles(self, client):
         """Test GET /profiles."""
         from auth import ensure_default_profile
+
         ensure_default_profile()
 
         response = client.get("/api/v1/profiles")
@@ -239,8 +249,12 @@ class TestProfileAPI:
         p2 = client.post("/api/v1/profiles", json={"name": "P2", "pin": "2222"}).json()["profile"]
 
         # Get session tokens
-        t1 = client.post("/api/v1/profiles/session", json={"profile_id": p1["profile_id"], "pin": "1111"}).json()["token"]
-        t2 = client.post("/api/v1/profiles/session", json={"profile_id": p2["profile_id"], "pin": "2222"}).json()["token"]
+        t1 = client.post("/api/v1/profiles/session", json={"profile_id": p1["profile_id"], "pin": "1111"}).json()[
+            "token"
+        ]
+        t2 = client.post("/api/v1/profiles/session", json={"profile_id": p2["profile_id"], "pin": "2222"}).json()[
+            "token"
+        ]
 
         # Add history to P1
         h1_resp = client.post(
@@ -279,8 +293,12 @@ class TestProfileAPI:
         p1 = client.post("/api/v1/profiles", json={"name": "Fav1", "pin": "1111"}).json()["profile"]
         p2 = client.post("/api/v1/profiles", json={"name": "Fav2", "pin": "2222"}).json()["profile"]
 
-        t1 = client.post("/api/v1/profiles/session", json={"profile_id": p1["profile_id"], "pin": "1111"}).json()["token"]
-        t2 = client.post("/api/v1/profiles/session", json={"profile_id": p2["profile_id"], "pin": "2222"}).json()["token"]
+        t1 = client.post("/api/v1/profiles/session", json={"profile_id": p1["profile_id"], "pin": "1111"}).json()[
+            "token"
+        ]
+        t2 = client.post("/api/v1/profiles/session", json={"profile_id": p2["profile_id"], "pin": "2222"}).json()[
+            "token"
+        ]
 
         # Add favorite to P1
         client.post(
@@ -308,8 +326,12 @@ class TestProfileAPI:
         p1 = client.post("/api/v1/profiles", json={"name": "Set1", "pin": "1111"}).json()["profile"]
         p2 = client.post("/api/v1/profiles", json={"name": "Set2", "pin": "2222"}).json()["profile"]
 
-        t1 = client.post("/api/v1/profiles/session", json={"profile_id": p1["profile_id"], "pin": "1111"}).json()["token"]
-        t2 = client.post("/api/v1/profiles/session", json={"profile_id": p2["profile_id"], "pin": "2222"}).json()["token"]
+        t1 = client.post("/api/v1/profiles/session", json={"profile_id": p1["profile_id"], "pin": "1111"}).json()[
+            "token"
+        ]
+        t2 = client.post("/api/v1/profiles/session", json={"profile_id": p2["profile_id"], "pin": "2222"}).json()[
+            "token"
+        ]
 
         # Set theme for P1
         client.put(
