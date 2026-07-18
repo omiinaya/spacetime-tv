@@ -143,6 +143,22 @@ def _save_profiles(profiles: dict):
         log.warning(f"Failed to save profiles: {e}")
 
 
+def _hash_pin(pin: str) -> str:
+    """Hash a PIN using SHA-256 with random salt (embedded in hash)."""
+    salt = secrets.token_hex(16)
+    return salt + ":" + hashlib.sha256((salt + pin).encode()).hexdigest()
+
+
+def _verify_pin(stored: str, pin: str) -> bool:
+    """Verify a PIN against its stored hash."""
+    if ":" not in stored:
+        return hmac.compare_digest(stored, pin)
+    salt, expected = stored.split(":", 1)
+    return hmac.compare_digest(
+        hashlib.sha256((salt + pin).encode()).hexdigest(), expected
+    )
+
+
 def create_profile(name: str, pin: str, avatar: str = "") -> dict:
     """Create a new user profile. PIN must be 4-6 digits."""
     if not pin or not pin.isdigit() or len(pin) < 4 or len(pin) > 6:
@@ -151,7 +167,7 @@ def create_profile(name: str, pin: str, avatar: str = "") -> dict:
     profile_id = secrets.token_hex(8)
     profiles[profile_id] = {
         "name": name,
-        "pin": pin,
+        "pin_hash": _hash_pin(pin),
         "avatar": avatar,
         "created": time.time(),
         "favorites": [],
@@ -170,7 +186,10 @@ def verify_profile_pin(profile_id: str, pin: str) -> bool:
     profile = profiles.get(profile_id)
     if not profile:
         return False
-    return hmac.compare_digest(profile.get("pin", ""), pin)
+    stored = profile.get("pin_hash") or profile.get("pin", "")
+    if not stored:
+        return False
+    return _verify_pin(stored, pin)
 
 
 def get_profile(profile_id: str) -> dict | None:
@@ -338,7 +357,7 @@ def ensure_default_profile() -> dict | None:
     profile_id = secrets.token_hex(8)
     profiles[profile_id] = {
         "name": "Main Profile",
-        "pin": "",
+        "pin_hash": "",
         "avatar": "default",
         "created": time.time(),
         "favorites": [],

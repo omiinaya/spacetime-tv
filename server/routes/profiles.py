@@ -27,6 +27,19 @@ from auth import (
     verify_profile_token,
 )
 
+def _require_profile_access(profile_id: str, request: Request):
+    """Check that X-Profile-Token matches the requested profile_id."""
+    token = request.headers.get("X-Profile-Token", "")
+    if not token:
+        raise HTTPException(401, "Missing X-Profile-Token header")
+    result = verify_profile_token(token)
+    if not result:
+        raise HTTPException(401, "Invalid or expired profile token")
+    if result["profile_id"] != profile_id:
+        raise HTTPException(403, "Token does not match requested profile")
+    return result
+
+
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["profiles"])
 
@@ -89,15 +102,16 @@ async def api_get_profile(profile_id: str):
 @router.delete("/profiles/{profile_id}")
 async def api_delete_profile(profile_id: str, request: Request):
     """Delete a profile. Admin or device auth required."""
-    # Auth handled by middleware
+    _require_profile_access(profile_id, request)
     if not delete_profile(profile_id):
         raise HTTPException(404, "Profile not found")
     return {"status": "ok", "detail": "Profile deleted"}
 
 
 @router.get("/profiles/{profile_id}/progress")
-async def api_get_profile_progress(profile_id: str):
+async def api_get_profile_progress(profile_id: str, request: Request):
     """Get watch progress for a profile."""
+    _require_profile_access(profile_id, request)
     profiles = _load_profiles()
     p = profiles.get(profile_id)
     if not p:
@@ -158,8 +172,9 @@ async def api_add_profile_history(profile_id: str, payload: dict):
 
 
 @router.get("/profiles/{profile_id}/history")
-async def api_get_profile_history(profile_id: str, limit: int = 50, offset: int = 0):
+async def api_get_profile_history(profile_id: str, request: Request, limit: int = 50, offset: int = 0):
     """Get watch history for a profile."""
+    _require_profile_access(profile_id, request)
     history = get_profile_history(profile_id, limit, offset)
     return {"history": history}
 
@@ -176,8 +191,9 @@ async def api_clear_profile_history(profile_id: str):
 
 
 @router.get("/profiles/{profile_id}/favorites")
-async def api_get_profile_favorites(profile_id: str):
+async def api_get_profile_favorites(profile_id: str, request: Request):
     """Get favorites for a profile."""
+    _require_profile_access(profile_id, request)
     favorites = get_profile_favorites(profile_id)
     return {"favorites": favorites}
 
