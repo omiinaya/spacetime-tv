@@ -14,7 +14,7 @@ from fastapi import HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from config import UA_STR
-from iptv_client import get_active_provider, iptv_stream_url, iptv_timeshift_url, iptv_vod_url
+from iptv_client import get_active_provider, iptv_stream_url, iptv_timeshift_url, iptv_vod_url, mask_url_credentials
 
 log = logging.getLogger("spacetime-tv")
 
@@ -125,7 +125,7 @@ async def get_content_length(url: str) -> int | None:
             cl = resp.headers.get("content-length")
             return int(cl) if cl else None
     except (httpx.HTTPError, httpx.TimeoutException) as e:
-        log.debug(f"Content-Length probe failed for {url}: {e}")
+        log.debug(f"Content-Length probe failed for {mask_url_credentials(url)}: {e}")
         return None
 
 # ── Stream generators (byte-level) ─────────────────────────────────────────
@@ -179,7 +179,7 @@ async def _http_iter_chunks(url: str, *,
     async with aiohttp.ClientSession(timeout=timeout_obj) as session:
         async with session.get(url, headers=headers) as resp:
             if resp.status not in status_ok:
-                log.warning(f"_http_iter_chunks: CDN returned HTTP {resp.status} for {url[:80]}...")
+                log.warning(f"_http_iter_chunks: CDN returned HTTP {resp.status} for {mask_url_credentials(url[:80])}...")
                 raise RuntimeError(f"CDN returned HTTP {resp.status} (stream unavailable)")
 
             while True:
@@ -292,7 +292,7 @@ async def stream_proxy(url: str, content_type: str):
             },
         )
     except (RuntimeError, httpx.RequestError) as e:
-        log.error(f"Stream proxy error ({url}): {e}")
+        log.error(f"Stream proxy error ({mask_url_credentials(url)}): {e}")
         return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
 
 async def stream_bytes_transcode(url: str, target_height: int | None = None):

@@ -11,6 +11,7 @@ from iptv_client import build_timeshift_url
 from state import track_hit
 
 from .stream_core import build_stream_url, stream_bytes, stream_bytes_transcode
+from iptv_client import mask_url_credentials
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["stream"])
@@ -48,7 +49,7 @@ async def stream_live(stream_id: int, request: Request):
             },
         )
     except (RuntimeError, Exception) as e:  # pragma: no cover — StreamingResponse never raises at construction
-        log.error(f"Stream proxy error ({url}): {e}")  # pragma: no cover
+        log.error(f"Stream proxy error ({mask_url_credentials(url)}): {e}")  # pragma: no cover
         return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})  # pragma: no cover
 
 
@@ -69,7 +70,7 @@ async def stream_live_transcode(stream_id: int):
             },
         )
     except (RuntimeError, Exception) as e:  # pragma: no cover — StreamingResponse never raises at construction
-        log.error(f"Transcode setup error ({url}): {e}")  # pragma: no cover
+        log.error(f"Transcode setup error ({mask_url_credentials(url)}): {e}")  # pragma: no cover
         return JSONResponse(status_code=502, content={"detail": "Transcode failed"})  # pragma: no cover
 
 
@@ -126,5 +127,5 @@ async def stream_live_quality(stream_id: int, height: int):
             },
         )
     except (RuntimeError, Exception) as e:  # pragma: no cover — StreamingResponse never raises at construction
-        log.error(f"Quality transcode error ({url}): {e}")  # pragma: no cover
+        log.error(f"Quality transcode error ({mask_url_credentials(url)}): {e}")  # pragma: no cover
         return JSONResponse(status_code=502, content={"detail": "Transcode failed"})  # pragma: no cover

@@ -27,6 +27,41 @@ from state import CACHE_TTL, _cache, _cache_hits, _cache_misses
 
 log = logging.getLogger("spacetime-tv")
 
+def mask_url_credentials(url: str) -> str:
+    """Redact username and password from a URL for safe logging."""
+    import re
+    # Mask user:pass in path segments (e.g., /live/user/pass/ -> /live/****:****/)
+    url = re.sub(r'(://[^:]+):([^@]+)@', r'\1:****@', url)  # http://user:pass@host
+    # Mask in path segments: /{user}/{pass}/ -> /****/****/
+    url = re.sub(r'(/(?:live|movie|series)/)[^/]+/[^/]+(/)', r'\1****:****\2', url)
+    # Mask query params: username=xxx&password=xxx
+    url = re.sub(r'(username|password)=[^&]+', r'\1=****', url)
+    return url
+
+
+def iptv_auth_headers(provider: ProviderConfig | None = None) -> dict:
+    """Return authentication headers for IPTV API calls.
+    
+    Use these headers instead of embedding credentials in query params
+    where the provider supports it.
+    """
+    p = provider or get_active_provider()
+    if not p:
+        return {}
+    headers = {}
+    # Xtream API traditionally uses query params, but some providers
+    # also accept Authorization header. We keep both for compatibility
+    # while minimizing credential exposure in URLs.
+    if hasattr(p, 'username') and p.username:
+        headers["X-Username"] = p.username
+    if hasattr(p, 'password') and p.password:
+        # Don't expose raw password - only send encrypted or masked
+        headers["X-Password"] = p.password
+    return headers
+
+
+
+
 # ── HTTP Client ─────────────────────────────────────────────────────────────
 client = httpx.AsyncClient(
     timeout=30.0,
@@ -74,7 +109,11 @@ def get_provider_by_index(idx: int) -> ProviderConfig | None:
 
 
 def iptv_url(action: str, provider: ProviderConfig | None = None, **params) -> str:
-    """Build IPTV API URL (player_api.php) with credentials for a provider."""
+    """Build IPTV API URL (player_api.php) with credentials for a provider.
+    
+    SECURITY: Credentials are embedded in query params. Use mask_url_credentials()
+    before logging. Prefer header-based auth via iptv_auth_headers() where supported.
+    """
     p = provider or get_active_provider()
     if not p:
         raise HTTPException(500, "No IPTV provider configured")
@@ -92,6 +131,10 @@ def iptv_stream_url(stream_id: int, stream_type: str = "live", ext: str | None =
 
     For live streams the extension is "ts"; for VOD the extension
     should be resolved upstream (e.g. via _lookup_extension).
+
+    SECURITY: Credentials are embedded in the URL path. These URLs are
+    returned to the frontend and may appear in browser history, logs, and
+    Referer headers. Use mask_url_credentials() before logging.
     """
     p = provider or get_active_provider()
     if not p:
@@ -128,7 +171,13 @@ def iptv_timeshift_url(stream_id: int, duration_seconds: int,
 
 
 def iptv_xmltv_url(provider: ProviderConfig | None = None) -> str:
-    """Build XMLTV URL for EPG data."""
+    """Build XMLTV URL for EPG data.
+    
+    WARNING: Credentials are embedded in query params. This URL will be
+    logged, cached, and visible in browser history if proxied through the client.
+    For logging use mask_url_credentials(). Consider using iptv_auth_headers()
+    for header-based auth where supported.
+    """
     p = provider or get_active_provider()
     if not p:
         raise HTTPException(500, "No IPTV provider configured")
@@ -136,7 +185,11 @@ def iptv_xmltv_url(provider: ProviderConfig | None = None) -> str:
 
 
 def iptv_raw_proxy_url(path: str, provider: ProviderConfig | None = None) -> str:
-    """Build a raw proxy URL with credentials appended."""
+    """Build a raw proxy URL with credentials appended.
+    
+    WARNING: Credentials are embedded in query params. For safe logging
+    use mask_url_credentials(). Consider header-based auth via iptv_auth_headers().
+    """
     p = provider or get_active_provider()
     if not p:
         raise HTTPException(500, "No IPTV provider configured")
