@@ -72,12 +72,15 @@ async def search(
     limit: int = Query(20, ge=1, le=50),
     offset: int = Query(0, ge=0),
     section: str | None = Query(None, pattern="^(live|movies|series)$"),
+    provider_idx: int = Query(-1, ge=-1, description="Provider index (-1 = all enabled providers)"),
 ):
     """Search across live TV, movies, and series with pagination support.
 
     Returns all three sections when section is omitted, or a single section
     when loading additional pages. Uses in-memory cache for fast warm-cache
     path, falls back to service layer for full scan.
+    When multiple providers are configured, searches across all by default.
+    Use provider_idx=N to search only a specific provider.
     """
     query = q.lower().strip()
     record_search(query)
