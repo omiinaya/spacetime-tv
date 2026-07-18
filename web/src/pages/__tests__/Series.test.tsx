@@ -32,9 +32,11 @@ vi.mock("@/lib/watchlist", () => ({
 // ── Mock continueWatching ────────────────────────────────
 const mockGetContinueWatching = vi.fn<() => SeriesProgress[]>(() => []);
 const mockRemoveSeriesProgress = vi.fn();
-const mockLoadServerProgress = vi.fn<(signal?: AbortSignal) => Promise<{ series: SeriesProgress[]; movies: unknown[] }>>(
-  () => Promise.resolve({ series: [], movies: [] })
-);
+const mockLoadServerProgress = vi.fn<
+  (
+    signal?: AbortSignal,
+  ) => Promise<{ series: SeriesProgress[]; movies: unknown[] }>
+>(() => Promise.resolve({ series: [], movies: [] }));
 
 vi.mock("@/lib/continueWatching", () => ({
   getContinueWatching: (...args: unknown[]) =>
@@ -42,35 +44,70 @@ vi.mock("@/lib/continueWatching", () => ({
   removeSeriesProgress: (...args: unknown[]) =>
     (mockRemoveSeriesProgress as (...a: unknown[]) => void)(...args),
   loadServerProgress: (...args: unknown[]) =>
-    (mockLoadServerProgress as (...a: unknown[]) => Promise<{ series: SeriesProgress[]; movies: unknown[] }>)(...args),
+    (
+      mockLoadServerProgress as (
+        ...a: unknown[]
+      ) => Promise<{ series: SeriesProgress[]; movies: unknown[] }>
+    )(...args),
 }));
 
 // ── Mock SettingsContext ─────────────────────────────────
 const mockUpdateSettings = vi.fn();
 const mockResetSettings = vi.fn();
-const mockSettings = { languages: [], hiddenCategories: [], showAdult: false, services: [] };
+const mockSettings = {
+  languages: [],
+  hiddenCategories: [],
+  showAdult: false,
+  services: [],
+};
 
 vi.mock("@/context/SettingsContext", () => ({
-  useSettings: () => ({ settings: mockSettings, update: mockUpdateSettings, reset: mockResetSettings }),
+  useSettings: () => ({
+    settings: mockSettings,
+    update: mockUpdateSettings,
+    reset: mockResetSettings,
+  }),
   SettingsProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 // ── Mock child components ────────────────────────────────
 vi.mock("@/components/SeriesOverlay", () => ({
-  default: ({ series, onClose }: { series: { name?: string }; onClose: () => void }) =>
+  default: ({
+    series,
+    onClose,
+  }: {
+    series: { name?: string };
+    onClose: () => void;
+  }) => (
     <div data-testid="series-overlay">
       <span>{series?.name} overlay</span>
-      <button onClick={onClose} aria-label="Close overlay">Close</button>
-    </div>,
+      <button onClick={onClose} aria-label="Close overlay">
+        Close
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("@/components/ContentRow", () => ({
-  default: ({ title, children, action }: { title: string; children: React.ReactNode; action?: { label: string; onClick: () => void } }) =>
+  default: ({
+    title,
+    children,
+    action,
+  }: {
+    title: string;
+    children: React.ReactNode;
+    action?: { label: string; onClick: () => void };
+  }) => (
     <div data-testid="content-row">
       <h3>{title}</h3>
-      {action && <button onClick={action.onClick} data-testid="show-all-btn">{action.label}</button>}
+      {action && (
+        <button onClick={action.onClick} data-testid="show-all-btn">
+          {action.label}
+        </button>
+      )}
       {children}
-    </div>,
+    </div>
+  ),
 }));
 vi.mock("@/components/TrendingSeriesRow", () => ({
   default: () => (
@@ -83,37 +120,66 @@ vi.mock("@/components/TrendingSeriesRow", () => ({
   ),
 }));
 
-
 vi.mock("@/components/Pagination", () => ({
-  Pagination: ({ currentPage, totalPages, onPageChange }: { currentPage: number; totalPages: number; onPageChange: (p: number) => void }) =>
+  Pagination: ({
+    currentPage,
+    totalPages,
+    onPageChange,
+  }: {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (p: number) => void;
+  }) =>
     totalPages <= 1 ? null : (
       <div data-testid="pagination">
-        <button onClick={() => onPageChange(currentPage - 1)} aria-label="Previous page">Prev</button>
-        <span>{currentPage} / {totalPages}</span>
-        <button onClick={() => onPageChange(currentPage + 1)} aria-label="Next page">Next</button>
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          aria-label="Previous page"
+        >
+          Prev
+        </button>
+        <span>
+          {currentPage} / {totalPages}
+        </span>
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          aria-label="Next page"
+        >
+          Next
+        </button>
       </div>
     ),
 }));
 
 // ── Mock IntersectionObserver ────────────────────────────
-vi.stubGlobal("IntersectionObserver", vi.fn(function MockIntersectionObserver() {
-  this.observe = vi.fn();
-  this.disconnect = vi.fn();
-  this.unobserve = vi.fn();
-  this.takeRecords = vi.fn(() => []);
-  return this;
-}));
+vi.stubGlobal(
+  "IntersectionObserver",
+  vi.fn(function MockIntersectionObserver() {
+    this.observe = vi.fn();
+    this.disconnect = vi.fn();
+    this.unobserve = vi.fn();
+    this.takeRecords = vi.fn(() => []);
+    return this;
+  }),
+);
 
-vi.stubGlobal("ResizeObserver", vi.fn(function MockResizeObserver() {
-  this.observe = vi.fn();
-  this.disconnect = vi.fn();
-  this.unobserve = vi.fn();
-  this.takeRecords = vi.fn(() => []);
-  return this;
-}));
+vi.stubGlobal(
+  "ResizeObserver",
+  vi.fn(function MockResizeObserver() {
+    this.observe = vi.fn();
+    this.disconnect = vi.fn();
+    this.unobserve = vi.fn();
+    this.takeRecords = vi.fn(() => []);
+    return this;
+  }),
+);
 
 // ── Sample data from shared MSW fixtures ─────────────────
-import { sampleCategories, sampleSeries, sampleTrending } from "@/mocks/handlers";
+import {
+  sampleCategories,
+  sampleSeries,
+  sampleTrending,
+} from "@/mocks/handlers";
 
 // ── Helper ───────────────────────────────────────────────
 function renderSeries() {
@@ -155,7 +221,7 @@ describe("SeriesPage (MSW)", () => {
     it("shows skeleton placeholders while loading", async () => {
       renderSeries();
       // Should show skeleton rows
-      const skeletons = document.querySelectorAll('.space-y-8 > .space-y-2');
+      const skeletons = document.querySelectorAll(".space-y-8 > .space-y-2");
       expect(skeletons.length).toBeGreaterThan(0);
       // Should not show error or content
       expect(screen.queryByText("Error")).not.toBeInTheDocument();
@@ -164,7 +230,7 @@ describe("SeriesPage (MSW)", () => {
     it("shows loading state without heading content", () => {
       renderSeries();
       // Skeleton elements should be present for the header
-      const skeletonElements = document.querySelectorAll('.skeleton\\:');
+      const skeletonElements = document.querySelectorAll(".skeleton\\:");
       // Just ensure loading state does not crash
       expect(screen.queryByText("Series")).not.toBeInTheDocument();
     });
@@ -174,8 +240,9 @@ describe("SeriesPage (MSW)", () => {
   describe("error state", () => {
     beforeEach(() => {
       server.use(
-        http.get("/api/series/categories", () =>
-          new HttpResponse(null, { status: 500 }),
+        http.get(
+          "/api/series/categories",
+          () => new HttpResponse(null, { status: 500 }),
         ),
       );
     });
@@ -214,7 +281,9 @@ describe("SeriesPage (MSW)", () => {
       renderSeries();
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText("Filter series...")).toBeInTheDocument();
+        expect(
+          screen.getByPlaceholderText("Filter series..."),
+        ).toBeInTheDocument();
       });
     });
 
@@ -259,7 +328,9 @@ describe("SeriesPage (MSW)", () => {
       renderSeries();
 
       await waitFor(() => {
-        const hearts = screen.getAllByRole("button", { name: /Add to watchlist|Remove from watchlist/ });
+        const hearts = screen.getAllByRole("button", {
+          name: /Add to watchlist|Remove from watchlist/,
+        });
         expect(hearts.length).toBeGreaterThan(0);
       });
     });
@@ -269,7 +340,9 @@ describe("SeriesPage (MSW)", () => {
       renderSeries();
 
       await waitFor(() => {
-        const removeBtns = screen.getAllByRole("button", { name: "Remove from watchlist" });
+        const removeBtns = screen.getAllByRole("button", {
+          name: "Remove from watchlist",
+        });
         expect(removeBtns.length).toBeGreaterThan(0);
       });
     });
@@ -298,14 +371,16 @@ describe("SeriesPage (MSW)", () => {
       renderSeries();
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText("Filter series...")).toBeInTheDocument();
+        expect(
+          screen.getByPlaceholderText("Filter series..."),
+        ).toBeInTheDocument();
       });
 
       const searchInput = screen.getByPlaceholderText("Filter series...");
       fireEvent.change(searchInput, { target: { value: "test" } });
 
       // X button should appear
-      const clearButton = document.querySelector('button svg.lucide-x');
+      const clearButton = document.querySelector("button svg.lucide-x");
       expect(clearButton).toBeInTheDocument();
     });
 
@@ -313,7 +388,9 @@ describe("SeriesPage (MSW)", () => {
       renderSeries();
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText("Filter series...")).toBeInTheDocument();
+        expect(
+          screen.getByPlaceholderText("Filter series..."),
+        ).toBeInTheDocument();
       });
 
       const searchInput = screen.getByPlaceholderText("Filter series...");
@@ -406,7 +483,7 @@ describe("SeriesPage (MSW)", () => {
 
       await waitFor(() => {
         // Progress bar should be rendered with width ~33.3%
-        const progressBars = document.querySelectorAll('.h-full.bg-primary');
+        const progressBars = document.querySelectorAll(".h-full.bg-primary");
         expect(progressBars.length).toBeGreaterThan(0);
       });
     });
@@ -416,7 +493,9 @@ describe("SeriesPage (MSW)", () => {
       renderSeries();
 
       await waitFor(() => {
-        const dismissBtn = screen.getByLabelText("Remove from continue watching");
+        const dismissBtn = screen.getByLabelText(
+          "Remove from continue watching",
+        );
         expect(dismissBtn).toBeInTheDocument();
       });
     });
@@ -452,7 +531,9 @@ describe("SeriesPage (MSW)", () => {
       renderSeries();
 
       await waitFor(() => {
-        expect(screen.queryByText("Recently Completed")).not.toBeInTheDocument();
+        expect(
+          screen.queryByText("Recently Completed"),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -461,7 +542,9 @@ describe("SeriesPage (MSW)", () => {
       renderSeries();
 
       await waitFor(() => {
-        const dismissBtn = screen.getByLabelText("Remove from recently completed");
+        const dismissBtn = screen.getByLabelText(
+          "Remove from recently completed",
+        );
         expect(dismissBtn).toBeInTheDocument();
       });
     });
@@ -472,7 +555,12 @@ describe("SeriesPage (MSW)", () => {
     it("renders trending section when enabled and has data", async () => {
       server.use(
         http.get("/api/tmdb/tv/trending", () =>
-          HttpResponse.json({ trending: sampleTrending, total_pages: 1, total_results: sampleTrending.length, enabled: true }),
+          HttpResponse.json({
+            trending: sampleTrending,
+            total_pages: 1,
+            total_results: sampleTrending.length,
+            enabled: true,
+          }),
         ),
       );
       renderSeries();
@@ -486,33 +574,52 @@ describe("SeriesPage (MSW)", () => {
     it("does not render trending when disabled", async () => {
       server.use(
         http.get("/api/tmdb/tv/trending", () =>
-          HttpResponse.json({ trending: sampleTrending, total_pages: 1, total_results: sampleTrending.length, enabled: false }),
+          HttpResponse.json({
+            trending: sampleTrending,
+            total_pages: 1,
+            total_results: sampleTrending.length,
+            enabled: false,
+          }),
         ),
       );
       renderSeries();
 
       await waitFor(() => {
-        expect(screen.queryByText("Trending This Week")).not.toBeInTheDocument();
+        expect(
+          screen.queryByText("Trending This Week"),
+        ).not.toBeInTheDocument();
       });
     });
 
     it("does not render trending when empty", async () => {
       server.use(
         http.get("/api/tmdb/tv/trending", () =>
-          HttpResponse.json({ trending: [], total_pages: 0, total_results: 0, enabled: true }),
+          HttpResponse.json({
+            trending: [],
+            total_pages: 0,
+            total_results: 0,
+            enabled: true,
+          }),
         ),
       );
       renderSeries();
 
       await waitFor(() => {
-        expect(screen.queryByText("Trending This Week")).not.toBeInTheDocument();
+        expect(
+          screen.queryByText("Trending This Week"),
+        ).not.toBeInTheDocument();
       });
     });
 
     it("shows rating and year badges on trending cards", async () => {
       server.use(
         http.get("/api/tmdb/tv/trending", () =>
-          HttpResponse.json({ trending: sampleTrending, total_pages: 1, total_results: sampleTrending.length, enabled: true }),
+          HttpResponse.json({
+            trending: sampleTrending,
+            total_pages: 1,
+            total_results: sampleTrending.length,
+            enabled: true,
+          }),
         ),
       );
       renderSeries();
@@ -557,7 +664,12 @@ describe("SeriesPage (MSW)", () => {
           const url = new URL(request.url);
           const catId = url.searchParams.get("category_id") || "";
           const filtered = manySeries.filter((s) => s.category_id === catId);
-          return HttpResponse.json({ series: filtered, total: filtered.length, offset: 0, limit: 20 });
+          return HttpResponse.json({
+            series: filtered,
+            total: filtered.length,
+            offset: 0,
+            limit: 20,
+          });
         }),
       );
       renderSeries();
@@ -597,7 +709,7 @@ describe("SeriesPage (MSW)", () => {
         expect(screen.getByText("The Office")).toBeInTheDocument();
         // No rating badge for The Office
         const ratings = screen.queryAllByText(/^\d\.\d$/);
-        const officeRatings = ratings.filter(r => r.textContent === "");
+        const officeRatings = ratings.filter((r) => r.textContent === "");
         // Just ensure it doesn't crash
       });
     });
@@ -633,8 +745,9 @@ describe("SeriesPage (MSW)", () => {
       });
 
       // Click the Breaking Bad card to open overlay
-      const bbCard = screen.getByText("Breaking Bad").closest('[role="button"]') ||
-                     screen.getByText("Breaking Bad");
+      const bbCard =
+        screen.getByText("Breaking Bad").closest('[role="button"]') ||
+        screen.getByText("Breaking Bad");
       if (bbCard && bbCard.closest('[role="button"]')) {
         fireEvent.click(bbCard.closest('[role="button"]')!);
       } else {
@@ -679,7 +792,9 @@ describe("SeriesPage (MSW)", () => {
       renderSeries();
 
       await waitFor(() => {
-        expect(screen.getByText("No categories match your filters")).toBeInTheDocument();
+        expect(
+          screen.getByText("No categories match your filters"),
+        ).toBeInTheDocument();
       });
 
       // Reset

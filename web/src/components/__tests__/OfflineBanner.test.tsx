@@ -39,7 +39,11 @@ describe("OfflineBanner", () => {
     it("shows the banner when showAlways is true even when online", () => {
       render(<OfflineBanner showAlways />);
       expect(screen.getByRole("alert")).toBeInTheDocument();
-      expect(screen.getByText("Back online — showing cached content where available.")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Back online — showing cached content where available.",
+        ),
+      ).toBeInTheDocument();
     });
   });
 
@@ -49,7 +53,9 @@ describe("OfflineBanner", () => {
       render(<OfflineBanner />);
       const alert = screen.getByRole("alert");
       expect(alert).toBeInTheDocument();
-      expect(screen.getByText("You are offline. Some features may be unavailable.")).toBeInTheDocument();
+      expect(
+        screen.getByText("You are offline. Some features may be unavailable."),
+      ).toBeInTheDocument();
     });
 
     it("uses role='alert' and aria-live='polite' for accessibility", () => {
@@ -93,7 +99,9 @@ describe("OfflineBanner", () => {
         window.dispatchEvent(new Event("offline"));
       });
       expect(screen.getByRole("alert")).toBeInTheDocument();
-      expect(screen.getByText("You are offline. Some features may be unavailable.")).toBeInTheDocument();
+      expect(
+        screen.getByText("You are offline. Some features may be unavailable."),
+      ).toBeInTheDocument();
     });
 
     it("cleans up event listeners on unmount", () => {
@@ -118,13 +126,19 @@ describe("OfflineBanner", () => {
   describe("showAlways prop", () => {
     it("shows the back-online message when showAlways is true and online", () => {
       render(<OfflineBanner showAlways />);
-      expect(screen.getByText("Back online — showing cached content where available.")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Back online — showing cached content where available.",
+        ),
+      ).toBeInTheDocument();
     });
 
     it("shows the offline message when showAlways is true and offline", () => {
       setOnline(false);
       render(<OfflineBanner showAlways />);
-      expect(screen.getByText("You are offline. Some features may be unavailable.")).toBeInTheDocument();
+      expect(
+        screen.getByText("You are offline. Some features may be unavailable."),
+      ).toBeInTheDocument();
     });
 
     it("renders nothing when showAlways is false and online", () => {

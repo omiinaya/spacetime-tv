@@ -6,6 +6,7 @@ route handlers, and real IPTV API calls). Requires valid .env credentials.
 Run:  python -m pytest tests/ -m integration -v
 Skip: pytest automatically when IPTV credentials are placeholder values.
 """
+
 import os
 import sys
 
@@ -23,12 +24,14 @@ pytestmark = [
     pytest.mark.skipif(not _has_creds, reason="Real IPTV credentials not configured"),
 ]
 
+
 # Lazy import to avoid loading the app for skip conditions
 @pytest.fixture(scope="module")
 def client():
     from fastapi.testclient import TestClient
 
     from main import app
+
     return TestClient(app)
 
 
@@ -136,10 +139,12 @@ class TestHealthEndpoint:
         assert data.get("status") == "healthy"
         assert "uptime" in data
 
+
 # ── Streaming E2E Integration Tests ──────────────────────────────────────
 # These tests verify both live and VOD streaming paths deliver playable content
 # against the real IPTV provider. They check content types, streaming headers,
 # status codes, and that the response body starts with valid container bytes.
+
 
 class TestLiveStreamingE2E:
     """Verify live TV streaming path delivers playable MPEG-TS."""
@@ -157,7 +162,9 @@ class TestLiveStreamingE2E:
 
         resp = client.get(f"/api/v1/stream/live/{stream_id}")
         assert resp.status_code == 200, f"Live stream {stream_id} returned {resp.status_code}"
-        assert resp.headers.get("content-type") == "video/mp2t",             f"Expected video/mp2t, got {resp.headers.get('content-type')}"
+        assert resp.headers.get("content-type") == "video/mp2t", (
+            f"Expected video/mp2t, got {resp.headers.get('content-type')}"
+        )
         assert "no-cache" in resp.headers.get("cache-control", "")
 
     def test_live_stream_starts_with_ts_sync_byte(self, client):
@@ -195,9 +202,11 @@ class TestVODStreamingE2E:
         stream_id = data[0]["stream_id"]
 
         resp = client.get(f"/api/v1/stream/movie/{stream_id}")
-        assert resp.status_code in (200, 206),             f"VOD movie stream {stream_id} returned {resp.status_code}"
+        assert resp.status_code in (200, 206), f"VOD movie stream {stream_id} returned {resp.status_code}"
         ct = resp.headers.get("content-type", "")
-        assert any(v in ct for v in ["video/x-matroska", "video/mp4", "video/mp2t", "video/webm"]),             f"Unexpected content-type: {ct}"
+        assert any(v in ct for v in ["video/x-matroska", "video/mp4", "video/mp2t", "video/webm"]), (
+            f"Unexpected content-type: {ct}"
+        )
         assert "no-cache" in resp.headers.get("cache-control", "")
         assert resp.headers.get("accept-ranges") == "bytes"
 
@@ -214,8 +223,10 @@ class TestVODStreamingE2E:
         stream_id = data[0]["stream_id"]
 
         resp = client.get(f"/api/v1/stream/movie/{stream_id}/remux")
-        assert resp.status_code == 200,             f"VOD movie remux {stream_id} returned {resp.status_code}"
-        assert resp.headers.get("content-type") == "video/mp2t",             f"Expected video/mp2t, got {resp.headers.get('content-type')}"
+        assert resp.status_code == 200, f"VOD movie remux {stream_id} returned {resp.status_code}"
+        assert resp.headers.get("content-type") == "video/mp2t", (
+            f"Expected video/mp2t, got {resp.headers.get('content-type')}"
+        )
         assert "no-cache" in resp.headers.get("cache-control", "")
 
     def test_vod_movie_transcode_content_type(self, client):
@@ -231,8 +242,10 @@ class TestVODStreamingE2E:
         stream_id = data[0]["stream_id"]
 
         resp = client.get(f"/api/v1/stream/movie/{stream_id}/transcode")
-        assert resp.status_code == 200,             f"VOD movie transcode {stream_id} returned {resp.status_code}"
-        assert resp.headers.get("content-type") == "video/mp2t",             f"Expected video/mp2t, got {resp.headers.get('content-type')}"
+        assert resp.status_code == 200, f"VOD movie transcode {stream_id} returned {resp.status_code}"
+        assert resp.headers.get("content-type") == "video/mp2t", (
+            f"Expected video/mp2t, got {resp.headers.get('content-type')}"
+        )
 
     def test_vod_movie_stream_with_range(self, client):
         """VOD movie stream with Range header returns 206 with content-range."""
@@ -247,7 +260,7 @@ class TestVODStreamingE2E:
         stream_id = data[0]["stream_id"]
 
         resp = client.get(f"/api/v1/stream/movie/{stream_id}", headers={"range": "bytes=0-1023"})
-        assert resp.status_code == 206,             f"VOD movie range request {stream_id} returned {resp.status_code}"
+        assert resp.status_code == 206, f"VOD movie range request {stream_id} returned {resp.status_code}"
         assert "content-range" in resp.headers
         assert resp.headers.get("accept-ranges") == "bytes"
         # Should have partial content
@@ -275,9 +288,11 @@ class TestVODStreamingE2E:
         episode_id = episodes[0]["id"]
 
         resp = client.get(f"/api/v1/stream/series/{series_id}/{episode_id}")
-        assert resp.status_code in (200, 206),             f"Series stream {series_id}/{episode_id} returned {resp.status_code}"
+        assert resp.status_code in (200, 206), f"Series stream {series_id}/{episode_id} returned {resp.status_code}"
         ct = resp.headers.get("content-type", "")
-        assert any(v in ct for v in ["video/x-matroska", "video/mp4", "video/mp2t", "video/webm"]),             f"Unexpected content-type: {ct}"
+        assert any(v in ct for v in ["video/x-matroska", "video/mp4", "video/mp2t", "video/webm"]), (
+            f"Unexpected content-type: {ct}"
+        )
         assert resp.headers.get("accept-ranges") == "bytes"
 
     def test_vod_series_remux_content_type(self, client):
@@ -298,8 +313,10 @@ class TestVODStreamingE2E:
         episode_id = episodes[0]["id"]
 
         resp = client.get(f"/api/v1/stream/series/{series_id}/{episode_id}/remux")
-        assert resp.status_code == 200,             f"Series remux {series_id}/{episode_id} returned {resp.status_code}"
-        assert resp.headers.get("content-type") == "video/mp2t",             f"Expected video/mp2t, got {resp.headers.get('content-type')}"
+        assert resp.status_code == 200, f"Series remux {series_id}/{episode_id} returned {resp.status_code}"
+        assert resp.headers.get("content-type") == "video/mp2t", (
+            f"Expected video/mp2t, got {resp.headers.get('content-type')}"
+        )
 
     def test_vod_series_transcode_content_type(self, client):
         """VOD series transcode returns MPEG-TS playable content."""
@@ -319,5 +336,7 @@ class TestVODStreamingE2E:
         episode_id = episodes[0]["id"]
 
         resp = client.get(f"/api/v1/stream/series/{series_id}/{episode_id}/transcode")
-        assert resp.status_code == 200,             f"Series transcode {series_id}/{episode_id} returned {resp.status_code}"
-        assert resp.headers.get("content-type") == "video/mp2t",             f"Expected video/mp2t, got {resp.headers.get('content-type')}"
+        assert resp.status_code == 200, f"Series transcode {series_id}/{episode_id} returned {resp.status_code}"
+        assert resp.headers.get("content-type") == "video/mp2t", (
+            f"Expected video/mp2t, got {resp.headers.get('content-type')}"
+        )

@@ -11,7 +11,13 @@
  * and navigation CTA buttons.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import WatchlistPage from "@/pages/WatchlistPage";
 import type { UnifiedMovie, Series } from "@/lib/api";
@@ -24,13 +30,20 @@ vi.mock("@/lib/api", () => ({
   api: {
     movies: {
       unified: (...args: unknown[]) =>
-        (mockMoviesUnified as unknown as (...a: unknown[]) => Promise<{
-          movies: UnifiedMovie[]; total: number; offset: number; limit: number
-        }>)(...args),
+        (
+          mockMoviesUnified as unknown as (...a: unknown[]) => Promise<{
+            movies: UnifiedMovie[];
+            total: number;
+            offset: number;
+            limit: number;
+          }>
+        )(...args),
     },
     series: {
       details: (...args: unknown[]) =>
-        (mockSeriesDetails as unknown as (...a: unknown[]) => Promise<unknown>)(...args),
+        (mockSeriesDetails as unknown as (...a: unknown[]) => Promise<unknown>)(
+          ...args,
+        ),
     },
   },
   imageUrl: (url: string) => url,
@@ -61,25 +74,44 @@ vi.mock("@/lib/watchlist", () => ({
 
 // ── Mock child components ────────────────────────────────
 vi.mock("@/components/MovieOverlay", () => ({
-  default: ({ movie, onClose }: { movie: { name?: string }; onClose: () => void }) =>
+  default: ({
+    movie,
+    onClose,
+  }: {
+    movie: { name?: string };
+    onClose: () => void;
+  }) => (
     <div data-testid="movie-overlay">
       <span>{movie?.name} overlay</span>
-      <button onClick={onClose} aria-label="Close overlay">Close</button>
-    </div>,
+      <button onClick={onClose} aria-label="Close overlay">
+        Close
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("@/components/SeriesOverlay", () => ({
-  default: ({ series, onClose }: { series: { name?: string }; onClose: () => void }) =>
+  default: ({
+    series,
+    onClose,
+  }: {
+    series: { name?: string };
+    onClose: () => void;
+  }) => (
     <div data-testid="series-overlay">
       <span>{series?.name} overlay</span>
-      <button onClick={onClose} aria-label="Close overlay">Close</button>
-    </div>,
+      <button onClick={onClose} aria-label="Close overlay">
+        Close
+      </button>
+    </div>
+  ),
 }));
 
 // ── Mock navigate ──────────────────────────────────────────
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
-  const actual = await vi.importActual<typeof import("react-router")>("react-router");
+  const actual =
+    await vi.importActual<typeof import("react-router")>("react-router");
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -99,7 +131,14 @@ const sampleMovies: UnifiedMovie[] = [
     category_id: "10",
     container_extension: "mp4",
     base_name: "Inception",
-    languages: [{ code: "EN", name: "English", stream_id: 101, container_extension: "mp4" }],
+    languages: [
+      {
+        code: "EN",
+        name: "English",
+        stream_id: 101,
+        container_extension: "mp4",
+      },
+    ],
     language_count: 1,
     added: "1700000000",
   },
@@ -114,7 +153,14 @@ const sampleMovies: UnifiedMovie[] = [
     category_id: "10",
     container_extension: "mp4",
     base_name: "The Matrix",
-    languages: [{ code: "EN", name: "English", stream_id: 102, container_extension: "mp4" }],
+    languages: [
+      {
+        code: "EN",
+        name: "English",
+        stream_id: 102,
+        container_extension: "mp4",
+      },
+    ],
     language_count: 1,
     added: "1690000000",
   },
@@ -377,7 +423,9 @@ describe("WatchlistPage", () => {
     it("calls toggleWatchlist when remove button is clicked", async () => {
       renderWatchlistPage();
       await waitFor(() => {
-        expect(screen.getByLabelText("Remove Inception from watchlist")).toBeInTheDocument();
+        expect(
+          screen.getByLabelText("Remove Inception from watchlist"),
+        ).toBeInTheDocument();
       });
       fireEvent.click(screen.getByLabelText("Remove Inception from watchlist"));
       expect(mockToggleWatchlist).toHaveBeenCalledWith(101);
@@ -474,9 +522,13 @@ describe("WatchlistPage", () => {
       renderWatchlistPage();
       fireEvent.click(screen.getByText(/Series/));
       await waitFor(() => {
-        expect(screen.getByLabelText("Remove Breaking Bad from watchlist")).toBeInTheDocument();
+        expect(
+          screen.getByLabelText("Remove Breaking Bad from watchlist"),
+        ).toBeInTheDocument();
       });
-      fireEvent.click(screen.getByLabelText("Remove Breaking Bad from watchlist"));
+      fireEvent.click(
+        screen.getByLabelText("Remove Breaking Bad from watchlist"),
+      );
       expect(mockToggleSeriesWatchlist).toHaveBeenCalledWith(201);
     });
 

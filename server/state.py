@@ -3,6 +3,7 @@
 Extracted from main.py to enable route decomposition into separate modules.
 All module-level mutable state that routes depend on lives here.
 """
+
 import asyncio
 import contextlib
 import json
@@ -24,10 +25,10 @@ import config
 CACHE_LIVE_ALL = "live_all"
 CACHE_LIVE_CATS = "live_cats"
 CACHE_VOD_CATEGORIES = "vod_categories"
-CACHE_VOD_CAT = "vod_{id}"          # f"vod_{category_id}"
-CACHE_VOD_INFO = "vod_info_{id}"    # f"vod_info_{stream_id}"
+CACHE_VOD_CAT = "vod_{id}"  # f"vod_{category_id}"
+CACHE_VOD_INFO = "vod_info_{id}"  # f"vod_info_{stream_id}"
 CACHE_SERIES_CATEGORIES = "series_categories"
-CACHE_SERIES_CAT = "series_{id}"    # f"series_{category_id}"
+CACHE_SERIES_CAT = "series_{id}"  # f"series_{category_id}"
 CACHE_SERIES_INFO = "series_info_{id}"  # f"series_info_{series_id}"
 CACHE_TMDB_ENRICH = "tmdb_enrich_{type}_{id}"  # f"tmdb_enrich_{item_type}_{tmdb_id}"
 
@@ -65,6 +66,7 @@ _stream_hits: dict[str, int] = {}
 _error_log: list[dict] = []
 _search_queries: list[dict] = []
 
+
 def _load_stream_hits():
     global _stream_hits
     try:
@@ -75,6 +77,7 @@ def _load_stream_hits():
     except (FileNotFoundError, json.JSONDecodeError):
         pass
 
+
 def _save_stream_hits():
     try:
         with open(STREAM_HITS_FILE, "w") as f:
@@ -82,20 +85,24 @@ def _save_stream_hits():
     except OSError:
         pass
 
+
 def track_hit(stream_type: str, stream_id: int | str):
     key = f"{stream_type}:{stream_id}"
     _stream_hits[key] = _stream_hits.get(key, 0) + 1
     _save_stream_hits()
+
 
 def log_error(msg: str, path: str = ""):
     _error_log.append({"ts": time.time(), "message": msg, "path": path})
     if len(_error_log) > 100:
         _error_log.pop(0)
 
+
 def record_search(query: str):
     _search_queries.append({"ts": time.time(), "query": query[:80]})
     if len(_search_queries) > 1000:
         _search_queries.pop(0)
+
 
 # ── SSE (EPG broadcast) ───────────────────────────────────────────────────
 _epg_clients: list[asyncio.Queue] = []
@@ -104,6 +111,7 @@ _epg_clients: list[asyncio.Queue] = []
 PROGRESS_FILE = config.DATA_DIR / "watch_progress.json"
 _progress_store: dict = {}
 
+
 def _load_progress_store():
     global _progress_store
     try:
@@ -111,6 +119,7 @@ def _load_progress_store():
             _progress_store = json.loads(PROGRESS_FILE.read_text())
     except (json.JSONDecodeError, OSError):
         _progress_store = {}
+
 
 def _save_progress_store():
     with contextlib.suppress(OSError):

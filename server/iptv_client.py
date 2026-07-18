@@ -27,21 +27,23 @@ from state import CACHE_TTL, _cache, _cache_hits, _cache_misses
 
 log = logging.getLogger("spacetime-tv")
 
+
 def mask_url_credentials(url: str) -> str:
     """Redact username and password from a URL for safe logging."""
     import re
+
     # Mask user:pass in path segments (e.g., /live/user/pass/ -> /live/****:****/)
-    url = re.sub(r'(://[^:]+):([^@]+)@', r'\1:****@', url)  # http://user:pass@host
+    url = re.sub(r"(://[^:]+):([^@]+)@", r"\1:****@", url)  # http://user:pass@host
     # Mask in path segments: /{user}/{pass}/ -> /****/****/
-    url = re.sub(r'(/(?:live|movie|series)/)[^/]+/[^/]+(/)', r'\1****:****\2', url)
+    url = re.sub(r"(/(?:live|movie|series)/)[^/]+/[^/]+(/)", r"\1****:****\2", url)
     # Mask query params: username=xxx&password=xxx
-    url = re.sub(r'(username|password)=[^&]+', r'\1=****', url)
+    url = re.sub(r"(username|password)=[^&]+", r"\1=****", url)
     return url
 
 
 def iptv_auth_headers(provider: ProviderConfig | None = None) -> dict:
     """Return authentication headers for IPTV API calls.
-    
+
     Use these headers instead of embedding credentials in query params
     where the provider supports it.
     """
@@ -52,14 +54,12 @@ def iptv_auth_headers(provider: ProviderConfig | None = None) -> dict:
     # Xtream API traditionally uses query params, but some providers
     # also accept Authorization header. We keep both for compatibility
     # while minimizing credential exposure in URLs.
-    if hasattr(p, 'username') and p.username:
+    if hasattr(p, "username") and p.username:
         headers["X-Username"] = p.username
-    if hasattr(p, 'password') and p.password:
+    if hasattr(p, "password") and p.password:
         # Don't expose raw password - only send encrypted or masked
         headers["X-Password"] = p.password
     return headers
-
-
 
 
 # ── HTTP Client ─────────────────────────────────────────────────────────────
@@ -106,7 +106,6 @@ def get_provider_by_index(idx: int) -> ProviderConfig | None:
     if 0 <= idx < len(providers):
         return providers[idx]
     return None
-
 
 
 # ── Parallel multi-provider fetch ────────────────────────────────────────────
@@ -212,9 +211,10 @@ async def fetch_search_all_providers(action: str, **params) -> list:
     """
     return await fetch_all_providers(action, **params)
 
+
 def iptv_url(action: str, provider: ProviderConfig | None = None, **params) -> str:
     """Build IPTV API URL (player_api.php) with credentials for a provider.
-    
+
     SECURITY: Credentials are embedded in query params. Use mask_url_credentials()
     before logging. Prefer header-based auth via iptv_auth_headers() where supported.
     """
@@ -227,8 +227,9 @@ def iptv_url(action: str, provider: ProviderConfig | None = None, **params) -> s
     return f"{p.base_url}/player_api.php?{urlencode(params)}"
 
 
-def iptv_stream_url(stream_id: int, stream_type: str = "live", ext: str | None = None,
-                    provider: ProviderConfig | None = None) -> str:
+def iptv_stream_url(
+    stream_id: int, stream_type: str = "live", ext: str | None = None, provider: ProviderConfig | None = None
+) -> str:
     """Build a direct stream URL for the IPTV CDN.
 
     Format: {base}/{prefix}/{user}/{pass}/{stream_id}.{ext}
@@ -248,8 +249,7 @@ def iptv_stream_url(stream_id: int, stream_type: str = "live", ext: str | None =
     return f"{p.base_url}/{prefix}/{p.username}/{p.password}/{stream_id}.{ext}"
 
 
-def iptv_vod_url(stream_id: int, media_type: str = "movie",
-                 provider: ProviderConfig | None = None) -> str:
+def iptv_vod_url(stream_id: int, media_type: str = "movie", provider: ProviderConfig | None = None) -> str:
     """Build a provider MKV URL for ffprobe/ffmpeg (VOD probe context)."""
     p = provider or get_active_provider()
     if not p:
@@ -258,8 +258,7 @@ def iptv_vod_url(stream_id: int, media_type: str = "movie",
     return f"{p.base_url}/{prefix}/{p.username}/{p.password}/{stream_id}.mkv"
 
 
-def iptv_timeshift_url(stream_id: int, duration_seconds: int,
-                       provider: ProviderConfig | None = None) -> str:
+def iptv_timeshift_url(stream_id: int, duration_seconds: int, provider: ProviderConfig | None = None) -> str:
     """Build a timeshift URL.
 
     Xtream Codes API format:
@@ -276,7 +275,7 @@ def iptv_timeshift_url(stream_id: int, duration_seconds: int,
 
 def iptv_xmltv_url(provider: ProviderConfig | None = None) -> str:
     """Build XMLTV URL for EPG data.
-    
+
     WARNING: Credentials are embedded in query params. This URL will be
     logged, cached, and visible in browser history if proxied through the client.
     For logging use mask_url_credentials(). Consider using iptv_auth_headers()
@@ -290,7 +289,7 @@ def iptv_xmltv_url(provider: ProviderConfig | None = None) -> str:
 
 def iptv_raw_proxy_url(path: str, provider: ProviderConfig | None = None) -> str:
     """Build a raw proxy URL with credentials appended.
-    
+
     WARNING: Credentials are embedded in query params. For safe logging
     use mask_url_credentials(). Consider header-based auth via iptv_auth_headers().
     """
@@ -309,8 +308,7 @@ def iptv_referer(provider: ProviderConfig | None = None) -> str:
     return f"{p.base_url}/"
 
 
-def iptv_probe_url(stream_id: int, media_type: str = "movie",
-                   provider: ProviderConfig | None = None) -> str:
+def iptv_probe_url(stream_id: int, media_type: str = "movie", provider: ProviderConfig | None = None) -> str:
     """Build the provider MKV URL for ffprobe/ffmpeg (VOD subtitle/audio context).
     Alias for iptv_vod_url() for backward compatibility.
     """
@@ -438,11 +436,11 @@ async def cached_fetch(key: str, action: str, provider_idx: int = -1, **params) 
     return data
 
 
-
 def _update_provider_health(provider: ProviderConfig, success: bool, error: str = ""):
     """Update provider health tracking in state."""
     try:
         from state import _provider_health
+
         enabled = get_enabled_providers()
         for h_idx, h_p in enumerate(enabled):
             if h_p.name == provider.name:
@@ -466,6 +464,7 @@ async def _fetch_single_provider(provider: ProviderConfig, action: str, **params
     # Decrypt password if encrypted at rest
     if provider.password and provider.password.startswith("enc:"):
         from crypto_utils import decrypt
+
         provider.password = decrypt(provider.password)
     url = iptv_url(action, provider=provider, **params)
     try:
@@ -482,15 +481,16 @@ async def _fetch_single_provider(provider: ProviderConfig, action: str, **params
         _update_provider_health(provider, success=False, error=str(e))
         raise HTTPException(502, f"IPTV provider '{provider.name}' error: {e}")
 
+
 # ── Backward-compatible aliases ──────────────────────────────────────────────
 # These are imported by older route modules. They delegate to provider-aware functions.
 
-def vod_url(stream_id: int, media_type: str = "movie",
-            provider: ProviderConfig | None = None) -> str:
+
+def vod_url(stream_id: int, media_type: str = "movie", provider: ProviderConfig | None = None) -> str:
     """Backward-compatible alias for iptv_vod_url()."""
     return iptv_vod_url(stream_id, media_type, provider=provider)
 
-def build_timeshift_url(stream_id: int, duration_seconds: int,
-                        provider: ProviderConfig | None = None) -> str:
+
+def build_timeshift_url(stream_id: int, duration_seconds: int, provider: ProviderConfig | None = None) -> str:
     """Backward-compatible alias for iptv_timeshift_url()."""
     return iptv_timeshift_url(stream_id, duration_seconds, provider=provider)

@@ -4,10 +4,7 @@
  * Covers: QUALITIES, SPEEDS, type exports at compile time.
  */
 import { describe, it, expect } from "vitest";
-import {
-  QUALITIES,
-  SPEEDS,
-} from "@/hooks/usePlayerTypes";
+import { QUALITIES, SPEEDS } from "@/hooks/usePlayerTypes";
 
 describe("QUALITIES array", () => {
   it("contains 4 quality tiers", () => {

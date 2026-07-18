@@ -15,7 +15,8 @@ import type { Series, SeriesDetails, Episode } from "@/lib/api";
 // ── Router mock ──────────────────────────────────────────
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
-  const actual = await vi.importActual<typeof import("react-router")>("react-router");
+  const actual =
+    await vi.importActual<typeof import("react-router")>("react-router");
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
@@ -33,7 +34,11 @@ vi.mock("@/lib/watchlist", () => ({
 const mockGetSeriesProgress = vi.fn();
 vi.mock("@/lib/continueWatching", () => ({
   getSeriesProgress: (...args: unknown[]) =>
-    (mockGetSeriesProgress as (...a: unknown[]) => Map<string, { progressSeconds: number; durationSeconds: number }>)(...args),
+    (
+      mockGetSeriesProgress as (
+        ...a: unknown[]
+      ) => Map<string, { progressSeconds: number; durationSeconds: number }>
+    )(...args),
 }));
 
 // ── API mock ─────────────────────────────────────────────
@@ -43,7 +48,9 @@ vi.mock("@/lib/api", () => ({
   api: {
     series: {
       details: (...args: unknown[]) =>
-        (mockSeriesDetails as (...a: unknown[]) => Promise<SeriesDetails>)(...args),
+        (mockSeriesDetails as (...a: unknown[]) => Promise<SeriesDetails>)(
+          ...args,
+        ),
     },
     tmdb: {
       tv: {
@@ -138,8 +145,30 @@ const fullSeriesDetails: SeriesDetails = {
     category_ids: [20],
   },
   seasons: [
-    { name: "Season 1", season_number: 1, episode_count: "7", cover: "", cover_big: "", cover_tmdb: "", overview: "", air_date: "2008-01-20", releaseDate: "2008-01-20", duration: "48" },
-    { name: "Season 2", season_number: 2, episode_count: "13", cover: "", cover_big: "", cover_tmdb: "", overview: "", air_date: "2009-03-08", releaseDate: "2009-03-08", duration: "48" },
+    {
+      name: "Season 1",
+      season_number: 1,
+      episode_count: "7",
+      cover: "",
+      cover_big: "",
+      cover_tmdb: "",
+      overview: "",
+      air_date: "2008-01-20",
+      releaseDate: "2008-01-20",
+      duration: "48",
+    },
+    {
+      name: "Season 2",
+      season_number: 2,
+      episode_count: "13",
+      cover: "",
+      cover_big: "",
+      cover_tmdb: "",
+      overview: "",
+      air_date: "2009-03-08",
+      releaseDate: "2009-03-08",
+      duration: "48",
+    },
   ],
   episodes: {
     "1": [ep1, ep2],
@@ -154,7 +183,10 @@ const tmdbTvEnrichment = {
     backdrop_path: "/tmdb_backdrop.jpg",
     poster_path: "/tmdb_poster.jpg",
     vote_average: 9.4,
-    genres: [{ id: 18, name: "Drama" }, { id: 80, name: "Crime" }],
+    genres: [
+      { id: 18, name: "Drama" },
+      { id: 80, name: "Crime" },
+    ],
     networks: [{ name: "AMC" }],
     created_by: [{ name: "Vince Gilligan" }],
     number_of_seasons: 5,
@@ -174,7 +206,7 @@ function renderOverlay(series: Series = sampleSeries) {
   return render(
     <MemoryRouter>
       <SeriesOverlay series={series} onClose={vi.fn()} />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -204,7 +236,7 @@ describe("SeriesOverlay", () => {
     expect(screen.queryByTestId("similar-series")).not.toBeInTheDocument();
   });
 
-  it('shows empty episode grid when details have no episodes', async () => {
+  it("shows empty episode grid when details have no episodes", async () => {
     mockSeriesDetails.mockResolvedValue({
       info: fullSeriesDetails.info,
       seasons: [],
@@ -297,7 +329,7 @@ describe("SeriesOverlay", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/watch/series/1001/ep1");
   });
 
-  it('shows placeholder for episodes without thumbnails', async () => {
+  it("shows placeholder for episodes without thumbnails", async () => {
     mockSeriesDetails.mockResolvedValue(fullSeriesDetails);
     mockTmdbTvDetails.mockResolvedValue(null);
     renderOverlay();
@@ -375,7 +407,7 @@ describe("SeriesOverlay", () => {
     const tmdbLink = await screen.findByText("TMDB");
     expect(tmdbLink.closest("a")).toHaveAttribute(
       "href",
-      "https://www.themoviedb.org/tv/1396"
+      "https://www.themoviedb.org/tv/1396",
     );
   });
 
@@ -405,7 +437,9 @@ describe("SeriesOverlay", () => {
 
     // Ep1 is fully watched — should have green checkmark
     await waitFor(() => {
-      const checkmarks = document.querySelectorAll(".bg-green-500\\/80, .text-green-500");
+      const checkmarks = document.querySelectorAll(
+        ".bg-green-500\\/80, .text-green-500",
+      );
       expect(checkmarks.length).toBeGreaterThan(0);
     });
   });

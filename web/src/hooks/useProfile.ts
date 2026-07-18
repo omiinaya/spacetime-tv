@@ -109,7 +109,6 @@ export async function syncProfileProgress(
   return res.ok;
 }
 
-
 // ── Watch history ─────────────────────────────────────────────────
 
 export async function addProfileHistory(
@@ -124,7 +123,14 @@ export async function addProfileHistory(
   const res = await fetch(`${API_BASE}/profiles/${profileId}/history`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ watchKey, title, contentType, position, duration, metadata }),
+    body: JSON.stringify({
+      watchKey,
+      title,
+      contentType,
+      position,
+      duration,
+      metadata,
+    }),
   });
   return res.ok;
 }
@@ -134,7 +140,9 @@ export async function fetchProfileHistory(
   limit: number = 50,
   offset: number = 0,
 ): Promise<any[]> {
-  const res = await fetch(`${API_BASE}/profiles/${profileId}/history?limit=${limit}&offset=${offset}`);
+  const res = await fetch(
+    `${API_BASE}/profiles/${profileId}/history?limit=${limit}&offset=${offset}`,
+  );
   if (!res.ok) return [];
   const data = await res.json();
   return data.history || [];

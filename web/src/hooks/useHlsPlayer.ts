@@ -8,7 +8,11 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import Hls from "hls.js";
-import { tryAutoplay, saveProgress, registerProgressSync } from "./usePlayerUtils";
+import {
+  tryAutoplay,
+  saveProgress,
+  registerProgressSync,
+} from "./usePlayerUtils";
 import type { PlayPhase, ErrorType, VideoSourceType } from "./usePlayerTypes";
 
 export interface HlsPlayerCallbacks {
@@ -49,7 +53,10 @@ export function useHlsPlayer(
         hlsCleanupRef.current();
         hlsCleanupRef.current = null;
       }
-      if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
       video.removeAttribute("src");
 
       let saveInterval: ReturnType<typeof setInterval> | null = null;
@@ -67,7 +74,9 @@ export function useHlsPlayer(
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           callbacks.onPhaseChange("playing");
-          callbacks.onDuration(hls.levels[0]?.details?.totalduration || video.duration || 0);
+          callbacks.onDuration(
+            hls.levels[0]?.details?.totalduration || video.duration || 0,
+          );
           tryAutoplay(video, callbacks.onAutoplayMuted).then((started) => {
             if (!started) callbacks.onPhaseChange("paused");
           });
@@ -76,8 +85,12 @@ export function useHlsPlayer(
         hls.on(Hls.Events.ERROR, (_event, data) => {
           if (data.fatal) {
             switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
-              case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hls.recoverMediaError();
+                break;
               default:
                 callbacks.onError("stream_error", "Playback error. Try again.");
                 hls.destroy();
@@ -97,22 +110,32 @@ export function useHlsPlayer(
         }
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
         video.src = playlistUrl;
-        video.addEventListener("loadedmetadata", () => {
-          callbacks.onDuration(video.duration || 0);
-          if (startPos && startPos > 5) video.currentTime = startPos;
-          callbacks.onPhaseChange("playing");
-          tryAutoplay(video, callbacks.onAutoplayMuted).then((started) => {
-            if (!started) callbacks.onPhaseChange("paused");
-          });
-        }, { once: true });
+        video.addEventListener(
+          "loadedmetadata",
+          () => {
+            callbacks.onDuration(video.duration || 0);
+            if (startPos && startPos > 5) video.currentTime = startPos;
+            callbacks.onPhaseChange("playing");
+            tryAutoplay(video, callbacks.onAutoplayMuted).then((started) => {
+              if (!started) callbacks.onPhaseChange("paused");
+            });
+          },
+          { once: true },
+        );
       } else {
-        callbacks.onError("not_supported", "This video format is not supported by your browser.");
+        callbacks.onError(
+          "not_supported",
+          "This video format is not supported by your browser.",
+        );
         return;
       }
 
       const onTimeUpdate = () => {
         const buf = video.buffered;
-        callbacks.onTimeUpdate(video.currentTime, buf.length > 0 ? buf.end(buf.length - 1) : 0);
+        callbacks.onTimeUpdate(
+          video.currentTime,
+          buf.length > 0 ? buf.end(buf.length - 1) : 0,
+        );
       };
       const onDurationChange = () => {
         const d = video.duration;
@@ -129,20 +152,34 @@ export function useHlsPlayer(
       if (watchKey) {
         let syncCounter = 0;
         saveInterval = setInterval(() => {
-          saveProgress({ video, watchKey, type: type || "movie", seriesId, epId, id, onAutoAdvance });
+          saveProgress({
+            video,
+            watchKey,
+            type: type || "movie",
+            seriesId,
+            epId,
+            id,
+            onAutoAdvance,
+          });
           syncCounter++;
           if (syncCounter % 6 === 0) registerProgressSync();
         }, 5000);
       }
 
       const timeout = setTimeout(() => {
-        callbacks.onError("timeout", "Video is taking too long to start. Try again.");
+        callbacks.onError(
+          "timeout",
+          "Video is taking too long to start. Try again.",
+        );
       }, 15000);
 
       const emptyCheck = setInterval(() => {
         if (video.readyState === 0) {
           clearInterval(emptyCheck);
-          callbacks.onError("empty_stream", "Stream returned empty data. The content may not be available on this server.");
+          callbacks.onError(
+            "empty_stream",
+            "Stream returned empty data. The content may not be available on this server.",
+          );
         } else if (video.readyState > 0) {
           clearInterval(emptyCheck);
         }
@@ -162,8 +199,13 @@ export function useHlsPlayer(
   );
 
   const destroy = useCallback(() => {
-    if (hlsCleanupRef.current) { hlsCleanupRef.current(); hlsCleanupRef.current = null; }
-    try { hlsRef.current?.destroy(); } catch {} // cleanup — errors expected if already destroyed
+    if (hlsCleanupRef.current) {
+      hlsCleanupRef.current();
+      hlsCleanupRef.current = null;
+    }
+    try {
+      hlsRef.current?.destroy();
+    } catch {} // cleanup — errors expected if already destroyed
     hlsRef.current = null;
   }, []);
 

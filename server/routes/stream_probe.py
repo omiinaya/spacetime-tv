@@ -2,6 +2,7 @@
 
 Extracted from stream.py during decomposition of the 1105-line monolithic file.
 """
+
 import asyncio
 import json
 import logging
@@ -45,12 +46,18 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
 
     try:
         proc = await asyncio.create_subprocess_exec(
-            "/usr/bin/timeout", "8", "/usr/bin/ffprobe",
-            "-v", "error",
-            "-print_format", "json",
+            "/usr/bin/timeout",
+            "8",
+            "/usr/bin/ffprobe",
+            "-v",
+            "error",
+            "-print_format",
+            "json",
             "-show_streams",
-            "-user_agent", ua,
-            "-select_streams", "v:0",
+            "-user_agent",
+            ua,
+            "-select_streams",
+            "v:0",
             url,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -71,12 +78,13 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
             log.info(f"Probe {stream_id}: ffprobe got 405 — trying curl_cffi fallback")
             cffi_url = await build_stream_url(stream_id, stream_type)
             resp = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: CurlReq.get(
+                None,
+                lambda: CurlReq.get(
                     cffi_url,
                     headers={"User-Agent": UA_STR, "Referer": iptv_referer(), "Range": "bytes=0-65535"},
                     timeout=10,
                     impersonate="chrome120",
-                )
+                ),
             )
             cl = resp.headers.get("content-length", "0")
             if resp.status_code in (200, 206) and cl.isdigit() and int(cl) > 0:
@@ -85,7 +93,10 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
                 _probe_cache[cache_key] = (now, result)
                 return result
             log.info(f"Probe {stream_id}: all probe methods failed — reporting unavailable")
-            result = {"codec": "unavailable", "error": "Not on this CDN edge"}  # pragma: no cover — all probes failed, runtime only
+            result = {
+                "codec": "unavailable",
+                "error": "Not on this CDN edge",
+            }  # pragma: no cover — all probes failed, runtime only
             _probe_cache[cache_key] = (now, result)
             return result  # pragma: no cover — all probes failed, runtime only
         try:
@@ -93,7 +104,10 @@ async def probe_stream(stream_id: int, stream_type: str = "live") -> dict:
                 resp = await c.get(url)
                 if resp.status_code == 405:
                     log.info(f"Probe {stream_id}: GET returned 405 — unavailable")
-                    result = {"codec": "unavailable", "error": "Not on this CDN edge"}  # pragma: no cover — network runtime
+                    result = {
+                        "codec": "unavailable",
+                        "error": "Not on this CDN edge",
+                    }  # pragma: no cover — network runtime
                     _probe_cache[cache_key] = (now, result)
                     return result  # pragma: no cover — network runtime
         except httpx.HTTPError as e:

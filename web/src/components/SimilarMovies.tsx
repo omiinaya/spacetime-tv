@@ -7,25 +7,40 @@ interface SimilarMoviesProps {
   currentId: number;
 }
 
-export default function SimilarMovies({ categoryId, currentId }: SimilarMoviesProps) {
+export default function SimilarMovies({
+  categoryId,
+  currentId,
+}: SimilarMoviesProps) {
   const [movies, setMovies] = useState<Movie[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    api.movies.list(categoryId, 12, 0).then((d) => {
-      if (!cancelled) {
-        setMovies(d.movies.filter((m) => m.stream_id !== currentId).slice(0, 10));
-      }
-    }).catch(() => {});
-    return () => { cancelled = true; };
+    api.movies
+      .list(categoryId, 12, 0)
+      .then((d) => {
+        if (!cancelled) {
+          setMovies(
+            d.movies.filter((m) => m.stream_id !== currentId).slice(0, 10),
+          );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [categoryId, currentId]);
 
   if (movies.length === 0) return null;
 
   return (
     <div className="mt-6">
-      <h3 className="text-sm font-semibold text-white/50 mb-3">More Like This</h3>
-      <div className="flex gap-3 overflow-x-auto pb-2" style={{ touchAction: "manipulation" }}>
+      <h3 className="text-sm font-semibold text-white/50 mb-3">
+        More Like This
+      </h3>
+      <div
+        className="flex gap-3 overflow-x-auto pb-2"
+        style={{ touchAction: "manipulation" }}
+      >
         {movies.map((m) => (
           <button
             key={m.stream_id}
@@ -38,7 +53,12 @@ export default function SimilarMovies({ categoryId, currentId }: SimilarMoviesPr
           >
             <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5">
               {m.stream_icon ? (
-                <img src={imageUrl(m.stream_icon)} alt={m.name ? `${m.name} poster` : ''} className="w-full h-full object-cover" loading="lazy" />
+                <img
+                  src={imageUrl(m.stream_icon)}
+                  alt={m.name ? `${m.name} poster` : ""}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-[#141420]">
                   <Film className="h-5 w-5 text-white/10" />

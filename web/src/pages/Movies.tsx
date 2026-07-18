@@ -1,19 +1,22 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router";
+import { Film, Loader2, Star, Search, X, Globe, Heart } from "lucide-react";
 import {
-  Film,
-  Loader2,
-  Star,
-  Search,
-  X,
-  Globe,
-  Heart,
-} from "lucide-react";
-import { api, UnifiedMovie, TmdbMovieResult, imageUrl, tmdbImgProps } from "@/lib/api";
+  api,
+  UnifiedMovie,
+  TmdbMovieResult,
+  imageUrl,
+  tmdbImgProps,
+} from "@/lib/api";
 import MovieOverlay from "@/components/MovieOverlay";
 import ContentRow from "@/components/ContentRow";
 import { PosterCardSkeleton } from "@/components/Skeleton";
-import { getMovieContinueWatching, loadServerProgress, removeMovieProgress, type MovieProgress } from "@/lib/continueWatching";
+import {
+  getMovieContinueWatching,
+  loadServerProgress,
+  removeMovieProgress,
+  type MovieProgress,
+} from "@/lib/continueWatching";
 import { isInWatchlist, toggleWatchlist as toggleWl } from "@/lib/watchlist";
 import { useGridKeyboardNav } from "@/hooks/useGridKeyboardNav";
 import { SearchHistory, addSearchHistory } from "@/components/SearchHistory";
@@ -25,7 +28,7 @@ function useWatchlistToggle() {
   const [, setV] = useState(0);
   return useCallback((movieId: number) => {
     toggleWl(movieId);
-    setV(v => v + 1);
+    setV((v) => v + 1);
   }, []);
 }
 
@@ -37,19 +40,24 @@ export default function Movies() {
   const [searchQuery, setSearchQueryState] = useState(urlQuery);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleInputChange = useCallback((value: string) => {
-    setInputValue(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setSearchQueryState(value);
-      if (value) setSearchParams({ q: value }, { replace: true });
-      else setSearchParams({}, { replace: true });
-    }, 300);
-  }, [setSearchParams]);
+  const handleInputChange = useCallback(
+    (value: string) => {
+      setInputValue(value);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        setSearchQueryState(value);
+        if (value) setSearchParams({ q: value }, { replace: true });
+        else setSearchParams({}, { replace: true });
+      }, 300);
+    },
+    [setSearchParams],
+  );
 
   // Cleanup debounce on unmount
   useEffect(() => {
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, []);
 
   // ── State ───────────────────────────────────────────────────────
@@ -93,15 +101,20 @@ export default function Movies() {
   useEffect(() => {
     let cancelled = false;
     setTrendingLoading(true);
-    api.tmdb.trending("week", 1).then((res) => {
-      if (cancelled) return;
-      setTrending(res.trending || []);
-      setTrendingEnabled(res.enabled);
-      setTrendingLoading(false);
-    }).catch(() => {
-      if (!cancelled) setTrendingLoading(false);
-    });
-    return () => { cancelled = true; };
+    api.tmdb
+      .trending("week", 1)
+      .then((res) => {
+        if (cancelled) return;
+        setTrending(res.trending || []);
+        setTrendingEnabled(res.enabled);
+        setTrendingLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) setTrendingLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // ── Fetch ───────────────────────────────────────────────────────
@@ -115,7 +128,11 @@ export default function Movies() {
       else setLoadingMore(true);
 
       try {
-        const d = await api.movies.unified(PAGE_SIZE, offset, query || undefined);
+        const d = await api.movies.unified(
+          PAGE_SIZE,
+          offset,
+          query || undefined,
+        );
         if (sid !== searchIdRef.current) return;
         if (replace) {
           setMovies(d.movies);
@@ -134,7 +151,7 @@ export default function Movies() {
         fetchingRef.current = false;
       }
     },
-    []
+    [],
   );
 
   // Initial load + reload on search change
@@ -152,7 +169,7 @@ export default function Movies() {
           fetchPage(movies.length, false, searchQuery);
         }
       },
-      { rootMargin: "400px" }
+      { rootMargin: "400px" },
     );
     obs.observe(sentinel);
     return () => obs.disconnect();
@@ -161,12 +178,15 @@ export default function Movies() {
   // ── Helpers ─────────────────────────────────────────────────────
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const goToPage = useCallback((page: number) => {
-    const offset = (page - 1) * PAGE_SIZE;
-    setCurrentPage(page);
-    fetchPage(offset, true, searchQuery);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [searchQuery, fetchPage]);
+  const goToPage = useCallback(
+    (page: number) => {
+      const offset = (page - 1) * PAGE_SIZE;
+      setCurrentPage(page);
+      fetchPage(offset, true, searchQuery);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [searchQuery, fetchPage],
+  );
 
   const yearFromName = (name: string) => {
     const m = /\((\d{4})\)/.exec(name);
@@ -187,8 +207,8 @@ export default function Movies() {
             {total > 0
               ? `${total.toLocaleString()} movies across all languages`
               : loading
-              ? "Loading..."
-              : ""}
+                ? "Loading..."
+                : ""}
           </p>
         </div>
       </div>
@@ -200,7 +220,9 @@ export default function Movies() {
           type="text"
           value={inputValue}
           onChange={(e) => handleInputChange(e.target.value)}
-          onFocus={() => { if (!inputValue) setShowHistory(true); }}
+          onFocus={() => {
+            if (!inputValue) setShowHistory(true);
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && inputValue.trim().length >= 2) {
               addSearchHistory(inputValue);
@@ -229,112 +251,172 @@ export default function Movies() {
       </div>
 
       {/* Continue Watching — in-progress only */}
-      {!loading && continueWatching.length > 0 && (() => {
-        const cwMovies = continueWatching.filter(cw => movies.some(m => m.stream_id === cw.movieId));
-        const inProgress = cwMovies.filter(cw => cw.durationSeconds <= 0 || (cw.progressSeconds / cw.durationSeconds) < 0.9);
-        if (inProgress.length === 0) return null;
-        return (
-          <div>
-            <h2 className="text-sm font-semibold text-muted-foreground mb-3">Continue Watching</h2>
-            <div className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-0" style={{ touchAction: "manipulation" }}>
-              {inProgress.slice(0, 10).map((cw) => {
-                const movie = movies.find(m => m.stream_id === cw.movieId);
-                if (!movie) return null;
-                const pct = cw.durationSeconds > 0 ? Math.min(100, (cw.progressSeconds / cw.durationSeconds) * 100) : 0;
-                return (
-                  <div key={cw.movieId} className="shrink-0 w-[120px] group relative">
-                    <button onClick={() => setOverlayMovie(movie)} className="w-full text-left">
-                      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5">
-                        {movie.stream_icon ? (
-                          <img src={imageUrl(movie.stream_icon)} alt={movie.name ? `${movie.name} poster` : ''} className="w-full h-full object-cover" loading="lazy" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-[#141420]">
-                            <Film className="h-6 w-6 text-white/10" />
-                          </div>
-                        )}
-                        <div className="absolute inset-x-0 bottom-0 h-1 bg-white/10">
-                          <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
-                        </div>
-                      </div>
-                      <p className="text-[11px] leading-tight line-clamp-2 group-hover:text-primary transition-colors">
-                        {movie.base_name || movie.name}
-                      </p>
-                    </button>
-                    {/* Dismiss button */}
-                    <button
-                      onClick={() => removeMovieProgress(cw.movieId)}
-                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-black/70 backdrop-blur-sm text-white/60 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] z-10"
-                      aria-label="Remove from continue watching"
+      {!loading &&
+        continueWatching.length > 0 &&
+        (() => {
+          const cwMovies = continueWatching.filter((cw) =>
+            movies.some((m) => m.stream_id === cw.movieId),
+          );
+          const inProgress = cwMovies.filter(
+            (cw) =>
+              cw.durationSeconds <= 0 ||
+              cw.progressSeconds / cw.durationSeconds < 0.9,
+          );
+          if (inProgress.length === 0) return null;
+          return (
+            <div>
+              <h2 className="text-sm font-semibold text-muted-foreground mb-3">
+                Continue Watching
+              </h2>
+              <div
+                className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-0"
+                style={{ touchAction: "manipulation" }}
+              >
+                {inProgress.slice(0, 10).map((cw) => {
+                  const movie = movies.find((m) => m.stream_id === cw.movieId);
+                  if (!movie) return null;
+                  const pct =
+                    cw.durationSeconds > 0
+                      ? Math.min(
+                          100,
+                          (cw.progressSeconds / cw.durationSeconds) * 100,
+                        )
+                      : 0;
+                  return (
+                    <div
+                      key={cw.movieId}
+                      className="shrink-0 w-[120px] group relative"
                     >
-                      ✕
-                    </button>
-                  </div>
-                );
-              })}
+                      <button
+                        onClick={() => setOverlayMovie(movie)}
+                        className="w-full text-left"
+                      >
+                        <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5">
+                          {movie.stream_icon ? (
+                            <img
+                              src={imageUrl(movie.stream_icon)}
+                              alt={movie.name ? `${movie.name} poster` : ""}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-[#141420]">
+                              <Film className="h-6 w-6 text-white/10" />
+                            </div>
+                          )}
+                          <div className="absolute inset-x-0 bottom-0 h-1 bg-white/10">
+                            <div
+                              className="h-full bg-primary transition-all"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                        <p className="text-[11px] leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+                          {movie.base_name || movie.name}
+                        </p>
+                      </button>
+                      {/* Dismiss button */}
+                      <button
+                        onClick={() => removeMovieProgress(cw.movieId)}
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-black/70 backdrop-blur-sm text-white/60 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] z-10"
+                        aria-label="Remove from continue watching"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {/* Recently Completed */}
-      {!loading && continueWatching.length > 0 && (() => {
-        const cwMovies = continueWatching.filter(cw => movies.some(m => m.stream_id === cw.movieId));
-        const completed = cwMovies.filter(cw => cw.durationSeconds > 0 && (cw.progressSeconds / cw.durationSeconds) >= 0.9);
-        if (completed.length === 0) return null;
-        return (
-          <div>
-            <h2 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-1.5">
-              <span className="text-green-400">✓</span>
-              Recently Completed
-            </h2>
-            <div className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-0" style={{ touchAction: "manipulation" }}>
-              {completed.slice(0, 8).map((cw) => {
-                const movie = movies.find(m => m.stream_id === cw.movieId);
-                if (!movie) return null;
-                return (
-                  <div key={cw.movieId} className="shrink-0 w-[120px] group relative">
-                    <button onClick={() => setOverlayMovie(movie)} className="w-full text-left">
-                      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-1 ring-green-500/20 group-hover:ring-green-500/40 transition-all">
-                        {movie.stream_icon ? (
-                          <img src={imageUrl(movie.stream_icon)} alt={movie.name ? `${movie.name} poster` : ''} className="w-full h-full object-cover opacity-70" loading="lazy" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-[#141420]">
-                            <Film className="h-6 w-6 text-white/10" />
-                          </div>
-                        )}
-                        {/* Completed check */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="p-1.5 rounded-full bg-green-500/20 backdrop-blur-sm">
-                            <span className="text-green-400 text-sm">✓</span>
-                          </div>
-                        </div>
-                        <div className="absolute inset-x-0 bottom-0 h-0.5 bg-green-500" />
-                      </div>
-                      <p className="text-[11px] leading-tight line-clamp-2 group-hover:text-primary transition-colors">
-                        {movie.base_name || movie.name}
-                      </p>
-                    </button>
-                    {/* Dismiss button */}
-                    <button
-                      onClick={() => removeMovieProgress(cw.movieId)}
-                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-black/70 backdrop-blur-sm text-white/60 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] z-10"
-                      aria-label="Remove from recently completed"
+      {!loading &&
+        continueWatching.length > 0 &&
+        (() => {
+          const cwMovies = continueWatching.filter((cw) =>
+            movies.some((m) => m.stream_id === cw.movieId),
+          );
+          const completed = cwMovies.filter(
+            (cw) =>
+              cw.durationSeconds > 0 &&
+              cw.progressSeconds / cw.durationSeconds >= 0.9,
+          );
+          if (completed.length === 0) return null;
+          return (
+            <div>
+              <h2 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-1.5">
+                <span className="text-green-400">✓</span>
+                Recently Completed
+              </h2>
+              <div
+                className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-0"
+                style={{ touchAction: "manipulation" }}
+              >
+                {completed.slice(0, 8).map((cw) => {
+                  const movie = movies.find((m) => m.stream_id === cw.movieId);
+                  if (!movie) return null;
+                  return (
+                    <div
+                      key={cw.movieId}
+                      className="shrink-0 w-[120px] group relative"
                     >
-                      ✕
-                    </button>
-                  </div>
-                );
-              })}
+                      <button
+                        onClick={() => setOverlayMovie(movie)}
+                        className="w-full text-left"
+                      >
+                        <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-1 ring-green-500/20 group-hover:ring-green-500/40 transition-all">
+                          {movie.stream_icon ? (
+                            <img
+                              src={imageUrl(movie.stream_icon)}
+                              alt={movie.name ? `${movie.name} poster` : ""}
+                              className="w-full h-full object-cover opacity-70"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-[#141420]">
+                              <Film className="h-6 w-6 text-white/10" />
+                            </div>
+                          )}
+                          {/* Completed check */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="p-1.5 rounded-full bg-green-500/20 backdrop-blur-sm">
+                              <span className="text-green-400 text-sm">✓</span>
+                            </div>
+                          </div>
+                          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-green-500" />
+                        </div>
+                        <p className="text-[11px] leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+                          {movie.base_name || movie.name}
+                        </p>
+                      </button>
+                      {/* Dismiss button */}
+                      <button
+                        onClick={() => removeMovieProgress(cw.movieId)}
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-black/70 backdrop-blur-sm text-white/60 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[10px] z-10"
+                        aria-label="Remove from recently completed"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {/* Recently Added */}
       {!loading && movies.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-muted-foreground mb-3">Recently Added</h2>
-          <div className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-0" style={{ touchAction: "manipulation" }}>
+          <h2 className="text-sm font-semibold text-muted-foreground mb-3">
+            Recently Added
+          </h2>
+          <div
+            className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-0"
+            style={{ touchAction: "manipulation" }}
+          >
             {[...movies]
               .filter((m): m is typeof m & { added: string } => !!m.added)
               .sort((a, b) => parseInt(b.added) - parseInt(a.added))
@@ -347,7 +429,12 @@ export default function Movies() {
                 >
                   <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5">
                     {m.stream_icon ? (
-                      <img src={imageUrl(m.stream_icon)} alt={m.name ? `${m.name} poster` : ''} className="w-full h-full object-cover" loading="lazy" />
+                      <img
+                        src={imageUrl(m.stream_icon)}
+                        alt={m.name ? `${m.name} poster` : ""}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-[#141420]">
                         <Film className="h-6 w-6 text-white/10" />
@@ -372,7 +459,9 @@ export default function Movies() {
         <div>
           <ContentRow title="Trending This Week" itemCount={trending.length}>
             {trending.map((t, idx) => {
-              const posterProps = t.poster_path ? tmdbImgProps(t.poster_path) : null;
+              const posterProps = t.poster_path
+                ? tmdbImgProps(t.poster_path)
+                : null;
               const year = t.release_date ? t.release_date.slice(0, 4) : "";
               return (
                 <button
@@ -383,7 +472,12 @@ export default function Movies() {
                     // Open the first matching unified movie, or just log
                     const match = movies.find((m) => {
                       // Match by TMDB ID stored in the movie's `tmdb` field
-                      return m.tmdb === String(t.id) || m.name.toLowerCase().includes(t.title.toLowerCase().slice(0, 20));
+                      return (
+                        m.tmdb === String(t.id) ||
+                        m.name
+                          .toLowerCase()
+                          .includes(t.title.toLowerCase().slice(0, 20))
+                      );
                     });
                     if (match) setOverlayMovie(match);
                   }}
@@ -423,7 +517,9 @@ export default function Movies() {
                     {t.title}
                   </p>
                   {year && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{year}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {year}
+                    </p>
                   )}
                 </button>
               );
@@ -463,7 +559,10 @@ export default function Movies() {
 
       {/* Movie grid */}
       {!loading && movies.length > 0 && (
-        <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <div
+          ref={gridRef}
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
+        >
           {movies.map((m, idx) => {
             const year = yearFromName(m.name);
             return (
@@ -472,7 +571,10 @@ export default function Movies() {
                 data-grid-idx={idx}
                 onClick={() => setOverlayMovie(m)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOverlayMovie(m); }
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setOverlayMovie(m);
+                  }
                   handleGridKeyDown(e, idx);
                 }}
                 role="button"
@@ -488,7 +590,11 @@ export default function Movies() {
                   {m.stream_icon ? (
                     <img
                       src={imageUrl(m.stream_icon)}
-                      alt={(m.base_name || m.name) ? `${m.base_name || m.name} poster` : ""}
+                      alt={
+                        m.base_name || m.name
+                          ? `${m.base_name || m.name} poster`
+                          : ""
+                      }
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
                       loading="lazy"
                       onError={(e) => {
@@ -517,9 +623,16 @@ export default function Movies() {
                   )}
                   {/* Watchlist heart — always visible on mobile, brighter on hover */}
                   <button
-                    onClick={(e) => { e.stopPropagation(); toggleWatchlist(m.stream_id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleWatchlist(m.stream_id);
+                    }}
                     className="absolute bottom-2 right-2 p-1 rounded-full bg-black/60 backdrop-blur-sm opacity-70 hover:opacity-100 transition-opacity hover:scale-110"
-                    aria-label={isInWatchlist(m.stream_id) ? "Remove from watchlist" : "Add to watchlist"}
+                    aria-label={
+                      isInWatchlist(m.stream_id)
+                        ? "Remove from watchlist"
+                        : "Add to watchlist"
+                    }
                   >
                     <Heart
                       className={`h-4 w-4 ${isInWatchlist(m.stream_id) ? "fill-red-500 text-red-500" : "text-white/70"}`}

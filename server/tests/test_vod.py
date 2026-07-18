@@ -3,6 +3,7 @@
 Relies on the client fixture (mocked cached_fetch → []) and the
 client_with_cache fixture (real cached_fetch) from conftest.py.
 """
+
 import time
 
 # ── Movies: /api/movies/categories ────────────────────────────────
@@ -89,14 +90,18 @@ def test_movies_unified_uses_cached_vod_data(client_with_cache):
     """Unified should merge streams from vod_* caches, grouped by TMDB."""
     from state import _cache
 
-    _cache["vod_10"] = (time.time() + 3600, [
-        {"stream_id": 101, "name": "EN - The Matrix (1999)", "tmdb": "tmdb603",
-         "container_extension": "mkv"},
-    ])
-    _cache["vod_20"] = (time.time() + 3600, [
-        {"stream_id": 201, "name": "EN - Inception (2010)", "tmdb": "tmdb27205",
-         "container_extension": "mp4"},
-    ])
+    _cache["vod_10"] = (
+        time.time() + 3600,
+        [
+            {"stream_id": 101, "name": "EN - The Matrix (1999)", "tmdb": "tmdb603", "container_extension": "mkv"},
+        ],
+    )
+    _cache["vod_20"] = (
+        time.time() + 3600,
+        [
+            {"stream_id": 201, "name": "EN - Inception (2010)", "tmdb": "tmdb27205", "container_extension": "mp4"},
+        ],
+    )
 
     resp = client_with_cache.get("/api/v1/movies/unified?limit=50")
     assert resp.status_code == 200
@@ -111,12 +116,13 @@ def test_movies_unified_filters_by_query(client_with_cache):
     """Unified should filter by ?q= parameter."""
     from state import _cache
 
-    _cache["vod_10"] = (time.time() + 3600, [
-        {"stream_id": 101, "name": "EN - The Matrix (1999)", "tmdb": "tmdb603",
-         "container_extension": "mkv"},
-        {"stream_id": 102, "name": "EN - Inception (2010)", "tmdb": "tmdb27205",
-         "container_extension": "mp4"},
-    ])
+    _cache["vod_10"] = (
+        time.time() + 3600,
+        [
+            {"stream_id": 101, "name": "EN - The Matrix (1999)", "tmdb": "tmdb603", "container_extension": "mkv"},
+            {"stream_id": 102, "name": "EN - Inception (2010)", "tmdb": "tmdb27205", "container_extension": "mp4"},
+        ],
+    )
 
     resp = client_with_cache.get("/api/v1/movies/unified?q=matrix")
     assert resp.status_code == 200
@@ -129,12 +135,13 @@ def test_movies_unified_groups_languages(client_with_cache):
     """Unified should group multiple language entries under same TMDB."""
     from state import _cache
 
-    _cache["vod_10"] = (time.time() + 3600, [
-        {"stream_id": 101, "name": "EN - The Matrix (1999)", "tmdb": "tmdb603",
-         "container_extension": "mkv"},
-        {"stream_id": 102, "name": "FR - Matrix (1999)", "tmdb": "tmdb603",
-         "container_extension": "mkv"},
-    ])
+    _cache["vod_10"] = (
+        time.time() + 3600,
+        [
+            {"stream_id": 101, "name": "EN - The Matrix (1999)", "tmdb": "tmdb603", "container_extension": "mkv"},
+            {"stream_id": 102, "name": "FR - Matrix (1999)", "tmdb": "tmdb603", "container_extension": "mkv"},
+        ],
+    )
 
     resp = client_with_cache.get("/api/v1/movies/unified")
     assert resp.status_code == 200

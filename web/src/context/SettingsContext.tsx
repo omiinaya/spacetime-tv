@@ -1,4 +1,11 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from "react";
 import {
   AppSettings,
   DEFAULT_SETTINGS,
@@ -103,18 +110,33 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setAdultUnlocked(false);
   }, []);
 
-  const unlockAdult = useCallback(async (pin: string): Promise<boolean> => {
-    const valid = await verifyPin(pin, settings.adultPin);
-    if (valid) setAdultUnlocked(true);
-    return valid;
-  }, [settings.adultPin]);
+  const unlockAdult = useCallback(
+    async (pin: string): Promise<boolean> => {
+      const valid = await verifyPin(pin, settings.adultPin);
+      if (valid) setAdultUnlocked(true);
+      return valid;
+    },
+    [settings.adultPin],
+  );
 
   const lockAdult = useCallback(() => {
     setAdultUnlocked(false);
   }, []);
 
   return (
-    <SettingsContext.Provider value={{ settings, update, reset, adultUnlocked, setAdultPin, clearAdultPin, unlockAdult, lockAdult, resolvedTheme }}>
+    <SettingsContext.Provider
+      value={{
+        settings,
+        update,
+        reset,
+        adultUnlocked,
+        setAdultPin,
+        clearAdultPin,
+        unlockAdult,
+        lockAdult,
+        resolvedTheme,
+      }}
+    >
       {children}
     </SettingsContext.Provider>
   );

@@ -2,6 +2,7 @@
 
 Extracted from stream.py during decomposition of the 1105-line monolithic file.
 """
+
 import logging
 from functools import partial
 
@@ -24,8 +25,8 @@ router = APIRouter(tags=["stream"])
 
 # ── VOD stream helpers ──────────────────────────────────────────────────────
 
-async def handle_vod_request(req: Request, stream_id: int, stream_type: str,
-                              content_type: str = ""):
+
+async def handle_vod_request(req: Request, stream_id: int, stream_type: str, content_type: str = ""):
     """Handle a VOD stream request with Range/206 support for seeking.
 
     Uses curl_cffi as the HTTP transport (CDN blocks httpx with 405 but
@@ -68,22 +69,27 @@ async def stream_vod_mpegts(url: str, start_time: float | None = None):
     """
     cmd = [
         "/usr/bin/ffmpeg",
-        "-loglevel", "warning",
-        "-probesize", "512K",
-        "-analyzeduration", "512K",
+        "-loglevel",
+        "warning",
+        "-probesize",
+        "512K",
+        "-analyzeduration",
+        "512K",
     ]
     range_header = None
     if start_time and start_time > 0:
         cmd += ["-ss", str(start_time), "-copyts"]
         range_header = f"bytes={int(start_time * 5_000_000)}-"
     cmd += [
-        "-i", "pipe:0",
-        "-c", "copy",
-        "-f", "mpegts",
+        "-i",
+        "pipe:0",
+        "-c",
+        "copy",
+        "-f",
+        "mpegts",
         "pipe:1",
     ]
-    feed = partial(_http_feed_stdin, url=url, range_header=range_header,
-                   buf_size=262144, log_prefix="vod-remux")
+    feed = partial(_http_feed_stdin, url=url, range_header=range_header, buf_size=262144, log_prefix="vod-remux")
     async for chunk in _ffmpeg_pipe(cmd, feed):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
 
@@ -94,17 +100,28 @@ async def stream_vod_transcode(url: str):
     """
     cmd = [
         "/usr/bin/ffmpeg",
-        "-loglevel", "warning",
-        "-probesize", "512K",
-        "-analyzeduration", "512K",
-        "-i", "pipe:0",
-        "-c:v", "libx264",
-        "-preset", "ultrafast",
-        "-tune", "zerolatency",
-        "-crf", "26",
-        "-c:a", "aac",
-        "-b:a", "128k",
-        "-f", "mpegts",
+        "-loglevel",
+        "warning",
+        "-probesize",
+        "512K",
+        "-analyzeduration",
+        "512K",
+        "-i",
+        "pipe:0",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-tune",
+        "zerolatency",
+        "-crf",
+        "26",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        "-f",
+        "mpegts",
         "pipe:1",
     ]
     feed = partial(_http_feed_stdin, url=url, log_prefix="vod-transcode")
@@ -113,6 +130,7 @@ async def stream_vod_transcode(url: str):
 
 
 # ── VOD stream routes ───────────────────────────────────────────────────────
+
 
 @router.get("/stream/movie/{stream_id}/remux")
 async def stream_movie_remux(stream_id: int, start: float | None = None):

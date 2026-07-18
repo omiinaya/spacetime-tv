@@ -9,7 +9,9 @@ const BATCH_INTERVAL = 30000; // refresh every 30 seconds
  * Auto-refreshes every 30 seconds.
  */
 export function useNowPlaying(streamIds: number[]) {
-  const [programmes, setProgrammes] = useState<Map<number, GuideNowResult>>(new Map());
+  const [programmes, setProgrammes] = useState<Map<number, GuideNowResult>>(
+    new Map(),
+  );
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {

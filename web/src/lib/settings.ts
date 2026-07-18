@@ -46,14 +46,34 @@ export function saveSettings(s: AppSettings) {
 // ── Category filter helpers ─────────────────────────────────────────────────
 
 const ADULT_KEYWORDS = [
-  "adult", "xxx", "18+", "erotic", "porn", "sex", "hentai",
-  "+18", "18+", "21+", "🔞",
+  "adult",
+  "xxx",
+  "18+",
+  "erotic",
+  "porn",
+  "sex",
+  "hentai",
+  "+18",
+  "18+",
+  "21+",
+  "🔞",
 ];
 
 const SERVICE_PREFIXES = [
-  "NETFLIX", "DISNEY+", "AMAZON", "HBO", "HULU", "APPLE TV+",
-  "OSN+", "CRUNCHYROLL", "DISCOVERY+", "PARAMOUNT+", "PEACOCK",
-  "STARZ", "SHOWTIME", "SHAHID",
+  "NETFLIX",
+  "DISNEY+",
+  "AMAZON",
+  "HBO",
+  "HULU",
+  "APPLE TV+",
+  "OSN+",
+  "CRUNCHYROLL",
+  "DISCOVERY+",
+  "PARAMOUNT+",
+  "PEACOCK",
+  "STARZ",
+  "SHOWTIME",
+  "SHAHID",
 ];
 
 /** Extract the 2-3 letter language/country prefix from a category name.
@@ -81,7 +101,9 @@ export function isAdultCategory(name: string): boolean {
 }
 
 /** Filter categories based on settings. Returns filtered array. */
-export function filterCategories<T extends { category_id: string; category_name: string }>(
+export function filterCategories<
+  T extends { category_id: string; category_name: string },
+>(
   categories: T[],
   settings: AppSettings,
   isLiveTV: boolean = false,
@@ -93,7 +115,8 @@ export function filterCategories<T extends { category_id: string; category_name:
     // const nameUpper unused
 
     // Adult filter — blocked if showAdult is off OR PIN is configured but not unlocked
-    if (isAdultCategory(name) && (!settings.showAdult || pinBlocksAdult)) return false;
+    if (isAdultCategory(name) && (!settings.showAdult || pinBlocksAdult))
+      return false;
 
     // Hidden categories
     if (settings.hiddenCategories.includes(cat.category_id)) return false;
@@ -175,7 +198,10 @@ export function collectAllServices(
 }
 
 /** Verify a PIN against a stored hash. */
-export async function verifyPin(pin: string, storedHash: string): Promise<boolean> {
+export async function verifyPin(
+  pin: string,
+  storedHash: string,
+): Promise<boolean> {
   if (!storedHash || !pin) return false;
   const hash = await hashPin(pin);
   return hash === storedHash;

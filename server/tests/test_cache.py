@@ -9,13 +9,9 @@ def test_all_cache_keys_are_known():
         assert isinstance(name, str), f"Key alias must be a string: {name}"
         assert isinstance(pattern, str), f"Pattern must be a string: {pattern}"
         if "{id}" in pattern:
-            assert "{id}" in pattern, (
-                f"Template pattern '{pattern}' should use {{id}} placeholder"
-            )
+            assert "{id}" in pattern, f"Template pattern '{pattern}' should use {{id}} placeholder"
         else:
-            assert "{" not in pattern, (
-                f"Static pattern '{pattern}' contains '{{' but no {{id}} placeholder"
-            )
+            assert "{" not in pattern, f"Static pattern '{pattern}' contains '{{' but no {{id}} placeholder"
 
 
 def test_cache_key_producer_consumer_match(client):
@@ -52,8 +48,7 @@ def test_cache_key_producer_consumer_match(client):
             prefix = pattern.split("{")[0]
             has_entries = any(k.startswith(prefix) for k in _cache)
             assert has_entries, (
-                f"No entries for template key '{pattern}' (prefix '{prefix}') — "
-                f"endpoint will get empty data!"
+                f"No entries for template key '{pattern}' (prefix '{prefix}') — endpoint will get empty data!"
             )
 
 

@@ -68,7 +68,12 @@ describe("MediaOverlay — basic rendering", () => {
   });
 
   it("renders meta items", () => {
-    render(<MediaOverlay {...defaultProps} metaItems={["2h 15m", "English", "4K"]} />);
+    render(
+      <MediaOverlay
+        {...defaultProps}
+        metaItems={["2h 15m", "English", "4K"]}
+      />,
+    );
     expect(screen.getByText("2h 15m")).toBeInTheDocument();
     expect(screen.getByText("English")).toBeInTheDocument();
     expect(screen.getByText("4K")).toBeInTheDocument();
@@ -201,13 +206,7 @@ describe("MediaOverlay — edge cases", () => {
   });
 
   it("handles no rating, year, or plot", () => {
-    render(
-      <MediaOverlay
-        onClose={vi.fn()}
-        title="Minimal"
-        genres={[]}
-      />,
-    );
+    render(<MediaOverlay onClose={vi.fn()} title="Minimal" genres={[]} />);
     expect(screen.getByText("Minimal")).toBeInTheDocument();
     // No rating, year, or plot should be absent
     expect(screen.queryByText("8.5")).not.toBeInTheDocument();

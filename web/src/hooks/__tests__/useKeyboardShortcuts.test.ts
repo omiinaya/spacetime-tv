@@ -15,12 +15,16 @@ describe("useKeyboardShortcuts", () => {
     mockNavigate.mockClear();
     // Track registered event listeners
     events = new Map();
-    vi.spyOn(window, "addEventListener").mockImplementation((type: string, handler: any) => {
-      events.set(type, handler);
-    });
-    vi.spyOn(window, "removeEventListener").mockImplementation((type: string) => {
-      events.delete(type);
-    });
+    vi.spyOn(window, "addEventListener").mockImplementation(
+      (type: string, handler: any) => {
+        events.set(type, handler);
+      },
+    );
+    vi.spyOn(window, "removeEventListener").mockImplementation(
+      (type: string) => {
+        events.delete(type);
+      },
+    );
     // Default: no input focused
     document.activeElement?.blur();
   });
@@ -72,7 +76,7 @@ describe("useKeyboardShortcuts", () => {
     renderHook(() => useKeyboardShortcuts());
     fireKey("?");
     expect(dispatchSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "stv:toggle-shortcuts" })
+      expect.objectContaining({ type: "stv:toggle-shortcuts" }),
     );
     dispatchSpy.mockRestore();
   });

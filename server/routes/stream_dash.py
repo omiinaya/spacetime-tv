@@ -19,17 +19,17 @@ def generate_live_mpd(stream_id: int, base_url: str) -> str:
         '     xmlns="urn:mpeg:dash:schema:mpd:2011"\n'
         '     profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"\n'
         '     type="static">\n'
-        ' <Period>\n'
+        " <Period>\n"
         f'    <AdaptationSet mimeType="{mime}" contentType="video" startWithSAP="1">\n'
         '      <Representation bandwidth="5000000">\n'
-        f'        <BaseURL>{safe_url}</BaseURL>\n'
+        f"        <BaseURL>{safe_url}</BaseURL>\n"
         '        <SegmentBase indexRangeExact="true">\n'
         '          <Initialization range="0-0" />\n'
-        '        </SegmentBase>\n'
-        '      </Representation>\n'
-        '    </AdaptationSet>\n'
-        ' </Period>\n'
-        '</MPD>'
+        "        </SegmentBase>\n"
+        "      </Representation>\n"
+        "    </AdaptationSet>\n"
+        " </Period>\n"
+        "</MPD>"
     )
 
 
@@ -53,17 +53,17 @@ def generate_vod_mpd(stream_id: int, media_type: str, base_url: str) -> str:
         '     xmlns="urn:mpeg:dash:schema:mpd:2011"\n'
         '     profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"\n'
         '     type="static">\n'
-        ' <Period>\n'
+        " <Period>\n"
         f'    <AdaptationSet mimeType="{mime}" contentType="video" startWithSAP="1">\n'
         '      <Representation bandwidth="5000000">\n'
-        f'        <BaseURL>{safe_url}</BaseURL>\n'
+        f"        <BaseURL>{safe_url}</BaseURL>\n"
         '        <SegmentBase indexRangeExact="true">\n'
         '          <Initialization range="0-0" />\n'
-        '        </SegmentBase>\n'
-        '      </Representation>\n'
-        '    </AdaptationSet>\n'
-        ' </Period>\n'
-        '</MPD>'
+        "        </SegmentBase>\n"
+        "      </Representation>\n"
+        "    </AdaptationSet>\n"
+        " </Period>\n"
+        "</MPD>"
     )
 
 

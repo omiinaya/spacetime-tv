@@ -1,5 +1,14 @@
 import { useRef, useState, useEffect } from "react";
-import { Play, Tv, Circle, Clock, Info, Star, Film, Loader2 } from "lucide-react";
+import {
+  Play,
+  Tv,
+  Circle,
+  Clock,
+  Info,
+  Star,
+  Film,
+  Loader2,
+} from "lucide-react";
 import type { ChannelGroup, Programme, GuideEnrichResult } from "@/lib/api";
 import { api } from "@/lib/api";
 import { programmeProgress, programmeTimeRange } from "@/lib/guideUtils";
@@ -54,49 +63,74 @@ export function ChannelRow({
           className={`flex items-center gap-2.5 text-left flex-1 min-w-0 rounded-lg px-1 py-1 transition-all duration-150 ${
             focusedCol === -1 ? "ring-2 ring-primary/40 bg-primary/5" : ""
           } ${
-            hasStream ? "cursor-pointer hover:opacity-80" : "cursor-default opacity-60"
+            hasStream
+              ? "cursor-pointer hover:opacity-80"
+              : "cursor-default opacity-60"
           }`}
-          aria-label={hasStream ? `Watch ${group.channel_name}` : `${group.channel_name} — no stream available`}
+          aria-label={
+            hasStream
+              ? `Watch ${group.channel_name}`
+              : `${group.channel_name} — no stream available`
+          }
         >
-        <div className="shrink-0 w-9 h-9 rounded-lg bg-[#141420] flex items-center justify-center overflow-hidden">
-          {group.channel_icon ? (
-            <img
-              src={group.channel_icon}
-              alt={group.channel_name ? `${group.channel_name} icon` : ""}
-              className="w-7 h-7 object-contain"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
-          ) : (
-            <Tv className="h-4 w-4 text-muted-foreground/40" aria-hidden="true" />
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium leading-tight truncate">{group.channel_name}</p>
-          {hasStream && (
-            <Play className="h-3 w-3 text-primary/50 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          )}
-        </div>
-      </button>
-      {/* Favorite star */}
-      {onToggleFavorite && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
-          className="shrink-0 p-1 rounded hover:bg-muted/50 transition-colors opacity-0 group-hover:opacity-100"
-          aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-          title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-        >
-          <Star
-            className={`h-3.5 w-3.5 ${isFavorite ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/40"}`}
-          />
+          <div className="shrink-0 w-9 h-9 rounded-lg bg-[#141420] flex items-center justify-center overflow-hidden">
+            {group.channel_icon ? (
+              <img
+                src={group.channel_icon}
+                alt={group.channel_name ? `${group.channel_name} icon` : ""}
+                className="w-7 h-7 object-contain"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+            ) : (
+              <Tv
+                className="h-4 w-4 text-muted-foreground/40"
+                aria-hidden="true"
+              />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium leading-tight truncate">
+              {group.channel_name}
+            </p>
+            {hasStream && (
+              <Play className="h-3 w-3 text-primary/50 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+          </div>
         </button>
-      )}
+        {/* Favorite star */}
+        {onToggleFavorite && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite();
+            }}
+            className="shrink-0 p-1 rounded hover:bg-muted/50 transition-colors opacity-0 group-hover:opacity-100"
+            aria-label={
+              isFavorite ? "Remove from favorites" : "Add to favorites"
+            }
+            title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+          >
+            <Star
+              className={`h-3.5 w-3.5 ${isFavorite ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/40"}`}
+            />
+          </button>
+        )}
       </div>
 
       {/* Programme cards */}
-      <div ref={scrollRef} className="flex-1 flex gap-2 overflow-x-auto scrollbar-none min-w-0 relative"
-           style={{ touchAction: "manipulation", WebkitMaskImage: "linear-gradient(to right, black calc(100% - 32px), transparent 100%)", maskImage: "linear-gradient(to right, black calc(100% - 32px), transparent 100%)" }}>
+      <div
+        ref={scrollRef}
+        className="flex-1 flex gap-2 overflow-x-auto scrollbar-none min-w-0 relative"
+        style={{
+          touchAction: "manipulation",
+          WebkitMaskImage:
+            "linear-gradient(to right, black calc(100% - 32px), transparent 100%)",
+          maskImage:
+            "linear-gradient(to right, black calc(100% - 32px), transparent 100%)",
+        }}
+      >
         {sorted.length === 0 ? (
           <div className="flex items-center h-[52px] text-[11px] text-muted-foreground/40">
             <Clock className="h-3 w-3 mr-1" />
@@ -144,7 +178,9 @@ function ProgrammeCard({
   const progress = isLive ? programmeProgress(programme, now) : 0;
   const timeStr = programmeTimeRange(programme);
   const [showInfo, setShowInfo] = useState(false);
-  const [enrichResult, setEnrichResult] = useState<GuideEnrichResult | null | undefined>(undefined);
+  const [enrichResult, setEnrichResult] = useState<
+    GuideEnrichResult | null | undefined
+  >(undefined);
   const [enrichLoading, setEnrichLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -200,15 +236,22 @@ function ProgrammeCard({
             ? "bg-primary/10 border border-primary/15 hover:bg-primary/15 hover:border-primary/30 cursor-pointer"
             : "bg-card border border-border hover:border-primary/20 cursor-pointer"
         } ${!onPlay ? "opacity-50 cursor-default" : ""} ${
-          focusedCol === colIndex ? "ring-2 ring-primary/50 border-primary/40" : ""
+          focusedCol === colIndex
+            ? "ring-2 ring-primary/50 border-primary/40"
+            : ""
         }`}
       >
         <div className="flex items-start justify-between gap-1">
-          <p className={`text-xs font-medium leading-tight line-clamp-2 ${isLive ? "text-primary" : ""}`}>
+          <p
+            className={`text-xs font-medium leading-tight line-clamp-2 ${isLive ? "text-primary" : ""}`}
+          >
             {programme.title || "No title"}
           </p>
           {programme.desc && (
-            <Info className="h-3 w-3 text-muted-foreground/30 shrink-0 mt-0.5" aria-hidden="true" />
+            <Info
+              className="h-3 w-3 text-muted-foreground/30 shrink-0 mt-0.5"
+              aria-hidden="true"
+            />
           )}
         </div>
         <p className="text-[10px] text-muted-foreground/60 mt-1">{timeStr}</p>
@@ -216,7 +259,9 @@ function ProgrammeCard({
           <div className="mt-1.5">
             <div className="flex items-center gap-1.5 mb-1">
               <Circle className="h-1.5 w-1.5 fill-red-500 text-red-500" />
-              <span className="text-[9px] font-semibold text-red-500 tracking-wide">LIVE</span>
+              <span className="text-[9px] font-semibold text-red-500 tracking-wide">
+                LIVE
+              </span>
             </div>
             <div className="h-0.5 bg-primary/20 rounded-full overflow-hidden">
               <div
@@ -279,7 +324,9 @@ function ProgrammeCard({
                       </span>
                     </div>
                     {enrichResult.year && (
-                      <span className="text-[10px] text-white/40">{enrichResult.year}</span>
+                      <span className="text-[10px] text-white/40">
+                        {enrichResult.year}
+                      </span>
                     )}
                     <span className="text-[9px] uppercase tracking-wider text-white/30 bg-white/5 px-1 rounded">
                       {enrichResult.type === "movie" ? "Movie" : "TV"}
@@ -287,15 +334,22 @@ function ProgrammeCard({
                   </div>
                 )}
                 {programme.subtitle && (
-                  <p className="text-[10px] text-white/50 mb-1 italic line-clamp-1">{programme.subtitle}</p>
+                  <p className="text-[10px] text-white/50 mb-1 italic line-clamp-1">
+                    {programme.subtitle}
+                  </p>
                 )}
                 <p className="text-[11px] text-white/60 leading-relaxed line-clamp-3">
-                  {enrichResult?.overview || programme.desc || "No description available."}
+                  {enrichResult?.overview ||
+                    programme.desc ||
+                    "No description available."}
                 </p>
                 {!enrichResult && programme.category && (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {programme.category.split(",").map((c, i) => (
-                      <span key={i} className="px-1.5 py-0.5 rounded bg-white/5 text-[9px] text-white/40">
+                      <span
+                        key={i}
+                        className="px-1.5 py-0.5 rounded bg-white/5 text-[9px] text-white/40"
+                      >
                         {c.trim()}
                       </span>
                     ))}

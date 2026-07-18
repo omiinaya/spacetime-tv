@@ -79,7 +79,10 @@ export default function WatchRecording() {
 
       {/* Back button */}
       <button
-        onClick={(e) => { e.stopPropagation(); navigate(-1); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          navigate(-1);
+        }}
         className="absolute top-4 left-4 p-2 rounded-lg bg-black/50 text-white hover:bg-black/70 z-20 transition-opacity"
         style={{ opacity: controlsVisible ? 1 : 0 }}
       >
@@ -99,14 +102,23 @@ export default function WatchRecording() {
         >
           <div
             className="h-full bg-primary rounded-full"
-            style={{ width: duration ? `${(currentTime / duration) * 100}%` : "0%" }}
+            style={{
+              width: duration ? `${(currentTime / duration) * 100}%` : "0%",
+            }}
           />
         </div>
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <button onClick={togglePlay} className="text-white hover:text-primary">
-              {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+            <button
+              onClick={togglePlay}
+              className="text-white hover:text-primary"
+            >
+              {playing ? (
+                <Pause className="h-5 w-5" />
+              ) : (
+                <Play className="h-5 w-5" />
+              )}
             </button>
             <span className="text-xs text-white/80 font-mono">
               {fmtTime(currentTime)} / {fmtTime(duration)}
@@ -117,7 +129,11 @@ export default function WatchRecording() {
             onClick={() => setIsFullscreen(!isFullscreen)}
             className="text-white hover:text-primary"
           >
-            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+            {isFullscreen ? (
+              <Minimize className="h-4 w-4" />
+            ) : (
+              <Maximize className="h-4 w-4" />
+            )}
           </button>
         </div>
       </div>

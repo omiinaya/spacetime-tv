@@ -20,6 +20,7 @@ import pytest
 def _clear_tmdb_cache():
     """Clear the TMDB in-memory cache between tests."""
     from routes.tmdb import _TMDB_CACHE
+
     _TMDB_CACHE.clear()
 
 
@@ -33,6 +34,7 @@ async def test_tmdb_fetch_no_api_key_returns_none():
     with patch.dict(os.environ, {}, clear=True):
         # Re-import would be ideal but we can mock os.getenv inline
         import routes.tmdb as tmdb
+
         original_key = os.environ.get("TMDB_API_KEY")
         if "TMDB_API_KEY" in os.environ:
             del os.environ["TMDB_API_KEY"]
@@ -442,6 +444,7 @@ def test_tmdb_tv_similar_with_data(client):
 def test_tmdb_cache_fresh_hit_pure():
     """Fresh _TMDB_CACHE entries should have TTL remaining."""
     from routes.tmdb import _TMDB_CACHE
+
     _clear_tmdb_cache()
 
     cache_key = "tmdb_trending/movie/week?page=1"
@@ -459,6 +462,7 @@ def test_tmdb_cache_fresh_hit_pure():
 def test_tmdb_cache_stale_expiry():
     """Stale _TMDB_CACHE entries should be past TTL."""
     from routes.tmdb import _TMDB_CACHE
+
     _clear_tmdb_cache()
 
     cache_key = "tmdb_trending/movie/week?page=1"
@@ -536,6 +540,7 @@ async def test_tmdb_fetch_stale_cache_refetches():
     from unittest.mock import MagicMock
 
     from routes.tmdb import _TMDB_CACHE, tmdb_fetch
+
     _TMDB_CACHE.clear()
 
     # Plant a stale cache entry
@@ -568,6 +573,7 @@ async def test_tmdb_fetch_http_error_returns_none():
     from unittest.mock import MagicMock
 
     from routes.tmdb import _TMDB_CACHE, tmdb_fetch
+
     _TMDB_CACHE.clear()
 
     mock_resp = MagicMock()
@@ -590,6 +596,7 @@ async def test_tmdb_fetch_http_exception_returns_none():
     """tmdb_fetch returns None when httpx raises."""
 
     from routes.tmdb import _TMDB_CACHE, tmdb_fetch
+
     _TMDB_CACHE.clear()
 
     mock_client = AsyncMock()
@@ -611,6 +618,7 @@ async def test_tmdb_fetch_http_exception_returns_none():
 async def test_tmdb_fetch_fresh_cache_returns_directly():
     """tmdb_fetch returns from cache without HTTP call when TTL is valid."""
     from routes.tmdb import _TMDB_CACHE, tmdb_fetch
+
     _TMDB_CACHE.clear()
 
     now = time.time()
@@ -672,6 +680,7 @@ async def test_tmdb_enrich_cli_generic_exception():
 def test_tmdb_person_search_cli_returns_none(client):
     """Person search returns enabled=False when CLI returns None."""
     from routes.tmdb import _TMDB_CACHE
+
     _TMDB_CACHE.clear()
 
     async def mock_cli(*args):
@@ -690,6 +699,7 @@ def test_tmdb_person_search_cli_returns_none(client):
 def test_tmdb_person_details_cli_returns_none(client):
     """Person details returns enabled=False when CLI returns None."""
     from routes.tmdb import _TMDB_CACHE
+
     _TMDB_CACHE.clear()
 
     async def mock_cli(*args):

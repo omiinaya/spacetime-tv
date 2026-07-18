@@ -2,6 +2,7 @@
 
 Extracted from stream.py during decomposition of the 1105-line monolithic file.
 """
+
 import logging
 
 from fastapi import APIRouter, Query, Request
@@ -29,6 +30,7 @@ async def stream_live(stream_id: int, request: Request):
     log.info(f"STREAM LIVE START id={stream_id}")
 
     try:
+
         async def monitored_stream():
             try:
                 async for chunk in stream_bytes(url):
@@ -75,7 +77,9 @@ async def stream_live_transcode(stream_id: int):
 
 
 @router.get("/stream/live/{stream_id}/timeshift")
-async def stream_live_timeshift(request: Request, stream_id: int, duration: int = Query(3600, description="Seconds to go back (default 1h)")):
+async def stream_live_timeshift(
+    request: Request, stream_id: int, duration: int = Query(3600, description="Seconds to go back (default 1h)")
+):
     """Proxy a catch-up/timeshift stream for the given channel.
 
     Duration specifies how far back in seconds (e.g. 3600 = 1 hour ago).
@@ -86,6 +90,7 @@ async def stream_live_timeshift(request: Request, stream_id: int, duration: int 
     log.info(f"STREAM TIMESHIFT id={stream_id} duration={duration}s")
 
     try:
+
         async def monitored_stream():
             try:
                 async for chunk in stream_bytes(url):

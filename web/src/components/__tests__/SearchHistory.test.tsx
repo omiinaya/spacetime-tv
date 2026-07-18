@@ -46,9 +46,7 @@ describe("SearchHistory", () => {
   });
 
   it("renders history items when show is true", () => {
-    render(
-      <SearchHistory onSelect={onSelect} show={true} onClose={onClose} />,
-    );
+    render(<SearchHistory onSelect={onSelect} show={true} onClose={onClose} />);
 
     expect(screen.getByText("inception")).toBeInTheDocument();
     expect(screen.getByText("star wars")).toBeInTheDocument();
@@ -56,18 +54,14 @@ describe("SearchHistory", () => {
   });
 
   it('shows "Recent Searches" header and "Clear all" button', () => {
-    render(
-      <SearchHistory onSelect={onSelect} show={true} onClose={onClose} />,
-    );
+    render(<SearchHistory onSelect={onSelect} show={true} onClose={onClose} />);
 
     expect(screen.getByText("Recent Searches")).toBeInTheDocument();
     expect(screen.getByText("Clear all")).toBeInTheDocument();
   });
 
   it("calls onSelect and onClose when a history item is clicked", () => {
-    render(
-      <SearchHistory onSelect={onSelect} show={true} onClose={onClose} />,
-    );
+    render(<SearchHistory onSelect={onSelect} show={true} onClose={onClose} />);
 
     fireEvent.click(screen.getByText("inception"));
 
@@ -77,9 +71,7 @@ describe("SearchHistory", () => {
   });
 
   it("calls clearSearchHistory when Clear all is clicked", () => {
-    render(
-      <SearchHistory onSelect={onSelect} show={true} onClose={onClose} />,
-    );
+    render(<SearchHistory onSelect={onSelect} show={true} onClose={onClose} />);
 
     fireEvent.click(screen.getByText("Clear all"));
 
@@ -88,9 +80,7 @@ describe("SearchHistory", () => {
   });
 
   it("closes on outside click", () => {
-    render(
-      <SearchHistory onSelect={onSelect} show={true} onClose={onClose} />,
-    );
+    render(<SearchHistory onSelect={onSelect} show={true} onClose={onClose} />);
 
     // Click outside the dropdown
     fireEvent.mouseDown(document.body);
@@ -99,9 +89,7 @@ describe("SearchHistory", () => {
   });
 
   it("does not close on click inside the dropdown", () => {
-    render(
-      <SearchHistory onSelect={onSelect} show={true} onClose={onClose} />,
-    );
+    render(<SearchHistory onSelect={onSelect} show={true} onClose={onClose} />);
 
     // Click inside the dropdown
     const dropdown = screen.getByText("Recent Searches").closest("div");

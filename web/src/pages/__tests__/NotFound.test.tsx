@@ -8,7 +8,8 @@ import NotFound from "@/pages/NotFound";
 
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
-  const actual = await vi.importActual<typeof import("react-router")>("react-router");
+  const actual =
+    await vi.importActual<typeof import("react-router")>("react-router");
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -41,7 +42,9 @@ describe("NotFound", () => {
   it("renders the descriptive subtext", () => {
     renderNotFound();
     expect(
-      screen.getByText(/The page you're looking for doesn't exist or has been moved/),
+      screen.getByText(
+        /The page you're looking for doesn't exist or has been moved/,
+      ),
     ).toBeInTheDocument();
   });
 

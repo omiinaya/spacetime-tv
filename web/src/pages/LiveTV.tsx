@@ -1,8 +1,20 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { Tv, Loader2, AlertCircle, RotateCcw, Search, X, Star } from "lucide-react";
+import {
+  Tv,
+  Loader2,
+  AlertCircle,
+  RotateCcw,
+  Search,
+  X,
+  Star,
+} from "lucide-react";
 import { api, Category, LiveStream } from "@/lib/api";
-import { Skeleton, ChannelCardSkeleton, TabSkeleton } from "@/components/Skeleton";
+import {
+  Skeleton,
+  ChannelCardSkeleton,
+  TabSkeleton,
+} from "@/components/Skeleton";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useSettings } from "@/context/SettingsContext";
 import { filterCategories } from "@/lib/settings";
@@ -14,15 +26,27 @@ const BATCH = 50;
 const ALL_CAT = "__all__";
 
 // Slim stream format for sessionStorage cache (fields abbreviated to save space)
-interface SlimStream { id: number; n: string; c: string; ic?: string }
-interface SlimAllCache { a: SlimStream[]; ts: number }
+interface SlimStream {
+  id: number;
+  n: string;
+  c: string;
+  ic?: string;
+}
+interface SlimAllCache {
+  a: SlimStream[];
+  ts: number;
+}
 
 export default function LiveTV() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // ── Cache helpers ──────────────────────────────────────────────
-  const loadCache = <T,>(key: string, field: string, ttl = 900000): T | null => {
+  const loadCache = <T,>(
+    key: string,
+    field: string,
+    ttl = 900000,
+  ): T | null => {
     try {
       const raw = sessionStorage.getItem(key);
       if (!raw) return null;
@@ -43,13 +67,25 @@ export default function LiveTV() {
       if (!raw) return [];
       const parsed = JSON.parse(raw) as SlimAllCache;
       if (parsed.a?.length && Date.now() - parsed.ts < 900000) {
-        return parsed.a.map((s) => ({
-          stream_id: s.id, name: s.n, stream_icon: "",
-          category_id: s.c, num: 0, stream_type: "live",
-          epg_channel_id: "", added: "", is_adult: 0,
-          category_ids: [s.c], custom_sid: null, tv_archive: 0,
-          direct_source: "", tv_archive_duration: 0,
-        } as LiveStream));
+        return parsed.a.map(
+          (s) =>
+            ({
+              stream_id: s.id,
+              name: s.n,
+              stream_icon: "",
+              category_id: s.c,
+              num: 0,
+              stream_type: "live",
+              epg_channel_id: "",
+              added: "",
+              is_adult: 0,
+              category_ids: [s.c],
+              custom_sid: null,
+              tv_archive: 0,
+              direct_source: "",
+              tv_archive_duration: 0,
+            }) as LiveStream,
+        );
       }
     } catch {} // DOMException: storage quota or disabled
     return [];
@@ -57,12 +93,16 @@ export default function LiveTV() {
 
   // Initialize from sessionStorage so the first render has data (no spinner flash)
   const [categories, setCategories] = useState<Category[]>(
-    () => loadCache("stv_live_cats", "categories") ?? []
+    () => loadCache("stv_live_cats", "categories") ?? [],
   );
   const [activeCat, setActiveCat] = useState<string>(ALL_CAT);
   const [streams, setStreams] = useState<LiveStream[]>([]);
-  const [allStreams, setAllStreams] = useState<LiveStream[]>(() => restoreAllStreams());
-  const [loading, setLoading] = useState(() => !loadCache("stv_live_cats", "categories"));
+  const [allStreams, setAllStreams] = useState<LiveStream[]>(() =>
+    restoreAllStreams(),
+  );
+  const [loading, setLoading] = useState(
+    () => !loadCache("stv_live_cats", "categories"),
+  );
   const [streamsLoading, setStreamsLoading] = useState(false);
   const [allLoading, setAllLoading] = useState(() => {
     try {
@@ -70,7 +110,8 @@ export default function LiveTV() {
       if (!raw) return true;
       const parsed = JSON.parse(raw);
       return !(parsed.a?.length && Date.now() - parsed.ts < 900000);
-    } catch { // DOMException: storage quota or disabled
+    } catch {
+      // DOMException: storage quota or disabled
       return true;
     }
   });
@@ -85,13 +126,14 @@ export default function LiveTV() {
         setSearchParams({});
       }
     },
-    [setSearchParams]
+    [setSearchParams],
   );
   const q = searchQuery.toLowerCase().trim();
   const isAllMode = activeCat === ALL_CAT;
 
   const { visibleItems, sentinelRef, hasMore } = useInfiniteScroll(
-    q ? allStreams : (isAllMode ? allStreams : streams), BATCH
+    q ? allStreams : isAllMode ? allStreams : streams,
+    BATCH,
   );
   const { settings, adultUnlocked } = useSettings();
   const { favorites, toggleFavorite } = useChannelFavorites();
@@ -99,14 +141,14 @@ export default function LiveTV() {
 
   // Now-playing EPG data for visible channels
   const nowPlayingStreamIds = useMemo(() => {
-    const source = q ? allStreams : (isAllMode ? allStreams : streams);
+    const source = q ? allStreams : isAllMode ? allStreams : streams;
     return source.slice(0, 200).map((s) => s.stream_id);
   }, [q, isAllMode, allStreams, streams]);
   const { getNowPlaying } = useNowPlaying(nowPlayingStreamIds);
 
   const filteredCategories = useMemo(
     () => filterCategories(categories, settings, true, adultUnlocked),
-    [categories, settings, adultUnlocked]
+    [categories, settings, adultUnlocked],
   );
 
   // Pre-compute full search matches so we can show the total count
@@ -154,7 +196,10 @@ export default function LiveTV() {
       .then((d) => {
         setCategories(d.categories);
         if (d.categories?.length) {
-          sessionStorage.setItem("stv_live_cats", JSON.stringify({ categories: d.categories, ts: Date.now() }));
+          sessionStorage.setItem(
+            "stv_live_cats",
+            JSON.stringify({ categories: d.categories, ts: Date.now() }),
+          );
         }
       })
       .catch((e) => setError(e.message))
@@ -184,9 +229,14 @@ export default function LiveTV() {
           if (d.streams?.length) {
             try {
               const slim = d.streams.map((s) => ({
-                id: s.stream_id, n: s.name, c: s.category_id,
+                id: s.stream_id,
+                n: s.name,
+                c: s.category_id,
               }));
-              sessionStorage.setItem(SLIM_ALL_KEY, JSON.stringify({ a: slim, ts: Date.now() }));
+              sessionStorage.setItem(
+                SLIM_ALL_KEY,
+                JSON.stringify({ a: slim, ts: Date.now() }),
+              );
             } catch {} // DOMException: storage quota or disabled
           }
         })
@@ -196,8 +246,13 @@ export default function LiveTV() {
   }, []);
 
   useEffect(() => {
-    if (filteredCategories.length > 0 && !filteredCategories.find((c) => c.category_id === activeCat)) {
-      setActiveCat(activeCat === ALL_CAT ? ALL_CAT : filteredCategories[0].category_id);
+    if (
+      filteredCategories.length > 0 &&
+      !filteredCategories.find((c) => c.category_id === activeCat)
+    ) {
+      setActiveCat(
+        activeCat === ALL_CAT ? ALL_CAT : filteredCategories[0].category_id,
+      );
     }
   }, [filteredCategories, activeCat]);
 
@@ -252,7 +307,11 @@ export default function LiveTV() {
           <button
             onClick={() => {
               setError(null);
-              if (activeCat) api.live.streams(activeCat).then(d => setStreams(d.streams)).catch(e => setError(e.message));
+              if (activeCat)
+                api.live
+                  .streams(activeCat)
+                  .then((d) => setStreams(d.streams))
+                  .catch((e) => setError(e.message));
             }}
             className="ml-auto shrink-0 flex items-center gap-1 px-2 py-1 rounded text-xs border border-border hover:bg-muted"
           >
@@ -271,7 +330,11 @@ export default function LiveTV() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={allLoading ? "Loading channels..." : `Search ${allStreams.length.toLocaleString()} channels...`}
+              placeholder={
+                allLoading
+                  ? "Loading channels..."
+                  : `Search ${allStreams.length.toLocaleString()} channels...`
+              }
               disabled={allLoading}
               className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
             />
@@ -293,12 +356,20 @@ export default function LiveTV() {
                   ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
                   : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
-              title={favoritesOnly ? "Show all channels" : "Show favorites only"}
-              aria-label={favoritesOnly ? "Show all channels" : "Show favorites only"}
+              title={
+                favoritesOnly ? "Show all channels" : "Show favorites only"
+              }
+              aria-label={
+                favoritesOnly ? "Show all channels" : "Show favorites only"
+              }
               aria-pressed={favoritesOnly}
             >
-              <Star className={`h-3.5 w-3.5 ${favoritesOnly ? "fill-yellow-400" : ""}`} />
-              <span className="hidden sm:inline">{favoritesOnly ? "Favorites" : "Favorites"}</span>
+              <Star
+                className={`h-3.5 w-3.5 ${favoritesOnly ? "fill-yellow-400" : ""}`}
+              />
+              <span className="hidden sm:inline">
+                {favoritesOnly ? "Favorites" : "Favorites"}
+              </span>
               <span className="text-[10px] opacity-60">{favorites.size}</span>
             </button>
           )}
@@ -306,16 +377,25 @@ export default function LiveTV() {
       )}
 
       {/* Category tabs (hidden when searching or in favorites-only mode) */}
-      {!isSearching && !favoritesOnly && (
-        loading ? (
+      {!isSearching &&
+        !favoritesOnly &&
+        (loading ? (
           <div className="flex gap-1.5 pb-2">
             {Array.from({ length: 8 }).map((_, i) => (
               <TabSkeleton key={i} />
             ))}
           </div>
         ) : (
-          <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin relative"
-               style={{ touchAction: "manipulation", WebkitMaskImage: "linear-gradient(to right, black calc(100% - 48px), transparent 100%)", maskImage: "linear-gradient(to right, black calc(100% - 48px), transparent 100%)" }}>
+          <div
+            className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin relative"
+            style={{
+              touchAction: "manipulation",
+              WebkitMaskImage:
+                "linear-gradient(to right, black calc(100% - 48px), transparent 100%)",
+              maskImage:
+                "linear-gradient(to right, black calc(100% - 48px), transparent 100%)",
+            }}
+          >
             {/* "All" tab — shows all channels across every category */}
             <button
               onClick={() => setActiveCat(ALL_CAT)}
@@ -341,11 +421,10 @@ export default function LiveTV() {
               </button>
             ))}
           </div>
-        )
-      )}
+        ))}
 
       {/* Channel grid */}
-      {((isSearching || isAllMode) && allLoading) ? (
+      {(isSearching || isAllMode) && allLoading ? (
         <div className="channel-grid">
           {Array.from({ length: 20 }).map((_, i) => (
             <ChannelCardSkeleton key={i} />
@@ -365,7 +444,9 @@ export default function LiveTV() {
               <h2 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
                 <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
                 Favorites
-                <span className="text-[10px] text-muted-foreground/50 font-normal">{favorites.size}</span>
+                <span className="text-[10px] text-muted-foreground/50 font-normal">
+                  {favorites.size}
+                </span>
               </h2>
               <div className="channel-grid">
                 {allStreams
@@ -379,9 +460,16 @@ export default function LiveTV() {
                       className="channel-card bg-card rounded-lg border border-border p-3 text-left hover:border-primary/30 relative group/card"
                     >
                       <button
-                        onClick={(e) => { e.stopPropagation(); toggleFavorite(s.stream_id); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(s.stream_id);
+                        }}
                         className="absolute top-2 right-2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity"
-                        aria-label={favorites.has(s.stream_id) ? "Remove from favorites" : "Add to favorites"}
+                        aria-label={
+                          favorites.has(s.stream_id)
+                            ? "Remove from favorites"
+                            : "Add to favorites"
+                        }
                       >
                         <Star
                           className={`h-3.5 w-3.5 ${favorites.has(s.stream_id) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/40"}`}
@@ -406,7 +494,8 @@ export default function LiveTV() {
                           className="w-full h-12 object-contain mb-2 rounded opacity-80"
                           loading="lazy"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
+                            (e.target as HTMLImageElement).style.display =
+                              "none";
                           }}
                         />
                       ) : (
@@ -432,7 +521,8 @@ export default function LiveTV() {
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Search className="h-10 w-10 text-muted-foreground/20 mb-3" />
               <p className="text-sm text-muted-foreground">
-                No channels matching "{searchQuery}" across all {allStreams.length.toLocaleString()} channels
+                No channels matching "{searchQuery}" across all{" "}
+                {allStreams.length.toLocaleString()} channels
               </p>
               <button
                 onClick={() => setSearchQuery("")}
@@ -452,9 +542,16 @@ export default function LiveTV() {
                     className="channel-card bg-card rounded-lg border border-border p-3 text-left hover:border-primary/30 relative group/card"
                   >
                     <button
-                      onClick={(e) => { e.stopPropagation(); toggleFavorite(s.stream_id); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(s.stream_id);
+                      }}
                       className="absolute top-2 right-2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity"
-                      aria-label={favorites.has(s.stream_id) ? "Remove from favorites" : "Add to favorites"}
+                      aria-label={
+                        favorites.has(s.stream_id)
+                          ? "Remove from favorites"
+                          : "Add to favorites"
+                      }
                     >
                       <Star
                         className={`h-3.5 w-3.5 ${favorites.has(s.stream_id) ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/40"}`}
@@ -509,12 +606,18 @@ export default function LiveTV() {
         </>
       )}
 
-      {!(isSearching || isAllMode) && streams.length === 0 && !streamsLoading && !loading && !isSearching && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Tv className="h-10 w-10 text-muted-foreground/20 mb-3" />
-          <p className="text-sm text-muted-foreground">No channels in this category</p>
-        </div>
-      )}
+      {!(isSearching || isAllMode) &&
+        streams.length === 0 &&
+        !streamsLoading &&
+        !loading &&
+        !isSearching && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Tv className="h-10 w-10 text-muted-foreground/20 mb-3" />
+            <p className="text-sm text-muted-foreground">
+              No channels in this category
+            </p>
+          </div>
+        )}
 
       {isAllMode && allStreams.length === 0 && !allLoading && !loading && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -526,7 +629,9 @@ export default function LiveTV() {
       {filteredCategories.length === 0 && !loading && !isSearching && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Tv className="h-10 w-10 text-muted-foreground/20 mb-3" />
-          <p className="text-sm text-muted-foreground">No categories match your filters</p>
+          <p className="text-sm text-muted-foreground">
+            No categories match your filters
+          </p>
           <p className="text-xs text-muted-foreground/50 mt-1">
             Adjust your language/country settings to see more content
           </p>

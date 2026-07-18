@@ -10,7 +10,13 @@
  * rendering state with channel rows + favorites interaction.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import Guide from "@/pages/Guide";
 import type { ChannelGroup, Programme } from "@/lib/api";
@@ -23,7 +29,11 @@ vi.mock("@/hooks/useGuideData", () => ({
   default: () => mockUseGuideData(),
   useGuideData: () => mockUseGuideData(),
   formatTime: (d: Date) =>
-    d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }),
+    d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }),
   parseXmltvTime: vi.fn(),
 }));
 
@@ -58,7 +68,8 @@ vi.mock("@/context/SettingsContext", () => ({
 // ── Mock react-router ───────────────────────────────────────
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
-  const actual = await vi.importActual<typeof import("react-router")>("react-router");
+  const actual =
+    await vi.importActual<typeof import("react-router")>("react-router");
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -195,7 +206,9 @@ describe("Guide", () => {
 
     it("does NOT render search input when loading", () => {
       renderGuide();
-      expect(screen.queryByPlaceholderText("Search programmes...")).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText("Search programmes..."),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -235,7 +248,9 @@ describe("Guide", () => {
       renderGuide();
       // totalChannels=3, filteredChannels still has data
       // Text is split across elements by React rendering
-      expect(screen.getByText((content) => content.includes("3 channels"))).toBeInTheDocument();
+      expect(
+        screen.getByText((content) => content.includes("3 channels")),
+      ).toBeInTheDocument();
     });
   });
 
@@ -260,7 +275,9 @@ describe("Guide", () => {
     it("shows hint about XMLTV feed source", () => {
       renderGuide();
       expect(
-        screen.getByText("Guide data is loaded from the IPTV provider's XMLTV feed"),
+        screen.getByText(
+          "Guide data is loaded from the IPTV provider's XMLTV feed",
+        ),
       ).toBeInTheDocument();
     });
 
@@ -285,7 +302,9 @@ describe("Guide", () => {
 
     it('shows "No channels match your settings" message', () => {
       renderGuide();
-      expect(screen.getByText("No channels match your settings")).toBeInTheDocument();
+      expect(
+        screen.getByText("No channels match your settings"),
+      ).toBeInTheDocument();
     });
 
     it("shows channel count available in allData", () => {
@@ -312,9 +331,7 @@ describe("Guide", () => {
       renderGuide();
       const input = screen.getByPlaceholderText("Search programmes...");
       fireEvent.change(input, { target: { value: "zzzznotfound" } });
-      expect(
-        screen.getByText(/No programmes matching/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/No programmes matching/)).toBeInTheDocument();
       expect(screen.getByText(/zzzznotfound/)).toBeInTheDocument();
     });
 
@@ -338,7 +355,9 @@ describe("Guide", () => {
 
       // After clearing, channel names should reappear
       expect(screen.getByText("BBC One")).toBeInTheDocument();
-      expect(screen.queryByText(/No programmes matching/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/No programmes matching/),
+      ).not.toBeInTheDocument();
     });
 
     it("shows clear (X) button in search input when query is non-empty", () => {
@@ -380,7 +399,9 @@ describe("Guide", () => {
       renderGuide();
       // Text is split across elements
       expect(
-        screen.getByText((content) => content.includes("channels") && content.includes("·")),
+        screen.getByText(
+          (content) => content.includes("channels") && content.includes("·"),
+        ),
       ).toBeInTheDocument();
     });
 
@@ -460,7 +481,9 @@ describe("Guide", () => {
       fireEvent.change(input, { target: { value: "Morning" } });
       // Text is split across elements by React rendering
       expect(
-        screen.getByText((content) => content.includes("programme") && content.includes("2")),
+        screen.getByText(
+          (content) => content.includes("programme") && content.includes("2"),
+        ),
       ).toBeInTheDocument();
     });
   });
@@ -498,9 +521,7 @@ describe("Guide", () => {
   // ── Loading more ───────────────────────────────────────────
   describe("loading more", () => {
     it("shows spinner when loadingMore is true", () => {
-      mockUseGuideData.mockReturnValue(
-        defaultGuideData({ loadingMore: true }),
-      );
+      mockUseGuideData.mockReturnValue(defaultGuideData({ loadingMore: true }));
       renderGuide();
       const spinner = document.querySelector(".animate-spin");
       expect(spinner).toBeInTheDocument();

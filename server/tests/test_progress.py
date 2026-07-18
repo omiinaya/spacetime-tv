@@ -18,11 +18,14 @@ def test_sync_progress_missing_fields_returns_400(client):
 
 def test_sync_progress_persists_entry(client):
     """POST /api/watchlist/sync-progress stores the entry and returns ok."""
-    resp = client.post("/api/v1/watchlist/sync-progress", json={
-        "watchKey": "vod_42",
-        "position": 120.5,
-        "timestamp": 1000000,
-    })
+    resp = client.post(
+        "/api/v1/watchlist/sync-progress",
+        json={
+            "watchKey": "vod_42",
+            "position": 120.5,
+            "timestamp": 1000000,
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "ok"
@@ -30,6 +33,7 @@ def test_sync_progress_persists_entry(client):
 
     # Check it was stored in the module-level progress store
     from state import _progress_store
+
     assert "vod_42" in _progress_store
     assert _progress_store["vod_42"][0]["position"] == 120.5
 
@@ -37,14 +41,18 @@ def test_sync_progress_persists_entry(client):
 def test_sync_progress_keeps_only_last_5_per_key(client):
     """POST /api/watchlist/sync-progress retains at most 5 entries per key."""
     for i in range(10):
-        resp = client.post("/api/v1/watchlist/sync-progress", json={
-            "watchKey": "vod_99",
-            "position": float(i * 10),
-            "timestamp": 2000000 + i,
-        })
+        resp = client.post(
+            "/api/v1/watchlist/sync-progress",
+            json={
+                "watchKey": "vod_99",
+                "position": float(i * 10),
+                "timestamp": 2000000 + i,
+            },
+        )
         assert resp.status_code == 200
 
     from state import _progress_store
+
     assert len(_progress_store["vod_99"]) == 5
     # Most recent entries first (highest timestamp)
     assert _progress_store["vod_99"][0]["position"] == 90.0
@@ -53,24 +61,28 @@ def test_sync_progress_keeps_only_last_5_per_key(client):
 
 def test_sync_progress_with_series_metadata(client):
     """POST /api/watchlist/sync-progress stores series metadata."""
-    resp = client.post("/api/v1/watchlist/sync-progress", json={
-        "watchKey": "ep_1_2",
-        "position": 300.0,
-        "timestamp": 3000000,
-        "seriesData": {
-            "seriesId": 1,
-            "seriesName": "Test Series",
-            "cover": "http://example.com/cover.jpg",
-            "seasonNumber": 1,
-            "episodeNum": 2,
-            "episodeId": "ep2",
-            "episodeTitle": "Test Episode",
-            "durationSeconds": 3600,
+    resp = client.post(
+        "/api/v1/watchlist/sync-progress",
+        json={
+            "watchKey": "ep_1_2",
+            "position": 300.0,
+            "timestamp": 3000000,
+            "seriesData": {
+                "seriesId": 1,
+                "seriesName": "Test Series",
+                "cover": "http://example.com/cover.jpg",
+                "seasonNumber": 1,
+                "episodeNum": 2,
+                "episodeId": "ep2",
+                "episodeTitle": "Test Episode",
+                "durationSeconds": 3600,
+            },
         },
-    })
+    )
     assert resp.status_code == 200
 
     from state import _progress_store
+
     entry = _progress_store["ep_1_2"][0]
     assert entry["seriesData"]["seriesName"] == "Test Series"
     assert entry["seriesData"]["episodeNum"] == 2
@@ -78,20 +90,24 @@ def test_sync_progress_with_series_metadata(client):
 
 def test_sync_progress_with_movie_metadata(client):
     """POST /api/watchlist/sync-progress stores movie metadata."""
-    resp = client.post("/api/v1/watchlist/sync-progress", json={
-        "watchKey": "vod_100",
-        "position": 500.0,
-        "timestamp": 4000000,
-        "movieData": {
-            "movieId": 100,
-            "movieName": "Test Movie",
-            "poster": "http://example.com/poster.jpg",
-            "durationSeconds": 7200,
+    resp = client.post(
+        "/api/v1/watchlist/sync-progress",
+        json={
+            "watchKey": "vod_100",
+            "position": 500.0,
+            "timestamp": 4000000,
+            "movieData": {
+                "movieId": 100,
+                "movieName": "Test Movie",
+                "poster": "http://example.com/poster.jpg",
+                "durationSeconds": 7200,
+            },
         },
-    })
+    )
     assert resp.status_code == 200
 
     from state import _progress_store
+
     entry = _progress_store["vod_100"][0]
     assert entry["movieData"]["movieName"] == "Test Movie"
 
@@ -107,17 +123,23 @@ def test_get_progress_returns_empty_when_no_data(client):
 def test_get_progress_returns_stored_entries(client):
     """GET /api/watchlist/progress returns entries previously synced."""
     # Sync two entries
-    client.post("/api/v1/watchlist/sync-progress", json={
-        "watchKey": "vod_42",
-        "position": 120.5,
-        "timestamp": 1000000,
-    })
-    client.post("/api/v1/watchlist/sync-progress", json={
-        "watchKey": "ep_1_2",
-        "position": 300.0,
-        "timestamp": 2000000,
-        "seriesData": {"seriesId": 1, "seriesName": "Test"},
-    })
+    client.post(
+        "/api/v1/watchlist/sync-progress",
+        json={
+            "watchKey": "vod_42",
+            "position": 120.5,
+            "timestamp": 1000000,
+        },
+    )
+    client.post(
+        "/api/v1/watchlist/sync-progress",
+        json={
+            "watchKey": "ep_1_2",
+            "position": 300.0,
+            "timestamp": 2000000,
+            "seriesData": {"seriesId": 1, "seriesName": "Test"},
+        },
+    )
 
     resp = client.get("/api/v1/watchlist/progress")
     assert resp.status_code == 200

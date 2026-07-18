@@ -6,7 +6,13 @@
  * fallback, and persists dismissal via localStorage.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+  waitFor,
+} from "@testing-library/react";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
 // ── Mock matchMedia for standalone mode detection ──────────────
@@ -116,7 +122,9 @@ describe("PWAInstallPrompt", () => {
       });
 
       expect(screen.getByText("Install Spacetime-TV")).toBeInTheDocument();
-      expect(screen.getByText("Add to your home screen for quick access")).toBeInTheDocument();
+      expect(
+        screen.getByText("Add to your home screen for quick access"),
+      ).toBeInTheDocument();
     });
 
     it("shows Install and 'Not now' buttons", () => {
@@ -160,7 +168,9 @@ describe("PWAInstallPrompt", () => {
       fireEvent.click(screen.getByText("Install"));
       await waitFor(() => {
         // After accepted, the banner should hide
-        expect(screen.queryByText("Install Spacetime-TV")).not.toBeInTheDocument();
+        expect(
+          screen.queryByText("Install Spacetime-TV"),
+        ).not.toBeInTheDocument();
       });
     });
   });
@@ -177,7 +187,9 @@ describe("PWAInstallPrompt", () => {
       expect(screen.getByText("Install Spacetime-TV")).toBeInTheDocument();
       fireEvent.click(screen.getByText("Not now"));
 
-      expect(screen.queryByText("Install Spacetime-TV")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Install Spacetime-TV"),
+      ).not.toBeInTheDocument();
     });
 
     it("stores dismissal timestamp in localStorage", async () => {
@@ -217,13 +229,15 @@ describe("PWAInstallPrompt", () => {
     it("shows install prompt for iOS Safari after delay", () => {
       vi.useFakeTimers();
       mockUserAgent(
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
       );
 
       render(<PWAInstallPrompt />);
 
       // Before delay — should not show yet
-      expect(screen.queryByText("Install Spacetime-TV")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Install Spacetime-TV"),
+      ).not.toBeInTheDocument();
 
       // Advance past the 5s delay
       act(() => {
@@ -255,7 +269,10 @@ describe("PWAInstallPrompt", () => {
 
     it("shows again if dismissed more than a week ago", () => {
       // Set an old dismissal
-      localStorage.setItem("stv_pwa_dismissed", String(Date.now() - 8 * 86400_000)); // 8 days ago
+      localStorage.setItem(
+        "stv_pwa_dismissed",
+        String(Date.now() - 8 * 86400_000),
+      ); // 8 days ago
 
       render(<PWAInstallPrompt />);
 

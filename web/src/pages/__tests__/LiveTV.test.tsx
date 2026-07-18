@@ -7,7 +7,13 @@
  * category filtering, search, favorites, and channel card rendering.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import LiveTV from "@/pages/LiveTV";
 import type { Category, LiveStream } from "@/lib/api";
@@ -22,13 +28,29 @@ vi.mock("@/lib/api", () => ({
   api: {
     live: {
       categories: (...args: unknown[]) =>
-        (mockCategories as unknown as (...a: unknown[]) => Promise<{ categories: Category[] }>)(...args),
+        (
+          mockCategories as unknown as (
+            ...a: unknown[]
+          ) => Promise<{ categories: Category[] }>
+        )(...args),
       streams: (...args: unknown[]) =>
-        (mockStreams as unknown as (...a: unknown[]) => Promise<{ streams: LiveStream[] }>)(...args),
+        (
+          mockStreams as unknown as (
+            ...a: unknown[]
+          ) => Promise<{ streams: LiveStream[] }>
+        )(...args),
       all: (...args: unknown[]) =>
-        (mockAll as unknown as (...a: unknown[]) => Promise<{ streams: LiveStream[] }>)(...args),
+        (
+          mockAll as unknown as (
+            ...a: unknown[]
+          ) => Promise<{ streams: LiveStream[] }>
+        )(...args),
       allSlim: (...args: unknown[]) =>
-        (mockAllSlim as unknown as (...a: unknown[]) => Promise<{ streams: LiveStream[] }>)(...args),
+        (
+          mockAllSlim as unknown as (
+            ...a: unknown[]
+          ) => Promise<{ streams: LiveStream[] }>
+        )(...args),
       info: vi.fn(),
     },
     guide: { now: vi.fn() },
@@ -44,7 +66,10 @@ const mockSentinelRef = { current: null };
 
 vi.mock("@/hooks/useInfiniteScroll", () => ({
   useInfiniteScroll: <T,>(items: T[], _batch?: number) => ({
-    visibleItems: mockVisibleItems.length > 0 ? mockVisibleItems : items.slice(0, _batch ?? 50),
+    visibleItems:
+      mockVisibleItems.length > 0
+        ? mockVisibleItems
+        : items.slice(0, _batch ?? 50),
     sentinelRef: mockSentinelRef,
     hasMore: mockHasMore,
     reset: vi.fn(),
@@ -54,10 +79,19 @@ vi.mock("@/hooks/useInfiniteScroll", () => ({
 // ── Mock SettingsContext ──────────────────────────────────────
 const mockUpdateSettings = vi.fn();
 const mockResetSettings = vi.fn();
-const mockSettings = { languages: [], hiddenCategories: [], showAdult: false, services: [] };
+const mockSettings = {
+  languages: [],
+  hiddenCategories: [],
+  showAdult: false,
+  services: [],
+};
 
 vi.mock("@/context/SettingsContext", () => ({
-  useSettings: () => ({ settings: mockSettings, update: mockUpdateSettings, reset: mockResetSettings }),
+  useSettings: () => ({
+    settings: mockSettings,
+    update: mockUpdateSettings,
+    reset: mockResetSettings,
+  }),
   SettingsProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
@@ -85,7 +119,8 @@ vi.mock("@/hooks/useNowPlaying", () => ({
 const mockNavigate = vi.fn();
 
 vi.mock("react-router", async () => {
-  const actual = await vi.importActual<typeof import("react-router")>("react-router");
+  const actual =
+    await vi.importActual<typeof import("react-router")>("react-router");
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
@@ -97,10 +132,70 @@ const sampleCategories: Category[] = [
 ];
 
 const sampleStreams: LiveStream[] = [
-  { stream_id: 101, name: "CNN US", stream_icon: "/icons/cnn.png", category_id: "1", num: 1, stream_type: "live", epg_channel_id: "cnn.us", added: "", is_adult: 0, category_ids: ["1"], custom_sid: null, tv_archive: 0, direct_source: "", tv_archive_duration: 0 },
-  { stream_id: 102, name: "FOX News", stream_icon: "/icons/fox.png", category_id: "1", num: 2, stream_type: "live", epg_channel_id: "fox.us", added: "", is_adult: 0, category_ids: ["1"], custom_sid: null, tv_archive: 0, direct_source: "", tv_archive_duration: 0 },
-  { stream_id: 201, name: "BBC One", stream_icon: "/icons/bbc.png", category_id: "2", num: 3, stream_type: "live", epg_channel_id: "bbc.uk", added: "", is_adult: 0, category_ids: ["2"], custom_sid: null, tv_archive: 0, direct_source: "", tv_archive_duration: 0 },
-  { stream_id: 301, name: "ESPN", stream_icon: "", category_id: "3", num: 5, stream_type: "live", epg_channel_id: "espn", added: "", is_adult: 0, category_ids: ["3"], custom_sid: null, tv_archive: 0, direct_source: "", tv_archive_duration: 0 },
+  {
+    stream_id: 101,
+    name: "CNN US",
+    stream_icon: "/icons/cnn.png",
+    category_id: "1",
+    num: 1,
+    stream_type: "live",
+    epg_channel_id: "cnn.us",
+    added: "",
+    is_adult: 0,
+    category_ids: ["1"],
+    custom_sid: null,
+    tv_archive: 0,
+    direct_source: "",
+    tv_archive_duration: 0,
+  },
+  {
+    stream_id: 102,
+    name: "FOX News",
+    stream_icon: "/icons/fox.png",
+    category_id: "1",
+    num: 2,
+    stream_type: "live",
+    epg_channel_id: "fox.us",
+    added: "",
+    is_adult: 0,
+    category_ids: ["1"],
+    custom_sid: null,
+    tv_archive: 0,
+    direct_source: "",
+    tv_archive_duration: 0,
+  },
+  {
+    stream_id: 201,
+    name: "BBC One",
+    stream_icon: "/icons/bbc.png",
+    category_id: "2",
+    num: 3,
+    stream_type: "live",
+    epg_channel_id: "bbc.uk",
+    added: "",
+    is_adult: 0,
+    category_ids: ["2"],
+    custom_sid: null,
+    tv_archive: 0,
+    direct_source: "",
+    tv_archive_duration: 0,
+  },
+  {
+    stream_id: 301,
+    name: "ESPN",
+    stream_icon: "",
+    category_id: "3",
+    num: 5,
+    stream_type: "live",
+    epg_channel_id: "espn",
+    added: "",
+    is_adult: 0,
+    category_ids: ["3"],
+    custom_sid: null,
+    tv_archive: 0,
+    direct_source: "",
+    tv_archive_duration: 0,
+  },
 ];
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -116,7 +211,9 @@ function setupDefaultMocks() {
   mockCategories.mockResolvedValue({ categories: sampleCategories });
   mockAll.mockResolvedValue({ streams: sampleStreams });
   mockAllSlim.mockResolvedValue({ streams: sampleStreams });
-  mockStreams.mockResolvedValue({ streams: sampleStreams.filter(s => s.category_id === "1") });
+  mockStreams.mockResolvedValue({
+    streams: sampleStreams.filter((s) => s.category_id === "1"),
+  });
   mockGetNowPlaying.mockReturnValue(null);
   mockIsFavorite.mockReturnValue(false);
   mockUseChannelFavorites.mockReturnValue({
@@ -171,7 +268,9 @@ describe("LiveTV", () => {
       renderLiveTV();
 
       await waitFor(() => {
-        expect(screen.getByText("Failed to fetch categories")).toBeInTheDocument();
+        expect(
+          screen.getByText("Failed to fetch categories"),
+        ).toBeInTheDocument();
       });
     });
 
@@ -202,13 +301,17 @@ describe("LiveTV", () => {
     it('shows "No categories match your filters" when filteredCategories empty', async () => {
       // Categories with adult name that gets filtered by default
       mockCategories.mockResolvedValue({
-        categories: [{ category_id: "99", category_name: "ADULT 18+", parent_id: 0 }],
+        categories: [
+          { category_id: "99", category_name: "ADULT 18+", parent_id: 0 },
+        ],
       });
 
       renderLiveTV();
 
       await waitFor(() => {
-        expect(screen.getByText("No categories match your filters")).toBeInTheDocument();
+        expect(
+          screen.getByText("No categories match your filters"),
+        ).toBeInTheDocument();
       });
     });
 
@@ -222,7 +325,9 @@ describe("LiveTV", () => {
 
       // Type a search that won't match
       const searchInput = screen.getByPlaceholderText(/Search.*channels/);
-      fireEvent.change(searchInput, { target: { value: "XYZZZZ_NONEXISTENT" } });
+      fireEvent.change(searchInput, {
+        target: { value: "XYZZZZ_NONEXISTENT" },
+      });
 
       // Should show empty search state
       await waitFor(() => {
@@ -298,8 +403,8 @@ describe("LiveTV", () => {
 
       await waitFor(() => {
         const images = screen.getAllByRole("img");
-        const channelLogos = images.filter(img =>
-          img.getAttribute("alt")?.includes("logo")
+        const channelLogos = images.filter((img) =>
+          img.getAttribute("alt")?.includes("logo"),
         );
         expect(channelLogos.length).toBeGreaterThanOrEqual(3);
       });
@@ -324,7 +429,9 @@ describe("LiveTV", () => {
       renderLiveTV();
 
       await waitFor(() => {
-        expect(screen.getAllByText("Live News at 6").length).toBeGreaterThanOrEqual(1);
+        expect(
+          screen.getAllByText("Live News at 6").length,
+        ).toBeGreaterThanOrEqual(1);
       });
     });
 
@@ -430,8 +537,8 @@ describe("LiveTV", () => {
       // Find the X button (it's the one nested in search input area)
       const xButtons = document.querySelectorAll("button");
       // Click the clear/X button in the search input
-      const clearSearchBtn = Array.from(xButtons).find(btn =>
-        btn.closest(".relative")?.querySelector("input")
+      const clearSearchBtn = Array.from(xButtons).find((btn) =>
+        btn.closest(".relative")?.querySelector("input"),
       );
       if (clearSearchBtn) fireEvent.click(clearSearchBtn);
     });
@@ -459,12 +566,14 @@ describe("LiveTV", () => {
       expect(countBadges.length).toBeGreaterThanOrEqual(1);
     });
 
-    it('renders a Favorites section when favorites exist', async () => {
+    it("renders a Favorites section when favorites exist", async () => {
       renderLiveTV();
 
       await waitFor(() => {
         // The Favorites section heading and toggle button both say "Favorites"
-        expect(screen.getAllByText("Favorites").length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText("Favorites").length).toBeGreaterThanOrEqual(
+          1,
+        );
       });
 
       // Favorite channels should appear in the Favorites section (also in main grid)
@@ -474,7 +583,7 @@ describe("LiveTV", () => {
       expect(bbcElements.length).toBeGreaterThanOrEqual(1);
     });
 
-    it('shows favorites-only filter button', async () => {
+    it("shows favorites-only filter button", async () => {
       renderLiveTV();
 
       await waitFor(() => {
@@ -483,9 +592,10 @@ describe("LiveTV", () => {
 
       // Find the favorites toggle button
       const favButtons = screen.getAllByRole("button");
-      const favToggle = favButtons.find(btn =>
-        btn.getAttribute("aria-label") === "Show favorites only" ||
-        btn.getAttribute("aria-label") === "Show all channels"
+      const favToggle = favButtons.find(
+        (btn) =>
+          btn.getAttribute("aria-label") === "Show favorites only" ||
+          btn.getAttribute("aria-label") === "Show all channels",
       );
       expect(favToggle).toBeInTheDocument();
     });

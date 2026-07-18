@@ -3,11 +3,13 @@
 These routes involve HTTP calls to external services, so we mock
 the `main.client` httpx.AsyncClient where needed.
 """
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 
 # ── SPA fallback: /{full_path:path} ───────────────────────────────────
+
 
 def test_spa_fallback_serves_index(client):
     """The catch-all route should serve index.html for unknown paths."""
@@ -24,6 +26,7 @@ def test_spa_fallback_serves_index_for_root(client):
 
 
 # ── Image Proxy helpers ──────────────────────────────────────────────
+
 
 def test_img_cache_key_consistency(client):
     """_img_cache_key should produce consistent, deterministic keys."""
@@ -58,6 +61,7 @@ def test_img_cache_path_and_meta_path(client):
 
 
 # ── Image Proxy: /api/image-proxy (validation layer tests) ───────────
+
 
 def test_image_proxy_rejects_direct_access(client):
     """Image proxy should reject requests with external referer."""
@@ -133,6 +137,7 @@ def test_image_proxy_subdomain_allowed(client):
 def test_image_proxy_uses_in_memory_cache(client):
     """Second request for same URL should use in-memory cache."""
     from routes.misc import _img_cache
+
     _img_cache.clear()
 
     # Also mock disk cache to avoid pollution from previous test runs
@@ -166,6 +171,7 @@ def test_image_proxy_with_localhost_referer_allows_access(client):
 
 
 # ── IPTV Raw Proxy: /api/iptv/{path:path} ────────────────────────────
+
 
 def test_iptv_raw_proxy_proxies_request(client):
     """IPTV raw proxy should forward requests and return upstream content."""

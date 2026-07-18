@@ -25,11 +25,14 @@ def test_search_filters_live(client_with_cache):
     """Search should filter live streams by name."""
     from state import _cache
 
-    _cache["live_all"] = (1000.0, [
-        {"stream_id": 1, "name": "BBC News", "stream_icon": "", "category_id": "1"},
-        {"stream_id": 2, "name": "ESPN Sports", "stream_icon": "", "category_id": "2"},
-        {"stream_id": 3, "name": "Sky News HD", "stream_icon": "", "category_id": "1"},
-    ])
+    _cache["live_all"] = (
+        1000.0,
+        [
+            {"stream_id": 1, "name": "BBC News", "stream_icon": "", "category_id": "1"},
+            {"stream_id": 2, "name": "ESPN Sports", "stream_icon": "", "category_id": "2"},
+            {"stream_id": 3, "name": "Sky News HD", "stream_icon": "", "category_id": "1"},
+        ],
+    )
 
     resp = client_with_cache.get("/api/v1/search?q=news")
     assert resp.status_code == 200
@@ -45,10 +48,13 @@ def test_search_filters_movies_from_cache(client_with_cache):
     from state import _cache
 
     _cache["vod_categories"] = (1000.0, [{"category_id": 10, "category_name": "EN - Action"}])
-    _cache["vod_10"] = (1000.0, [
-        {"stream_id": 100, "name": "EN - The Dark Knight (2008)", "stream_icon": "", "container_extension": "mkv"},
-        {"stream_id": 101, "name": "EN - Inception (2010)", "stream_icon": "", "container_extension": "mp4"},
-    ])
+    _cache["vod_10"] = (
+        1000.0,
+        [
+            {"stream_id": 100, "name": "EN - The Dark Knight (2008)", "stream_icon": "", "container_extension": "mkv"},
+            {"stream_id": 101, "name": "EN - Inception (2010)", "stream_icon": "", "container_extension": "mp4"},
+        ],
+    )
 
     resp = client_with_cache.get("/api/v1/search?q=knight")
     assert resp.status_code == 200
@@ -72,12 +78,15 @@ def test_search_pagination_limit_offset_section(client_with_cache):
     """Search with limit, offset, and section params should return sliced results."""
     from state import _cache
 
-    _cache["live_all"] = (1000.0, [
-        {"stream_id": 101, "name": "Channel One", "stream_icon": "", "category_id": "1"},
-        {"stream_id": 102, "name": "Channel Two", "stream_icon": "", "category_id": "1"},
-        {"stream_id": 103, "name": "Channel Three", "stream_icon": "", "category_id": "1"},
-        {"stream_id": 104, "name": "Channel Four", "stream_icon": "", "category_id": "1"},
-    ])
+    _cache["live_all"] = (
+        1000.0,
+        [
+            {"stream_id": 101, "name": "Channel One", "stream_icon": "", "category_id": "1"},
+            {"stream_id": 102, "name": "Channel Two", "stream_icon": "", "category_id": "1"},
+            {"stream_id": 103, "name": "Channel Three", "stream_icon": "", "category_id": "1"},
+            {"stream_id": 104, "name": "Channel Four", "stream_icon": "", "category_id": "1"},
+        ],
+    )
 
     # Default limit=20 should return all 4 matching channels
     resp = client_with_cache.get("/api/v1/search?q=channel")
@@ -121,10 +130,13 @@ def test_search_enrich_empty_body(client):
 
 def test_search_enrich_no_tmdb_key(client):
     """POST /api/search/enrich should skip items when no TMDB data available."""
-    resp = client.post("/api/v1/search/enrich", json={
-        "movies": [{"stream_id": 1, "tmdb_id": "550"}],
-        "series": [{"series_id": 2, "tmdb_id": "1399"}],
-    })
+    resp = client.post(
+        "/api/v1/search/enrich",
+        json={
+            "movies": [{"stream_id": 1, "tmdb_id": "550"}],
+            "series": [{"series_id": 2, "tmdb_id": "1399"}],
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     # Without TMDB_API_KEY or tmdb-enrich, items that fail enrichment

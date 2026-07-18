@@ -8,7 +8,11 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import mpegts from "mpegts.js";
-import { tryAutoplay, saveProgress, registerProgressSync } from "./usePlayerUtils";
+import {
+  tryAutoplay,
+  saveProgress,
+  registerProgressSync,
+} from "./usePlayerUtils";
 import type { PlayPhase, ErrorType, VideoSourceType } from "./usePlayerTypes";
 
 // Stats object from mpegts.js STATISTICS_INFO events
@@ -131,9 +135,7 @@ export function useRemuxPlayer(
           callbacks.onStats(
             stats.speed,
             typeof stats?.droppedFrames === "number" ? stats.droppedFrames : 0,
-            typeof stats?.decodedFrames === "number"
-              ? stats.decodedFrames
-              : 0,
+            typeof stats?.decodedFrames === "number" ? stats.decodedFrames : 0,
           );
         }
       });

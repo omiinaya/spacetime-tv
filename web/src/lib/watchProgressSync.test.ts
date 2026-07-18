@@ -49,27 +49,43 @@ describe("watchProgressSync", () => {
 
   it("stores series metadata when type=series", async () => {
     const seriesData = {
-      seriesId: 101, seriesName: "Test Series", cover: "http://example.com/cover.jpg",
-      seasonNumber: 1, episodeNum: 3, episodeId: "ep3",
-      episodeTitle: "Test Episode", durationSeconds: 1800,
+      seriesId: 101,
+      seriesName: "Test Series",
+      cover: "http://example.com/cover.jpg",
+      seasonNumber: 1,
+      episodeNum: 3,
+      episodeId: "ep3",
+      episodeTitle: "Test Episode",
+      durationSeconds: 1800,
     };
     await queueProgress("series:101", 60, { type: "series", seriesData });
-    const entry = (await getPendingProgress()).find((e) => e.watchKey === "series:101");
+    const entry = (await getPendingProgress()).find(
+      (e) => e.watchKey === "series:101",
+    );
     expect(entry?.seriesData).toEqual(seriesData);
     expect(entry?.movieData).toBeUndefined();
   });
 
   it("stores movie metadata when type=movie", async () => {
-    const movieData = { movieId: 42, movieName: "Test", poster: "", durationSeconds: 7200 };
+    const movieData = {
+      movieId: 42,
+      movieName: "Test",
+      poster: "",
+      durationSeconds: 7200,
+    };
     await queueProgress("movie:42", 120, { type: "movie", movieData });
-    const entry = (await getPendingProgress()).find((e) => e.watchKey === "movie:42");
+    const entry = (await getPendingProgress()).find(
+      (e) => e.watchKey === "movie:42",
+    );
     expect(entry?.movieData).toEqual(movieData);
     expect(entry?.seriesData).toBeUndefined();
   });
 
   it("queues entries without metadata gracefully", async () => {
     await queueProgress("nometa:1", 5, { type: "movie" });
-    const entry = (await getPendingProgress()).find((e) => e.watchKey === "nometa:1");
+    const entry = (await getPendingProgress()).find(
+      (e) => e.watchKey === "nometa:1",
+    );
     expect(entry?.movieData).toBeUndefined();
   });
 
@@ -103,7 +119,9 @@ describe("watchProgressSync", () => {
     db.close();
 
     await incrementRetry(keys[idx]);
-    const entry = (await getPendingProgress()).find((e) => e.watchKey === "retry_test");
+    const entry = (await getPendingProgress()).find(
+      (e) => e.watchKey === "retry_test",
+    );
     expect(entry?.retries).toBe(1);
   });
 
@@ -116,14 +134,18 @@ describe("watchProgressSync", () => {
     for (let i = 0; i < 5; i++) {
       await incrementRetry(keys[idx]);
     }
-    const entry = (await getPendingProgress()).find((e) => e.watchKey === "retry_test");
+    const entry = (await getPendingProgress()).find(
+      (e) => e.watchKey === "retry_test",
+    );
     expect(entry).toBeUndefined();
   });
 
   // ── flushPendingProgress ───────────────────────────
 
   it("flushes entries and removes them on success", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 200 }));
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, { status: 200 }),
+    );
     // Count current entries
     const before = await getPendingProgress();
     const countBefore = before.length;
@@ -137,7 +159,9 @@ describe("watchProgressSync", () => {
   it("marks failed on 500, retries increment", async () => {
     await queueProgress("fivehundred", 10);
     await queueProgress("fivehundred_2", 20);
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 500 }));
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, { status: 500 }),
+    );
 
     const result = await flushPendingProgress();
     expect(result).toEqual({ flushed: 0, failed: 2 });
@@ -159,7 +183,9 @@ describe("watchProgressSync", () => {
 
   it("does not throw when IndexedDB is unavailable", async () => {
     const orig = indexedDB.open;
-    indexedDB.open = (() => { throw new Error("unavailable"); }) as typeof indexedDB.open;
+    indexedDB.open = (() => {
+      throw new Error("unavailable");
+    }) as typeof indexedDB.open;
     await expect(queueProgress("ignored", 0)).resolves.toBeUndefined();
     await expect(getPendingProgress()).resolves.toEqual([]);
     await expect(removePendingProgress(1)).resolves.toBeUndefined();
@@ -187,7 +213,10 @@ async function openDB(): Promise<IDBDatabase> {
   });
 }
 
-async function getAllFromStore(db: IDBDatabase, store: string): Promise<{ keys: IDBValidKey[]; values: any[] }> {
+async function getAllFromStore(
+  db: IDBDatabase,
+  store: string,
+): Promise<{ keys: IDBValidKey[]; values: any[] }> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(store, "readonly");
     const keyReq = tx.objectStore(store).getAllKeys();
@@ -195,8 +224,16 @@ async function getAllFromStore(db: IDBDatabase, store: string): Promise<{ keys: 
     let keys: IDBValidKey[] = [];
     let values: any[] = [];
     let done = 0;
-    keyReq.onsuccess = () => { keys = keyReq.result; done++; if (done === 2) resolve({ keys, values }); };
-    valReq.onsuccess = () => { values = valReq.result; done++; if (done === 2) resolve({ keys, values }); };
+    keyReq.onsuccess = () => {
+      keys = keyReq.result;
+      done++;
+      if (done === 2) resolve({ keys, values });
+    };
+    valReq.onsuccess = () => {
+      values = valReq.result;
+      done++;
+      if (done === 2) resolve({ keys, values });
+    };
     keyReq.onerror = () => reject(keyReq.error);
     valReq.onerror = () => reject(valReq.error);
   });

@@ -2,6 +2,7 @@
 
 Extracted from main.py during P1.1 Phase 6 decomposition.
 """
+
 import logging
 
 from fastapi import APIRouter, HTTPException, Query
@@ -72,8 +73,11 @@ async def live_info(
         return {"streams": []}
     try:
         live_all = await cached_fetch("live_all", "get_live_streams")
-        results = [{"stream_id": s["stream_id"], "name": s.get("name", ""), "stream_icon": s.get("stream_icon", "")}
-                    for s in live_all if s["stream_id"] in requested]
+        results = [
+            {"stream_id": s["stream_id"], "name": s.get("name", ""), "stream_icon": s.get("stream_icon", "")}
+            for s in live_all
+            if s["stream_id"] in requested
+        ]
         return {"streams": results}
     except HTTPException as e:
         log.warning(f"[LIVE/INFO] Failed: {e}")

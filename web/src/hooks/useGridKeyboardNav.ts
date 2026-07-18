@@ -155,9 +155,15 @@ export function useRowKeyboardNav(
           const cardRect = target.getBoundingClientRect();
           const rowRect = row.getBoundingClientRect();
           if (cardRect.right > rowRect.right) {
-            row.scrollBy({ left: cardRect.right - rowRect.right + 16, behavior: "smooth" });
+            row.scrollBy({
+              left: cardRect.right - rowRect.right + 16,
+              behavior: "smooth",
+            });
           } else if (cardRect.left < rowRect.left) {
-            row.scrollBy({ left: cardRect.left - rowRect.left - 16, behavior: "smooth" });
+            row.scrollBy({
+              left: cardRect.left - rowRect.left - 16,
+              behavior: "smooth",
+            });
           }
         }
       }

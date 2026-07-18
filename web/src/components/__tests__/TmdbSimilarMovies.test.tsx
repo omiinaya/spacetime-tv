@@ -169,9 +169,7 @@ describe("TmdbSimilarMovies", () => {
 
     screen.getByText("Similar Movie 1").click();
 
-    expect(mockNavigate).toHaveBeenCalledWith(
-      "/movies?q=Similar%20Movie%201",
-    );
+    expect(mockNavigate).toHaveBeenCalledWith("/movies?q=Similar%20Movie%201");
   });
 
   it("handles API error gracefully", async () => {

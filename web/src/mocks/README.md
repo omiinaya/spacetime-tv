@@ -38,6 +38,7 @@ it("returns series from default handler", async () => {
 ### 2. Migrating from vi.mock() — remove the API mock
 
 **Before (vi.mock):**
+
 ```ts
 const mockSeriesCategories = vi.fn();
 vi.mock("@/lib/api", () => ({
@@ -54,6 +55,7 @@ mockSeriesCategories.mockRejectedValue(new Error("Oops"));
 ```
 
 **After (MSW):**
+
 ```ts
 // Remove the entire vi.mock("@/lib/api") block.
 // The real api module makes fetch calls → MSW intercepts them.
@@ -65,14 +67,19 @@ import { http, HttpResponse } from "msw";
 
 server.use(
   http.get("/api/series/categories", () =>
-    HttpResponse.json({ categories: [{ category_id: "99", category_name: "Custom", parent_id: 0 }] }),
+    HttpResponse.json({
+      categories: [
+        { category_id: "99", category_name: "Custom", parent_id: 0 },
+      ],
+    }),
   ),
 );
 
 // For error states:
 server.use(
-  http.get("/api/series/categories", () =>
-    new HttpResponse(null, { status: 500 }),
+  http.get(
+    "/api/series/categories",
+    () => new HttpResponse(null, { status: 500 }),
   ),
 );
 ```
@@ -147,23 +154,23 @@ every endpoint in the `api` module through MSW.
 
 ## Available Handlers
 
-| Endpoint | Handler | Returns |
-|---|---|---|
-| `GET /api/series/categories` | `sampleCategories` | 2 categories (Action, Drama) |
-| `GET /api/series?category_id=` | Filtered from `sampleSeries` | 3 series (Breaking Bad, Stranger Things, The Office) |
-| `GET /api/series/:id` | Full series detail + seasons + episodes | |
-| `GET /api/movies/categories` | `sampleCategories` (same as series) | |
-| `GET /api/movies/unified` | `sampleMovies` (The Matrix, Inception) | |
-| `GET /api/movies/:id` | Movie info with cast/director/genre | |
-| `GET /api/live/categories` | `sampleCategories` | |
-| `GET /api/live/streams` | Filtered from `sampleLiveStreams` | |
-| `GET /api/live/all` | All live streams | |
-| `GET /api/guide` | Channel groups with programmes | |
-| `GET /api/guide/now` | Now-playing programmes | |
-| `GET /api/search?q=` | Filtered movies/series/live | |
-| `GET /api/tmdb/tv/trending` | Sample trending data | |
-| `GET /api/tmdb/trending` | Sample trending data | |
-| `GET /api/watchlist/progress` | Empty progress | |
+| Endpoint                       | Handler                                 | Returns                                              |
+| ------------------------------ | --------------------------------------- | ---------------------------------------------------- |
+| `GET /api/series/categories`   | `sampleCategories`                      | 2 categories (Action, Drama)                         |
+| `GET /api/series?category_id=` | Filtered from `sampleSeries`            | 3 series (Breaking Bad, Stranger Things, The Office) |
+| `GET /api/series/:id`          | Full series detail + seasons + episodes |                                                      |
+| `GET /api/movies/categories`   | `sampleCategories` (same as series)     |                                                      |
+| `GET /api/movies/unified`      | `sampleMovies` (The Matrix, Inception)  |                                                      |
+| `GET /api/movies/:id`          | Movie info with cast/director/genre     |                                                      |
+| `GET /api/live/categories`     | `sampleCategories`                      |                                                      |
+| `GET /api/live/streams`        | Filtered from `sampleLiveStreams`       |                                                      |
+| `GET /api/live/all`            | All live streams                        |                                                      |
+| `GET /api/guide`               | Channel groups with programmes          |                                                      |
+| `GET /api/guide/now`           | Now-playing programmes                  |                                                      |
+| `GET /api/search?q=`           | Filtered movies/series/live             |                                                      |
+| `GET /api/tmdb/tv/trending`    | Sample trending data                    |                                                      |
+| `GET /api/tmdb/trending`       | Sample trending data                    |                                                      |
+| `GET /api/watchlist/progress`  | Empty progress                          |                                                      |
 
 See `src/mocks/handlers.ts` for the full fixture data and handler definitions.
 
@@ -176,6 +183,7 @@ import { sampleSeries, sampleMovies, sampleCategories } from "@/mocks/handlers";
 ```
 
 Available exports:
+
 - `sampleCategories` — `Category[]` (Action, Drama)
 - `sampleSeries` — `Series[]` (Breaking Bad, Stranger Things, The Office)
 - `sampleMovies` — `UnifiedMovie[]` (The Matrix, Inception)

@@ -106,17 +106,46 @@ export default function ProfilePicker({
             <div className="h-16 w-16 rounded-full bg-[#252540] flex items-center justify-center">
               <Lock className="h-8 w-8 text-blue-400" />
             </div>
-            <h2 className="text-lg font-semibold text-white">Enter PIN for {pinEntry.name}</h2>
-            <p className="text-sm text-gray-400">Enter your profile PIN to continue</p>
-            <input type="password" inputMode="numeric" maxLength={6} autoFocus value={pin}
-              onChange={(e) => { setPin(e.target.value.replace(/\D/g, "")); setPinError(false); }}
-              onKeyDown={(e) => { if (e.key === "Enter") handlePinSubmit(); if (e.key === "Escape") setPinEntry(null); }}
+            <h2 className="text-lg font-semibold text-white">
+              Enter PIN for {pinEntry.name}
+            </h2>
+            <p className="text-sm text-gray-400">
+              Enter your profile PIN to continue
+            </p>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              autoFocus
+              value={pin}
+              onChange={(e) => {
+                setPin(e.target.value.replace(/\D/g, ""));
+                setPinError(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handlePinSubmit();
+                if (e.key === "Escape") setPinEntry(null);
+              }}
               className="w-full h-12 px-4 rounded-xl bg-[#252540] border border-[#3a3a5e] text-white text-center text-2xl tracking-[0.5em] placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-              placeholder="●●●●" />
-            {pinError && <p className="text-sm text-red-400">Incorrect PIN. Try again.</p>}
+              placeholder="●●●●"
+            />
+            {pinError && (
+              <p className="text-sm text-red-400">Incorrect PIN. Try again.</p>
+            )}
             <div className="flex gap-3 w-full">
-              <button onClick={() => setPinEntry(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-[#3a3a5e] text-sm text-gray-300 hover:bg-[#252540] transition-colors">Cancel</button>
-              <button onClick={handlePinSubmit} disabled={pin.length < 4} className="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 text-sm text-white font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors">Unlock</button>
+              <button
+                onClick={() => setPinEntry(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-[#3a3a5e] text-sm text-gray-300 hover:bg-[#252540] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePinSubmit}
+                disabled={pin.length < 4}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-blue-600 text-sm text-white font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors"
+              >
+                Unlock
+              </button>
             </div>
           </div>
         </div>
@@ -130,27 +159,69 @@ export default function ProfilePicker({
         <div className="bg-[#1a1a2e] rounded-2xl p-8 w-full max-w-sm mx-4 border border-[#2a2a4e] shadow-2xl">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-white">Create Profile</h2>
-            <button onClick={() => setShowCreate(false)} className="p-1 rounded-lg hover:bg-[#252540] transition-colors"><X className="h-5 w-5 text-gray-400" /></button>
+            <button
+              onClick={() => setShowCreate(false)}
+              className="p-1 rounded-lg hover:bg-[#252540] transition-colors"
+            >
+              <X className="h-5 w-5 text-gray-400" />
+            </button>
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1.5">Profile Name</label>
-              <input type="text" maxLength={50} value={newName} onChange={(e) => setNewName(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl bg-[#252540] border border-[#3a3a5e] text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="Enter a name" />
+              <label className="block text-sm text-gray-400 mb-1.5">
+                Profile Name
+              </label>
+              <input
+                type="text"
+                maxLength={50}
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl bg-[#252540] border border-[#3a3a5e] text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                placeholder="Enter a name"
+              />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1.5">PIN (4-6 digits)</label>
-              <input type="password" inputMode="numeric" maxLength={6} value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
-                className="w-full h-10 px-3 rounded-xl bg-[#252540] border border-[#3a3a5e] text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="●●●●" />
+              <label className="block text-sm text-gray-400 mb-1.5">
+                PIN (4-6 digits)
+              </label>
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                value={newPin}
+                onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
+                className="w-full h-10 px-3 rounded-xl bg-[#252540] border border-[#3a3a5e] text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                placeholder="●●●●"
+              />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1.5">Confirm PIN</label>
-              <input type="password" inputMode="numeric" maxLength={6} value={newConfirm} onChange={(e) => setNewConfirm(e.target.value.replace(/\D/g, ""))}
-                className="w-full h-10 px-3 rounded-xl bg-[#252540] border border-[#3a3a5e] text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50" placeholder="●●●●" />
+              <label className="block text-sm text-gray-400 mb-1.5">
+                Confirm PIN
+              </label>
+              <input
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                value={newConfirm}
+                onChange={(e) =>
+                  setNewConfirm(e.target.value.replace(/\D/g, ""))
+                }
+                className="w-full h-10 px-3 rounded-xl bg-[#252540] border border-[#3a3a5e] text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                placeholder="●●●●"
+              />
             </div>
-            {createError && <p className="text-sm text-red-400">{createError}</p>}
-            <button onClick={handleCreate} disabled={!newName.trim() || newPin.length < 4 || newPin !== newConfirm}
-              className="w-full py-2.5 rounded-xl bg-blue-600 text-sm text-white font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors">Create Profile</button>
+            {createError && (
+              <p className="text-sm text-red-400">{createError}</p>
+            )}
+            <button
+              onClick={handleCreate}
+              disabled={
+                !newName.trim() || newPin.length < 4 || newPin !== newConfirm
+              }
+              className="w-full py-2.5 rounded-xl bg-blue-600 text-sm text-white font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors"
+            >
+              Create Profile
+            </button>
           </div>
         </div>
       </div>
@@ -161,7 +232,9 @@ export default function ProfilePicker({
     <div className="min-h-screen bg-[#0f0f1a] flex items-center justify-center p-4">
       <div className="w-full max-w-xl">
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-white mb-2">Who's Watching?</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Who's Watching?
+          </h1>
           <p className="text-gray-400 text-sm">Select a profile to continue</p>
         </div>
         {loading ? (
@@ -170,30 +243,51 @@ export default function ProfilePicker({
           </div>
         ) : profiles.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-400 mb-6">No profiles yet. Create your first profile to get started.</p>
-            <button onClick={() => setShowCreate(true)} className="px-6 py-3 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors">Create Profile</button>
+            <p className="text-gray-400 mb-6">
+              No profiles yet. Create your first profile to get started.
+            </p>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="px-6 py-3 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
+            >
+              Create Profile
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
             {profiles.map((p) => (
-              <button key={p.profile_id} onClick={() => handleProfileClick(p)}
-                className="group flex flex-col items-center gap-3 p-6 rounded-2xl bg-[#1a1a2e] border border-[#2a2a4e] hover:border-blue-500/50 hover:bg-[#1e1e38] transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50 relative">
+              <button
+                key={p.profile_id}
+                onClick={() => handleProfileClick(p)}
+                className="group flex flex-col items-center gap-3 p-6 rounded-2xl bg-[#1a1a2e] border border-[#2a2a4e] hover:border-blue-500/50 hover:bg-[#1e1e38] transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50 relative"
+              >
                 <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg group-hover:scale-110 transition-transform">
-                  {p.avatar === "default" ? <User className="h-8 w-8" /> : p.name.charAt(0).toUpperCase()}
+                  {p.avatar === "default" ? (
+                    <User className="h-8 w-8" />
+                  ) : (
+                    p.name.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <span className="text-sm font-medium text-white">{p.name}</span>
-                <button onClick={(e) => handleDelete(p.profile_id, e)}
-                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/10 text-red-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 transition-all" title="Delete profile">
+                <button
+                  onClick={(e) => handleDelete(p.profile_id, e)}
+                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/10 text-red-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 transition-all"
+                  title="Delete profile"
+                >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </button>
             ))}
-            <button onClick={() => setShowCreate(true)}
-              className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-dashed border-[#3a3a5e] hover:border-blue-500/50 hover:bg-[#1a1a2e] transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50">
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-dashed border-[#3a3a5e] hover:border-blue-500/50 hover:bg-[#1a1a2e] transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            >
               <div className="h-16 w-16 rounded-full bg-[#252540] flex items-center justify-center">
                 <Plus className="h-8 w-8 text-gray-400 group-hover:text-blue-400 transition-colors" />
               </div>
-              <span className="text-sm font-medium text-gray-400 group-hover:text-white transition-colors">Add Profile</span>
+              <span className="text-sm font-medium text-gray-400 group-hover:text-white transition-colors">
+                Add Profile
+              </span>
             </button>
           </div>
         )}

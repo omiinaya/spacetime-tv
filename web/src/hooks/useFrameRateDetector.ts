@@ -62,7 +62,8 @@ export function useFrameRateDetector(
 
   // Detect support once
   useEffect(() => {
-    const hasRVFC = typeof HTMLVideoElement !== "undefined" &&
+    const hasRVFC =
+      typeof HTMLVideoElement !== "undefined" &&
       "requestVideoFrameCallback" in HTMLVideoElement.prototype;
     setSupported(hasRVFC);
   }, []);
@@ -102,8 +103,7 @@ export function useFrameRateDetector(
       // Calculate rolling average
       const samples = frameTimesRef.current;
       if (samples.length >= MIN_SAMPLES) {
-        const avgDelta =
-          samples.reduce((a, b) => a + b, 0) / samples.length;
+        const avgDelta = samples.reduce((a, b) => a + b, 0) / samples.length;
         const fps = Math.round(1 / avgDelta);
         setVideoFps(fps);
       }
@@ -116,7 +116,10 @@ export function useFrameRateDetector(
     callbackHandleRef.current = video.requestVideoFrameCallback(onFrame);
 
     return () => {
-      if (callbackHandleRef.current && typeof video.cancelVideoFrameCallback === "function") {
+      if (
+        callbackHandleRef.current &&
+        typeof video.cancelVideoFrameCallback === "function"
+      ) {
         video.cancelVideoFrameCallback(callbackHandleRef.current);
       }
     };

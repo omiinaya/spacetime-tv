@@ -8,21 +8,35 @@ interface SeriesCardProps {
   onToggleWatchlist: (seriesId: number) => void;
 }
 
-export default function SeriesCard({ series: s, onSelect, onToggleWatchlist }: SeriesCardProps) {
+export default function SeriesCard({
+  series: s,
+  onSelect,
+  onToggleWatchlist,
+}: SeriesCardProps) {
   return (
     <div
       onClick={() => onSelect(s)}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(s); }
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(s);
+        }
       }}
-      role="button" tabIndex={0}
+      role="button"
+      tabIndex={0}
       className="group shrink-0 w-[170px] sm:w-[185px] flex flex-col rounded-xl overflow-hidden bg-card border border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 text-left focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/40 cursor-pointer"
     >
       <div className="relative w-full aspect-[2/3] bg-muted overflow-hidden">
         {s.cover ? (
-          <img src={s.cover} alt={s.name ? `${s.name} poster` : ""}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400" loading="lazy"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+          <img
+            src={s.cover}
+            alt={s.name ? `${s.name} poster` : ""}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
+            loading="lazy"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-[#141420]">
             <Tv2 className="h-8 w-8 text-white/10" />
@@ -40,15 +54,27 @@ export default function SeriesCard({ series: s, onSelect, onToggleWatchlist }: S
             {s.releaseDate.slice(0, 4)}
           </div>
         )}
-        <button onClick={(e) => { e.stopPropagation(); onToggleWatchlist(s.series_id); }}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleWatchlist(s.series_id);
+          }}
           className="absolute bottom-2 right-2 p-1 rounded-full bg-black/60 backdrop-blur-sm opacity-70 hover:opacity-100 transition-opacity hover:scale-110"
-          aria-label={isSeriesInWatchlist(s.series_id) ? "Remove from watchlist" : "Add to watchlist"}
+          aria-label={
+            isSeriesInWatchlist(s.series_id)
+              ? "Remove from watchlist"
+              : "Add to watchlist"
+          }
         >
-          <Heart className={`h-4 w-4 ${isSeriesInWatchlist(s.series_id) ? "fill-red-500 text-red-500" : "text-white/70"}`} />
+          <Heart
+            className={`h-4 w-4 ${isSeriesInWatchlist(s.series_id) ? "fill-red-500 text-red-500" : "text-white/70"}`}
+          />
         </button>
       </div>
       <div className="p-2.5 flex-1">
-        <p className="text-xs font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">{s.name}</p>
+        <p className="text-xs font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+          {s.name}
+        </p>
       </div>
     </div>
   );

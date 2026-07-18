@@ -5,7 +5,13 @@
  * a dropdown with available audio tracks. Hides when only 1 track.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { AudioSelector } from "@/components/AudioSelector";
 
 describe("AudioSelector", () => {
@@ -124,7 +130,7 @@ describe("AudioSelector", () => {
     expect(screen.queryByLabelText("Audio track")).not.toBeInTheDocument();
   });
 
-  it('is hidden when no tracks returned', async () => {
+  it("is hidden when no tracks returned", async () => {
     mockFetchSuccess({ tracks: [] });
     render(<AudioSelector mediaType="movie" streamId="123" />);
 

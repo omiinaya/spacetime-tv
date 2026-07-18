@@ -19,7 +19,9 @@ export function getWatchPos(key: string): number | null {
   try {
     const d = JSON.parse(localStorage.getItem("stv_watch") || "{}");
     return d[key]?.pos ?? null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -37,21 +39,32 @@ export function saveWatchPos(key: string, pos: number) {
 }
 
 export function getVolume(): number {
-  try { const v = parseFloat(localStorage.getItem("stv_volume") || "0.8"); return isNaN(v) ? 0.8 : v; }
-  catch { return 0.8; }
+  try {
+    const v = parseFloat(localStorage.getItem("stv_volume") || "0.8");
+    return isNaN(v) ? 0.8 : v;
+  } catch {
+    return 0.8;
+  }
 }
 
 export function saveVolume(v: number) {
-  try { localStorage.setItem("stv_volume", String(v)); } catch {} // DOMException: storage quota
+  try {
+    localStorage.setItem("stv_volume", String(v));
+  } catch {} // DOMException: storage quota
 }
 
 export function getMuted(): boolean {
-  try { return localStorage.getItem("stv_muted") === "true"; }
-  catch { return false; }
+  try {
+    return localStorage.getItem("stv_muted") === "true";
+  } catch {
+    return false;
+  }
 }
 
 export function saveMuted(m: boolean) {
-  try { localStorage.setItem("stv_muted", String(m)); } catch {} // DOMException: storage quota
+  try {
+    localStorage.setItem("stv_muted", String(m));
+  } catch {} // DOMException: storage quota
 }
 
 // ── Autoplay ──────────────────────────────────────────────────
@@ -127,10 +140,7 @@ export function fmtTime(s: number): string {
 }
 
 // ── Watch progress persistence helpers ────────────────────────
-import {
-  saveSeriesProgress,
-  saveMovieProgress,
-} from "@/lib/continueWatching";
+import { saveSeriesProgress, saveMovieProgress } from "@/lib/continueWatching";
 import type { VideoSourceType } from "./usePlayerTypes";
 
 interface SaveProgressParams {
@@ -202,8 +212,7 @@ export function saveProgress(params: SaveProgressParams): void {
           10,
         );
         const activeSeason = parseInt(
-          sessionStorage.getItem(`stv_series_active_season_${seriesId}`) ||
-            "1",
+          sessionStorage.getItem(`stv_series_active_season_${seriesId}`) || "1",
           10,
         );
         const episodesRaw = sessionStorage.getItem(
@@ -278,6 +287,10 @@ interface ServiceWorkerRegistrationWithSync extends ServiceWorkerRegistration {
  */
 export function registerProgressSync(): void {
   navigator.serviceWorker?.ready
-    .then((reg) => (reg as ServiceWorkerRegistrationWithSync).sync.register("sync-watch-progress"))
+    .then((reg) =>
+      (reg as ServiceWorkerRegistrationWithSync).sync.register(
+        "sync-watch-progress",
+      ),
+    )
     .catch(() => {});
 }

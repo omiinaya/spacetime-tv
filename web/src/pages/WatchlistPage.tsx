@@ -39,7 +39,10 @@ export default function WatchlistPage() {
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          <Heart className="h-3.5 w-3.5 inline mr-1.5 -mt-0.5" aria-hidden="true" />
+          <Heart
+            className="h-3.5 w-3.5 inline mr-1.5 -mt-0.5"
+            aria-hidden="true"
+          />
           Movies ({getWatchlist().length})
         </button>
         <button
@@ -50,7 +53,10 @@ export default function WatchlistPage() {
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          <Tv2 className="h-3.5 w-3.5 inline mr-1.5 -mt-0.5" aria-hidden="true" />
+          <Tv2
+            className="h-3.5 w-3.5 inline mr-1.5 -mt-0.5"
+            aria-hidden="true"
+          />
           Series ({getSeriesWatchlist().length})
         </button>
       </div>
@@ -71,12 +77,15 @@ function MoviesTab() {
   const [overlayMovie, setOverlayMovie] = useState<UnifiedMovie | null>(null);
   const [, setRefresh] = useState(0);
 
-  const handleToggle = useCallback((movieId: number) => {
-    toggleWatchlist(movieId);
-    setRefresh(v => v + 1);
-    const ids = getWatchlist();
-    setMovies(allMovies.filter(m => ids.includes(m.stream_id)));
-  }, [allMovies]);
+  const handleToggle = useCallback(
+    (movieId: number) => {
+      toggleWatchlist(movieId);
+      setRefresh((v) => v + 1);
+      const ids = getWatchlist();
+      setMovies(allMovies.filter((m) => ids.includes(m.stream_id)));
+    },
+    [allMovies],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -88,14 +97,17 @@ function MoviesTab() {
         if (cancelled) return;
         setAllMovies(d.movies);
         const ids = getWatchlist();
-        setMovies(d.movies.filter(m => ids.includes(m.stream_id)));
+        setMovies(d.movies.filter((m) => ids.includes(m.stream_id)));
       } catch (e: unknown) {
-        if (!cancelled) setError((e as Error).message || "Failed to load watchlist");
+        if (!cancelled)
+          setError((e as Error).message || "Failed to load watchlist");
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) {
@@ -125,10 +137,16 @@ function MoviesTab() {
   if (movies.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <Heart className="h-12 w-12 text-muted-foreground/30" aria-hidden="true" />
-        <p className="text-muted-foreground text-lg font-medium">No movies saved yet</p>
+        <Heart
+          className="h-12 w-12 text-muted-foreground/30"
+          aria-hidden="true"
+        />
+        <p className="text-muted-foreground text-lg font-medium">
+          No movies saved yet
+        </p>
         <p className="text-muted-foreground/60 text-sm max-w-md text-center">
-          Browse movies and tap the heart icon to save your favorites here for quick access.
+          Browse movies and tap the heart icon to save your favorites here for
+          quick access.
         </p>
         <button
           onClick={() => navigate("/movies")}
@@ -155,7 +173,10 @@ function MoviesTab() {
               data-watch-link
               onClick={() => setOverlayMovie(m)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOverlayMovie(m); }
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setOverlayMovie(m);
+                }
               }}
               role="button"
               tabIndex={0}
@@ -165,7 +186,11 @@ function MoviesTab() {
               <div className="aspect-[2/3] overflow-hidden bg-muted">
                 <img
                   src={imageUrl(m.stream_icon)}
-                  alt={m.base_name || m.name ? `${m.base_name || m.name} poster` : ""}
+                  alt={
+                    m.base_name || m.name
+                      ? `${m.base_name || m.name} poster`
+                      : ""
+                  }
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   loading="lazy"
                   onError={(e) => {
@@ -176,7 +201,10 @@ function MoviesTab() {
               </div>
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <Play className="h-8 w-8 text-white/80 fill-white/80" aria-hidden="true" />
+                  <Play
+                    className="h-8 w-8 text-white/80 fill-white/80"
+                    aria-hidden="true"
+                  />
                 </div>
               </div>
               {!isNaN(rating) && (
@@ -191,7 +219,10 @@ function MoviesTab() {
                 </div>
               )}
               <button
-                onClick={(e) => { e.stopPropagation(); handleToggle(m.stream_id); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggle(m.stream_id);
+                }}
                 className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/60 backdrop-blur-sm hover:bg-red-500/80 transition-colors z-10"
                 aria-label={`Remove ${m.base_name || m.name} from watchlist`}
                 title="Remove from watchlist"
@@ -233,8 +264,8 @@ function SeriesTab() {
 
   const handleToggle = useCallback((seriesId: number) => {
     toggleSeriesWatchlist(seriesId);
-    setRefresh(v => v + 1);
-    setSeriesList(prev => prev.filter(s => s.series_id !== seriesId));
+    setRefresh((v) => v + 1);
+    setSeriesList((prev) => prev.filter((s) => s.series_id !== seriesId));
   }, []);
 
   useEffect(() => {
@@ -253,7 +284,7 @@ function SeriesTab() {
           ids.map(async (id) => {
             const data = await api.series.details(id);
             return { id, data };
-          })
+          }),
         );
         if (cancelled) return;
         const items: SeriesWithInfo[] = [];
@@ -285,12 +316,15 @@ function SeriesTab() {
         }
         if (!cancelled) setSeriesList(items);
       } catch (e: unknown) {
-        if (!cancelled) setError((e as Error).message || "Failed to load series");
+        if (!cancelled)
+          setError((e as Error).message || "Failed to load series");
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) {
@@ -320,10 +354,16 @@ function SeriesTab() {
   if (seriesList.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <Tv2 className="h-12 w-12 text-muted-foreground/30" aria-hidden="true" />
-        <p className="text-muted-foreground text-lg font-medium">No series saved yet</p>
+        <Tv2
+          className="h-12 w-12 text-muted-foreground/30"
+          aria-hidden="true"
+        />
+        <p className="text-muted-foreground text-lg font-medium">
+          No series saved yet
+        </p>
         <p className="text-muted-foreground/60 text-sm max-w-md text-center">
-          Browse series and tap the heart icon to save your favorites here for quick access.
+          Browse series and tap the heart icon to save your favorites here for
+          quick access.
         </p>
         <button
           onClick={() => navigate("/series")}
@@ -338,7 +378,8 @@ function SeriesTab() {
   return (
     <>
       <p className="text-sm text-muted-foreground mb-4">
-        {seriesList.length} {seriesList.length === 1 ? "series" : "series"} saved
+        {seriesList.length} {seriesList.length === 1 ? "series" : "series"}{" "}
+        saved
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
         {seriesList.map((s) => {
@@ -348,7 +389,10 @@ function SeriesTab() {
               key={s.series_id}
               onClick={() => setOverlaySeries(s)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOverlaySeries(s); }
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setOverlaySeries(s);
+                }
               }}
               role="button"
               tabIndex={0}
@@ -388,7 +432,10 @@ function SeriesTab() {
                 )}
                 {/* Remove from watchlist */}
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleToggle(s.series_id); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggle(s.series_id);
+                  }}
                   className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/60 backdrop-blur-sm hover:bg-red-500/80 transition-colors z-10"
                   aria-label={`Remove ${s.name} from watchlist`}
                   title="Remove from watchlist"

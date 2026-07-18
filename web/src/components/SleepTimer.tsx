@@ -17,33 +17,36 @@ export function SleepTimer({ onPause }: SleepTimerProps) {
   const [remaining, setRemaining] = useState(0); // seconds, 0 = off
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const start = useCallback((minutes: number) => {
-    // Clear existing timer
-    if (intervalRef.current) clearInterval(intervalRef.current);
+  const start = useCallback(
+    (minutes: number) => {
+      // Clear existing timer
+      if (intervalRef.current) clearInterval(intervalRef.current);
 
-    if (minutes <= 0) {
-      setRemaining(0);
+      if (minutes <= 0) {
+        setRemaining(0);
+        setOpen(false);
+        return;
+      }
+
+      const seconds = minutes * 60;
+      setRemaining(seconds);
+
+      intervalRef.current = setInterval(() => {
+        setRemaining((prev) => {
+          if (prev <= 1) {
+            // Time's up — pause playback
+            onPause();
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
       setOpen(false);
-      return;
-    }
-
-    const seconds = minutes * 60;
-    setRemaining(seconds);
-
-    intervalRef.current = setInterval(() => {
-      setRemaining((prev) => {
-        if (prev <= 1) {
-          // Time's up — pause playback
-          onPause();
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    setOpen(false);
-  }, [onPause]);
+    },
+    [onPause],
+  );
 
   // Cleanup on unmount
   useEffect(() => {
@@ -65,7 +68,11 @@ export function SleepTimer({ onPause }: SleepTimerProps) {
         className={`text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center gap-1 ${
           remaining > 0 ? "text-purple-400" : ""
         }`}
-        aria-label={remaining > 0 ? `Sleep timer: ${fmt(remaining)} remaining` : "Sleep timer"}
+        aria-label={
+          remaining > 0
+            ? `Sleep timer: ${fmt(remaining)} remaining`
+            : "Sleep timer"
+        }
       >
         <Moon className="w-4 h-4" aria-hidden="true" />
         {remaining > 0 && (
@@ -80,11 +87,13 @@ export function SleepTimer({ onPause }: SleepTimerProps) {
               key={p.label}
               onClick={() => start(p.minutes)}
               className={`block w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors ${
-                (p.minutes > 0 && remaining > 0 && Math.abs(remaining - p.minutes * 60) < 100)
+                p.minutes > 0 &&
+                remaining > 0 &&
+                Math.abs(remaining - p.minutes * 60) < 100
                   ? "text-purple-400"
                   : p.minutes === 0 && remaining === 0
-                  ? "text-blue-400"
-                  : "text-white/70"
+                    ? "text-blue-400"
+                    : "text-white/70"
               }`}
             >
               {p.label}

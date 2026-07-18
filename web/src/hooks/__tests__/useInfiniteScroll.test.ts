@@ -71,7 +71,7 @@ describe("useInfiniteScroll", () => {
   it("updates when source items change", () => {
     const { result, rerender } = renderHook(
       ({ items }) => useInfiniteScroll(items, 30),
-      { initialProps: { items: allItems } }
+      { initialProps: { items: allItems } },
     );
     expect(result.current.visibleItems).toHaveLength(30);
 

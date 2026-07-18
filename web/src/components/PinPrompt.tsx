@@ -84,7 +84,9 @@ export function PinPrompt({
       aria-modal="true"
       aria-label={title}
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
     >
       <div className="bg-card border border-border rounded-xl shadow-2xl p-6 w-full max-w-sm">
         {/* Header */}

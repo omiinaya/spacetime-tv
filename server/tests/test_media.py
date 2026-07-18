@@ -1,8 +1,10 @@
 """Tests for media routes — subtitle and audio probing/streaming."""
+
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 # ── Mock helpers ──────────────────────────────────────────────────────
+
 
 def _make_mock_process(returncode: int = 0, stdout: bytes = b"", stderr: bytes = b""):
     proc = AsyncMock()
@@ -37,6 +39,7 @@ def _make_audio_stream(index=0, language="eng", title="English", codec="aac", ch
 
 
 # ── Subtitles: /api/subtitles/probe ──────────────────────────────────
+
 
 class TestProbeSubtitles:
     """Tests for GET /api/subtitles/probe/{media_type}/{stream_id}."""
@@ -144,6 +147,7 @@ class TestProbeSubtitles:
 
 # ── Audio: /api/audio/probe ──────────────────────────────────────────
 
+
 class TestProbeAudio:
     """Tests for GET /api/audio/probe/{media_type}/{stream_id}."""
 
@@ -228,6 +232,7 @@ class TestProbeAudio:
 
 # ── Subtitles: /api/subtitles/{media_type}/{stream_id}/{track_index} ──
 
+
 class TestGetSubtitles:
     """Tests for GET /api/subtitles/{media_type}/{stream_id}/{track_index}."""
 
@@ -287,6 +292,7 @@ class TestGetSubtitles:
 
 
 # ── Audio stream: /api/audio/stream/{media_type}/{stream_id}/{audio_index} ─
+
 
 class TestStreamAudio:
     """Tests for GET /api/audio/stream/{media_type}/{stream_id}/{audio_index}."""

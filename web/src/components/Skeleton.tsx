@@ -10,7 +10,8 @@ export function Skeleton({
     <div
       className={`rounded bg-muted ${className}`}
       style={{
-        background: "linear-gradient(90deg, oklch(0.15 0.005 286.033) 25%, oklch(0.22 0.005 286.033) 50%, oklch(0.15 0.005 286.033) 75%)",
+        background:
+          "linear-gradient(90deg, oklch(0.15 0.005 286.033) 25%, oklch(0.22 0.005 286.033) 50%, oklch(0.15 0.005 286.033) 75%)",
         backgroundSize: "200% 100%",
         animation: "shimmer 2.5s ease-in-out infinite",
         ...style,
@@ -26,19 +27,10 @@ export function SkeletonLine({
   width?: string;
   className?: string;
 }) {
-  return (
-    <Skeleton
-      className={`h-3 ${className}`}
-      style={{ width }}
-    />
-  );
+  return <Skeleton className={`h-3 ${className}`} style={{ width }} />;
 }
 
-export function SkeletonBlock({
-  className = "",
-}: {
-  className?: string;
-}) {
+export function SkeletonBlock({ className = "" }: { className?: string }) {
   return <Skeleton className={`aspect-square ${className}`} />;
 }
 

@@ -2,6 +2,7 @@
 
 Extracted from main.py during P1.1 Phase 6 decomposition.
 """
+
 import hashlib
 import json
 import logging
@@ -48,9 +49,7 @@ def _img_write_disk(cache_key: str, content: bytes, content_type: str):
     """Write image + metadata to disk cache (fire-and-forget)."""
     try:
         _img_cache_path(cache_key).write_bytes(content)
-        _img_meta_path(cache_key).write_text(
-            json.dumps({"ct": content_type, "ts": time.time()})
-        )
+        _img_meta_path(cache_key).write_text(json.dumps({"ct": content_type, "ts": time.time()}))
     except (OSError, TypeError) as e:
         log.debug(f"Disk cache write failed: {e}")
 
@@ -118,8 +117,7 @@ async def image_proxy(request: Request, url: str = Query(...)):
     if url in _img_cache:
         cached_at, content, ct = _img_cache[url]
         if now - cached_at < _IMG_CACHE_TTL:
-            return Response(content=content, media_type=ct,
-                           headers={"Cache-Control": "public, max-age=86400"})
+            return Response(content=content, media_type=ct, headers={"Cache-Control": "public, max-age=86400"})
         del _img_cache[url]
 
     img_key = _img_cache_key(url)
@@ -130,8 +128,7 @@ async def image_proxy(request: Request, url: str = Query(...)):
             oldest_key = min(_img_cache, key=lambda k: _img_cache[k][0])
             del _img_cache[oldest_key]
         _img_cache[url] = (now, content, ct)
-        return Response(content=content, media_type=ct,
-                        headers={"Cache-Control": "public, max-age=86400"})
+        return Response(content=content, media_type=ct, headers={"Cache-Control": "public, max-age=86400"})
 
     resp = await client.get(url, follow_redirects=True)
     resp.raise_for_status()
@@ -144,8 +141,7 @@ async def image_proxy(request: Request, url: str = Query(...)):
     _img_cache[url] = (now, content, content_type)
 
     _img_write_disk(img_key, content, content_type)
-    return Response(content=content, media_type=content_type,
-                    headers={"Cache-Control": "public, max-age=86400"})
+    return Response(content=content, media_type=content_type, headers={"Cache-Control": "public, max-age=86400"})
 
 
 # ── SPA Catch-All ───────────────────────────────────────────────────

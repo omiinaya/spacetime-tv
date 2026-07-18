@@ -7,7 +7,11 @@ interface PlayerResumePromptProps {
 }
 
 export default function PlayerResumePrompt({
-  showResumePrompt, resumePos, onResume, onStartOver, fmtTime,
+  showResumePrompt,
+  resumePos,
+  onResume,
+  onStartOver,
+  fmtTime,
 }: PlayerResumePromptProps) {
   if (!showResumePrompt || !resumePos) return null;
 

@@ -12,7 +12,8 @@ import WatchlistPopover from "../WatchlistPopover";
 // ── Router mock ──────────────────────────────────────────────
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
-  const actual = await vi.importActual<typeof import("react-router")>("react-router");
+  const actual =
+    await vi.importActual<typeof import("react-router")>("react-router");
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
@@ -40,11 +41,17 @@ vi.mock("@/lib/api", () => ({
   api: {
     movies: {
       unified: (...args: unknown[]) =>
-        (mockUnified as (...a: unknown[]) => Promise<{ movies: unknown[] }>)(...args),
+        (mockUnified as (...a: unknown[]) => Promise<{ movies: unknown[] }>)(
+          ...args,
+        ),
     },
     series: {
       details: (...args: unknown[]) =>
-        (mockSeriesDetails as (...a: unknown[]) => Promise<{ info?: Record<string, unknown> }>)(...args),
+        (
+          mockSeriesDetails as (
+            ...a: unknown[]
+          ) => Promise<{ info?: Record<string, unknown> }>
+        )(...args),
     },
   },
   imageUrl: (...args: unknown[]) =>
@@ -54,9 +61,20 @@ vi.mock("@/lib/api", () => ({
 // ── Helpers ──────────────────────────────────────────────────
 function onClose() {}
 
-const BASE_MOVIE = { stream_id: 1, name: "Test Movie", stream_icon: "/img.jpg", rating: "8.5", added: "2026-01-01" };
+const BASE_MOVIE = {
+  stream_id: 1,
+  name: "Test Movie",
+  stream_icon: "/img.jpg",
+  rating: "8.5",
+  added: "2026-01-01",
+};
 const BASE_SERIES = {
-  info: { name: "Test Series", cover: "/series.jpg", releaseDate: "2025", rating: "9.0" },
+  info: {
+    name: "Test Series",
+    cover: "/series.jpg",
+    releaseDate: "2025",
+    rating: "9.0",
+  },
 };
 
 function resetMocks() {
@@ -72,8 +90,12 @@ function resetMocks() {
 
 // ═════════════════════════════════════════════════════════════
 describe("WatchlistPopover", () => {
-  beforeEach(() => { resetMocks(); });
-  afterEach(() => { document.body.innerHTML = ""; });
+  beforeEach(() => {
+    resetMocks();
+  });
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
 
   it("shows loading state initially", () => {
     mockGetWatchlist.mockReturnValue([1]);

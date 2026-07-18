@@ -45,8 +45,6 @@ def _is_playable_ts(data: bytes) -> bool:
     return len(data) > 0 and data[0] == 0x47
 
 
-
-
 # ── Fixtures ──────────────────────────────────────────────────────────────
 
 
@@ -62,15 +60,25 @@ def client():
 def live_cache():
     """Pre-populate live cache with a test channel."""
     from state import _cache
+
     _cache["live_all"] = (
         time.time() + 3600,
         [
             {
-                "stream_id": 999, "name": "Test Live", "stream_icon": "",
-                "category_id": "1", "epg_channel_id": "", "num": 1,
-                "stream_type": "live", "added": "", "is_adult": 0,
-                "category_ids": ["1"], "custom_sid": None,
-                "tv_archive": 0, "direct_source": "", "tv_archive_duration": 0,
+                "stream_id": 999,
+                "name": "Test Live",
+                "stream_icon": "",
+                "category_id": "1",
+                "epg_channel_id": "",
+                "num": 1,
+                "stream_type": "live",
+                "added": "",
+                "is_adult": 0,
+                "category_ids": ["1"],
+                "custom_sid": None,
+                "tv_archive": 0,
+                "direct_source": "",
+                "tv_archive_duration": 0,
             }
         ],
     )

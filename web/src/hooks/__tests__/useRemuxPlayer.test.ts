@@ -6,7 +6,10 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useRemuxPlayer, type RemuxPlayerCallbacks } from "@/hooks/useRemuxPlayer";
+import {
+  useRemuxPlayer,
+  type RemuxPlayerCallbacks,
+} from "@/hooks/useRemuxPlayer";
 
 // ── Mock mpegts.js ───────────────────────────────────────────
 const state = {
@@ -28,7 +31,7 @@ function makeMockPlayer() {
 }
 
 function fireMpegtsEvent(event: string, ...args: unknown[]) {
-  for (const cb of (state.listeners[event] || [])) cb(...args);
+  for (const cb of state.listeners[event] || []) cb(...args);
 }
 
 vi.mock("mpegts.js", () => {
@@ -59,7 +62,9 @@ vi.mock("@/hooks/usePlayerUtils", () => ({
 }));
 
 // ── Helpers ─────────────────────────────────────────────────
-function mockVideo(overrides: Partial<HTMLVideoElement> = {}): HTMLVideoElement {
+function mockVideo(
+  overrides: Partial<HTMLVideoElement> = {},
+): HTMLVideoElement {
   return {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
@@ -100,7 +105,9 @@ describe("useRemuxPlayer", () => {
   let videoRef: { current: HTMLVideoElement };
   let cb: RemuxPlayerCallbacks;
 
-  beforeEach(() => { resetTestState(); });
+  beforeEach(() => {
+    resetTestState();
+  });
   beforeEach(() => {
     videoRef = { current: mockVideo() };
     cb = makeCallbacks();
@@ -110,10 +117,14 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv"); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv");
+    });
 
     expect(state.createPlayerCalls).toBe(1);
-    expect(state.lastPlayer?.attachMediaElement).toHaveBeenCalledWith(videoRef.current);
+    expect(state.lastPlayer?.attachMediaElement).toHaveBeenCalledWith(
+      videoRef.current,
+    );
     expect(state.lastPlayer?.load).toHaveBeenCalled();
     unmount();
   });
@@ -122,7 +133,9 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv"); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv");
+    });
     expect(videoRef.current.removeAttribute).toHaveBeenCalledWith("src");
     unmount();
   });
@@ -131,9 +144,13 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/first.mkv"); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/first.mkv");
+    });
     const firstPlayer = state.lastPlayer;
-    act(() => { result.current.playVodRemux("http://example.com/second.mkv"); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/second.mkv");
+    });
     expect(firstPlayer?.destroy).toHaveBeenCalled();
     unmount();
   });
@@ -142,7 +159,9 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv", 120); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv", 120);
+    });
     // url check via createPlayer first arg
     expect(state.lastPlayer).not.toBeNull();
     unmount();
@@ -152,8 +171,12 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv"); });
-    act(() => { fireMpegtsEvent("media_info", { duration: 3600 }); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv");
+    });
+    act(() => {
+      fireMpegtsEvent("media_info", { duration: 3600 });
+    });
     expect(cb.onDuration).toHaveBeenCalledWith(3600);
     unmount();
   });
@@ -162,8 +185,12 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv"); });
-    act(() => { fireMpegtsEvent("media_info", {}); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv");
+    });
+    act(() => {
+      fireMpegtsEvent("media_info", {});
+    });
     expect(cb.onDuration).not.toHaveBeenCalled();
     unmount();
   });
@@ -172,8 +199,16 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv"); });
-    act(() => { fireMpegtsEvent("statistics_info", { speed: 2500, droppedFrames: 2, decodedFrames: 50 }); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv");
+    });
+    act(() => {
+      fireMpegtsEvent("statistics_info", {
+        speed: 2500,
+        droppedFrames: 2,
+        decodedFrames: 50,
+      });
+    });
     expect(cb.onStats).toHaveBeenCalledWith(2500, 2, 50);
     unmount();
   });
@@ -182,11 +217,17 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv"); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv");
+    });
 
-    const addCalls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const addCalls = (
+      videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+    ).mock.calls;
     const waitCb = addCalls.find(([e]: [string]) => e === "waiting");
-    act(() => { waitCb?.[1](); });
+    act(() => {
+      waitCb?.[1]();
+    });
     expect(cb.onStall).toHaveBeenCalled();
     unmount();
   });
@@ -196,11 +237,17 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv"); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv");
+    });
 
-    const addCalls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const addCalls = (
+      videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+    ).mock.calls;
     const timeCb = addCalls.find(([e]: [string]) => e === "timeupdate");
-    act(() => { timeCb?.[1](); });
+    act(() => {
+      timeCb?.[1]();
+    });
     expect(cb.clearLoadingTimeout).toHaveBeenCalled();
     expect(cb.onPhaseChange).toHaveBeenCalledWith("playing");
     unmount();
@@ -214,11 +261,17 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv"); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv");
+    });
 
-    const addCalls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const addCalls = (
+      videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+    ).mock.calls;
     const timeCb = addCalls.find(([e]: [string]) => e === "timeupdate");
-    act(() => { timeCb?.[1](); });
+    act(() => {
+      timeCb?.[1]();
+    });
     expect(cb.onTimeUpdate).toHaveBeenCalledWith(30, 60);
     unmount();
   });
@@ -227,11 +280,17 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv"); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv");
+    });
 
-    const addCalls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const addCalls = (
+      videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+    ).mock.calls;
     const durCb = addCalls.find(([e]: [string]) => e === "durationchange");
-    act(() => { durCb?.[1](); });
+    act(() => {
+      durCb?.[1]();
+    });
     expect(cb.onDuration).toHaveBeenCalledWith(120);
     unmount();
   });
@@ -240,17 +299,25 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv"); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv");
+    });
 
     // errorCount starts at 0; errors with code !== 0 increment it.
     // 1st error: errorCount=1, 1<3 → ignored
     // 2nd error: errorCount=2, 2<3 → ignored
-    act(() => { fireMpegtsEvent("error", "", { response: { code: 500 } }); });
-    act(() => { fireMpegtsEvent("error", "", { response: { code: 500 } }); });
+    act(() => {
+      fireMpegtsEvent("error", "", { response: { code: 500 } });
+    });
+    act(() => {
+      fireMpegtsEvent("error", "", { response: { code: 500 } });
+    });
     expect(cb.onError).not.toHaveBeenCalled();
 
     // 3rd error: errorCount=3, 3<3 → false → fires onError
-    act(() => { fireMpegtsEvent("error", "", { response: { code: 500 } }); });
+    act(() => {
+      fireMpegtsEvent("error", "", { response: { code: 500 } });
+    });
     expect(cb.onError).toHaveBeenCalledWith("stream_error", expect.any(String));
     unmount();
   });
@@ -259,10 +326,14 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv"); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv");
+    });
 
     for (let i = 0; i < 5; i++) {
-      act(() => { fireMpegtsEvent("error", "", { response: { code: 0 } }); });
+      act(() => {
+        fireMpegtsEvent("error", "", { response: { code: 0 } });
+      });
     }
     expect(cb.onError).not.toHaveBeenCalled();
     unmount();
@@ -273,8 +344,12 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv"); });
-    act(() => { vi.advanceTimersByTime(61000); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv");
+    });
+    act(() => {
+      vi.advanceTimersByTime(61000);
+    });
     expect(cb.onError).toHaveBeenCalledWith("timeout", expect.any(String));
     vi.useRealTimers();
     unmount();
@@ -285,9 +360,16 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv", null, true); });
-    act(() => { vi.advanceTimersByTime(91000); });
-    expect(cb.onError).toHaveBeenCalledWith("transcode_timeout", expect.any(String));
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv", null, true);
+    });
+    act(() => {
+      vi.advanceTimersByTime(91000);
+    });
+    expect(cb.onError).toHaveBeenCalledWith(
+      "transcode_timeout",
+      expect.any(String),
+    );
     vi.useRealTimers();
     unmount();
   });
@@ -297,12 +379,18 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv"); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv");
+    });
 
     videoRef.current.currentTime = 2;
-    const addCalls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const addCalls = (
+      videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+    ).mock.calls;
     const timeCb = addCalls.find(([e]: [string]) => e === "timeupdate");
-    act(() => { timeCb?.[1](); });
+    act(() => {
+      timeCb?.[1]();
+    });
 
     // Timeupdate handler calls clearLoadingTimeout + onPhaseChange("playing")
     // The hook's internal setTimeout still fires, but these callbacks are invoked
@@ -316,9 +404,13 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv"); });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv");
+    });
     const player = state.lastPlayer;
-    act(() => { unmount(); });
+    act(() => {
+      unmount();
+    });
     expect(player?.destroy).toHaveBeenCalled();
   });
 
@@ -326,11 +418,24 @@ describe("useRemuxPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useRemuxPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playVodRemux("http://example.com/vod.mkv"); });
-    act(() => { result.current.playVodRemux("http://example.com/vod2.mkv"); });
-    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith("timeupdate", expect.any(Function));
-    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith("durationchange", expect.any(Function));
-    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith("waiting", expect.any(Function));
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod.mkv");
+    });
+    act(() => {
+      result.current.playVodRemux("http://example.com/vod2.mkv");
+    });
+    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith(
+      "timeupdate",
+      expect.any(Function),
+    );
+    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith(
+      "durationchange",
+      expect.any(Function),
+    );
+    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith(
+      "waiting",
+      expect.any(Function),
+    );
     unmount();
   });
 });

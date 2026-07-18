@@ -1,4 +1,10 @@
-import { useState, useEffect, useRef, useCallback, type RefObject } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  type RefObject,
+} from "react";
 
 /**
  * Client-side infinite scroll — renders items in batches from an already-fetched array.
@@ -6,7 +12,7 @@ import { useState, useEffect, useRef, useCallback, type RefObject } from "react"
  */
 export function useInfiniteScroll<T>(
   items: T[],
-  batchSize = 40
+  batchSize = 40,
 ): {
   visibleItems: T[];
   sentinelRef: RefObject<HTMLDivElement>;
@@ -33,12 +39,10 @@ export function useInfiniteScroll<T>(
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && visibleCount < items.length) {
-          setVisibleCount((prev) =>
-            Math.min(prev + batchSize, items.length)
-          );
+          setVisibleCount((prev) => Math.min(prev + batchSize, items.length));
         }
       },
-      { root, rootMargin: "300px" }
+      { root, rootMargin: "300px" },
     );
 
     observer.observe(sentinel);

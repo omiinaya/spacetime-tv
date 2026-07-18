@@ -6,7 +6,10 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useMpegtsPlayer, type MpegtsPlayerCallbacks } from "@/hooks/useMpegtsPlayer";
+import {
+  useMpegtsPlayer,
+  type MpegtsPlayerCallbacks,
+} from "@/hooks/useMpegtsPlayer";
 
 // ── Mock mpegts.js ───────────────────────────────────────────
 // Module-level mutable state — vi.mock references it via strings
@@ -31,7 +34,7 @@ function makeMockPlayer() {
 }
 
 function fireMpegtsEvent(event: string, ...args: unknown[]) {
-  for (const cb of (state.listeners[event] || [])) cb(...args);
+  for (const cb of state.listeners[event] || []) cb(...args);
 }
 
 vi.mock("mpegts.js", () => {
@@ -55,7 +58,9 @@ vi.mock("mpegts.js", () => {
 });
 
 // ── Helpers ─────────────────────────────────────────────────
-function mockVideo(overrides: Partial<HTMLVideoElement> = {}): HTMLVideoElement {
+function mockVideo(
+  overrides: Partial<HTMLVideoElement> = {},
+): HTMLVideoElement {
   return {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
@@ -94,7 +99,9 @@ describe("useMpegtsPlayer", () => {
   let videoRef: { current: HTMLVideoElement };
   let cb: MpegtsPlayerCallbacks;
 
-  beforeEach(() => { resetTestState(); });
+  beforeEach(() => {
+    resetTestState();
+  });
   beforeEach(() => {
     videoRef = { current: mockVideo() };
     cb = makeCallbacks();
@@ -104,10 +111,14 @@ describe("useMpegtsPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useMpegtsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playMPEGTS("http://example.com/stream.ts", true, false); });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/stream.ts", true, false);
+    });
 
     expect(state.createPlayerCalls).toBe(1);
-    expect(state.lastPlayer?.attachMediaElement).toHaveBeenCalledWith(videoRef.current);
+    expect(state.lastPlayer?.attachMediaElement).toHaveBeenCalledWith(
+      videoRef.current,
+    );
     expect(state.lastPlayer?.load).toHaveBeenCalled();
     expect(cb.onPhaseChange).toHaveBeenCalledWith("loading");
     unmount();
@@ -117,7 +128,9 @@ describe("useMpegtsPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useMpegtsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playMPEGTS("http://example.com/stream.ts", true, false); });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/stream.ts", true, false);
+    });
     expect(cb.startLoadingTimeout).toHaveBeenCalled();
     unmount();
   });
@@ -126,7 +139,9 @@ describe("useMpegtsPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useMpegtsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playMPEGTS("http://example.com/stream.ts", true, false); });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/stream.ts", true, false);
+    });
     expect(videoRef.current.removeAttribute).toHaveBeenCalledWith("src");
     unmount();
   });
@@ -135,9 +150,13 @@ describe("useMpegtsPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useMpegtsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playMPEGTS("http://example.com/first.ts", true, false); });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/first.ts", true, false);
+    });
     const firstPlayer = state.lastPlayer;
-    act(() => { result.current.playMPEGTS("http://example.com/second.ts", true, false); });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/second.ts", true, false);
+    });
     expect(firstPlayer?.destroy).toHaveBeenCalled();
     unmount();
   });
@@ -146,8 +165,12 @@ describe("useMpegtsPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useMpegtsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playMPEGTS("http://example.com/stream.ts", true, false); });
-    act(() => { fireMpegtsEvent("media_info"); });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/stream.ts", true, false);
+    });
+    act(() => {
+      fireMpegtsEvent("media_info");
+    });
     expect(videoRef.current.play).toHaveBeenCalled();
     unmount();
   });
@@ -156,8 +179,12 @@ describe("useMpegtsPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useMpegtsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playMPEGTS("http://example.com/stream.ts", true, false); });
-    act(() => { fireMpegtsEvent("loading_complete"); });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/stream.ts", true, false);
+    });
+    act(() => {
+      fireMpegtsEvent("loading_complete");
+    });
     expect(videoRef.current.play).toHaveBeenCalled();
     unmount();
   });
@@ -166,8 +193,16 @@ describe("useMpegtsPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useMpegtsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playMPEGTS("http://example.com/stream.ts", true, false); });
-    act(() => { fireMpegtsEvent("statistics_info", { speed: 1500, droppedFrames: 5, decodedFrames: 100 }); });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/stream.ts", true, false);
+    });
+    act(() => {
+      fireMpegtsEvent("statistics_info", {
+        speed: 1500,
+        droppedFrames: 5,
+        decodedFrames: 100,
+      });
+    });
     expect(cb.onStats).toHaveBeenCalledWith(1500, 5, 100);
     unmount();
   });
@@ -176,9 +211,13 @@ describe("useMpegtsPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useMpegtsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playMPEGTS("http://example.com/stream.ts", true, false); });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/stream.ts", true, false);
+    });
     const prevPlayer = state.lastPlayer;
-    act(() => { fireMpegtsEvent("error", "", { response: { code: 0 } }); });
+    act(() => {
+      fireMpegtsEvent("error", "", { response: { code: 0 } });
+    });
     expect(prevPlayer?.destroy).not.toHaveBeenCalled();
     unmount();
   });
@@ -188,11 +227,17 @@ describe("useMpegtsPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useMpegtsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playMPEGTS("http://example.com/stream.ts", true, false); });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/stream.ts", true, false);
+    });
     const prevPlayer = state.lastPlayer;
-    act(() => { fireMpegtsEvent("error", "", { response: { code: 500 } }); });
+    act(() => {
+      fireMpegtsEvent("error", "", { response: { code: 500 } });
+    });
     expect(prevPlayer?.destroy).toHaveBeenCalled();
-    act(() => { vi.advanceTimersByTime(5000); });
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
     // A new player should have been created (total calls >= 2)
     expect(state.createPlayerCalls).toBeGreaterThanOrEqual(2);
     vi.useRealTimers();
@@ -204,15 +249,23 @@ describe("useMpegtsPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useMpegtsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playMPEGTS("http://example.com/stream.ts", true, false); });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/stream.ts", true, false);
+    });
     const prevPlayer = state.lastPlayer;
 
-    act(() => { vi.advanceTimersByTime(15000); });
+    act(() => {
+      vi.advanceTimersByTime(15000);
+    });
     expect(prevPlayer?.destroy).not.toHaveBeenCalled();
 
-    act(() => { vi.advanceTimersByTime(5000); });
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
     expect(prevPlayer?.destroy).toHaveBeenCalled();
-    act(() => { vi.advanceTimersByTime(5000); });
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
     expect(state.createPlayerCalls).toBeGreaterThanOrEqual(2);
     vi.useRealTimers();
     unmount();
@@ -223,9 +276,13 @@ describe("useMpegtsPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useMpegtsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playMPEGTS("http://example.com/stream.ts", false, false); });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/stream.ts", false, false);
+    });
     const prevPlayer = state.lastPlayer;
-    act(() => { vi.advanceTimersByTime(30000); });
+    act(() => {
+      vi.advanceTimersByTime(30000);
+    });
     expect(prevPlayer?.destroy).not.toHaveBeenCalled();
     vi.useRealTimers();
     unmount();
@@ -239,11 +296,17 @@ describe("useMpegtsPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useMpegtsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playMPEGTS("http://example.com/stream.ts", true, false); });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/stream.ts", true, false);
+    });
 
-    const addCalls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const addCalls = (
+      videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+    ).mock.calls;
     const timeCb = addCalls.find(([e]: [string]) => e === "timeupdate");
-    act(() => { timeCb?.[1](); });
+    act(() => {
+      timeCb?.[1]();
+    });
     expect(cb.onLiveTimeUpdate).toHaveBeenCalledWith(30, 0, 60, 30, true);
     unmount();
   });
@@ -252,11 +315,17 @@ describe("useMpegtsPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useMpegtsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playMPEGTS("http://example.com/stream.ts", true, false); });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/stream.ts", true, false);
+    });
 
-    const addCalls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const addCalls = (
+      videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+    ).mock.calls;
     const waitCb = addCalls.find(([e]: [string]) => e === "waiting");
-    act(() => { waitCb?.[1](); });
+    act(() => {
+      waitCb?.[1]();
+    });
     expect(cb.onStall).toHaveBeenCalled();
     unmount();
   });
@@ -265,9 +334,13 @@ describe("useMpegtsPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useMpegtsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playMPEGTS("http://example.com/stream.ts", true, false); });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/stream.ts", true, false);
+    });
     const player = state.lastPlayer;
-    act(() => { unmount(); });
+    act(() => {
+      unmount();
+    });
     expect(player?.destroy).toHaveBeenCalled();
   });
 
@@ -275,11 +348,24 @@ describe("useMpegtsPlayer", () => {
     const { result, unmount } = renderHook(() =>
       useMpegtsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playMPEGTS("http://example.com/stream.ts", true, false); });
-    act(() => { result.current.playMPEGTS("http://example.com/stream2.ts", true, false); });
-    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith("playing", expect.any(Function));
-    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith("waiting", expect.any(Function));
-    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith("timeupdate", expect.any(Function));
+    act(() => {
+      result.current.playMPEGTS("http://example.com/stream.ts", true, false);
+    });
+    act(() => {
+      result.current.playMPEGTS("http://example.com/stream2.ts", true, false);
+    });
+    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith(
+      "playing",
+      expect.any(Function),
+    );
+    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith(
+      "waiting",
+      expect.any(Function),
+    );
+    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith(
+      "timeupdate",
+      expect.any(Function),
+    );
     unmount();
   });
 });

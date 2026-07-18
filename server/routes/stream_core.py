@@ -4,6 +4,7 @@ Extracted from stream.py during decomposition of the 1105-line monolithic file.
 These helpers are used by stream_live, stream_vod, stream_convert, stream_hls,
 stream_dash, and stream_probe modules.
 """
+
 import asyncio
 import logging
 from functools import partial
@@ -22,9 +23,10 @@ log = logging.getLogger("spacetime-tv")
 _probe_cache: dict[str, tuple[float, dict]] = {}
 PROBE_CACHE_TTL = 3600
 
+
 def stream_core_get_provider(provider_idx: int = -1):
     """Get provider by index or active provider.
-    
+
     Args:
         provider_idx: Provider index (-1 = active/default)
     Returns:
@@ -32,8 +34,10 @@ def stream_core_get_provider(provider_idx: int = -1):
     """
     if provider_idx >= 0:
         from iptv_client import get_provider_by_index
+
         return get_provider_by_index(provider_idx)
     return get_active_provider()
+
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 async def _lookup_extension(stream_id: int, stream_type: str) -> str:
@@ -44,7 +48,9 @@ async def _lookup_extension(stream_id: int, stream_type: str) -> str:
     cache_key = f"ext_lookup_{stream_type}_{stream_id}"
 
     # Check primary provider's category listings for the extension
-    action = "get_live_streams" if stream_type == "live" else "get_vod_streams" if stream_type == "movie" else "get_series"
+    action = (
+        "get_live_streams" if stream_type == "live" else "get_vod_streams" if stream_type == "movie" else "get_series"
+    )
     try:
         data = await cached_fetch(cache_key, action)
         if isinstance(data, list):
@@ -63,6 +69,7 @@ async def _lookup_extension(stream_id: int, stream_type: str) -> str:
     provider = get_active_provider()
     if provider:
         from urllib.parse import urlencode
+
         ext_params = {
             "username": provider.username,
             "password": provider.password,
@@ -90,16 +97,20 @@ async def _lookup_extension(stream_id: int, stream_type: str) -> str:
 
     log.info(f"Extension lookup for {stream_type} {stream_id}: defaulting to mkv")
     return "mkv"
+
+
 async def build_stream_url(stream_id: int, stream_type: str, provider_idx: int = -1) -> str:
     """Build the IPTV stream URL for a given stream ID and type."""
     ext = "ts" if stream_type == "live" else await _lookup_extension(stream_id, stream_type)
     provider = stream_core_get_provider(provider_idx)
     return iptv_stream_url(stream_id, stream_type, ext=ext, provider=provider)
 
+
 def _vod_url(stream_id: int, media_type: str = "movie", provider_idx: int = -1) -> str:
     """Build the provider MKV URL for ffprobe/ffmpeg (VOD subtitle/audio context)."""
     provider = stream_core_get_provider(provider_idx)
     return iptv_vod_url(stream_id, media_type, provider=provider)
+
 
 def build_timeshift_url(stream_id: int, duration_seconds: int, provider_idx: int = -1) -> str:
     """Build timeshift URL for catch-up TV playback.
@@ -113,11 +124,13 @@ def build_timeshift_url(stream_id: int, duration_seconds: int, provider_idx: int
     provider = stream_core_get_provider(provider_idx)
     return iptv_timeshift_url(stream_id, duration_seconds, provider=provider)
 
+
 async def get_content_length(url: str) -> int | None:
     """Discover Content-Length via Range request (HEAD returns 0 for this CDN)."""
     try:
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True,
-                                     headers={"User-Agent": UA_STR, "Range": "bytes=0-0"}) as c:
+        async with httpx.AsyncClient(
+            timeout=10.0, follow_redirects=True, headers={"User-Agent": UA_STR, "Range": "bytes=0-0"}
+        ) as c:
             resp = await c.get(url)
             cr = resp.headers.get("content-range")
             if cr and cr.startswith("bytes"):
@@ -128,13 +141,18 @@ async def get_content_length(url: str) -> int | None:
         log.debug(f"Content-Length probe failed for {mask_url_credentials(url)}: {e}")
         return None
 
+
 # ── Stream generators (byte-level) ─────────────────────────────────────────
 
-async def _http_iter_chunks(url: str, *,
-                            range_header: str | None = None,
-                            chunk_size: int = 1048576,
-                            status_ok: tuple[int, ...] = (200,),
-                            timeout: int = 120):
+
+async def _http_iter_chunks(
+    url: str,
+    *,
+    range_header: str | None = None,
+    chunk_size: int = 1048576,
+    status_ok: tuple[int, ...] = (200,),
+    timeout: int = 120,
+):
     """Async generator: yield chunks from a CDN URL via aiohttp.
 
     ═══════════════════════════════════════════════════════════════════
@@ -179,7 +197,9 @@ async def _http_iter_chunks(url: str, *,
     async with aiohttp.ClientSession(timeout=timeout_obj) as session:
         async with session.get(url, headers=headers) as resp:
             if resp.status not in status_ok:
-                log.warning(f"_http_iter_chunks: CDN returned HTTP {resp.status} for {mask_url_credentials(url[:80])}...")
+                log.warning(
+                    f"_http_iter_chunks: CDN returned HTTP {resp.status} for {mask_url_credentials(url[:80])}..."
+                )
                 raise RuntimeError(f"CDN returned HTTP {resp.status} (stream unavailable)")
 
             while True:
@@ -188,15 +208,21 @@ async def _http_iter_chunks(url: str, *,
                     break
                 yield chunk  # pragma: no cover — async generator yield (covered at runtime, not tracked by coverage)
 
+
 async def stream_bytes(url: str):
     """Generator that yields bytes from a live stream URL via curl_cffi."""
     async for chunk in _http_iter_chunks(url, status_ok=(200,)):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
 
-async def _http_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
-                           range_header: str | None = None,
-                           buf_size: int = 1048576,
-                           log_prefix: str = ""):
+
+async def _http_feed_stdin(
+    proc: asyncio.subprocess.Process,
+    url: str,
+    *,
+    range_header: str | None = None,
+    buf_size: int = 1048576,
+    log_prefix: str = "",
+):
     """Fetch a URL via aiohttp and pipe the data to an ffmpeg process stdin.
 
     Same aiohttp approach as ``_http_iter_chunks`` — avoids the pipe-copy
@@ -224,6 +250,7 @@ async def _http_feed_stdin(proc: asyncio.subprocess.Process, url: str, *,
             proc.stdin.close()
         except OSError:  # pragma: no cover — stdin close error, runtime only
             pass  # pragma: no cover
+
 
 async def _ffmpeg_pipe(cmd: list[str], feed_coro):
     """Run ffmpeg with pipes and yield its stdout chunks.
@@ -273,13 +300,14 @@ async def _ffmpeg_pipe(cmd: list[str], feed_coro):
             except OSError:
                 pass  # pragma: no cover — wait error, runtime only
 
+
 async def stream_vod_bytes(url: str, range_header: str | None = None):
     """Generator that yields VOD bytes via curl_cffi streaming.
     Supports Range/206 for seeking.
     """
-    async for chunk in _http_iter_chunks(url, range_header=range_header,
-                                         status_ok=(200, 206)):
+    async for chunk in _http_iter_chunks(url, range_header=range_header, status_ok=(200, 206)):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
+
 
 async def stream_proxy(url: str, content_type: str):
     """Stream a remote URL through our backend, bypassing CORS."""
@@ -295,31 +323,44 @@ async def stream_proxy(url: str, content_type: str):
         log.error(f"Stream proxy error ({mask_url_credentials(url)}): {e}")
         return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
 
+
 async def stream_bytes_transcode(url: str, target_height: int | None = None):
     """Transcode HEVC→H.264 via ffmpeg using curl_cffi download pipe."""
     cmd = [
         "/usr/bin/ffmpeg",
-        "-loglevel", "warning",
-        "-probesize", "512K",
-        "-analyzeduration", "512K",
-        "-i", "pipe:0",
-        "-c:v", "libx264",
-        "-preset", "ultrafast",
-        "-tune", "zerolatency",
-        "-crf", "28",
+        "-loglevel",
+        "warning",
+        "-probesize",
+        "512K",
+        "-analyzeduration",
+        "512K",
+        "-i",
+        "pipe:0",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-tune",
+        "zerolatency",
+        "-crf",
+        "28",
     ]
     if target_height:
         cmd += ["-vf", f"scale=-2:{target_height}"]
     cmd += [
-        "-c:a", "copy",
-        "-f", "mpegts",
+        "-c:a",
+        "copy",
+        "-f",
+        "mpegts",
         "pipe:1",
     ]
     feed = partial(_http_feed_stdin, url=url, log_prefix="transcode")
     async for chunk in _ffmpeg_pipe(cmd, feed):
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
 
+
 # ── MIME helper ────────────────────────────────────────────────────────────
+
 
 def _mime_from_url(url: str) -> str:
     """Guess the content mime type from a stream URL extension."""

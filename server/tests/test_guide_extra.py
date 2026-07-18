@@ -11,9 +11,11 @@ import pytest
 
 # ── SSE Events (streaming endpoint — verify without consuming body) ──
 
+
 def test_epg_sse_returns_event_stream(client):
     """GET /api/epg/events is registered — verify via app.url_path_for."""
     from main import app
+
     try:
         path = app.url_path_for("epg_sse")
         assert path == "/api/v1/epg/events"
@@ -24,6 +26,7 @@ def test_epg_sse_returns_event_stream(client):
 def test_epg_sse_has_cors_headers(client):
     """SSE endpoint route is registered — verified via app.url_path_for."""
     from main import app
+
     try:
         path = app.url_path_for("epg_sse")
         assert path == "/api/v1/epg/events"
@@ -35,11 +38,12 @@ def test_epg_sse_emits_connected_event(client):
     """SSE endpoint is wired — verified via server-side route check."""
     # Verify the SSE stream function exists and produces correct content type
     from routes.guide import epg_sse
+
     assert epg_sse is not None
 
 
-
 # ── Guide Enrich ─────────────────────────────────────────────────────────────
+
 
 def test_guide_enrich_requires_query(client):
     """GET /api/guide/enrich requires 'q' parameter."""
@@ -118,6 +122,7 @@ SAMPLE_XMLTV = """<?xml version="1.0" encoding="UTF-8"?>
 def test_parse_xmltv_channels():
     """parse_xmltv extracts channel list from XMLTV."""
     from routes.guide import parse_xmltv
+
     result = parse_xmltv(SAMPLE_XMLTV)
     assert "channels" in result
     assert len(result["channels"]) == 2
@@ -130,6 +135,7 @@ def test_parse_xmltv_channels():
 def test_parse_xmltv_programmes():
     """parse_xmltv extracts programme list with correct fields."""
     from routes.guide import parse_xmltv
+
     result = parse_xmltv(SAMPLE_XMLTV)
     assert "programmes" in result
     programmes = result["programmes"]
@@ -150,6 +156,7 @@ def test_parse_xmltv_programmes():
 def test_parse_xmltv_programme_minimal():
     """parse_xmltv handles programmes with missing optional elements."""
     from routes.guide import parse_xmltv
+
     result = parse_xmltv(SAMPLE_XMLTV)
     programmes = result["programmes"]
     # Second programme: no sub-title, no icon
@@ -163,6 +170,7 @@ def test_parse_xmltv_programme_minimal():
 def test_parse_xmltv_empty_returns_structure():
     """parse_xmltv on empty XML returns empty channels/programmes."""
     from routes.guide import parse_xmltv
+
     result = parse_xmltv("<tv></tv>")
     assert result == {"channels": [], "programmes": []}
 
@@ -179,6 +187,7 @@ def test_parse_xmltv_no_channel_icon():
   </programme>
 </tv>"""
     from routes.guide import parse_xmltv
+
     result = parse_xmltv(xmltv)
     assert len(result["channels"]) == 1
     assert result["channels"][0]["icon"] == ""
@@ -191,5 +200,6 @@ def test_parse_xmltv_malformed_does_not_raise():
     import xml.etree.ElementTree as ET
 
     from routes.guide import parse_xmltv
+
     with pytest.raises(ET.ParseError):
         parse_xmltv("not valid xml")

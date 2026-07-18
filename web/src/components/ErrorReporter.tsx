@@ -45,8 +45,7 @@ export default function ErrorReporter() {
             : "Unhandled promise rejection";
       beaconError({
         message,
-        stack:
-          reason instanceof Error ? reason.stack ?? "" : String(reason),
+        stack: reason instanceof Error ? (reason.stack ?? "") : String(reason),
       });
     };
 

@@ -65,7 +65,7 @@ export async function queueProgress(
     type: "series" | "movie";
     seriesData?: PendingProgress["seriesData"];
     movieData?: PendingProgress["movieData"];
-  }
+  },
 ): Promise<void> {
   try {
     const db = await openDB();
@@ -160,7 +160,10 @@ export async function incrementRetry(id: IDBValidKey): Promise<void> {
  * Flush all pending progress entries to the server.
  * Called by the service worker's sync event or directly when online.
  */
-export async function flushPendingProgress(): Promise<{ flushed: number; failed: number }> {
+export async function flushPendingProgress(): Promise<{
+  flushed: number;
+  failed: number;
+}> {
   const pending = await getPendingProgress();
   if (pending.length === 0) return { flushed: 0, failed: 0 };
 
@@ -194,7 +197,8 @@ export async function flushPendingProgress(): Promise<{ flushed: number; failed:
         ]);
 
         const idx = all.findIndex(
-          (e) => e.watchKey === entry.watchKey && e.timestamp === entry.timestamp
+          (e) =>
+            e.watchKey === entry.watchKey && e.timestamp === entry.timestamp,
         );
         if (idx !== -1 && keys[idx] !== undefined) {
           store.delete(keys[idx]);

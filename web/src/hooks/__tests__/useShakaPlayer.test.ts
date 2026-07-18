@@ -6,7 +6,10 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useShakaPlayer, type ShakaPlayerCallbacks } from "@/hooks/useShakaPlayer";
+import {
+  useShakaPlayer,
+  type ShakaPlayerCallbacks,
+} from "@/hooks/useShakaPlayer";
 
 // ── Mock state (object ref avoids hoisting TDZ with let) ────
 const state = {
@@ -28,12 +31,24 @@ vi.mock("shaka-player", () => {
     default: {
       Player: class MockShakaPlayer {
         static isBrowserSupported = vi.fn(() => state.isBrowserSupported);
-        get attach() { return state.attachImpl; }
-        get configure() { return state.configureImpl; }
-        get load() { return state.loadImpl; }
-        get destroy() { return state.destroyImpl; }
-        get addEventListener() { return state.addEventListenerImpl; }
-        get removeEventListener() { return state.removeEventListenerImpl; }
+        get attach() {
+          return state.attachImpl;
+        }
+        get configure() {
+          return state.configureImpl;
+        }
+        get load() {
+          return state.loadImpl;
+        }
+        get destroy() {
+          return state.destroyImpl;
+        }
+        get addEventListener() {
+          return state.addEventListenerImpl;
+        }
+        get removeEventListener() {
+          return state.removeEventListenerImpl;
+        }
       },
       util: { Error: { Severity } },
     },
@@ -48,7 +63,9 @@ vi.mock("@/hooks/usePlayerUtils", () => ({
 }));
 
 // ── Helpers ─────────────────────────────────────────────────
-function mockVideo(overrides: Partial<HTMLVideoElement> = {}): HTMLVideoElement {
+function mockVideo(
+  overrides: Partial<HTMLVideoElement> = {},
+): HTMLVideoElement {
   return {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
@@ -96,7 +113,9 @@ describe("useShakaPlayer", () => {
   let videoRef: { current: HTMLVideoElement };
   let cb: ShakaPlayerCallbacks;
 
-  beforeEach(() => { resetTestState(); });
+  beforeEach(() => {
+    resetTestState();
+  });
   beforeEach(() => {
     videoRef = { current: mockVideo() };
     cb = makeCallbacks();
@@ -108,8 +127,12 @@ describe("useShakaPlayer", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
-      await vi.waitFor(() => { expect(state.attachImpl).toHaveBeenCalledWith(videoRef.current, false); });
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
+      await vi.waitFor(() => {
+        expect(state.attachImpl).toHaveBeenCalledWith(videoRef.current, false);
+      });
       expect(state.configureImpl).toHaveBeenCalledWith({
         streaming: {
           alwaysStreamText: false,
@@ -126,9 +149,19 @@ describe("useShakaPlayer", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8", "application/x-mpegURL", 60); });
+      act(() => {
+        result.current.playShaka(
+          "http://example.com/playlist.m3u8",
+          "application/x-mpegURL",
+          60,
+        );
+      });
       await vi.waitFor(() => {
-        expect(state.loadImpl).toHaveBeenCalledWith("http://example.com/playlist.m3u8", 60, "application/x-mpegURL");
+        expect(state.loadImpl).toHaveBeenCalledWith(
+          "http://example.com/playlist.m3u8",
+          60,
+          "application/x-mpegURL",
+        );
       });
       unmount();
     });
@@ -137,32 +170,50 @@ describe("useShakaPlayer", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
-      await vi.waitFor(() => { expect(cb.onPhaseChange).toHaveBeenCalledWith("playing"); });
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
+      await vi.waitFor(() => {
+        expect(cb.onPhaseChange).toHaveBeenCalledWith("playing");
+      });
       expect(cb.onDuration).toHaveBeenCalledWith(120);
       unmount();
     });
 
     it("calls stream_error when shaka load fails", async () => {
-      state.loadImpl = vi.fn(() => Promise.reject(new Error("Manifest parse error")));
+      state.loadImpl = vi.fn(() =>
+        Promise.reject(new Error("Manifest parse error")),
+      );
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
       await vi.waitFor(() => {
-        expect(cb.onError).toHaveBeenCalledWith("stream_error", expect.stringContaining("Manifest parse error"));
+        expect(cb.onError).toHaveBeenCalledWith(
+          "stream_error",
+          expect.stringContaining("Manifest parse error"),
+        );
       });
       unmount();
     });
 
     it("calls not_supported when shaka attach fails", async () => {
-      state.attachImpl = vi.fn(() => Promise.reject(new Error("attach failed")));
+      state.attachImpl = vi.fn(() =>
+        Promise.reject(new Error("attach failed")),
+      );
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
       await vi.waitFor(() => {
-        expect(cb.onError).toHaveBeenCalledWith("not_supported", expect.any(String));
+        expect(cb.onError).toHaveBeenCalledWith(
+          "not_supported",
+          expect.any(String),
+        );
       });
       unmount();
     });
@@ -171,16 +222,23 @@ describe("useShakaPlayer", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
 
       const addCalls = state.addEventListenerImpl.mock.calls;
       const errorCb = addCalls.find(([e]: [string]) => e === "error");
       expect(errorCb).toBeDefined();
 
       act(() => {
-        errorCb?.[1](new CustomEvent("error", { detail: { severity: "critical" } }));
+        errorCb?.[1](
+          new CustomEvent("error", { detail: { severity: "critical" } }),
+        );
       });
-      expect(cb.onError).toHaveBeenCalledWith("stream_error", expect.any(String));
+      expect(cb.onError).toHaveBeenCalledWith(
+        "stream_error",
+        expect.any(String),
+      );
       unmount();
     });
   });
@@ -197,7 +255,9 @@ describe("useShakaPlayer", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
       expect(videoRef.current.src).toBe("http://example.com/playlist.m3u8");
       unmount();
     });
@@ -206,11 +266,17 @@ describe("useShakaPlayer", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
 
-      const addCalls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+      const addCalls = (
+        videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+      ).mock.calls;
       const metaCb = addCalls.find(([e]: [string]) => e === "loadedmetadata");
-      act(() => { metaCb?.[1](); });
+      act(() => {
+        metaCb?.[1]();
+      });
       expect(cb.onDuration).toHaveBeenCalledWith(120);
       expect(cb.onPhaseChange).toHaveBeenCalledWith("playing");
       unmount();
@@ -221,12 +287,20 @@ describe("useShakaPlayer", () => {
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
       act(() => {
-        result.current.playShaka("http://example.com/playlist.m3u8", "application/x-mpegURL", 120);
+        result.current.playShaka(
+          "http://example.com/playlist.m3u8",
+          "application/x-mpegURL",
+          120,
+        );
       });
 
-      const addCalls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+      const addCalls = (
+        videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+      ).mock.calls;
       const metaCb = addCalls.find(([e]: [string]) => e === "loadedmetadata");
-      act(() => { metaCb?.[1](); });
+      act(() => {
+        metaCb?.[1]();
+      });
       expect(videoRef.current.currentTime).toBe(120);
       unmount();
     });
@@ -243,8 +317,13 @@ describe("useShakaPlayer", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
-      expect(cb.onError).toHaveBeenCalledWith("not_supported", expect.any(String));
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
+      expect(cb.onError).toHaveBeenCalledWith(
+        "not_supported",
+        expect.any(String),
+      );
       unmount();
     });
   });
@@ -255,10 +334,13 @@ describe("useShakaPlayer", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
 
-      const calls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls
-        .map(([e]: [string]) => e);
+      const calls = (
+        videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+      ).mock.calls.map(([e]: [string]) => e);
       expect(calls).toContain("timeupdate");
       expect(calls).toContain("durationchange");
       expect(calls).toContain("ended");
@@ -274,11 +356,17 @@ describe("useShakaPlayer", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
 
-      const addCalls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+      const addCalls = (
+        videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+      ).mock.calls;
       const timeCb = addCalls.find(([e]: [string]) => e === "timeupdate");
-      act(() => { timeCb?.[1](); });
+      act(() => {
+        timeCb?.[1]();
+      });
       expect(cb.onTimeUpdate).toHaveBeenCalledWith(30, 60);
       unmount();
     });
@@ -288,11 +376,17 @@ describe("useShakaPlayer", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
 
-      const addCalls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+      const addCalls = (
+        videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+      ).mock.calls;
       const durCb = addCalls.find(([e]: [string]) => e === "durationchange");
-      act(() => { durCb?.[1](); });
+      act(() => {
+        durCb?.[1]();
+      });
       expect(cb.onDuration).toHaveBeenCalledWith(3600);
       unmount();
     });
@@ -301,11 +395,17 @@ describe("useShakaPlayer", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
 
-      const addCalls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+      const addCalls = (
+        videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+      ).mock.calls;
       const endedCb = addCalls.find(([e]: [string]) => e === "ended");
-      act(() => { endedCb?.[1](); });
+      act(() => {
+        endedCb?.[1]();
+      });
       expect(cb.onPhaseChange).toHaveBeenCalledWith("paused");
       unmount();
     });
@@ -314,11 +414,17 @@ describe("useShakaPlayer", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
 
-      const addCalls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+      const addCalls = (
+        videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+      ).mock.calls;
       const waitCb = addCalls.find(([e]: [string]) => e === "waiting");
-      act(() => { waitCb?.[1](); });
+      act(() => {
+        waitCb?.[1]();
+      });
       expect(cb.onStall).toHaveBeenCalled();
       unmount();
     });
@@ -326,15 +432,23 @@ describe("useShakaPlayer", () => {
 
   // ─── Timeout and empty-stream ──────────────────────────────
   describe("timeout and empty-stream", () => {
-    beforeEach(() => { vi.useFakeTimers(); });
-    afterEach(() => { vi.useRealTimers(); });
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
 
     it("fires timeout after 15s", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
-      act(() => { vi.advanceTimersByTime(15000); });
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
+      act(() => {
+        vi.advanceTimersByTime(15000);
+      });
       expect(cb.onError).toHaveBeenCalledWith("timeout", expect.any(String));
       unmount();
     });
@@ -344,9 +458,16 @@ describe("useShakaPlayer", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
-      act(() => { vi.advanceTimersByTime(2000); });
-      expect(cb.onError).toHaveBeenCalledWith("empty_stream", expect.any(String));
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(cb.onError).toHaveBeenCalledWith(
+        "empty_stream",
+        expect.any(String),
+      );
       unmount();
     });
   });
@@ -357,8 +478,12 @@ describe("useShakaPlayer", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
-      act(() => { unmount(); });
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
+      act(() => {
+        unmount();
+      });
       expect(state.destroyImpl).toHaveBeenCalled();
     });
 
@@ -366,12 +491,28 @@ describe("useShakaPlayer", () => {
       const { result, unmount } = renderHook(() =>
         useShakaPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
       );
-      act(() => { result.current.playShaka("http://example.com/playlist.m3u8"); });
-      act(() => { result.current.playShaka("http://example.com/playlist2.m3u8"); });
-      expect(videoRef.current.removeEventListener).toHaveBeenCalledWith("timeupdate", expect.any(Function));
-      expect(videoRef.current.removeEventListener).toHaveBeenCalledWith("durationchange", expect.any(Function));
-      expect(videoRef.current.removeEventListener).toHaveBeenCalledWith("ended", expect.any(Function));
-      expect(videoRef.current.removeEventListener).toHaveBeenCalledWith("waiting", expect.any(Function));
+      act(() => {
+        result.current.playShaka("http://example.com/playlist.m3u8");
+      });
+      act(() => {
+        result.current.playShaka("http://example.com/playlist2.m3u8");
+      });
+      expect(videoRef.current.removeEventListener).toHaveBeenCalledWith(
+        "timeupdate",
+        expect.any(Function),
+      );
+      expect(videoRef.current.removeEventListener).toHaveBeenCalledWith(
+        "durationchange",
+        expect.any(Function),
+      );
+      expect(videoRef.current.removeEventListener).toHaveBeenCalledWith(
+        "ended",
+        expect.any(Function),
+      );
+      expect(videoRef.current.removeEventListener).toHaveBeenCalledWith(
+        "waiting",
+        expect.any(Function),
+      );
       unmount();
     });
   });

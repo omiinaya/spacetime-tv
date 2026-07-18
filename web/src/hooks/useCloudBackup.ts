@@ -103,7 +103,8 @@ export function useCloudBackup() {
         },
       });
       const data = await resp.json();
-      if (data.status !== "ok") throw new Error(data.detail || "Download failed");
+      if (data.status !== "ok")
+        throw new Error(data.detail || "Download failed");
       setLastDownload(Date.now() / 1000);
       return {
         favorites: data.data?.favorites ?? [],

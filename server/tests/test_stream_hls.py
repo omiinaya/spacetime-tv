@@ -22,7 +22,7 @@ from config import DATA_DIR
 
 def test_serve_hls_file_rejects_dotdot_in_filename(client_with_cache):
     """serve_hls_file returns 400 for filenames containing '..'.
-    
+
     The route checks if ".." or "/" in filename to prevent path traversal.
     This is a defense-in-depth — FastAPI normalizes URLs before routing,
     so we verify the logic via the serve_hls_file function directly.
@@ -30,6 +30,7 @@ def test_serve_hls_file_rejects_dotdot_in_filename(client_with_cache):
     import inspect
 
     from routes.stream_hls import serve_hls_file
+
     source = inspect.getsource(serve_hls_file)
     assert '".." in filename' in source or "'..' in filename" in source
     assert '"/" in filename' in source
@@ -77,8 +78,7 @@ async def test_download_mkv_returns_cached_path():
         tmp_path = Path(f.name)
 
     try:
-        with patch("routes.stream_hls.CACHE_DIR", tmp_path.parent), \
-             patch("routes.stream_hls.build_stream_url"):
+        with patch("routes.stream_hls.CACHE_DIR", tmp_path.parent), patch("routes.stream_hls.build_stream_url"):
             result = await download_mkv("1", "movie", "cached_test")
             assert result is not None
             # Should find the pre-existing MKV by different key logic

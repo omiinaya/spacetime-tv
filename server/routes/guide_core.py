@@ -2,6 +2,7 @@
 
 Extracted from guide.py during decomposition of the 434-line monolithic file.
 """
+
 import xml.etree.ElementTree as ET
 
 # ── EPG Enrichment cache (TMDB metadata cache) ──────────────────────────
@@ -17,13 +18,13 @@ def parse_xmltv(xml_text: str) -> dict:
     channels = []
     for ch in root.findall("channel"):
         icon_el = ch.find("icon")
-        channels.append({
-            "id": ch.get("id", ""),
-            "name": " ".join(
-                (ch.findtext("display-name") or "").split()
-            ),
-            "icon": icon_el.get("src", "") if icon_el is not None else "",
-        })
+        channels.append(
+            {
+                "id": ch.get("id", ""),
+                "name": " ".join((ch.findtext("display-name") or "").split()),
+                "icon": icon_el.get("src", "") if icon_el is not None else "",
+            }
+        )
 
     programmes = []
     for prog in root.findall("programme"):
@@ -37,15 +38,17 @@ def parse_xmltv(xml_text: str) -> dict:
         cat_el = prog.find("category")
         subtitle_el = prog.find("sub-title")
 
-        programmes.append({
-            "channel": channel,
-            "start": start_str,
-            "stop": stop_str,
-            "title": (title_el.text or "") if title_el is not None else "",
-            "subtitle": (subtitle_el.text or "") if subtitle_el is not None else "",
-            "desc": (desc_el.text or "") if desc_el is not None else "",
-            "icon": (icon_el.get("src", "")) if icon_el is not None else "",
-            "category": (cat_el.text or "") if cat_el is not None else "",
-        })
+        programmes.append(
+            {
+                "channel": channel,
+                "start": start_str,
+                "stop": stop_str,
+                "title": (title_el.text or "") if title_el is not None else "",
+                "subtitle": (subtitle_el.text or "") if subtitle_el is not None else "",
+                "desc": (desc_el.text or "") if desc_el is not None else "",
+                "icon": (icon_el.get("src", "")) if icon_el is not None else "",
+                "category": (cat_el.text or "") if cat_el is not None else "",
+            }
+        )
 
     return {"channels": channels, "programmes": programmes}

@@ -18,10 +18,18 @@ vi.mock("@/lib/api", () => ({
   api: {
     tmdb: {
       trending: (...args: unknown[]) =>
-        (mockMovieTrending as unknown as (...a: unknown[]) => Promise<{ trending: unknown[] }>)(...args),
+        (
+          mockMovieTrending as unknown as (
+            ...a: unknown[]
+          ) => Promise<{ trending: unknown[] }>
+        )(...args),
       tv: {
         trending: (...args: unknown[]) =>
-          (mockTvTrending as unknown as (...a: unknown[]) => Promise<{ trending: unknown[] }>)(...args),
+          (
+            mockTvTrending as unknown as (
+              ...a: unknown[]
+            ) => Promise<{ trending: unknown[] }>
+          )(...args),
       },
     },
   },
@@ -31,7 +39,8 @@ vi.mock("@/lib/api", () => ({
 // ── Mock navigate ─────────────────────────────────────────
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
-  const actual = await vi.importActual<typeof import("react-router")>("react-router");
+  const actual =
+    await vi.importActual<typeof import("react-router")>("react-router");
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -96,7 +105,9 @@ describe("HomePage", () => {
       await waitFor(() => {
         expect(screen.getByText("Welcome to Spacetime-TV")).toBeInTheDocument();
       });
-      expect(screen.getByText("Start watching from Live TV, Movies, or Series")).toBeInTheDocument();
+      expect(
+        screen.getByText("Start watching from Live TV, Movies, or Series"),
+      ).toBeInTheDocument();
       expect(screen.getByText("Browse Live TV")).toBeInTheDocument();
       expect(screen.getByText("Browse Movies")).toBeInTheDocument();
     });
@@ -122,7 +133,9 @@ describe("HomePage", () => {
     it("does NOT render Continue Watching sections (moved to History)", () => {
       renderHomePage();
       expect(screen.queryByText("Continue Watching")).not.toBeInTheDocument();
-      expect(screen.queryByText("Continue Watching — Movies")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Continue Watching — Movies"),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -161,7 +174,9 @@ describe("HomePage", () => {
       renderHomePage();
 
       await waitFor(() => {
-        expect(screen.getByText("Trending Movies This Week")).toBeInTheDocument();
+        expect(
+          screen.getByText("Trending Movies This Week"),
+        ).toBeInTheDocument();
       });
       expect(screen.getByText("Test Movie")).toBeInTheDocument();
       expect(screen.getByText("2026")).toBeInTheDocument();
@@ -173,7 +188,9 @@ describe("HomePage", () => {
       renderHomePage();
 
       await waitFor(() => {
-        expect(screen.getByText("Trending Series This Week")).toBeInTheDocument();
+        expect(
+          screen.getByText("Trending Series This Week"),
+        ).toBeInTheDocument();
       });
       expect(screen.getByText("Test Series")).toBeInTheDocument();
       expect(screen.getByText("2025")).toBeInTheDocument();

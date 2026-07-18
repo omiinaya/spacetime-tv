@@ -65,7 +65,8 @@ export default function MediaOverlay({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative w-full h-full sm:h-auto sm:max-w-[960px] sm:max-h-[92vh] sm:rounded-2xl bg-[#0a0a0f] border-0 sm:border border-white/10 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 zoom-in-95 duration-300">
+        className="relative w-full h-full sm:h-auto sm:max-w-[960px] sm:max-h-[92vh] sm:rounded-2xl bg-[#0a0a0f] border-0 sm:border border-white/10 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-10 zoom-in-95 duration-300"
+      >
         {/* Close button */}
         <button
           onClick={onClose}
@@ -82,7 +83,9 @@ export default function MediaOverlay({
               <img
                 src={imageUrl(bannerUrl)}
                 srcSet={bannerSrcset || undefined}
-                sizes={bannerSrcset ? "(max-width: 768px) 100vw, 1200px" : undefined}
+                sizes={
+                  bannerSrcset ? "(max-width: 768px) 100vw, 1200px" : undefined
+                }
                 alt={`${title} banner`}
                 className="absolute inset-0 w-full h-full object-cover opacity-60"
                 onError={(e) => {
@@ -103,7 +106,9 @@ export default function MediaOverlay({
                 <img
                   src={imageUrl(posterUrl)}
                   srcSet={posterSrcset || undefined}
-                  sizes={posterSrcset ? "(max-width: 640px) 160px, 160px" : undefined}
+                  sizes={
+                    posterSrcset ? "(max-width: 640px) 160px, 160px" : undefined
+                  }
                   alt={`${title} poster`}
                   className="w-full aspect-[2/3] object-cover"
                   onError={(e) => {
@@ -150,9 +155,7 @@ export default function MediaOverlay({
               </div>
 
               {/* Play button */}
-              {playButton && (
-                <div className="mt-2 sm:mt-3">{playButton}</div>
-              )}
+              {playButton && <div className="mt-2 sm:mt-3">{playButton}</div>}
               {/* Trailer embed */}
               {trailerEmbed}
             </div>

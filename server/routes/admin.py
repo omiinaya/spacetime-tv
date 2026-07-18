@@ -1,4 +1,5 @@
 """Admin routes: cache controls, EPG refresh, stats."""
+
 import asyncio
 import logging
 import time
@@ -13,6 +14,7 @@ def require_admin_key(request: Request) -> None:
     Key is set from ADMIN_API_KEY env var, or auto-generated on first startup.
     """
     from config import ADMIN_API_KEY
+
     key = request.headers.get("X-Admin-Key", "")
     if key != ADMIN_API_KEY:
         raise HTTPException(status_code=403, detail="Invalid or missing admin key")
@@ -100,12 +102,18 @@ async def admin_stream_health():
         w = data.get("width", 0)
         h = data.get("height", 0)
         if w > 0 and h > 0:
-            if h >= 2160: res = "4K"
-            elif h >= 1440: res = "1440p"
-            elif h >= 1080: res = "1080p"
-            elif h >= 720: res = "720p"
-            elif h >= 480: res = "480p"
-            else: res = f"{h}p"
+            if h >= 2160:
+                res = "4K"
+            elif h >= 1440:
+                res = "1440p"
+            elif h >= 1080:
+                res = "1080p"
+            elif h >= 720:
+                res = "720p"
+            elif h >= 480:
+                res = "480p"
+            else:
+                res = f"{h}p"
             by_resolution[res] = by_resolution.get(res, 0) + 1
         else:
             by_resolution["unknown"] = by_resolution.get("unknown", 0) + 1
@@ -115,14 +123,16 @@ async def admin_stream_health():
 
         if len(cached_recent) < 20:
             err = data.get("error", "")
-            cached_recent.append({
-                "key": key,
-                "age_s": age,
-                "codec": codec,
-                "width": w,
-                "height": h,
-                "error": err if err else None,
-            })
+            cached_recent.append(
+                {
+                    "key": key,
+                    "age_s": age,
+                    "codec": codec,
+                    "width": w,
+                    "height": h,
+                    "error": err if err else None,
+                }
+            )
 
     return {
         "enabled": True,
@@ -181,6 +191,7 @@ async def admin_epg_refresh():
 
     already_running = _epg_refresh_task is not None and not _epg_refresh_task.done()
     from routes.guide import _refresh_epg_background
+
     if not already_running:
         _epg_refresh_task = asyncio.create_task(_refresh_epg_background())
 
@@ -195,7 +206,9 @@ async def admin_epg_refresh():
         "message": "EPG refresh triggered." if not already_running else "EPG refresh already in progress.",
     }
 
+
 # ── Provider Management ──────────────────────────────────────────────────
+
 
 @router.get("/admin/providers")
 async def admin_get_providers():
@@ -206,20 +219,22 @@ async def admin_get_providers():
     result = []
     for i, p in enumerate(PROVIDERS):
         health = _provider_health.get(i, {})
-        result.append({
-            "index": i,
-            "name": p.name,
-            "base_url": p.base_url,
-            "username": p.username,
-            "enabled": p.enabled,
-            "order": p.order,
-            "health": {
-                "last_ok": health.get("last_ok"),
-                "last_error": health.get("last_error"),
-                "error_count": health.get("error_count", 0),
-                "ok_count": health.get("ok_count", 0),
-            },
-        })
+        result.append(
+            {
+                "index": i,
+                "name": p.name,
+                "base_url": p.base_url,
+                "username": p.username,
+                "enabled": p.enabled,
+                "order": p.order,
+                "health": {
+                    "last_ok": health.get("last_ok"),
+                    "last_error": health.get("last_error"),
+                    "error_count": health.get("error_count", 0),
+                    "ok_count": health.get("ok_count", 0),
+                },
+            }
+        )
     return {"providers": result}
 
 
@@ -227,6 +242,7 @@ async def admin_get_providers():
 async def admin_toggle_provider(idx: int):
     """Enable/disable a provider."""
     from config import PROVIDERS
+
     if idx < 0 or idx >= len(PROVIDERS):
         raise HTTPException(404, f"Provider index {idx} not found")
     PROVIDERS[idx].enabled = not PROVIDERS[idx].enabled
@@ -237,6 +253,7 @@ async def admin_toggle_provider(idx: int):
 async def admin_reorder_provider(idx: int, new_order: int):
     """Change provider priority order."""
     from config import PROVIDERS
+
     if idx < 0 or idx >= len(PROVIDERS):
         raise HTTPException(404, f"Provider index {idx} not found")
     PROVIDERS[idx].order = new_order
@@ -251,6 +268,7 @@ async def admin_reorder_provider(idx: int, new_order: int):
 async def admin_reset_provider_health():
     """Reset all provider health counters."""
     from state import _provider_health
+
     _provider_health.clear()
     return {"message": "Provider health counters reset"}
 
@@ -259,8 +277,8 @@ async def admin_reset_provider_health():
 async def admin_get_active_provider():
     """Get the currently active (highest-priority enabled) provider."""
     from iptv_client import get_active_provider
+
     p = get_active_provider()
     if not p:
         return {"active": None}
     return {"active": {"name": p.name, "base_url": p.base_url}}
-

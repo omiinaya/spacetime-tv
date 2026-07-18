@@ -67,14 +67,18 @@ describe("ErrorBoundary", () => {
           <SafeChild />
         </ErrorBoundary>,
       );
-      expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Something went wrong"),
+      ).not.toBeInTheDocument();
     });
   });
 
   describe("error state", () => {
     it("catches a thrown error and shows fallback UI", () => {
       // Suppress console.error from React's error logging during test
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       render(
         <ErrorBoundary>
@@ -86,15 +90,15 @@ describe("ErrorBoundary", () => {
       expect(
         screen.getByText(/An unexpected error occurred/),
       ).toBeInTheDocument();
-      expect(
-        screen.getByText(/Try refreshing/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Try refreshing/)).toBeInTheDocument();
 
       consoleSpy.mockRestore();
     });
 
     it("shows the error message in details expandable section", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       render(
         <ErrorBoundary>
@@ -112,7 +116,9 @@ describe("ErrorBoundary", () => {
     });
 
     it("reports the error to the backend beacon via reportRenderError", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       render(
         <ErrorBoundary>
@@ -132,7 +138,9 @@ describe("ErrorBoundary", () => {
 
   describe("recovery actions", () => {
     it('has a "Reload" button that reloads the page', () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       render(
         <ErrorBoundary>
@@ -150,7 +158,9 @@ describe("ErrorBoundary", () => {
     });
 
     it('has a "Go Home" button that navigates to /', () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       render(
         <ErrorBoundary>
@@ -170,16 +180,24 @@ describe("ErrorBoundary", () => {
 
   describe("custom fallback prop", () => {
     it("renders custom fallback instead of default when provided", () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       render(
-        <ErrorBoundary fallback={<div data-testid="custom-fallback">Custom Error UI</div>}>
+        <ErrorBoundary
+          fallback={<div data-testid="custom-fallback">Custom Error UI</div>}
+        >
           <Bomb />
         </ErrorBoundary>,
       );
 
-      expect(screen.getByTestId("custom-fallback")).toHaveTextContent("Custom Error UI");
-      expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
+      expect(screen.getByTestId("custom-fallback")).toHaveTextContent(
+        "Custom Error UI",
+      );
+      expect(
+        screen.queryByText("Something went wrong"),
+      ).not.toBeInTheDocument();
 
       consoleSpy.mockRestore();
     });

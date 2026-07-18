@@ -27,9 +27,7 @@ export default function LiveSearchResults({
     <section>
       <div className="flex items-center gap-2 mb-3">
         <Tv className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-semibold">
-          Live TV ({streams.length})
-        </h2>
+        <h2 className="text-sm font-semibold">Live TV ({streams.length})</h2>
       </div>
       <div className="channel-grid">
         {streams.map((s) => (

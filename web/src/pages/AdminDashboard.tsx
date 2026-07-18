@@ -1,7 +1,20 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  Activity, Database, Tv, AlertTriangle, Radio, Clock, BarChart3,
-  Trash2, RefreshCw, RotateCcw, Loader2, Search, Wifi, Monitor, Code2,
+  Activity,
+  Database,
+  Tv,
+  AlertTriangle,
+  Radio,
+  Clock,
+  BarChart3,
+  Trash2,
+  RefreshCw,
+  RotateCcw,
+  Loader2,
+  Search,
+  Wifi,
+  Monitor,
+  Code2,
 } from "lucide-react";
 
 interface AdminStats {
@@ -51,11 +64,15 @@ export default function AdminDashboard() {
   const [cacheMsg, setCacheMsg] = useState<string | null>(null);
   const [epgMsg, setEpgMsg] = useState<string | null>(null);
   const [epgRefreshing, setEpgRefreshing] = useState(false);
-  const [adminKey, setAdminKey] = useState(() => sessionStorage.getItem("adminKey") || "");
+  const [adminKey, setAdminKey] = useState(
+    () => sessionStorage.getItem("adminKey") || "",
+  );
   const [showKeyPrompt, setShowKeyPrompt] = useState(false);
   const [pendingKey, setPendingKey] = useState("");
 
-  const headers: Record<string, string> = adminKey ? { "X-Admin-Key": adminKey } : {};
+  const headers: Record<string, string> = adminKey
+    ? { "X-Admin-Key": adminKey }
+    : {};
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -84,7 +101,9 @@ export default function AdminDashboard() {
     setPendingKey("");
   };
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   // Auto-refresh every 30s
   useEffect(() => {
@@ -140,21 +159,35 @@ export default function AdminDashboard() {
       <div className="flex flex-col items-center justify-center py-16 gap-3">
         <AlertTriangle className="h-8 w-8 text-red-400" />
         <p className="text-sm text-muted-foreground">{error}</p>
-        <button onClick={refresh} className="px-3 py-1 rounded bg-muted text-sm hover:bg-muted/80">Retry</button>
+        <button
+          onClick={refresh}
+          className="px-3 py-1 rounded bg-muted text-sm hover:bg-muted/80"
+        >
+          Retry
+        </button>
       </div>
     );
   }
 
   if (!stats) return null;
 
-  const StatCard = ({ icon: Icon, label, value, sub }: {
+  const StatCard = ({
+    icon: Icon,
+    label,
+    value,
+    sub,
+  }: {
     icon: React.ComponentType<{ className?: string }>;
-    label: string; value: string | number; sub?: string;
+    label: string;
+    value: string | number;
+    sub?: string;
   }) => (
     <div className="bg-card border border-border rounded-lg p-4">
       <div className="flex items-center gap-2 mb-2">
         <Icon className="h-4 w-4 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground uppercase tracking-wider">{label}</span>
+        <span className="text-xs text-muted-foreground uppercase tracking-wider">
+          {label}
+        </span>
       </div>
       <div className="text-2xl font-semibold">{value}</div>
       {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
@@ -171,25 +204,48 @@ export default function AdminDashboard() {
           <div>
             <h1 className="text-xl font-semibold">Admin Dashboard</h1>
             <p className="text-sm text-muted-foreground">
-              Uptime: {fmtUptime(stats.uptime)} · SSE clients: {stats.sse_clients}
+              Uptime: {fmtUptime(stats.uptime)} · SSE clients:{" "}
+              {stats.sse_clients}
             </p>
           </div>
         </div>
-        <button onClick={refresh} className="px-3 py-1.5 rounded-lg bg-muted text-xs hover:bg-muted/80 transition-colors">
+        <button
+          onClick={refresh}
+          className="px-3 py-1.5 rounded-lg bg-muted text-xs hover:bg-muted/80 transition-colors"
+        >
           {loading ? "Refreshing…" : "Refresh"}
         </button>
       </div>
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-        <StatCard icon={Database} label="Cache Entries" value={stats.cache.total_entries}
-          sub={`${stats.cache.vod_categories} VOD · ${stats.cache.series_categories} series`} />
-        <StatCard icon={Tv} label="Stream Hits" value={stats.streams.total_hits.toLocaleString()}
-          sub={`${stats.streams.unique_streams} unique streams`} />
-        <StatCard icon={Activity} label="Cache Hit Rate"
+        <StatCard
+          icon={Database}
+          label="Cache Entries"
+          value={stats.cache.total_entries}
+          sub={`${stats.cache.vod_categories} VOD · ${stats.cache.series_categories} series`}
+        />
+        <StatCard
+          icon={Tv}
+          label="Stream Hits"
+          value={stats.streams.total_hits.toLocaleString()}
+          sub={`${stats.streams.unique_streams} unique streams`}
+        />
+        <StatCard
+          icon={Activity}
+          label="Cache Hit Rate"
           value={stats.cache.hit_rate >= 0 ? `${stats.cache.hit_rate}%` : "—"}
-          sub={`${stats.cache.hits} hits · ${stats.cache.misses} misses`} />
-        <StatCard icon={Clock} label="EPG Age" value={stats.cache.epg_age != null ? `${Math.round(stats.cache.epg_age)}s` : "N/A"} />
+          sub={`${stats.cache.hits} hits · ${stats.cache.misses} misses`}
+        />
+        <StatCard
+          icon={Clock}
+          label="EPG Age"
+          value={
+            stats.cache.epg_age != null
+              ? `${Math.round(stats.cache.epg_age)}s`
+              : "N/A"
+          }
+        />
         <StatCard icon={Radio} label="SSE Clients" value={stats.sse_clients} />
       </div>
 
@@ -204,54 +260,87 @@ export default function AdminDashboard() {
             onClick={async () => {
               setCacheMsg("Clearing…");
               try {
-                const r = await fetch("/api/admin/cache/clear", { method: "POST", headers });
+                const r = await fetch("/api/admin/cache/clear", {
+                  method: "POST",
+                  headers,
+                });
                 const d = await r.json();
                 setCacheMsg(d.message || "Cache cleared");
                 refresh();
-              } catch { setCacheMsg("Failed"); } // SyntaxError or network error
+              } catch {
+                setCacheMsg("Failed");
+              } // SyntaxError or network error
             }}
             disabled={!!cacheMsg}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-xs hover:bg-destructive/20 hover:text-destructive transition-colors disabled:opacity-50"
           >
-            {cacheMsg === "Clearing…" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            {cacheMsg === "Clearing…" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="h-3.5 w-3.5" />
+            )}
             Clear Cache
           </button>
           <button
             onClick={async () => {
               setCacheMsg("Warming…");
               try {
-                const r = await fetch("/api/admin/cache/warm", { method: "POST", headers });
+                const r = await fetch("/api/admin/cache/warm", {
+                  method: "POST",
+                  headers,
+                });
                 const d = await r.json();
                 setCacheMsg(d.message || "Warming started");
-                setTimeout(() => { setCacheMsg(null); }, 3000);
+                setTimeout(() => {
+                  setCacheMsg(null);
+                }, 3000);
                 refresh();
-              } catch { setCacheMsg("Failed"); } // SyntaxError or network error
+              } catch {
+                setCacheMsg("Failed");
+              } // SyntaxError or network error
             }}
             disabled={!!cacheMsg}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-xs hover:bg-primary/20 hover:text-primary transition-colors disabled:opacity-50"
           >
-            {cacheMsg === "Warming…" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            {cacheMsg === "Warming…" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
             Warm Cache
           </button>
           <button
             onClick={async () => {
               setCacheMsg("Full re-warm…");
               try {
-                const r = await fetch("/api/admin/cache/warm-full", { method: "POST", headers });
+                const r = await fetch("/api/admin/cache/warm-full", {
+                  method: "POST",
+                  headers,
+                });
                 const d = await r.json();
                 setCacheMsg(d.message || "Full re-warm started");
-                setTimeout(() => { setCacheMsg(null); }, 3000);
+                setTimeout(() => {
+                  setCacheMsg(null);
+                }, 3000);
                 refresh();
-              } catch { setCacheMsg("Failed"); } // SyntaxError or network error
+              } catch {
+                setCacheMsg("Failed");
+              } // SyntaxError or network error
             }}
             disabled={!!cacheMsg}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-xs hover:bg-amber-500/20 hover:text-amber-400 transition-colors disabled:opacity-50"
           >
-            {cacheMsg === "Full re-warm…" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+            {cacheMsg === "Full re-warm…" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RotateCcw className="h-3.5 w-3.5" />
+            )}
             Full Rewarm
           </button>
           {cacheMsg && !cacheMsg.endsWith("…") && (
-            <span className="flex items-center text-xs text-muted-foreground ml-2">{cacheMsg}</span>
+            <span className="flex items-center text-xs text-muted-foreground ml-2">
+              {cacheMsg}
+            </span>
           )}
         </div>
       </div>
@@ -275,10 +364,15 @@ export default function AdminDashboard() {
                 setEpgRefreshing(true);
                 setEpgMsg(null);
                 try {
-                  const r = await fetch("/api/admin/epg/refresh", { method: "POST", headers });
+                  const r = await fetch("/api/admin/epg/refresh", {
+                    method: "POST",
+                    headers,
+                  });
                   const d = await r.json();
                   setEpgMsg(d.message || "EPG refresh triggered");
-                  setTimeout(() => { setEpgMsg(null); }, 3000);
+                  setTimeout(() => {
+                    setEpgMsg(null);
+                  }, 3000);
                   refresh();
                 } catch {
                   // SyntaxError or network error
@@ -299,7 +393,9 @@ export default function AdminDashboard() {
             </button>
           </div>
           {epgMsg && (
-            <span className="flex items-center text-xs text-muted-foreground">{epgMsg}</span>
+            <span className="flex items-center text-xs text-muted-foreground">
+              {epgMsg}
+            </span>
           )}
         </div>
       </div>
@@ -323,9 +419,14 @@ export default function AdminDashboard() {
               </thead>
               <tbody>
                 {stats.streams.popular.map((s, i) => (
-                  <tr key={s.stream} className={i % 2 === 0 ? "bg-muted/20" : ""}>
+                  <tr
+                    key={s.stream}
+                    className={i % 2 === 0 ? "bg-muted/20" : ""}
+                  >
                     <td className="px-4 py-2 font-mono text-xs">{s.stream}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{s.hits.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">
+                      {s.hits.toLocaleString()}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -347,11 +448,18 @@ export default function AdminDashboard() {
         ) : (
           <div className="bg-card border border-border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
             {stats.errors.recent.map((e, i) => (
-              <div key={i} className="px-4 py-2 border-b border-border/30 last:border-0 text-xs">
+              <div
+                key={i}
+                className="px-4 py-2 border-b border-border/30 last:border-0 text-xs"
+              >
                 <span className="text-muted-foreground">{fmtTime(e.ts)}</span>
                 {" — "}
                 <span className="text-red-400">{e.message}</span>
-                {e.path && <span className="text-muted-foreground/50 ml-2">{e.path}</span>}
+                {e.path && (
+                  <span className="text-muted-foreground/50 ml-2">
+                    {e.path}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -367,12 +475,19 @@ export default function AdminDashboard() {
           </h2>
         </div>
         {stats.searches.recent.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No search queries yet.</p>
+          <p className="text-sm text-muted-foreground">
+            No search queries yet.
+          </p>
         ) : (
           <div className="bg-card border border-border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
             {stats.searches.recent.map((s, i) => (
-              <div key={i} className="px-4 py-2 border-b border-border/30 last:border-0 text-xs flex items-center gap-2">
-                <span className="text-muted-foreground shrink-0 w-16">{fmtTime(s.ts)}</span>
+              <div
+                key={i}
+                className="px-4 py-2 border-b border-border/30 last:border-0 text-xs flex items-center gap-2"
+              >
+                <span className="text-muted-foreground shrink-0 w-16">
+                  {fmtTime(s.ts)}
+                </span>
                 <span className="font-mono">"{s.query}"</span>
               </div>
             ))}
@@ -395,7 +510,14 @@ interface StreamHealthData {
   by_codec: Record<string, number>;
   by_resolution: Record<string, number>;
   by_type: Record<string, number>;
-  recent: { key: string; age_s: number; codec: string; width: number; height: number; error: string | null }[];
+  recent: {
+    key: string;
+    age_s: number;
+    codec: string;
+    width: number;
+    height: number;
+    error: string | null;
+  }[];
 }
 
 function StreamHealthSection({ headers }: { headers: Record<string, string> }) {
@@ -407,11 +529,15 @@ function StreamHealthSection({ headers }: { headers: Record<string, string> }) {
     try {
       const r = await fetch("/api/admin/stream-health", { headers });
       if (r.ok) setHealth(await r.json());
-    } catch { /* SyntaxError or network error — silently ignore */ }
+    } catch {
+      /* SyntaxError or network error — silently ignore */
+    }
     setLoading(false);
   }, [headers]);
 
-  useEffect(() => { fetchHealth(); }, [fetchHealth]);
+  useEffect(() => {
+    fetchHealth();
+  }, [fetchHealth]);
 
   if (loading) {
     return (
@@ -424,13 +550,21 @@ function StreamHealthSection({ headers }: { headers: Record<string, string> }) {
   if (!health || !health.enabled) return null;
 
   const codecColors: Record<string, string> = {
-    h264: "text-green-400", hevc: "text-blue-400", h265: "text-blue-400",
-    unknown: "text-yellow-400", unavailable: "text-red-400", vp9: "text-purple-400",
-    av1: "text-cyan-400", mpeg2video: "text-orange-400",
+    h264: "text-green-400",
+    hevc: "text-blue-400",
+    h265: "text-blue-400",
+    unknown: "text-yellow-400",
+    unavailable: "text-red-400",
+    vp9: "text-purple-400",
+    av1: "text-cyan-400",
+    mpeg2video: "text-orange-400",
   };
   const resColors: Record<string, string> = {
-    "4K": "text-yellow-400", "1080p": "text-green-400", "720p": "text-blue-400",
-    "480p": "text-orange-400", unknown: "text-muted-foreground",
+    "4K": "text-yellow-400",
+    "1080p": "text-green-400",
+    "720p": "text-blue-400",
+    "480p": "text-orange-400",
+    unknown: "text-muted-foreground",
   };
 
   return (
@@ -440,7 +574,10 @@ function StreamHealthSection({ headers }: { headers: Record<string, string> }) {
         <h2 className="text-sm font-semibold">
           Stream Health ({health.total_probed} probed)
         </h2>
-        <button onClick={fetchHealth} className="ml-auto px-2 py-1 rounded bg-muted text-[10px] hover:bg-muted/80 transition-colors">
+        <button
+          onClick={fetchHealth}
+          className="ml-auto px-2 py-1 rounded bg-muted text-[10px] hover:bg-muted/80 transition-colors"
+        >
           Refresh
         </button>
       </div>
@@ -450,13 +587,22 @@ function StreamHealthSection({ headers }: { headers: Record<string, string> }) {
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex items-center gap-1.5 mb-3">
             <Code2 className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">By Codec</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+              By Codec
+            </span>
           </div>
           <div className="space-y-1">
             {Object.entries(health.by_codec).map(([codec, count]) => (
-              <div key={codec} className="flex items-center justify-between text-xs">
-                <span className={codecColors[codec] || "text-muted-foreground"}>{codec}</span>
-                <span className="tabular-nums text-muted-foreground">{count}</span>
+              <div
+                key={codec}
+                className="flex items-center justify-between text-xs"
+              >
+                <span className={codecColors[codec] || "text-muted-foreground"}>
+                  {codec}
+                </span>
+                <span className="tabular-nums text-muted-foreground">
+                  {count}
+                </span>
               </div>
             ))}
             {Object.keys(health.by_codec).length === 0 && (
@@ -469,13 +615,22 @@ function StreamHealthSection({ headers }: { headers: Record<string, string> }) {
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex items-center gap-1.5 mb-3">
             <Monitor className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">By Resolution</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+              By Resolution
+            </span>
           </div>
           <div className="space-y-1">
             {Object.entries(health.by_resolution).map(([res, count]) => (
-              <div key={res} className="flex items-center justify-between text-xs">
-                <span className={resColors[res] || "text-muted-foreground"}>{res}</span>
-                <span className="tabular-nums text-muted-foreground">{count}</span>
+              <div
+                key={res}
+                className="flex items-center justify-between text-xs"
+              >
+                <span className={resColors[res] || "text-muted-foreground"}>
+                  {res}
+                </span>
+                <span className="tabular-nums text-muted-foreground">
+                  {count}
+                </span>
               </div>
             ))}
             {Object.keys(health.by_resolution).length === 0 && (
@@ -488,13 +643,28 @@ function StreamHealthSection({ headers }: { headers: Record<string, string> }) {
         <div className="bg-card border border-border rounded-lg p-4">
           <div className="flex items-center gap-1.5 mb-3">
             <Tv className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">By Type</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+              By Type
+            </span>
           </div>
           <div className="space-y-1">
             {Object.entries(health.by_type).map(([type, count]) => (
-              <div key={type} className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground capitalize">{type === "live" ? "Live" : type === "movie" ? "Movies" : type === "series" ? "Series" : type}</span>
-                <span className="tabular-nums text-muted-foreground">{count}</span>
+              <div
+                key={type}
+                className="flex items-center justify-between text-xs"
+              >
+                <span className="text-muted-foreground capitalize">
+                  {type === "live"
+                    ? "Live"
+                    : type === "movie"
+                      ? "Movies"
+                      : type === "series"
+                        ? "Series"
+                        : type}
+                </span>
+                <span className="tabular-nums text-muted-foreground">
+                  {count}
+                </span>
               </div>
             ))}
             {Object.keys(health.by_type).length === 0 && (
@@ -506,7 +676,9 @@ function StreamHealthSection({ headers }: { headers: Record<string, string> }) {
 
       {/* Stale notice */}
       {health.stale_count > 0 && (
-        <p className="text-[10px] text-amber-400/70 mb-3">{health.stale_count} stale probes (&gt;1h old)</p>
+        <p className="text-[10px] text-amber-400/70 mb-3">
+          {health.stale_count} stale probes (&gt;1h old)
+        </p>
       )}
 
       {/* Recent probes */}
@@ -524,12 +696,27 @@ function StreamHealthSection({ headers }: { headers: Record<string, string> }) {
             </thead>
             <tbody>
               {health.recent.map((p) => (
-                <tr key={p.key} className="border-b border-border/30 last:border-0 hover:bg-muted/20">
-                  <td className="px-3 py-1.5 font-mono text-[10px] max-w-[180px] truncate">{p.key}</td>
-                  <td className={`px-3 py-1.5 ${codecColors[p.codec] || ""}`}>{p.codec}</td>
-                  <td className="px-3 py-1.5 text-muted-foreground">{p.width > 0 ? `${p.width}x${p.height}` : "—"}</td>
-                  <td className="px-3 py-1.5 text-muted-foreground">{p.age_s < 60 ? `${Math.round(p.age_s)}s` : `${Math.round(p.age_s / 60)}m`}</td>
-                  <td className="px-3 py-1.5 text-red-400/70 max-w-[160px] truncate">{p.error || ""}</td>
+                <tr
+                  key={p.key}
+                  className="border-b border-border/30 last:border-0 hover:bg-muted/20"
+                >
+                  <td className="px-3 py-1.5 font-mono text-[10px] max-w-[180px] truncate">
+                    {p.key}
+                  </td>
+                  <td className={`px-3 py-1.5 ${codecColors[p.codec] || ""}`}>
+                    {p.codec}
+                  </td>
+                  <td className="px-3 py-1.5 text-muted-foreground">
+                    {p.width > 0 ? `${p.width}x${p.height}` : "—"}
+                  </td>
+                  <td className="px-3 py-1.5 text-muted-foreground">
+                    {p.age_s < 60
+                      ? `${Math.round(p.age_s)}s`
+                      : `${Math.round(p.age_s / 60)}m`}
+                  </td>
+                  <td className="px-3 py-1.5 text-red-400/70 max-w-[160px] truncate">
+                    {p.error || ""}
+                  </td>
                 </tr>
               ))}
             </tbody>

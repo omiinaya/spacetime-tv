@@ -74,16 +74,18 @@ const groupNoProgrammes: ChannelGroup = {
 
 // ── Helper ──────────────────────────────────────────────────────
 
-function renderChannelRow(options: {
-  group?: ChannelGroup;
-  now?: Date;
-  rowIndex?: number;
-  focusedCol?: number;
-  onFocusCol?: (col: number) => void;
-  onPlay?: () => void;
-  isFavorite?: boolean;
-  onToggleFavorite?: () => void;
-} = {}) {
+function renderChannelRow(
+  options: {
+    group?: ChannelGroup;
+    now?: Date;
+    rowIndex?: number;
+    focusedCol?: number;
+    onFocusCol?: (col: number) => void;
+    onPlay?: () => void;
+    isFavorite?: boolean;
+    onToggleFavorite?: () => void;
+  } = {},
+) {
   return render(
     <ChannelRow
       group={options.group ?? sampleGroup}
@@ -94,7 +96,7 @@ function renderChannelRow(options: {
       onPlay={options.onPlay ?? vi.fn()}
       isFavorite={options.isFavorite}
       onToggleFavorite={options.onToggleFavorite}
-    />
+    />,
   );
 }
 
@@ -237,7 +239,9 @@ describe("ChannelRow", () => {
 
       fireEvent.mouseLeave(programmeBtn);
       await waitFor(() => {
-        expect(screen.queryByText(/comprehensive roundup/)).not.toBeInTheDocument();
+        expect(
+          screen.queryByText(/comprehensive roundup/),
+        ).not.toBeInTheDocument();
       });
     });
 
@@ -276,8 +280,12 @@ describe("ChannelRow", () => {
 
     it("does not show favorite button when onToggleFavorite is not provided", () => {
       renderChannelRow();
-      expect(screen.queryByLabelText("Add to favorites")).not.toBeInTheDocument();
-      expect(screen.queryByLabelText("Remove from favorites")).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText("Add to favorites"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText("Remove from favorites"),
+      ).not.toBeInTheDocument();
     });
 
     it("calls onToggleFavorite when star button clicked", () => {
@@ -292,8 +300,12 @@ describe("ChannelRow", () => {
       const onToggleFavorite = vi.fn();
       renderChannelRow({ onToggleFavorite, isFavorite: true });
 
-      expect(screen.getByLabelText("Remove from favorites")).toBeInTheDocument();
-      expect(screen.queryByLabelText("Add to favorites")).not.toBeInTheDocument();
+      expect(
+        screen.getByLabelText("Remove from favorites"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByLabelText("Add to favorites"),
+      ).not.toBeInTheDocument();
     });
   });
 

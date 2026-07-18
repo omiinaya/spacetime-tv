@@ -1,7 +1,6 @@
 """Tests for /api/search — special characters, fallback paths, enrichment edge cases."""
 
 
-
 def test_search_special_chars(client_with_cache):
     """Search with special characters should not crash."""
     resp = client_with_cache.get("/api/v1/search?q=star+%26+wars")
@@ -15,10 +14,14 @@ def test_search_special_chars(client_with_cache):
 def test_search_section_filter_movies(client_with_cache):
     """section=movies returns only movies section."""
     from state import _cache
+
     _cache["vod_categories"] = (1000.0, [{"category_id": 10, "category_name": "EN - Action"}])
-    _cache["vod_10"] = (1000.0, [
-        {"stream_id": 100, "name": "The Dark Knight", "stream_icon": "", "container_extension": "mkv"},
-    ])
+    _cache["vod_10"] = (
+        1000.0,
+        [
+            {"stream_id": 100, "name": "The Dark Knight", "stream_icon": "", "container_extension": "mkv"},
+        ],
+    )
 
     resp = client_with_cache.get("/api/v1/search?q=knight&section=movies")
     assert resp.status_code == 200
@@ -32,10 +35,14 @@ def test_search_section_filter_movies(client_with_cache):
 def test_search_section_filter_series(client_with_cache):
     """section=series returns only series section."""
     from state import _cache
+
     _cache["series_categories"] = (1000.0, [{"category_id": 5, "category_name": "EN - Drama"}])
-    _cache["series_5"] = (1000.0, [
-        {"series_id": 50, "name": "Breaking Bad", "cover": "", "plot": ""},
-    ])
+    _cache["series_5"] = (
+        1000.0,
+        [
+            {"series_id": 50, "name": "Breaking Bad", "cover": "", "plot": ""},
+        ],
+    )
 
     resp = client_with_cache.get("/api/v1/search?q=breaking&section=series")
     assert resp.status_code == 200
@@ -48,10 +55,19 @@ def test_search_section_filter_series(client_with_cache):
 def test_search_series_plot_match(client_with_cache):
     """Series should match on plot field when name doesn't match."""
     from state import _cache
+
     _cache["series_categories"] = (1000.0, [{"category_id": 5, "category_name": "EN - Drama"}])
-    _cache["series_5"] = (1000.0, [
-        {"series_id": 50, "name": "BB", "cover": "", "plot": "A chemistry teacher turns to cooking methamphetamine"},
-    ])
+    _cache["series_5"] = (
+        1000.0,
+        [
+            {
+                "series_id": 50,
+                "name": "BB",
+                "cover": "",
+                "plot": "A chemistry teacher turns to cooking methamphetamine",
+            },
+        ],
+    )
 
     resp = client_with_cache.get("/api/v1/search?q=chemistry")
     assert resp.status_code == 200
@@ -63,10 +79,14 @@ def test_search_series_plot_match(client_with_cache):
 def test_search_unicode(client_with_cache):
     """Search with unicode characters should work."""
     from state import _cache
-    _cache["live_all"] = (1000.0, [
-        {"stream_id": 1, "name": "Café Français", "stream_icon": "", "category_id": "1"},
-        {"stream_id": 2, "name": "日本語チャンネル", "stream_icon": "", "category_id": "1"},
-    ])
+
+    _cache["live_all"] = (
+        1000.0,
+        [
+            {"stream_id": 1, "name": "Café Français", "stream_icon": "", "category_id": "1"},
+            {"stream_id": 2, "name": "日本語チャンネル", "stream_icon": "", "category_id": "1"},
+        ],
+    )
 
     resp = client_with_cache.get("/api/v1/search?q=caf%C3%A9")
     assert resp.status_code == 200
@@ -87,6 +107,7 @@ def test_search_vod_fallback_path(client):
 
     from routes import search as search_module
     from state import _cache
+
     original = search_module.cached_fetch
 
     # Pre-populate cache so _search_all finds data (it scans _cache directly)
@@ -118,6 +139,7 @@ def test_search_vod_fallback_path(client):
 def test_search_vod_fallback_with_exception(client):
     """VOD fallback should handle exceptions gracefully."""
     from routes import search as search_module
+
     original = search_module.cached_fetch
 
     async def failing_fetch(key, action, **params):
@@ -140,10 +162,13 @@ def test_search_vod_fallback_with_exception(client):
 
 def test_enrich_with_tmdb_cache(client):
     """Enrichment endpoint should cache results."""
-    resp = client.post("/api/v1/search/enrich", json={
-        "movies": [{"stream_id": 1, "tmdb_id": "550"}],
-        "series": [{"series_id": 2, "tmdb_id": "1399"}],
-    })
+    resp = client.post(
+        "/api/v1/search/enrich",
+        json={
+            "movies": [{"stream_id": 1, "tmdb_id": "550"}],
+            "series": [{"series_id": 2, "tmdb_id": "1399"}],
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert "movies" in data

@@ -13,7 +13,10 @@ describe("BackToTop", () => {
     document.body.innerHTML = "";
     document.body.appendChild(mainEl);
     // Set a reasonable clientHeight so scroll events work
-    Object.defineProperty(mainEl, "clientHeight", { value: 800, configurable: true });
+    Object.defineProperty(mainEl, "clientHeight", {
+      value: 800,
+      configurable: true,
+    });
   });
 
   afterEach(() => {
@@ -39,7 +42,10 @@ describe("BackToTop", () => {
     const btn = screen.getByRole("button", { name: /scroll to top/i });
 
     // Simulate scroll past 600px
-    Object.defineProperty(mainEl, "scrollTop", { value: 601, configurable: true });
+    Object.defineProperty(mainEl, "scrollTop", {
+      value: 601,
+      configurable: true,
+    });
     fireEvent.scroll(mainEl);
 
     expect(btn.className).toContain("opacity-100");
@@ -51,12 +57,18 @@ describe("BackToTop", () => {
     const btn = screen.getByRole("button", { name: /scroll to top/i });
 
     // Scroll past 600px → visible
-    Object.defineProperty(mainEl, "scrollTop", { value: 800, configurable: true });
+    Object.defineProperty(mainEl, "scrollTop", {
+      value: 800,
+      configurable: true,
+    });
     fireEvent.scroll(mainEl);
     expect(btn.className).toContain("opacity-100");
 
     // Scroll back up → hidden
-    Object.defineProperty(mainEl, "scrollTop", { value: 300, configurable: true });
+    Object.defineProperty(mainEl, "scrollTop", {
+      value: 300,
+      configurable: true,
+    });
     fireEvent.scroll(mainEl);
     expect(btn.className).toContain("opacity-0");
     expect(btn.className).toContain("pointer-events-none");
@@ -67,12 +79,18 @@ describe("BackToTop", () => {
     const btn = screen.getByRole("button", { name: /scroll to top/i });
 
     // Make visible first
-    Object.defineProperty(mainEl, "scrollTop", { value: 601, configurable: true });
+    Object.defineProperty(mainEl, "scrollTop", {
+      value: 601,
+      configurable: true,
+    });
     fireEvent.scroll(mainEl);
 
     fireEvent.click(btn);
 
-    expect(mainEl.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+    expect(mainEl.scrollTo).toHaveBeenCalledWith({
+      top: 0,
+      behavior: "smooth",
+    });
   });
 
   it("does nothing when no main element exists", () => {

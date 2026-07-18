@@ -11,7 +11,11 @@ import { Wifi, WifiOff } from "lucide-react";
  * @param {Object} props
  * @param {boolean} [props.showAlways] — If true, shows the banner even when online (for testing)
  */
-export default function OfflineBanner({ showAlways = false }: { showAlways?: boolean }) {
+export default function OfflineBanner({
+  showAlways = false,
+}: {
+  showAlways?: boolean;
+}) {
   const [offline, setOffline] = useState(false);
 
   useEffect(() => {

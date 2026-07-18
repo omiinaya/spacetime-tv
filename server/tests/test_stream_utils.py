@@ -11,22 +11,26 @@ import pytest
 # ── _mime_from_url ─────────────────────────────────────────────────────────────
 
 
-@pytest.mark.parametrize("url,expected", [
-    ("http://example.com/stream.ts", "video/mp2t"),
-    ("http://example.com/video.mkv", "video/x-matroska"),
-    ("http://example.com/movie.mp4", "video/mp4"),
-    ("http://example.com/movie.m4v", "video/mp4"),
-    ("http://example.com/clip.webm", "video/webm"),
-    ("http://example.com/old.avi", "video/x-msvideo"),
-    ("http://example.com/clip.mov", "video/quicktime"),
-    ("http://example.com/noext", "video/mp2t"),  # default fallback
-    ("http://example.com/unknown.xyz", "video/mp2t"),  # unknown ext → default
-    ("http://example.com/UPPERCASE.TS", "video/mp2t"),  # case insensitive
-    ("", "video/mp2t"),  # empty URL
-])
+@pytest.mark.parametrize(
+    "url,expected",
+    [
+        ("http://example.com/stream.ts", "video/mp2t"),
+        ("http://example.com/video.mkv", "video/x-matroska"),
+        ("http://example.com/movie.mp4", "video/mp4"),
+        ("http://example.com/movie.m4v", "video/mp4"),
+        ("http://example.com/clip.webm", "video/webm"),
+        ("http://example.com/old.avi", "video/x-msvideo"),
+        ("http://example.com/clip.mov", "video/quicktime"),
+        ("http://example.com/noext", "video/mp2t"),  # default fallback
+        ("http://example.com/unknown.xyz", "video/mp2t"),  # unknown ext → default
+        ("http://example.com/UPPERCASE.TS", "video/mp2t"),  # case insensitive
+        ("", "video/mp2t"),  # empty URL
+    ],
+)
 def test_mime_from_url(url, expected):
     """_mime_from_url maps extensions to MIME types."""
     from routes.stream import _mime_from_url
+
     assert _mime_from_url(url) == expected
 
 
@@ -36,12 +40,13 @@ def test_mime_from_url(url, expected):
 def test_generate_live_mpd_structure():
     """generate_live_mpd returns valid-looking MPD XML for live stream."""
     from routes.stream import generate_live_mpd
+
     xml = generate_live_mpd(12345, "http://cdn.example.com/live/12345.ts")
     assert '<?xml version="1.0" encoding="utf-8"?>' in xml
     assert "<MPD" in xml
     assert 'profiles="urn:mpeg:dash:profile:isoff-live:2011"' in xml
     assert 'type="dynamic"' in xml
-    assert "<Period id=\"1\">" in xml
+    assert '<Period id="1">' in xml
     assert "<AdaptationSet" in xml
     assert "<BaseURL>http://cdn.example.com/live/12345.ts</BaseURL>" in xml
     assert "<SegmentBase" in xml
@@ -51,6 +56,7 @@ def test_generate_live_mpd_structure():
 def test_generate_live_mpd_contains_stream_id():
     """generate_live_mpd includes the stream_id in the MPD."""
     from routes.stream import generate_live_mpd
+
     xml = generate_live_mpd(42, "http://cdn.test/live/42.ts")
     assert "42" in xml
 
@@ -58,7 +64,8 @@ def test_generate_live_mpd_contains_stream_id():
 def test_generate_live_mpd_xml_escaping():
     """Special characters in stream URL are XML-escaped."""
     from routes.stream import generate_live_mpd
-    url = "http://cdn.test/live/1.ts?token=a&b<c>d\"e"
+
+    url = 'http://cdn.test/live/1.ts?token=a&b<c>d"e'
     xml = generate_live_mpd(1, url)
     assert "&amp;" in xml
     assert "&lt;" in xml
@@ -71,6 +78,7 @@ def test_generate_live_mpd_xml_escaping():
 def test_generate_live_mpd_has_timestamps():
     """Live MPD includes availabilityStartTime and publishTime."""
     from routes.stream import generate_live_mpd
+
     xml = generate_live_mpd(1, "http://test/stream.ts")
     assert "availabilityStartTime" in xml
     assert "publishTime" in xml
@@ -82,6 +90,7 @@ def test_generate_live_mpd_has_timestamps():
 def test_generate_vod_mpd_structure():
     """generate_vod_mpd returns valid-looking static MPD."""
     from routes.stream import generate_vod_mpd
+
     xml = generate_vod_mpd(100, "movie", "http://cdn.example.com/movie/100.mkv")
     assert '<?xml version="1.0" encoding="utf-8"?>' in xml
     assert "<MPD" in xml
@@ -94,6 +103,7 @@ def test_generate_vod_mpd_structure():
 def test_generate_vod_mpd_series_type():
     """VOD MPD generation works for series stream type."""
     from routes.stream import generate_vod_mpd
+
     xml = generate_vod_mpd(555, "series", "http://cdn.test/series/555.mp4")
     assert "<BaseURL>http://cdn.test/series/555.mp4</BaseURL>" in xml
 
@@ -101,6 +111,7 @@ def test_generate_vod_mpd_series_type():
 def test_generate_vod_mpd_xml_escaping():
     """VOD MPD URL is XML-escaped like live MPD."""
     from routes.stream import generate_vod_mpd
+
     url = "http://test/stream?x=1&y=2"
     xml = generate_vod_mpd(1, "movie", url)
     assert "&amp;" in xml
@@ -222,7 +233,7 @@ def test_movie_dash_manifest_returns_mpd(client):
     assert resp.headers.get("content-type", "").startswith("application/dash+xml")
     assert b"<MPD" in resp.content
     assert b"on-demand" in resp.content
-    assert b"type=\"static\"" in resp.content
+    assert b'type="static"' in resp.content
 
 
 def test_series_dash_manifest_returns_mpd(client):

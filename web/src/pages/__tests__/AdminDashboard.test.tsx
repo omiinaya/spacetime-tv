@@ -8,7 +8,13 @@
  * search queries (populated and empty), and interactive button functionality.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "@/mocks/server";
 import AdminDashboard from "@/pages/AdminDashboard";
@@ -37,8 +43,16 @@ const sampleStats = {
   errors: {
     total: 42,
     recent: [
-      { ts: 1719500000, message: "Connection timeout", path: "/api/live/streams" },
-      { ts: 1719490000, message: "Cache miss for series 123", path: "/api/series/123" },
+      {
+        ts: 1719500000,
+        message: "Connection timeout",
+        path: "/api/live/streams",
+      },
+      {
+        ts: 1719490000,
+        message: "Cache miss for series 123",
+        path: "/api/series/123",
+      },
     ],
   },
   searches: {
@@ -80,9 +94,7 @@ const sampleStatsNegativeHitRate: typeof sampleStats = {
 // ── Before each test, set up MSW handlers for admin endpoints ──
 beforeEach(() => {
   server.use(
-    http.get("/api/admin/stats", () =>
-      HttpResponse.json(sampleStats),
-    ),
+    http.get("/api/admin/stats", () => HttpResponse.json(sampleStats)),
     http.post("/api/admin/cache/clear", () =>
       HttpResponse.json({ message: "Cache cleared" }),
     ),
@@ -199,7 +211,9 @@ describe("AdminDashboard", () => {
 
   it("shows empty state when no popular content", async () => {
     server.use(
-      http.get("/api/admin/stats", () => HttpResponse.json(sampleStatsEmptyPopular)),
+      http.get("/api/admin/stats", () =>
+        HttpResponse.json(sampleStatsEmptyPopular),
+      ),
     );
     renderDashboard();
     await waitFor(() => {
@@ -220,7 +234,9 @@ describe("AdminDashboard", () => {
 
   it("shows empty state when no errors recorded", async () => {
     server.use(
-      http.get("/api/admin/stats", () => HttpResponse.json(sampleStatsEmptyErrors)),
+      http.get("/api/admin/stats", () =>
+        HttpResponse.json(sampleStatsEmptyErrors),
+      ),
     );
     renderDashboard();
     await waitFor(() => {
@@ -240,7 +256,9 @@ describe("AdminDashboard", () => {
 
   it("shows empty state when no search queries", async () => {
     server.use(
-      http.get("/api/admin/stats", () => HttpResponse.json(sampleStatsEmptySearches)),
+      http.get("/api/admin/stats", () =>
+        HttpResponse.json(sampleStatsEmptySearches),
+      ),
     );
     renderDashboard();
     await waitFor(() => {
@@ -250,7 +268,9 @@ describe("AdminDashboard", () => {
 
   it("shows — for hit rate when negative in the stat card", async () => {
     server.use(
-      http.get("/api/admin/stats", () => HttpResponse.json(sampleStatsNegativeHitRate)),
+      http.get("/api/admin/stats", () =>
+        HttpResponse.json(sampleStatsNegativeHitRate),
+      ),
     );
     renderDashboard();
     // Wait for stats to load (check for Cache Entries card first)
@@ -262,12 +282,15 @@ describe("AdminDashboard", () => {
     const dashes = screen.getAllByText("—");
     expect(dashes.length).toBeGreaterThanOrEqual(1);
     // The first dash should be in the stat card's value div
-    expect(dashes[0].closest('.text-2xl')).toBeTruthy();
+    expect(dashes[0].closest(".text-2xl")).toBeTruthy();
   });
 
   it("shows error state with retry button on fetch failure", async () => {
     server.use(
-      http.get("/api/admin/stats", () => new HttpResponse(null, { status: 500 })),
+      http.get(
+        "/api/admin/stats",
+        () => new HttpResponse(null, { status: 500 }),
+      ),
     );
     renderDashboard();
     await waitFor(() => {
@@ -279,7 +302,10 @@ describe("AdminDashboard", () => {
   it("retry button re-fetches stats after error", async () => {
     // First call fails
     server.use(
-      http.get("/api/admin/stats", () => new HttpResponse(null, { status: 500 })),
+      http.get(
+        "/api/admin/stats",
+        () => new HttpResponse(null, { status: 500 }),
+      ),
     );
     renderDashboard();
     await waitFor(() => {

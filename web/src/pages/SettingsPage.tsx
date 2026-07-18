@@ -1,5 +1,23 @@
 import { useEffect, useState, useMemo } from "react";
-import { Settings, Globe, EyeOff, Film, Tv2, Tv, RotateCcw, Check, Search, Lock, Sun, Moon, Monitor, Cloud, Upload, Download, Merge } from "lucide-react";
+import {
+  Settings,
+  Globe,
+  EyeOff,
+  Film,
+  Tv2,
+  Tv,
+  RotateCcw,
+  Check,
+  Search,
+  Lock,
+  Sun,
+  Moon,
+  Monitor,
+  Cloud,
+  Upload,
+  Download,
+  Merge,
+} from "lucide-react";
 import { api, Category } from "@/lib/api";
 import { useSettings } from "@/context/SettingsContext";
 import {
@@ -13,7 +31,15 @@ import { isPinConfigured } from "@/lib/settings";
 import { useCloudBackup } from "@/hooks/useCloudBackup";
 
 export default function SettingsPage() {
-  const { settings, update, reset, adultUnlocked, setAdultPin, clearAdultPin, lockAdult } = useSettings();
+  const {
+    settings,
+    update,
+    reset,
+    adultUnlocked,
+    setAdultPin,
+    clearAdultPin,
+    lockAdult,
+  } = useSettings();
 
   const [liveCats, setLiveCats] = useState<Category[]>([]);
   const [movieCats, setMovieCats] = useState<Category[]>([]);
@@ -29,8 +55,15 @@ export default function SettingsPage() {
 
   const pinConfigured = isPinConfigured(settings);
   const {
-    uploadBackup, downloadBackup, mergeFavorites,
-    backupStatus: { lastUpload, lastDownload, loading: cloudLoading, error: cloudError },
+    uploadBackup,
+    downloadBackup,
+    mergeFavorites,
+    backupStatus: {
+      lastUpload,
+      lastDownload,
+      loading: cloudLoading,
+      error: cloudError,
+    },
   } = useCloudBackup();
 
   const handleSetPin = async (pin: string) => {
@@ -57,9 +90,18 @@ export default function SettingsPage() {
 
   useEffect(() => {
     Promise.all([
-      api.live.categories().then((d) => d.categories).catch(() => []),
-      api.movies.categories().then((d) => d.categories).catch(() => []),
-      api.series.categories().then((d) => d.categories).catch(() => []),
+      api.live
+        .categories()
+        .then((d) => d.categories)
+        .catch(() => []),
+      api.movies
+        .categories()
+        .then((d) => d.categories)
+        .catch(() => []),
+      api.series
+        .categories()
+        .then((d) => d.categories)
+        .catch(() => []),
     ])
       .then(([l, m, s]) => {
         setLiveCats(l);
@@ -72,12 +114,12 @@ export default function SettingsPage() {
   // Collect all prefixes across content types
   const allPrefixes = useMemo(
     () => collectAllPrefixes(liveCats, movieCats, seriesCats),
-    [liveCats, movieCats, seriesCats]
+    [liveCats, movieCats, seriesCats],
   );
 
   const allServices = useMemo(
     () => collectAllServices(movieCats, seriesCats),
-    [movieCats, seriesCats]
+    [movieCats, seriesCats],
   );
 
   // Count how many categories would be visible with current settings
@@ -117,13 +159,29 @@ export default function SettingsPage() {
 
   // All categories for the hide list (searchable)
   const allCats = useMemo(() => {
-    const cats: { id: string; name: string; type: string; hidden: boolean }[] = [];
+    const cats: { id: string; name: string; type: string; hidden: boolean }[] =
+      [];
     for (const c of liveCats)
-      cats.push({ id: c.category_id, name: c.category_name, type: "Live TV", hidden: settings.hiddenCategories.includes(c.category_id) });
+      cats.push({
+        id: c.category_id,
+        name: c.category_name,
+        type: "Live TV",
+        hidden: settings.hiddenCategories.includes(c.category_id),
+      });
     for (const c of movieCats)
-      cats.push({ id: c.category_id, name: c.category_name, type: "Movies", hidden: settings.hiddenCategories.includes(c.category_id) });
+      cats.push({
+        id: c.category_id,
+        name: c.category_name,
+        type: "Movies",
+        hidden: settings.hiddenCategories.includes(c.category_id),
+      });
     for (const c of seriesCats)
-      cats.push({ id: c.category_id, name: c.category_name, type: "Series", hidden: settings.hiddenCategories.includes(c.category_id) });
+      cats.push({
+        id: c.category_id,
+        name: c.category_name,
+        type: "Series",
+        hidden: settings.hiddenCategories.includes(c.category_id),
+      });
     return cats;
   }, [liveCats, movieCats, seriesCats, settings.hiddenCategories]);
 
@@ -209,7 +267,13 @@ export default function SettingsPage() {
           Choose your preferred appearance.
         </p>
         <div className="flex gap-2">
-          {([["dark", "Dark", Moon], ["light", "Light", Sun], ["system", "System", Monitor]] as const).map(([mode, label, Icon]) => (
+          {(
+            [
+              ["dark", "Dark", Moon],
+              ["light", "Light", Sun],
+              ["system", "System", Monitor],
+            ] as const
+          ).map(([mode, label, Icon]) => (
             <button
               key={mode}
               onClick={() => update({ theme: mode })}
@@ -282,7 +346,8 @@ export default function SettingsPage() {
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          Show only movies/series from specific streaming platforms. Leave empty to show all.
+          Show only movies/series from specific streaming platforms. Leave empty
+          to show all.
         </p>
         <div className="flex flex-wrap gap-1.5">
           <button
@@ -331,7 +396,9 @@ export default function SettingsPage() {
           <button
             onClick={handleAdultToggle}
             className={`relative w-9 h-5 rounded-full transition-colors ${
-              settings.showAdult ? "bg-primary" : "bg-muted border border-border"
+              settings.showAdult
+                ? "bg-primary"
+                : "bg-muted border border-border"
             }`}
           >
             <span
@@ -341,11 +408,16 @@ export default function SettingsPage() {
             />
           </button>
           <span className="text-xs text-muted-foreground">
-            {settings.showAdult ? "Adult content is visible" : "Adult content is hidden"}
+            {settings.showAdult
+              ? "Adult content is visible"
+              : "Adult content is hidden"}
           </span>
           {adultUnlocked && (
             <button
-              onClick={(e) => { e.stopPropagation(); lockAdult(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                lockAdult();
+              }}
               className="text-[10px] px-2 py-0.5 rounded border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/30 transition-colors"
             >
               Lock again
@@ -401,12 +473,10 @@ export default function SettingsPage() {
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          Sync your channel favorites and watchlist across devices. Data is stored on the
-          server and keyed to this browser's device ID.
+          Sync your channel favorites and watchlist across devices. Data is
+          stored on the server and keyed to this browser's device ID.
         </p>
-        {cloudError && (
-          <p className="text-xs text-red-500">{cloudError}</p>
-        )}
+        {cloudError && <p className="text-xs text-red-500">{cloudError}</p>}
         <div className="flex flex-wrap gap-2">
           <button
             onClick={async () => {
@@ -424,7 +494,10 @@ export default function SettingsPage() {
               if (data) {
                 // Apply downloaded favorites to localStorage
                 try {
-                  localStorage.setItem("stv_channel_favorites", JSON.stringify(data.favorites));
+                  localStorage.setItem(
+                    "stv_channel_favorites",
+                    JSON.stringify(data.favorites),
+                  );
                   window.location.reload();
                 } catch {} // DOMException: storage quota or disabled
               }
@@ -439,7 +512,10 @@ export default function SettingsPage() {
             onClick={async () => {
               const merged = await mergeFavorites();
               if (merged) {
-                localStorage.setItem("stv_channel_favorites", JSON.stringify(merged));
+                localStorage.setItem(
+                  "stv_channel_favorites",
+                  JSON.stringify(merged),
+                );
                 window.location.reload();
               }
             }}
@@ -504,7 +580,9 @@ export default function SettingsPage() {
                 <span className="text-[10px] text-muted-foreground/60 w-14 shrink-0">
                   {cat.type}
                 </span>
-                <span className={`text-[11px] truncate ${cat.hidden ? "text-muted-foreground/40 line-through" : ""}`}>
+                <span
+                  className={`text-[11px] truncate ${cat.hidden ? "text-muted-foreground/40 line-through" : ""}`}
+                >
                   {cat.name}
                 </span>
               </label>
@@ -530,9 +608,18 @@ function PinSetup({ onSet }: { onSet: (pin: string) => Promise<void> }) {
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async () => {
-    if (pin.length < 4) { setError("PIN must be at least 4 digits"); return; }
-    if (!/^\d+$/.test(pin)) { setError("PIN must be digits only"); return; }
-    if (pin !== confirm) { setError("PINs do not match"); return; }
+    if (pin.length < 4) {
+      setError("PIN must be at least 4 digits");
+      return;
+    }
+    if (!/^\d+$/.test(pin)) {
+      setError("PIN must be digits only");
+      return;
+    }
+    if (pin !== confirm) {
+      setError("PINs do not match");
+      return;
+    }
     setError("");
     await onSet(pin);
     setSuccess(true);
@@ -549,7 +636,8 @@ function PinSetup({ onSet }: { onSet: (pin: string) => Promise<void> }) {
   return (
     <div className="space-y-2 p-3 rounded-lg border border-border bg-card">
       <p className="text-xs text-muted-foreground">
-        Set a PIN to protect adult content. You&apos;ll need to enter it each session to view adult channels.
+        Set a PIN to protect adult content. You&apos;ll need to enter it each
+        session to view adult channels.
       </p>
       <div className="flex gap-2">
         <input
@@ -597,7 +685,10 @@ function PinManager({
         Change PIN
       </button>
       <button
-        onClick={() => { if (confirm("Remove your PIN? Adult content will be unprotected.")) onRemovePin(); }}
+        onClick={() => {
+          if (confirm("Remove your PIN? Adult content will be unprotected."))
+            onRemovePin();
+        }}
         className="px-3 py-1.5 rounded border border-red-500/30 text-xs text-red-500 hover:bg-red-500/10 transition-colors"
       >
         Remove PIN

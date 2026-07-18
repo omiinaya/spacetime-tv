@@ -143,6 +143,7 @@ async def warm_cache():
     try:
         log.info("[WARMER] Pre-warming EPG...")
         from routes.guide import load_epg
+
         epg_data = await load_epg()
         channels = epg_data.get("channels", [])
         programmes = epg_data.get("programmes", [])
@@ -175,7 +176,9 @@ async def _verify_cache_coherence():
                 warnings_issued += 1
         else:
             if pattern not in _cache:
-                log.warning(f"[CACHE-COHERENCE] Missing cache key '{pattern}' (alias '{name}') -- endpoint may serve stale/empty data")
+                log.warning(
+                    f"[CACHE-COHERENCE] Missing cache key '{pattern}' (alias '{name}') -- endpoint may serve stale/empty data"
+                )
                 warnings_issued += 1
     if warnings_issued:
         log.warning(f"[CACHE-COHERENCE] {warnings_issued} coherence warnings -- check for key drift")

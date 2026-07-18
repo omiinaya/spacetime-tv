@@ -22,9 +22,45 @@ vi.mock("@/lib/api", () => ({
 import { api } from "@/lib/api";
 
 const sampleMovies = [
-  { stream_id: 1, name: "Movie One", stream_icon: "/icons/movie1.jpg", rating: "8.5", stream_type: "movie", added: "", category_id: "1", category_ids: ["1"], container_extension: "mp4", custom_sid: null, direct_source: "" },
-  { stream_id: 2, name: "Movie Two", stream_icon: "/icons/movie2.jpg", rating: "7.2", stream_type: "movie", added: "", category_id: "1", category_ids: ["1"], container_extension: "mp4", custom_sid: null, direct_source: "" },
-  { stream_id: 3, name: "Movie Three", stream_icon: "", rating: "", stream_type: "movie", added: "", category_id: "1", category_ids: ["1"], container_extension: "mp4", custom_sid: null, direct_source: "" },
+  {
+    stream_id: 1,
+    name: "Movie One",
+    stream_icon: "/icons/movie1.jpg",
+    rating: "8.5",
+    stream_type: "movie",
+    added: "",
+    category_id: "1",
+    category_ids: ["1"],
+    container_extension: "mp4",
+    custom_sid: null,
+    direct_source: "",
+  },
+  {
+    stream_id: 2,
+    name: "Movie Two",
+    stream_icon: "/icons/movie2.jpg",
+    rating: "7.2",
+    stream_type: "movie",
+    added: "",
+    category_id: "1",
+    category_ids: ["1"],
+    container_extension: "mp4",
+    custom_sid: null,
+    direct_source: "",
+  },
+  {
+    stream_id: 3,
+    name: "Movie Three",
+    stream_icon: "",
+    rating: "",
+    stream_type: "movie",
+    added: "",
+    category_id: "1",
+    category_ids: ["1"],
+    container_extension: "mp4",
+    custom_sid: null,
+    direct_source: "",
+  },
 ];
 
 describe("SimilarMovies", () => {

@@ -8,7 +8,10 @@ interface PlayerErrorOverlayProps {
 }
 
 export default function PlayerErrorOverlay({
-  phase, errorMsg, errorType, onRetry,
+  phase,
+  errorMsg,
+  errorType,
+  onRetry,
 }: PlayerErrorOverlayProps) {
   if (phase !== "error") return null;
 
@@ -25,7 +28,9 @@ export default function PlayerErrorOverlay({
       ) : (
         <AlertCircle className="w-10 h-10 text-red-400" />
       )}
-      <p className="text-white/70 text-sm max-w-md text-center">{errorMsg || "Playback failed."}</p>
+      <p className="text-white/70 text-sm max-w-md text-center">
+        {errorMsg || "Playback failed."}
+      </p>
       {errorType === "retry_exhausted" && (
         <p className="text-white/40 text-xs max-w-sm text-center">
           The channel may be offline or experiencing high traffic.
@@ -38,7 +43,8 @@ export default function PlayerErrorOverlay({
       )}
       {errorType === "empty_stream" && (
         <p className="text-white/40 text-xs max-w-sm text-center">
-          The CDN edge server does not have this content. Try again or pick a different source.
+          The CDN edge server does not have this content. Try again or pick a
+          different source.
         </p>
       )}
       {errorType === "transcode_timeout" && (

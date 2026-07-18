@@ -166,9 +166,7 @@ describe("TmdbSimilarShows", () => {
 
     screen.getByText("Similar Show 1").click();
 
-    expect(mockNavigate).toHaveBeenCalledWith(
-      "/series?q=Similar%20Show%201",
-    );
+    expect(mockNavigate).toHaveBeenCalledWith("/series?q=Similar%20Show%201");
   });
 
   it("handles API error gracefully", async () => {

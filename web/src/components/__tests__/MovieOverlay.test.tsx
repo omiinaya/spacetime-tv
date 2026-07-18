@@ -15,7 +15,8 @@ import type { UnifiedMovie, MovieInfo } from "@/lib/api";
 // ── Router mock ──────────────────────────────────────────
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
-  const actual = await vi.importActual<typeof import("react-router")>("react-router");
+  const actual =
+    await vi.importActual<typeof import("react-router")>("react-router");
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
@@ -36,7 +37,9 @@ vi.mock("@/lib/api", () => ({
   api: {
     movies: {
       details: (...args: unknown[]) =>
-        (mockMovieDetails as (...a: unknown[]) => Promise<{ info: MovieInfo }>)(...args),
+        (mockMovieDetails as (...a: unknown[]) => Promise<{ info: MovieInfo }>)(
+          ...args,
+        ),
     },
     tmdb: {
       details: (...args: unknown[]) =>
@@ -103,7 +106,10 @@ const tmdbEnrichment = {
     backdrop_path: "/tmdb_backdrop.jpg",
     poster_path: "/tmdb_poster.jpg",
     vote_average: 8.5,
-    genres: [{ id: 28, name: "Action" }, { id: 878, name: "Science Fiction" }],
+    genres: [
+      { id: 28, name: "Action" },
+      { id: 878, name: "Science Fiction" },
+    ],
     runtime: 148,
     status: "Released",
     release_date: "2010-07-16",
@@ -115,7 +121,7 @@ function renderOverlay(movie: UnifiedMovie = sampleMovie) {
   return render(
     <MemoryRouter>
       <MovieOverlay movie={movie} onClose={vi.fn()} />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -204,7 +210,7 @@ describe("MovieOverlay", () => {
     const tmdbLink = await screen.findByText("TMDB");
     expect(tmdbLink.closest("a")).toHaveAttribute(
       "href",
-      "https://www.themoviedb.org/movie/27205"
+      "https://www.themoviedb.org/movie/27205",
     );
   });
 
@@ -288,9 +294,7 @@ describe("MovieOverlay", () => {
 
     const castBtn = await screen.findByText("Leonardo DiCaprio");
     fireEvent.click(castBtn);
-    expect(mockNavigate).toHaveBeenCalledWith(
-      "/person/Leonardo%20DiCaprio"
-    );
+    expect(mockNavigate).toHaveBeenCalledWith("/person/Leonardo%20DiCaprio");
   });
 
   // ── Recommendation sections ──────────────────────────

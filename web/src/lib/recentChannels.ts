@@ -24,7 +24,11 @@ export function getRecentChannels(): RecentChannel[] {
   }
 }
 
-export function saveRecentChannel(channel: { stream_id: number; name: string; icon: string }) {
+export function saveRecentChannel(channel: {
+  stream_id: number;
+  name: string;
+  icon: string;
+}) {
   const items = getRecentChannels();
   const filtered = items.filter((i) => i.stream_id !== channel.stream_id);
   filtered.unshift({ ...channel, watchedAt: Date.now() });
@@ -35,5 +39,7 @@ export function saveRecentChannel(channel: { stream_id: number; name: string; ic
 }
 
 export function clearRecentChannels() {
-  try { localStorage.removeItem(KEY); } catch {} // DOMException: storage quota
+  try {
+    localStorage.removeItem(KEY);
+  } catch {} // DOMException: storage quota
 }

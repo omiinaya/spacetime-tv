@@ -10,12 +10,7 @@ import {
   Loader2,
   ArrowLeft,
 } from "lucide-react";
-import {
-  api,
-  type TmdbPersonInfo,
-  type TmdbPersonCredit,
-} from "@/lib/api";
-
+import { api, type TmdbPersonInfo, type TmdbPersonCredit } from "@/lib/api";
 
 export default function PersonPage() {
   const { encodedName } = useParams<{ encodedName: string }>();
@@ -38,39 +33,51 @@ export default function PersonPage() {
     setLoading(true);
     setError(null);
 
-    api.tmdb.person.search(name).then((resp) => {
-      if (cancelled) return;
-      if (!resp.enabled || !resp.info) {
-        setError(`No results found for "${name}"`);
+    api.tmdb.person
+      .search(name)
+      .then((resp) => {
+        if (cancelled) return;
+        if (!resp.enabled || !resp.info) {
+          setError(`No results found for "${name}"`);
+          setLoading(false);
+          return;
+        }
+        setInfo(resp.info);
+        // If the resolved name differs, update URL
+        if (resp.info.name !== name) {
+          window.history.replaceState(
+            null,
+            "",
+            `/person/${encodeURIComponent(resp.info.name)}`,
+          );
+        }
         setLoading(false);
-        return;
-      }
-      setInfo(resp.info);
-      // If the resolved name differs, update URL
-      if (resp.info.name !== name) {
-        window.history.replaceState(
-          null,
-          "",
-          `/person/${encodeURIComponent(resp.info.name)}`
-        );
-      }
-      setLoading(false);
-    }).catch(() => {
-      if (!cancelled) {
-        setError("Could not search for person");
-        setLoading(false);
-      }
-    });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError("Could not search for person");
+          setLoading(false);
+        }
+      });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [name]);
 
   // ── Derived ──────────────────────────────────────────────────────
   const credits = info?.known_for || [];
   const formatDate = (d: string | null) => {
     if (!d) return "";
-    try { return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }); }
-    catch { return d; } // render error — expected with incomplete state
+    try {
+      return new Date(d).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return d;
+    } // render error — expected with incomplete state
   };
   const age = (birthday: string | null) => {
     if (!birthday) return "";

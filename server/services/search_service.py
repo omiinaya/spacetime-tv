@@ -1,4 +1,5 @@
 """Service layer for search operations extracted from routes/search.py."""
+
 import asyncio
 import json
 import logging
@@ -36,9 +37,11 @@ async def enrich_tmdb_item(item_type: str, tmdb_id: str) -> dict | None:
     # Try API-key path first (richer data)
     if item_type == "movie" and TMDB_API_KEY:
         from routes.tmdb import tmdb_fetch  # type: ignore[import-unused]
+
         data = await tmdb_fetch(f"movie/{tmdb_id}")
     elif item_type == "tv" and TMDB_API_KEY:
         from routes.tmdb import tmdb_fetch  # type: ignore[import-unused]
+
         data = await tmdb_fetch(f"tv/{tmdb_id}")
     else:
         if not _TMDB_ENRICH:
@@ -47,7 +50,9 @@ async def enrich_tmdb_item(item_type: str, tmdb_id: str) -> dict | None:
         # Fallback: try tmdb-enrich CLI (browserless extraction)
         try:
             proc = await asyncio.create_subprocess_exec(
-                _TMDB_ENRICH, "--json", "enrich",
+                _TMDB_ENRICH,
+                "--json",
+                "enrich",
                 f"{'movie' if item_type == 'movie' else 'tv'}/{tmdb_id}",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -81,17 +86,21 @@ async def search_all_vod(query: str, provider_idx: int = -1) -> list:
     """Fetch all VOD streams matching query across all providers."""
     try:
         from iptv_client import get_enabled_providers, fetch_all_providers
+
         providers = get_enabled_providers()
         if provider_idx >= 0 and provider_idx < len(providers):
             # Specific provider requested
             from iptv_client import _fetch_single_provider
+
             provider = providers[provider_idx]
             vod_cats = await cached_fetch(CACHE_VOD_CATEGORIES, "get_vod_categories")
             cat_ids = set(c["category_id"] for c in vod_cats if c.get("category_id"))
             sem = asyncio.Semaphore(20)
+
             async def f(cid):
                 async with sem:
                     return await _fetch_single_provider(provider, "get_vod_streams", category_id=cid)
+
             all_results = await asyncio.gather(*[f(cid) for cid in cat_ids], return_exceptions=True)
             seen = set()
             out = []
@@ -110,9 +119,11 @@ async def search_all_vod(query: str, provider_idx: int = -1) -> list:
             vod_cats = await cached_fetch(CACHE_VOD_CATEGORIES, "get_vod_categories")
             cat_ids = set(c["category_id"] for c in vod_cats if c.get("category_id"))
             sem = asyncio.Semaphore(20)
+
             async def f(cid):
                 async with sem:
                     return await fetch_all_providers("get_vod_streams", category_id=cid)
+
             all_results = await asyncio.gather(*[f(cid) for cid in cat_ids], return_exceptions=True)
             seen = set()
             out = []
@@ -131,9 +142,11 @@ async def search_all_vod(query: str, provider_idx: int = -1) -> list:
             vod_cats = await cached_fetch(CACHE_VOD_CATEGORIES, "get_vod_categories")
             cat_ids = [c["category_id"] for c in vod_cats if c.get("category_id")]
             sem = asyncio.Semaphore(20)
+
             async def f(cid):
                 async with sem:
                     return await cached_fetch(CACHE_VOD_CAT.format(id=cid), "get_vod_streams", category_id=cid)
+
             all_streams = await asyncio.gather(*[f(cid) for cid in cat_ids], return_exceptions=True)
             seen = set()
             out = []
@@ -156,17 +169,21 @@ async def search_all_series(query: str, provider_idx: int = -1) -> list:
     """Fetch all series matching query across all providers."""
     try:
         from iptv_client import get_enabled_providers, fetch_all_providers
+
         providers = get_enabled_providers()
         if provider_idx >= 0 and provider_idx < len(providers):
             # Specific provider requested
             from iptv_client import _fetch_single_provider
+
             provider = providers[provider_idx]
             cats = await cached_fetch(CACHE_SERIES_CATEGORIES, "get_series_categories")
             cat_ids = set(c["category_id"] for c in cats if c.get("category_id"))
             sem = asyncio.Semaphore(20)
+
             async def f(cid):
                 async with sem:
                     return await _fetch_single_provider(provider, "get_series", category_id=cid)
+
             all_series_data = await asyncio.gather(*[f(cid) for cid in cat_ids], return_exceptions=True)
             seen = set()
             out = []
@@ -187,9 +204,11 @@ async def search_all_series(query: str, provider_idx: int = -1) -> list:
             cats = await cached_fetch(CACHE_SERIES_CATEGORIES, "get_series_categories")
             cat_ids = set(c["category_id"] for c in cats if c.get("category_id"))
             sem = asyncio.Semaphore(20)
+
             async def f(cid):
                 async with sem:
                     return await fetch_all_providers("get_series", category_id=cid)
+
             all_series_data = await asyncio.gather(*[f(cid) for cid in cat_ids], return_exceptions=True)
             seen = set()
             out = []
@@ -210,9 +229,11 @@ async def search_all_series(query: str, provider_idx: int = -1) -> list:
             cats = await cached_fetch(CACHE_SERIES_CATEGORIES, "get_series_categories")
             cat_ids = [c["category_id"] for c in cats if c.get("category_id")]
             sem = asyncio.Semaphore(20)
+
             async def f(cid):
                 async with sem:
                     return await cached_fetch(CACHE_SERIES_CAT.format(id=cid), "get_series", category_id=cid)
+
             all_series_data = await asyncio.gather(*[f(cid) for cid in cat_ids], return_exceptions=True)
             seen = set()
             out = []
@@ -232,6 +253,7 @@ async def search_all_series(query: str, provider_idx: int = -1) -> list:
         log.error(f"Series search error: {e}")
         return []
 
+
 async def search_from_cache(
     query: str,
     prefix: str,
@@ -242,6 +264,7 @@ async def search_from_cache(
     """Scan ALL cache entries with a given prefix, return ALL matches."""
     if cache is None:
         from state import _cache
+
         cache = _cache
     seen: set = set()
     out: list = []
@@ -265,6 +288,7 @@ async def search_live_channels(query: str, provider_idx: int = -1) -> list:
     """Search live channels by name from cache."""
     from state import CACHE_LIVE_ALL
     from iptv_client import cached_fetch
+
     try:
         all_live = await cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
         return [ch for ch in all_live if query in (ch.get("name") or "").lower()]

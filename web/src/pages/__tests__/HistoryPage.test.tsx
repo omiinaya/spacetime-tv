@@ -23,7 +23,8 @@ vi.mock("@/lib/recentChannels", () => ({
 // ── Mock navigate ──────────────────────────────────────────
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
-  const actual = await vi.importActual<typeof import("react-router")>("react-router");
+  const actual =
+    await vi.importActual<typeof import("react-router")>("react-router");
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -81,7 +82,9 @@ describe("HistoryPage", () => {
     it("shows a Clock icon in the empty state", () => {
       renderHistoryPage();
       // The Clock icon is rendered inside the empty state section
-      const emptySection = screen.getByText("No watch history yet").closest("div");
+      const emptySection = screen
+        .getByText("No watch history yet")
+        .closest("div");
       expect(emptySection?.querySelector("svg")).toBeInTheDocument();
     });
 
@@ -129,8 +132,7 @@ describe("HistoryPage", () => {
       const images = screen.getAllByRole("img");
       // Two channels have icons
       const bbcImg = images.find(
-        (img) =>
-          img.getAttribute("alt") === "BBC One logo",
+        (img) => img.getAttribute("alt") === "BBC One logo",
       );
       expect(bbcImg).toBeInTheDocument();
       expect(bbcImg).toHaveAttribute("loading", "lazy");
@@ -214,12 +216,15 @@ describe("HistoryPage", () => {
     });
 
     it("handles many channels (max 12)", () => {
-      const manyChannels: RecentChannel[] = Array.from({ length: 12 }, (_, i) => ({
-        stream_id: i + 100,
-        name: `Channel ${i + 1}`,
-        icon: "",
-        watchedAt: Date.now() - i * 1000,
-      }));
+      const manyChannels: RecentChannel[] = Array.from(
+        { length: 12 },
+        (_, i) => ({
+          stream_id: i + 100,
+          name: `Channel ${i + 1}`,
+          icon: "",
+          watchedAt: Date.now() - i * 1000,
+        }),
+      );
       mockGetRecentChannels.mockReturnValue(manyChannels);
       renderHistoryPage();
       // Should render all 12

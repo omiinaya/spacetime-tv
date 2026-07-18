@@ -1,5 +1,16 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { X, Search, Play, SkipBack, SkipForward, Maximize, VolumeX, ChevronUp, ChevronDown, Keyboard } from "lucide-react";
+import {
+  X,
+  Search,
+  Play,
+  SkipBack,
+  SkipForward,
+  Maximize,
+  VolumeX,
+  ChevronUp,
+  ChevronDown,
+  Keyboard,
+} from "lucide-react";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface Shortcut {
@@ -90,7 +101,9 @@ export default function KeyboardShortcuts() {
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <Keyboard className="h-4 w-4 text-primary" />
             </div>
-            <span className="text-sm font-semibold text-white">Keyboard Shortcuts</span>
+            <span className="text-sm font-semibold text-white">
+              Keyboard Shortcuts
+            </span>
           </div>
           <button
             onClick={close}
@@ -117,7 +130,9 @@ export default function KeyboardShortcuts() {
                     <span className="text-sm text-white/60">{s.label}</span>
                     <div className="flex items-center gap-1">
                       {iconForKey(s.key) && (
-                        <span className="text-white/30">{iconForKey(s.key)}</span>
+                        <span className="text-white/30">
+                          {iconForKey(s.key)}
+                        </span>
                       )}
                       <kbd className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[11px] font-mono text-white/80">
                         {s.key}
@@ -133,7 +148,11 @@ export default function KeyboardShortcuts() {
         {/* Footer */}
         <div className="px-5 py-3 border-t border-white/5 text-center">
           <p className="text-[11px] text-white/20">
-            Press <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[11px] font-mono">?</kbd> to toggle
+            Press{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[11px] font-mono">
+              ?
+            </kbd>{" "}
+            to toggle
           </p>
         </div>
       </div>

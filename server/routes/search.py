@@ -2,6 +2,7 @@
 
 Extracted from main.py during P1.1 Phase 4 decomposition.
 """
+
 import asyncio
 import json
 import logging
@@ -31,13 +32,13 @@ async def search_enrich(body: dict):
     result: dict = {"movies": {}, "series": {}}
     tasks = []
 
-    for m in (body.get("movies") or []):
+    for m in body.get("movies") or []:
         sid = m.get("stream_id")
         tid = m.get("tmdb_id")
         if sid and tid:
             tasks.append(enrich_tmdb_item("movie", str(tid)))
 
-    for s in (body.get("series") or []):
+    for s in body.get("series") or []:
         sid = s.get("series_id")
         tid = s.get("tmdb_id")
         if sid and tid:
@@ -48,14 +49,14 @@ async def search_enrich(body: dict):
 
     enriched_list = await asyncio.gather(*tasks, return_exceptions=True)
     idx = 0
-    for m in (body.get("movies") or []):
+    for m in body.get("movies") or []:
         sid = m.get("stream_id")
         if sid and m.get("tmdb_id"):
             data = enriched_list[idx]
             if data and not isinstance(data, Exception):
                 result["movies"][str(sid)] = data
             idx += 1
-    for s in (body.get("series") or []):
+    for s in body.get("series") or []:
         sid = s.get("series_id")
         if sid and s.get("tmdb_id"):
             data = enriched_list[idx]
@@ -131,11 +132,11 @@ async def search(
     }
 
     if section is None or section == "live":
-        results["live"] = all_live[offset:offset + limit]
+        results["live"] = all_live[offset : offset + limit]
     if section is None or section == "movies":
-        results["movies"] = all_movies[offset:offset + limit]
+        results["movies"] = all_movies[offset : offset + limit]
     if section is None or section == "series":
-        results["series"] = all_series[offset:offset + limit]
+        results["series"] = all_series[offset : offset + limit]
 
     return {**results, "totals": totals}
 

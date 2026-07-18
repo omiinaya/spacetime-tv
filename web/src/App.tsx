@@ -1,5 +1,18 @@
-import { useCallback, useEffect, useRef, useState, lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  lazy,
+  Suspense,
+} from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useNavigate,
+  useLocation,
+} from "react-router";
 import {
   Tv,
   CalendarClock,
@@ -25,7 +38,6 @@ import { BackToTop } from "@/components/BackToTop";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useProfile } from "@/hooks/useProfile";
 import ProfilePicker from "@/components/ProfilePicker";
-
 
 // Lazy-loaded pages for code splitting
 const HomePage = lazy(() => import("@/pages/HomePage"));
@@ -65,20 +77,26 @@ const SIDEBAR_DEFAULT = 240;
 const BACK_KEY = "stv_back_url";
 
 function saveBackPath(path: string) {
-  try { sessionStorage.setItem(BACK_KEY, path); } catch {} // DOMException: storage quota or unavailable
+  try {
+    sessionStorage.setItem(BACK_KEY, path);
+  } catch {} // DOMException: storage quota or unavailable
 }
 
 // Intercept all clicks that navigate to /watch/ routes and save the
 // current URL BEFORE the navigation happens. Uses capture phase to
 // fire before e.stopPropagation() in individual button handlers.
 if (typeof document !== "undefined") {
-  document.addEventListener("click", (e) => {
-    const target = e.target as HTMLElement;
-    const btn = target.closest<HTMLElement>("[data-watch-link]");
-    if (btn) {
-      saveBackPath(window.location.pathname + window.location.search);
-    }
-  }, true);
+  document.addEventListener(
+    "click",
+    (e) => {
+      const target = e.target as HTMLElement;
+      const btn = target.closest<HTMLElement>("[data-watch-link]");
+      if (btn) {
+        saveBackPath(window.location.pathname + window.location.search);
+      }
+    },
+    true,
+  );
 }
 
 const NAV_ITEMS = [
@@ -94,11 +112,12 @@ const NAV_ITEMS = [
 ];
 
 function AppLayout() {
-  const { profile, profiles, loading, setProfile, refreshProfiles } = useProfile();
+  const { profile, profiles, loading, setProfile, refreshProfiles } =
+    useProfile();
 
   // Show profile picker if no profile is selected
   const [profileGate, setProfileGate] = useState(!profile);
-  
+
   useEffect(() => {
     setProfileGate(!profile);
   }, [profile]);
@@ -107,7 +126,16 @@ function AppLayout() {
   const [, setShowProfileSwitcher] = useState(false);
 
   if (profileGate) {
-    return <ProfilePicker profiles={profiles} loading={loading} onSelect={(p) => { setProfile(p); }} onRefresh={refreshProfiles} />;
+    return (
+      <ProfilePicker
+        profiles={profiles}
+        loading={loading}
+        onSelect={(p) => {
+          setProfile(p);
+        }}
+        onRefresh={refreshProfiles}
+      />
+    );
   }
 
   const navigate = useNavigate();
@@ -135,7 +163,9 @@ function AppLayout() {
   }, [location.pathname]);
 
   const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const saved = localStorage.getItem("stv_sidebar_width") || localStorage.getItem("stv-sidebar-width");
+    const saved =
+      localStorage.getItem("stv_sidebar_width") ||
+      localStorage.getItem("stv-sidebar-width");
     return saved
       ? Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, parseInt(saved, 10)))
       : SIDEBAR_DEFAULT;
@@ -144,37 +174,31 @@ function AppLayout() {
   sidebarWidthRef.current = sidebarWidth;
   const dragging = useRef(false);
 
-  const handleResizeStart = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      dragging.current = true;
-      document.body.style.cursor = "ew-resize";
-      document.body.style.userSelect = "none";
-      const handleMouseMove = (ev: MouseEvent) => {
-        if (!dragging.current) return;
-        const newWidth = Math.min(
-          SIDEBAR_MAX,
-          Math.max(SIDEBAR_MIN, ev.clientX)
-        );
-        setSidebarWidth(newWidth);
-        sidebarWidthRef.current = newWidth;
-      };
-      const handleMouseUp = () => {
-        dragging.current = false;
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-        localStorage.setItem(
-          "stv_sidebar_width",
-          String(sidebarWidthRef.current)
-        );
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    },
-    []
-  );
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = true;
+    document.body.style.cursor = "ew-resize";
+    document.body.style.userSelect = "none";
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!dragging.current) return;
+      const newWidth = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, ev.clientX));
+      setSidebarWidth(newWidth);
+      sidebarWidthRef.current = newWidth;
+    };
+    const handleMouseUp = () => {
+      dragging.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      localStorage.setItem(
+        "stv_sidebar_width",
+        String(sidebarWidthRef.current),
+      );
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  }, []);
 
   const isActive = (path: string) =>
     path === "/"
@@ -196,20 +220,27 @@ function AppLayout() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5" role="navigation" aria-label="Main navigation">
+      <nav
+        className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5"
+        role="navigation"
+        aria-label="Main navigation"
+      >
         {NAV_ITEMS.map((item) =>
           item.id === "/watchlist" ? (
             <div key={item.id} className="relative">
               <button
                 onClick={(e) => {
-                  if ((e.target as HTMLElement).closest("[data-watchlist-close]")) return;
-                  setShowWatchlistPopover(v => !v);
+                  if (
+                    (e.target as HTMLElement).closest("[data-watchlist-close]")
+                  )
+                    return;
+                  setShowWatchlistPopover((v) => !v);
                 }}
                 className={cn(
                   "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left",
                   isActive(item.id)
                     ? "bg-primary/10 text-foreground font-medium border-l-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent",
                 )}
                 aria-label={item.label}
                 aria-current={isActive(item.id) ? "page" : undefined}
@@ -220,7 +251,9 @@ function AppLayout() {
                 {item.label}
               </button>
               {showWatchlistPopover && !mobileOpen && (
-                <WatchlistPopover onClose={() => setShowWatchlistPopover(false)} />
+                <WatchlistPopover
+                  onClose={() => setShowWatchlistPopover(false)}
+                />
               )}
             </div>
           ) : (
@@ -234,7 +267,7 @@ function AppLayout() {
                 "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left",
                 isActive(item.id)
                   ? "bg-primary/10 text-foreground font-medium border-l-2 border-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent",
               )}
               aria-label={item.label}
               aria-current={isActive(item.id) ? "page" : undefined}
@@ -242,7 +275,7 @@ function AppLayout() {
               <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
               {item.label}
             </button>
-          )
+          ),
         )}
       </nav>
 
@@ -251,7 +284,10 @@ function AppLayout() {
         {/* Profile badge */}
         {profile && (
           <button
-            onClick={() => { setShowProfileSwitcher(true); setProfileGate(true); }}
+            onClick={() => {
+              setShowProfileSwitcher(true);
+              setProfileGate(true);
+            }}
             className="w-full flex items-center gap-2.5 px-5 py-2 text-xs transition-colors text-left text-muted-foreground hover:text-foreground hover:bg-muted"
             aria-label="Switch profile"
           >
@@ -267,7 +303,7 @@ function AppLayout() {
             "w-full flex items-center gap-2.5 px-5 py-2.5 text-sm transition-colors text-left",
             isActive("/settings")
               ? "bg-primary/10 text-foreground font-medium"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted",
           )}
           aria-label="Settings"
           aria-current={isActive("/settings") ? "page" : undefined}
@@ -316,50 +352,171 @@ function AppLayout() {
       )}
 
       {/* Main content */}
-      <main id="main-content" className="flex-1 overflow-y-auto" role="main" tabIndex={-1}>
+      <main
+        id="main-content"
+        className="flex-1 overflow-y-auto"
+        role="main"
+        tabIndex={-1}
+      >
         {/* Mobile header — hidden on watch routes */}
         {!isWatchRoute && (
-        <div className="md:hidden flex items-center gap-3 px-4 h-12 border-b border-border bg-sidebar">
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="text-muted-foreground hover:text-foreground"
-            aria-label="Open navigation menu"
-          >
-            <Menu className="h-5 w-5" aria-hidden="true" />
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
-              <Tv className="h-3 w-3 text-white" />
+          <div className="md:hidden flex items-center gap-3 px-4 h-12 border-b border-border bg-sidebar">
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="text-muted-foreground hover:text-foreground"
+              aria-label="Open navigation menu"
+            >
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+                <Tv className="h-3 w-3 text-white" />
+              </div>
+              <span className="font-semibold text-sm">Spacetime-TV</span>
             </div>
-            <span className="font-semibold text-sm">Spacetime-TV</span>
           </div>
-        </div>
         )}
 
         <div className={isWatchRoute ? "" : "p-4 md:p-6 lg:p-8"}>
           <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/" element={<ErrorBoundary name="Home"><HomePage /></ErrorBoundary>} />
-            <Route path="/live" element={<ErrorBoundary name="Live TV"><LiveTV /></ErrorBoundary>} />
-            <Route path="/guide" element={<ErrorBoundary name="Guide"><Guide /></ErrorBoundary>} />
-            <Route path="/movies" element={<ErrorBoundary name="Movies"><Movies /></ErrorBoundary>} />
-            <Route path="/series" element={<ErrorBoundary name="Series"><Series /></ErrorBoundary>} />
-            <Route path="/search" element={<ErrorBoundary name="Search"><SearchPage /></ErrorBoundary>} />
-            <Route path="/watchlist" element={<ErrorBoundary name="Watchlist"><WatchlistPage /></ErrorBoundary>} />
-            <Route path="/history" element={<ErrorBoundary name="History"><HistoryPage /></ErrorBoundary>} />
-            <Route path="/recordings" element={<ErrorBoundary name="Recordings"><RecordingsPage /></ErrorBoundary>} />
-            <Route path="/person/:encodedName" element={<ErrorBoundary name="Person"><PersonPage /></ErrorBoundary>} />
-            <Route path="/settings" element={<ErrorBoundary name="Settings"><SettingsPage /></ErrorBoundary>} />
-            <Route path="/admin" element={<ErrorBoundary name="Admin"><AdminDashboard /></ErrorBoundary>} />
-            <Route path="/watch/live/:id" element={<ErrorBoundary name="Player (live)"><Player type="live" /></ErrorBoundary>} />
-            <Route path="/watch/movie/:id" element={<ErrorBoundary name="Player (movie)"><Player type="movie" /></ErrorBoundary>} />
-            <Route path="/watch/recording/:id" element={<ErrorBoundary name="Recording Player"><WatchRecording /></ErrorBoundary>} />
-            <Route
-              path="/watch/series/:seriesId/:epId"
-              element={<ErrorBoundary name="Player (series)"><Player type="series" /></ErrorBoundary>}
-            />
-            <Route path="*" element={<ErrorBoundary name="Page Not Found"><NotFound /></ErrorBoundary>} />
-          </Routes>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <ErrorBoundary name="Home">
+                    <HomePage />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/live"
+                element={
+                  <ErrorBoundary name="Live TV">
+                    <LiveTV />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/guide"
+                element={
+                  <ErrorBoundary name="Guide">
+                    <Guide />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/movies"
+                element={
+                  <ErrorBoundary name="Movies">
+                    <Movies />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/series"
+                element={
+                  <ErrorBoundary name="Series">
+                    <Series />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/search"
+                element={
+                  <ErrorBoundary name="Search">
+                    <SearchPage />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/watchlist"
+                element={
+                  <ErrorBoundary name="Watchlist">
+                    <WatchlistPage />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/history"
+                element={
+                  <ErrorBoundary name="History">
+                    <HistoryPage />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/recordings"
+                element={
+                  <ErrorBoundary name="Recordings">
+                    <RecordingsPage />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/person/:encodedName"
+                element={
+                  <ErrorBoundary name="Person">
+                    <PersonPage />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ErrorBoundary name="Settings">
+                    <SettingsPage />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ErrorBoundary name="Admin">
+                    <AdminDashboard />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/watch/live/:id"
+                element={
+                  <ErrorBoundary name="Player (live)">
+                    <Player type="live" />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/watch/movie/:id"
+                element={
+                  <ErrorBoundary name="Player (movie)">
+                    <Player type="movie" />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/watch/recording/:id"
+                element={
+                  <ErrorBoundary name="Recording Player">
+                    <WatchRecording />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/watch/series/:seriesId/:epId"
+                element={
+                  <ErrorBoundary name="Player (series)">
+                    <Player type="series" />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="*"
+                element={
+                  <ErrorBoundary name="Page Not Found">
+                    <NotFound />
+                  </ErrorBoundary>
+                }
+              />
+            </Routes>
           </Suspense>
         </div>
       </main>
@@ -368,7 +525,13 @@ function AppLayout() {
       <PWAInstallPrompt />
       <OfflineBanner />
       <KeyboardShortcuts />
-      <Toaster richColors theme={resolvedTheme} position="bottom-right" closeButton toastOptions={{ style: { fontSize: "0.875rem" } }} />
+      <Toaster
+        richColors
+        theme={resolvedTheme}
+        position="bottom-right"
+        closeButton
+        toastOptions={{ style: { fontSize: "0.875rem" } }}
+      />
       <BackToTop />
     </div>
   );

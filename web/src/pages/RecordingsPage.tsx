@@ -8,7 +8,8 @@ function formatSize(bytes?: number): string {
   if (!bytes || bytes <= 0) return "0 B";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
@@ -50,7 +51,9 @@ function RecordingCard({
       <div
         className={cn(
           "w-12 h-12 rounded-lg flex items-center justify-center shrink-0",
-          isActive ? "bg-red-500/10 text-red-500" : "bg-muted text-muted-foreground",
+          isActive
+            ? "bg-red-500/10 text-red-500"
+            : "bg-muted text-muted-foreground",
         )}
       >
         {isActive ? (
@@ -110,7 +113,7 @@ export default function RecordingsPage() {
 
   // Poll while any recording is active
   useEffect(() => {
-    const hasActive = recordings.some(r => r.status === "recording");
+    const hasActive = recordings.some((r) => r.status === "recording");
     if (!hasActive) return;
     const interval = setInterval(refresh, 3000);
     return () => clearInterval(interval);
@@ -156,7 +159,7 @@ export default function RecordingsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {recordings.map(rec => (
+          {recordings.map((rec) => (
             <RecordingCard
               key={rec.id}
               rec={rec}

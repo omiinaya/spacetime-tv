@@ -8,7 +8,14 @@
  * and category stats display.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, act, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+  within,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import SettingsPage from "@/pages/SettingsPage";
 import type { Category } from "@/lib/api";
@@ -22,15 +29,27 @@ vi.mock("@/lib/api", () => ({
   api: {
     live: {
       categories: (...args: unknown[]) =>
-        (mockLiveCats as unknown as (...a: unknown[]) => Promise<{ categories: Category[] }>)(...args),
+        (
+          mockLiveCats as unknown as (
+            ...a: unknown[]
+          ) => Promise<{ categories: Category[] }>
+        )(...args),
     },
     movies: {
       categories: (...args: unknown[]) =>
-        (mockMovieCats as unknown as (...a: unknown[]) => Promise<{ categories: Category[] }>)(...args),
+        (
+          mockMovieCats as unknown as (
+            ...a: unknown[]
+          ) => Promise<{ categories: Category[] }>
+        )(...args),
     },
     series: {
       categories: (...args: unknown[]) =>
-        (mockSeriesCats as unknown as (...a: unknown[]) => Promise<{ categories: Category[] }>)(...args),
+        (
+          mockSeriesCats as unknown as (
+            ...a: unknown[]
+          ) => Promise<{ categories: Category[] }>
+        )(...args),
     },
   },
   imageUrl: (url: string) => url,
@@ -52,8 +71,10 @@ const mockAdultUnlocked = false;
 vi.mock("@/context/SettingsContext", () => ({
   useSettings: () => ({
     settings: mockSettings,
-    update: (...args: unknown[]) => (mockUpdate as (...a: unknown[]) => void)(...args),
-    reset: (...args: unknown[]) => (mockReset as (...a: unknown[]) => void)(...args),
+    update: (...args: unknown[]) =>
+      (mockUpdate as (...a: unknown[]) => void)(...args),
+    reset: (...args: unknown[]) =>
+      (mockReset as (...a: unknown[]) => void)(...args),
     adultUnlocked: false,
     setAdultPin: vi.fn(),
     clearAdultPin: vi.fn(),
@@ -100,7 +121,7 @@ function renderSettingsPage() {
   return render(
     <MemoryRouter>
       <SettingsPage />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -143,7 +164,9 @@ describe("header", () => {
     await waitFor(() => {
       expect(screen.getByText("Settings")).toBeInTheDocument();
     });
-    expect(screen.getByText("Filter out content you don't want to see")).toBeInTheDocument();
+    expect(
+      screen.getByText("Filter out content you don't want to see"),
+    ).toBeInTheDocument();
   });
 
   it("renders the Settings icon", async () => {
@@ -226,7 +249,9 @@ describe("language / country filter", () => {
   it("renders 'All' button and all prefix buttons (EN, US, DE)", async () => {
     renderSettingsPage();
     await waitFor(() => {
-      const langSection = screen.getByText("Language / Country").closest("section")!;
+      const langSection = screen
+        .getByText("Language / Country")
+        .closest("section")!;
       expect(within(langSection).getByText("All")).toBeInTheDocument();
       expect(screen.getByText("EN")).toBeInTheDocument();
       expect(screen.getByText("US")).toBeInTheDocument();
@@ -265,10 +290,14 @@ describe("language / country filter", () => {
     mockSettings.languages = ["EN", "US"];
     renderSettingsPage();
     await waitFor(() => {
-      const langSection = screen.getByText("Language / Country").closest("section")!;
+      const langSection = screen
+        .getByText("Language / Country")
+        .closest("section")!;
       expect(within(langSection).getByText("All")).toBeInTheDocument();
     });
-    const langSection = screen.getByText("Language / Country").closest("section")!;
+    const langSection = screen
+      .getByText("Language / Country")
+      .closest("section")!;
     fireEvent.click(within(langSection).getByText("All"));
     expect(mockUpdate).toHaveBeenCalledWith({ languages: [] });
   });
@@ -288,7 +317,9 @@ describe("streaming services filter", () => {
   it("renders 'All' button and service buttons", async () => {
     renderSettingsPage();
     await waitFor(() => {
-      const svcSection = screen.getByText("Streaming Services").closest("section")!;
+      const svcSection = screen
+        .getByText("Streaming Services")
+        .closest("section")!;
       expect(within(svcSection).getByText("All")).toBeInTheDocument();
       expect(screen.getByText("NETFLIX")).toBeInTheDocument();
       expect(screen.getByText("HBO")).toBeInTheDocument();
@@ -329,10 +360,14 @@ describe("streaming services filter", () => {
     mockSettings.services = ["NETFLIX"];
     renderSettingsPage();
     await waitFor(() => {
-      const svcSection = screen.getByText("Streaming Services").closest("section")!;
+      const svcSection = screen
+        .getByText("Streaming Services")
+        .closest("section")!;
       expect(within(svcSection).getByText("All")).toBeInTheDocument();
     });
-    const svcSection = screen.getByText("Streaming Services").closest("section")!;
+    const svcSection = screen
+      .getByText("Streaming Services")
+      .closest("section")!;
     fireEvent.click(within(svcSection).getByText("All"));
     expect(mockUpdate).toHaveBeenCalledWith({ services: [] });
   });
@@ -370,7 +405,10 @@ describe("adult content toggle", () => {
       expect(screen.getByText("Adult content is hidden")).toBeInTheDocument();
     });
     // Click the toggle button
-    const toggle = screen.getByText("Adult content is hidden").closest("label")?.querySelector("button");
+    const toggle = screen
+      .getByText("Adult content is hidden")
+      .closest("label")
+      ?.querySelector("button");
     expect(toggle).toBeTruthy();
     fireEvent.click(toggle!);
     expect(mockUpdate).toHaveBeenCalledWith({ showAdult: true });
@@ -382,7 +420,10 @@ describe("adult content toggle", () => {
     await waitFor(() => {
       expect(screen.getByText("Adult content is visible")).toBeInTheDocument();
     });
-    const toggle = screen.getByText("Adult content is visible").closest("label")?.querySelector("button");
+    const toggle = screen
+      .getByText("Adult content is visible")
+      .closest("label")
+      ?.querySelector("button");
     expect(toggle).toBeTruthy();
     fireEvent.click(toggle!);
     expect(mockUpdate).toHaveBeenCalledWith({ showAdult: false });
@@ -429,7 +470,9 @@ describe("hidden categories section", () => {
   it("renders search input for filtering categories", async () => {
     renderSettingsPage();
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("Search categories...")).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("Search categories..."),
+      ).toBeInTheDocument();
     });
   });
 
@@ -453,7 +496,9 @@ describe("hidden categories section", () => {
   it("filters category list by search query", async () => {
     renderSettingsPage();
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("Search categories...")).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("Search categories..."),
+      ).toBeInTheDocument();
     });
     const input = screen.getByPlaceholderText("Search categories...");
     fireEvent.change(input, { target: { value: "NETFLIX" } });
@@ -467,7 +512,9 @@ describe("hidden categories section", () => {
   it("shows 'No categories found' when search has no matches", async () => {
     renderSettingsPage();
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("Search categories...")).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("Search categories..."),
+      ).toBeInTheDocument();
     });
     const input = screen.getByPlaceholderText("Search categories...");
     fireEvent.change(input, { target: { value: "XYZZZZ" } });
@@ -482,7 +529,9 @@ describe("hidden categories section", () => {
       expect(screen.getByText("EN| Entertainment")).toBeInTheDocument();
     });
     // Find the checkbox/button for EN| Entertainment
-    const entertainmentRow = screen.getByText("EN| Entertainment").closest("label");
+    const entertainmentRow = screen
+      .getByText("EN| Entertainment")
+      .closest("label");
     expect(entertainmentRow).toBeTruthy();
     const toggleBtn = entertainmentRow!.querySelector("button");
     expect(toggleBtn).toBeTruthy();
@@ -498,7 +547,9 @@ describe("hidden categories section", () => {
     await waitFor(() => {
       expect(screen.getByText("EN| Entertainment")).toBeInTheDocument();
     });
-    const entertainmentRow = screen.getByText("EN| Entertainment").closest("label");
+    const entertainmentRow = screen
+      .getByText("EN| Entertainment")
+      .closest("label");
     const toggleBtn = entertainmentRow!.querySelector("button");
     fireEvent.click(toggleBtn!);
     expect(mockUpdate).toHaveBeenCalledWith({

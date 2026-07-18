@@ -165,11 +165,14 @@ export function useMpegtsPlayer(
               } catch {} // cleanup - errors expected if already destroyed
               playerRef.current = null;
               video.removeEventListener("playing", onPlaying);
-              setTimeout(() => {
-                if (playerRef.current === null) {
-                  createPlayer();
-                }
-              }, Math.min(reconnectAttempts * 1000, 5000));
+              setTimeout(
+                () => {
+                  if (playerRef.current === null) {
+                    createPlayer();
+                  }
+                },
+                Math.min(reconnectAttempts * 1000, 5000),
+              );
             }
           },
         );
@@ -199,11 +202,14 @@ export function useMpegtsPlayer(
               } catch {} // cleanup - errors expected if already destroyed
               playerRef.current = null;
               video.removeEventListener("playing", onPlaying);
-              setTimeout(() => {
-                if (playerRef.current === null) {
-                  createPlayer();
-                }
-              }, Math.min(reconnectAttempts * 1000, 5000));
+              setTimeout(
+                () => {
+                  if (playerRef.current === null) {
+                    createPlayer();
+                  }
+                },
+                Math.min(reconnectAttempts * 1000, 5000),
+              );
             }
           }
         }, 5000);

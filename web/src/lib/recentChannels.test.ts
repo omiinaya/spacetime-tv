@@ -31,7 +31,12 @@ describe("getRecentChannels", () => {
     const channels: RecentChannel[] = [
       { stream_id: 1, name: "BBC One", icon: "/bbc.png", watchedAt: now },
       { stream_id: 2, name: "CNN", icon: "/cnn.png", watchedAt: now - 1000 },
-      { stream_id: 3, name: "Sky News", icon: "/sky.png", watchedAt: now - 2000 },
+      {
+        stream_id: 3,
+        name: "Sky News",
+        icon: "/sky.png",
+        watchedAt: now - 2000,
+      },
     ];
     setLocalStorage(channels);
     const result = getRecentChannels();
@@ -46,13 +51,25 @@ describe("getRecentChannels", () => {
     const now = Date.now();
     const channels: RecentChannel[] = [
       { stream_id: 1, name: "Recent", icon: "", watchedAt: now },
-      { stream_id: 2, name: "Expired", icon: "", watchedAt: now - 15 * 86400_000 },
-      { stream_id: 3, name: "Borderline", icon: "", watchedAt: now - 13 * 86400_000 },
+      {
+        stream_id: 2,
+        name: "Expired",
+        icon: "",
+        watchedAt: now - 15 * 86400_000,
+      },
+      {
+        stream_id: 3,
+        name: "Borderline",
+        icon: "",
+        watchedAt: now - 13 * 86400_000,
+      },
     ];
     setLocalStorage(channels);
     const result = getRecentChannels();
     expect(result).toHaveLength(2);
-    expect(result.find((c: RecentChannel) => c.stream_id === 2)).toBeUndefined();
+    expect(
+      result.find((c: RecentChannel) => c.stream_id === 2),
+    ).toBeUndefined();
   });
 
   it("returns max 12 items", () => {
@@ -97,12 +114,21 @@ describe("saveRecentChannel", () => {
   it("deduplicates by stream_id (moves to front and updates timestamp)", () => {
     const now = Date.now();
     setLocalStorage([
-      { stream_id: 1, name: "BBC One", icon: "/bbc.png", watchedAt: now - 5000 },
+      {
+        stream_id: 1,
+        name: "BBC One",
+        icon: "/bbc.png",
+        watchedAt: now - 5000,
+      },
       { stream_id: 2, name: "CNN", icon: "/cnn.png", watchedAt: now - 10000 },
     ]);
 
     // Save existing channel with possibly updated name
-    saveRecentChannel({ stream_id: 1, name: "BBC One HD", icon: "/bbc-hd.png" });
+    saveRecentChannel({
+      stream_id: 1,
+      name: "BBC One HD",
+      icon: "/bbc-hd.png",
+    });
     const result = getRecentChannels();
     expect(result).toHaveLength(2);
     // Deduped channel should be first (newest)
@@ -126,7 +152,9 @@ describe("saveRecentChannel", () => {
     saveRecentChannel({ stream_id: 99, name: "New Channel", icon: "" });
     const result = getRecentChannels();
     expect(result).toHaveLength(12);
-    expect(result.find((c: RecentChannel) => c.stream_id === 1)).toBeUndefined();
+    expect(
+      result.find((c: RecentChannel) => c.stream_id === 1),
+    ).toBeUndefined();
     expect(result.find((c: RecentChannel) => c.stream_id === 99)).toBeDefined();
   });
 });
@@ -137,7 +165,9 @@ describe("clearRecentChannels", () => {
   });
 
   it("removes the localStorage key", () => {
-    setLocalStorage([{ stream_id: 1, name: "Test", icon: "", watchedAt: Date.now() }]);
+    setLocalStorage([
+      { stream_id: 1, name: "Test", icon: "", watchedAt: Date.now() },
+    ]);
     clearRecentChannels();
     expect(localStorage.getItem(KEY)).toBeNull();
   });

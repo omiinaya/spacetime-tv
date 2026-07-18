@@ -2,19 +2,19 @@ import { describe, it, expect } from "vitest";
 import { timeAgo } from "@/lib/utils";
 
 describe("timeAgo", () => {
-  it('returns empty string for null', () => {
+  it("returns empty string for null", () => {
     expect(timeAgo(null)).toBe("");
   });
 
-  it('returns empty string for undefined', () => {
+  it("returns empty string for undefined", () => {
     expect(timeAgo(undefined)).toBe("");
   });
 
-  it('returns empty string for 0', () => {
+  it("returns empty string for 0", () => {
     expect(timeAgo(0)).toBe("");
   });
 
-  it('returns empty string for negative values', () => {
+  it("returns empty string for negative values", () => {
     expect(timeAgo(-1000)).toBe("");
   });
 

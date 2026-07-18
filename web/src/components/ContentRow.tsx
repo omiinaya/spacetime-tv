@@ -88,9 +88,15 @@ export default function ContentRow({
       const cardRect = cards[nextIdx].getBoundingClientRect();
       const rowRect = row.getBoundingClientRect();
       if (cardRect.right > rowRect.right) {
-        row.scrollBy({ left: cardRect.right - rowRect.right + 16, behavior: "smooth" });
+        row.scrollBy({
+          left: cardRect.right - rowRect.right + 16,
+          behavior: "smooth",
+        });
       } else if (cardRect.left < rowRect.left) {
-        row.scrollBy({ left: cardRect.left - rowRect.left - 16, behavior: "smooth" });
+        row.scrollBy({
+          left: cardRect.left - rowRect.left - 16,
+          behavior: "smooth",
+        });
       }
     };
 
@@ -102,7 +108,10 @@ export default function ContentRow({
     const el = rowRef.current;
     if (!el) return;
     const amount = el.clientWidth * 0.75;
-    el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
+    el.scrollBy({
+      left: dir === "left" ? -amount : amount,
+      behavior: "smooth",
+    });
   };
 
   return (

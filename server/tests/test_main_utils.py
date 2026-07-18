@@ -43,6 +43,7 @@ from state import _cache
 
 # ── _mime_from_url ───────────────────────────────────────────────────────────
 
+
 class TestMimeFromUrl:
     def test_ts_extension(self):
         assert _mime_from_url("http://example.com/stream.ts") == "video/mp2t"
@@ -79,6 +80,7 @@ class TestMimeFromUrl:
 
 
 # ── generate_live_mpd ────────────────────────────────────────────────────────
+
 
 class TestGenerateLiveMpd:
     def test_contains_mpd_root(self):
@@ -125,6 +127,7 @@ class TestGenerateLiveMpd:
 
 # ── generate_vod_mpd ─────────────────────────────────────────────────────────
 
+
 class TestGenerateVodMpd:
     def test_contains_mpd_root(self):
         xml = generate_vod_mpd(456, "movie", "http://example.com/movie.mkv")
@@ -167,6 +170,7 @@ class TestGenerateVodMpd:
 
 # ── iptv_url ─────────────────────────────────────────────────────────────────
 
+
 class TestIptvUrl:
     def test_basic_url_structure(self):
         url = iptv_url("get_vod_streams")
@@ -200,6 +204,7 @@ class TestIptvUrl:
 
 
 # ── _lookup_extension ────────────────────────────────────────────────────────
+
 
 class TestLookupExtension:
     def setup_method(self):
@@ -255,6 +260,7 @@ class TestLookupExtension:
 
 # ── Image cache key helpers ──────────────────────────────────────────────────
 
+
 class TestImgCacheHelpers:
     def test_cache_key_md5(self):
         key = _img_cache_key("http://example.com/image.jpg")
@@ -290,9 +296,11 @@ class TestImgCacheHelpers:
 
 # ── touch_access / get_last_access ───────────────────────────────────────────
 
+
 class TestTouchAccess:
     def setup_method(self):
         from main import CACHE_DIR
+
         self._cache_key = "_test_touch_access"
         stamp = CACHE_DIR / f".{self._cache_key}.accessed"
         if stamp.exists():
@@ -300,6 +308,7 @@ class TestTouchAccess:
 
     def test_touch_creates_stamp_file(self):
         from main import CACHE_DIR
+
         touch_access(self._cache_key)
         stamp = CACHE_DIR / f".{self._cache_key}.accessed"
         assert stamp.exists()
@@ -317,6 +326,7 @@ class TestTouchAccess:
 
     def test_touch_updates_timestamp(self):
         import time
+
         touch_access(self._cache_key)
         t1 = get_last_access(self._cache_key)
         assert t1 is not None
@@ -328,6 +338,7 @@ class TestTouchAccess:
 
 
 # ── serve_cached_mp4 ─────────────────────────────────────────────────────────
+
 
 class TestServeCachedMp4:
     def test_full_request_returns_file_response(self):

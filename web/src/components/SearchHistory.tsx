@@ -52,7 +52,9 @@ export function SearchHistory({ onSelect, show, onClose }: SearchHistoryProps) {
   const handleRemove = useCallback((q: string, e: React.MouseEvent) => {
     e.stopPropagation();
     removeSearchHistory(q);
-    setHistory(prev => prev.filter(item => item.toLowerCase() !== q.toLowerCase()));
+    setHistory((prev) =>
+      prev.filter((item) => item.toLowerCase() !== q.toLowerCase()),
+    );
   }, []);
 
   if (!show || history.length === 0) return null;
@@ -75,10 +77,7 @@ export function SearchHistory({ onSelect, show, onClose }: SearchHistoryProps) {
       </div>
       <div className="max-h-56 overflow-y-auto">
         {history.map((q, i) => (
-          <div
-            key={`${q}-${i}`}
-            className="group flex items-center"
-          >
+          <div key={`${q}-${i}`} className="group flex items-center">
             <button
               onClick={() => handleSelect(q)}
               className="flex-1 flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors min-w-0"

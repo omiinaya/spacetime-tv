@@ -12,7 +12,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router";
 import PersonPage from "@/pages/PersonPage";
-import type { TmdbPersonSearchResponse, TmdbPersonInfo, TmdbPersonCredit } from "@/lib/api";
+import type {
+  TmdbPersonSearchResponse,
+  TmdbPersonInfo,
+  TmdbPersonCredit,
+} from "@/lib/api";
 
 // ── Mock api ─────────────────────────────────────────────
 const mockPersonSearch = vi.fn();
@@ -22,7 +26,11 @@ vi.mock("@/lib/api", () => ({
     tmdb: {
       person: {
         search: (...args: unknown[]) =>
-          (mockPersonSearch as unknown as (...a: unknown[]) => Promise<TmdbPersonSearchResponse>)(...args),
+          (
+            mockPersonSearch as unknown as (
+              ...a: unknown[]
+            ) => Promise<TmdbPersonSearchResponse>
+          )(...args),
       },
     },
   },
@@ -36,7 +44,8 @@ export const tmdbPersonInfo: TmdbPersonInfo = {
   name: "Leonardo DiCaprio",
   birthday: "1974-11-11",
   gender: "Male",
-  image: "https://image.tmdb.org/t/p/w600_h600_bestv2/wo2hJpn04vbtmh0B9utCFGqo1kP.jpg",
+  image:
+    "https://image.tmdb.org/t/p/w600_h600_bestv2/wo2hJpn04vbtmh0B9utCFGqo1kP.jpg",
   roles: ["Actor", "Producer"],
   known_for: [
     {
@@ -94,7 +103,8 @@ const samplePersonNoBirthday: TmdbPersonInfo = {
 // ── Mock navigate ──────────────────────────────────────────
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
-  const actual = await vi.importActual<typeof import("react-router")>("react-router");
+  const actual =
+    await vi.importActual<typeof import("react-router")>("react-router");
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -190,7 +200,9 @@ describe("PersonPage", () => {
       setupApiError();
       renderPersonPage();
       await waitFor(() => {
-        expect(screen.getByText("Could not search for person")).toBeInTheDocument();
+        expect(
+          screen.getByText("Could not search for person"),
+        ).toBeInTheDocument();
       });
     });
 
@@ -239,7 +251,9 @@ describe("PersonPage", () => {
     it("renders the person's photo", async () => {
       renderPersonPage();
       await waitFor(() => {
-        const img = screen.getByAltText("Leonardo DiCaprio") as HTMLImageElement;
+        const img = screen.getByAltText(
+          "Leonardo DiCaprio",
+        ) as HTMLImageElement;
         expect(img).toBeInTheDocument();
         expect(img.src).toContain("image.tmdb.org");
       });
@@ -281,8 +295,7 @@ describe("PersonPage", () => {
       renderPersonPageWithName("No%20Photo%20Person");
       await waitFor(() => {
         expect(screen.getByText("No Photo Person")).toBeInTheDocument();
-        const container = screen.getByText("No Photo Person")
-          .closest(".flex");
+        const container = screen.getByText("No Photo Person").closest(".flex");
         // Should find the User icon (placeholder)
         expect(container?.querySelector("svg")).toBeInTheDocument();
       });

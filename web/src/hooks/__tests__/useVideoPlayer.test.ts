@@ -116,7 +116,12 @@ describe("useVideoPlayer — type derivation", () => {
 
   it("derives isLive=true for live type", () => {
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "live", id: "123", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "live",
+        id: "123",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
     expect(result.current.isLive).toBe(true);
     expect(result.current.isVod).toBe(false);
@@ -125,7 +130,12 @@ describe("useVideoPlayer — type derivation", () => {
 
   it("derives isVod=true for movie type", () => {
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "movie", id: "456", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "movie",
+        id: "456",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
     expect(result.current.isLive).toBe(false);
     expect(result.current.isVod).toBe(true);
@@ -134,7 +144,12 @@ describe("useVideoPlayer — type derivation", () => {
 
   it("derives isVod=true for series type", () => {
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "series", id: undefined, seriesId: "42", epId: "101" }),
+      useVideoPlayer({
+        type: "series",
+        id: undefined,
+        seriesId: "42",
+        epId: "101",
+      }),
     );
     expect(result.current.isLive).toBe(false);
     expect(result.current.isVod).toBe(true);
@@ -152,7 +167,12 @@ describe("useVideoPlayer — initial state", () => {
 
   it("reports default initial values", () => {
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "movie", id: "789", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "movie",
+        id: "789",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
 
     // The hook goes to "probing" immediately via the main effect
@@ -177,7 +197,12 @@ describe("useVideoPlayer — initial state", () => {
   it("reads volume from localStorage", () => {
     localStorage.setItem("stv_volume", "0.3");
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "movie", id: "101112", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "movie",
+        id: "101112",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
     expect(result.current.volume).toBe(0.3);
     unmount();
@@ -194,23 +219,37 @@ describe("useVideoPlayer — controls", () => {
 
   it("setVolume updates volume state", () => {
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "movie", id: "131415", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "movie",
+        id: "131415",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
 
-    act(() => { result.current.setVolume(0.5); });
+    act(() => {
+      result.current.setVolume(0.5);
+    });
     expect(result.current.volume).toBe(0.5);
     unmount();
   });
 
   it("toggleMute is a no-op without video element (ref is null)", () => {
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "movie", id: "161718", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "movie",
+        id: "161718",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
 
     // Without a mounted video element, toggleMute returns early.
     // Muted state remains false (default).
     const initialMuted = result.current.muted;
-    act(() => { result.current.toggleMute(); });
+    act(() => {
+      result.current.toggleMute();
+    });
     // State stays unchanged because videoRef.current is null
     // (the hook returns early before calling setMuted)
     expect(result.current.muted).toBe(initialMuted);
@@ -219,36 +258,61 @@ describe("useVideoPlayer — controls", () => {
 
   it("setSpeed updates playbackRate", () => {
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "movie", id: "192021", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "movie",
+        id: "192021",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
 
-    act(() => { result.current.setSpeed(1.5); });
+    act(() => {
+      result.current.setSpeed(1.5);
+    });
     expect(result.current.playbackRate).toBe(1.5);
 
-    act(() => { result.current.setSpeed(2); });
+    act(() => {
+      result.current.setSpeed(2);
+    });
     expect(result.current.playbackRate).toBe(2);
     unmount();
   });
 
   it("setQuality updates qualityIdx", () => {
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "movie", id: "222324", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "movie",
+        id: "222324",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
 
-    act(() => { result.current.setQuality(2); });
+    act(() => {
+      result.current.setQuality(2);
+    });
     expect(result.current.qualityIdx).toBe(2);
 
-    act(() => { result.current.setQuality(0); });
+    act(() => {
+      result.current.setQuality(0);
+    });
     expect(result.current.qualityIdx).toBe(0);
     unmount();
   });
 
   it("retryStream resets state and triggers reload", () => {
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "live", id: "252627", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "live",
+        id: "252627",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
 
-    act(() => { result.current.retryStream(); });
+    act(() => {
+      result.current.retryStream();
+    });
     // retryStream sets phase to "loading" then increments retryKey,
     // which re-fires the main effect which immediately sets phase
     // to "probing". So we expect "loading" or "probing" after retry.
@@ -268,7 +332,12 @@ describe("useVideoPlayer — resume prompt", () => {
 
   it("does not show resume prompt when no stored position", () => {
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "movie", id: "282930", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "movie",
+        id: "282930",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
     // Without localStorage position, showResumePrompt should be false
     expect(result.current.showResumePrompt).toBe(false);
@@ -282,7 +351,12 @@ describe("useVideoPlayer — resume prompt", () => {
       JSON.stringify({ live_123: { pos: 300, ts: Date.now() } }),
     );
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "live", id: "123", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "live",
+        id: "123",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
     expect(result.current.showResumePrompt).toBe(false);
     unmount();
@@ -300,7 +374,12 @@ describe("useVideoPlayer — probe routing", () => {
 
   it("transitions to probing state on mount", () => {
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "movie", id: "probe1", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "movie",
+        id: "probe1",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
     expect(result.current.phase).toBe("probing");
     expect(result.current.loadingStep).toBe("Detecting video format…");
@@ -315,7 +394,12 @@ describe("useVideoPlayer — probe routing", () => {
     );
 
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "movie", id: "probe2", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "movie",
+        id: "probe2",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
 
     await vi.waitFor(() => {
@@ -333,7 +417,12 @@ describe("useVideoPlayer — probe routing", () => {
     );
 
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "movie", id: "probe3", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "movie",
+        id: "probe3",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
 
     await vi.waitFor(() => {
@@ -351,7 +440,12 @@ describe("useVideoPlayer — probe routing", () => {
     );
 
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "movie", id: "probe4", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "movie",
+        id: "probe4",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
 
     await vi.waitFor(() => {
@@ -362,12 +456,15 @@ describe("useVideoPlayer — probe routing", () => {
   });
 
   it("probes and handles probe fetch error gracefully", async () => {
-    server.use(
-      http.get("*/movie/probe/probe5", () => HttpResponse.error()),
-    );
+    server.use(http.get("*/movie/probe/probe5", () => HttpResponse.error()));
 
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "movie", id: "probe5", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "movie",
+        id: "probe5",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
 
     await vi.waitFor(() => {
@@ -390,7 +487,12 @@ describe("useVideoPlayer — probe routing", () => {
     );
 
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "movie", id: "resume1", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "movie",
+        id: "resume1",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
 
     await vi.waitFor(() => {
@@ -413,7 +515,12 @@ describe("useVideoPlayer — probe routing", () => {
     );
 
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "live", id: "live1", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "live",
+        id: "live1",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
 
     await vi.waitFor(() => {
@@ -431,7 +538,12 @@ describe("useVideoPlayer — probe routing", () => {
     );
 
     const { result, unmount } = renderHook(() =>
-      useVideoPlayer({ type: "live", id: "liveProbe1", seriesId: undefined, epId: undefined }),
+      useVideoPlayer({
+        type: "live",
+        id: "liveProbe1",
+        seriesId: undefined,
+        epId: undefined,
+      }),
     );
 
     await vi.waitFor(() => {

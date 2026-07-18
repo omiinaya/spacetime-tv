@@ -14,7 +14,11 @@ interface SubtitleSelectorProps {
   videoRef: React.RefObject<HTMLVideoElement>;
 }
 
-export function SubtitleSelector({ mediaType, streamId, videoRef }: SubtitleSelectorProps) {
+export function SubtitleSelector({
+  mediaType,
+  streamId,
+  videoRef,
+}: SubtitleSelectorProps) {
   const [tracks, setTracks] = useState<SubtitleTrack[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTrack, setActiveTrack] = useState<number | null>(null);
@@ -45,7 +49,9 @@ export function SubtitleSelector({ mediaType, streamId, videoRef }: SubtitleSele
         }
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [mediaType, streamId]);
 
   // When a track is selected, load the VTT and add a <track> element

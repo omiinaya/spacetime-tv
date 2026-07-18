@@ -84,16 +84,17 @@ describe("useNowPlaying", () => {
   });
 
   it("silently handles API error", async () => {
-    server.use(
-      http.get("*/guide/now", () => HttpResponse.error()),
-    );
+    server.use(http.get("*/guide/now", () => HttpResponse.error()));
 
     const { result } = renderHook(() => useNowPlaying([1]));
 
     // The hook catches errors silently — programmes should be empty
-    await vi.waitFor(() => {
-      expect(result.current.programmes.size).toBe(0);
-    }, { timeout: 2000 });
+    await vi.waitFor(
+      () => {
+        expect(result.current.programmes.size).toBe(0);
+      },
+      { timeout: 2000 },
+    );
   });
 
   it("processes only first 200 streamIds", async () => {
@@ -110,8 +111,11 @@ describe("useNowPlaying", () => {
     const manyIds = Array.from({ length: 500 }, (_, i) => i + 1);
     renderHook(() => useNowPlaying(manyIds));
 
-    await vi.waitFor(() => {
-      expect(handler).toHaveBeenCalledWith(200);
-    }, { timeout: 2000 });
+    await vi.waitFor(
+      () => {
+        expect(handler).toHaveBeenCalledWith(200);
+      },
+      { timeout: 2000 },
+    );
   });
 });

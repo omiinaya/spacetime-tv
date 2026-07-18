@@ -2,6 +2,7 @@
 
 Extracted from guide.py during decomposition of the 434-line monolithic file.
 """
+
 import asyncio
 import json
 import logging
@@ -23,7 +24,9 @@ log = logging.getLogger("spacetime-tv")
 _RICH_ENABLED = bool(_TMDB_ENRICH)
 
 
-log.info(f"TMDB enrich: {'enabled' if _RICH_ENABLED else 'disabled'} — {'path: ' + str(_TMDB_ENRICH) if _RICH_ENABLED else 'no TMDB_ENRICH_PATH set'}")
+log.info(
+    f"TMDB enrich: {'enabled' if _RICH_ENABLED else 'disabled'} — {'path: ' + str(_TMDB_ENRICH) if _RICH_ENABLED else 'no TMDB_ENRICH_PATH set'}"
+)
 router = APIRouter(tags=["guide"])
 
 
@@ -42,10 +45,7 @@ async def tv_guide(
     """
     # Use cached guide if available and EPG hasn't been refreshed since
     time.time()
-    use_cache = (
-        _guide_cache["channel_groups"] is not None
-        and _guide_cache["built_at"] >= epg_cache["fetched"]
-    )
+    use_cache = _guide_cache["channel_groups"] is not None and _guide_cache["built_at"] >= epg_cache["fetched"]
 
     if use_cache:
         channel_groups: list[dict] = _guide_cache["channel_groups"]  # type: ignore
@@ -59,7 +59,7 @@ async def tv_guide(
 
     # Recompute is_live labels for the paginated slice (time-sensitive)
     now_dt = datetime.now(UTC)
-    page = channel_groups[offset:offset + limit]
+    page = channel_groups[offset : offset + limit]
     for group in page:
         for prog in group["programmes"]:
             try:
@@ -83,6 +83,7 @@ async def tv_guide(
 @router.get("/epg/events")
 async def epg_sse(request: Request):
     """SSE endpoint: notifies clients when EPG data has been refreshed."""
+
     async def event_stream():
         q: asyncio.Queue = asyncio.Queue(maxsize=8)
         _epg_clients.append(q)
@@ -201,7 +202,10 @@ async def guide_enrich(
 
     try:
         proc = await asyncio.create_subprocess_exec(
-            _TMDB_ENRICH, "--json", "enrich", q,
+            _TMDB_ENRICH,
+            "--json",
+            "enrich",
+            q,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -269,16 +273,18 @@ async def guide_catchup(
             continue
         # Include programmes that end after window_start and start before now
         if stop > window_start and start < now:
-            results.append({
-                "title": p.get("title", ""),
-                "subtitle": p.get("subtitle", ""),
-                "start": start.isoformat(),
-                "stop": stop.isoformat(),
-                "start_ts": int(start.timestamp()),
-                "stop_ts": int(stop.timestamp()),
-                "start_offset": int((now - start).total_seconds()),
-                "duration": int((stop - start).total_seconds()),
-            })
+            results.append(
+                {
+                    "title": p.get("title", ""),
+                    "subtitle": p.get("subtitle", ""),
+                    "start": start.isoformat(),
+                    "stop": stop.isoformat(),
+                    "start_ts": int(start.timestamp()),
+                    "stop_ts": int(stop.timestamp()),
+                    "start_offset": int((now - start).total_seconds()),
+                    "duration": int((stop - start).total_seconds()),
+                }
+            )
 
     results.sort(key=lambda r: r["start_ts"])
 
@@ -332,18 +338,20 @@ async def guide_search(
         if future_only and stop <= now:
             continue
 
-        results.append({
-            "title": title,
-            "subtitle": subtitle or None,
-            "description": desc or None,
-            "channel_id": p["channel"],
-            "channel_name": ch_map.get(p["channel"], p["channel"]),
-            "start": start.isoformat(),
-            "stop": stop.isoformat(),
-            "start_ts": int(start.timestamp()),
-            "stop_ts": int(stop.timestamp()),
-            "duration": int((stop - start).total_seconds()),
-        })
+        results.append(
+            {
+                "title": title,
+                "subtitle": subtitle or None,
+                "description": desc or None,
+                "channel_id": p["channel"],
+                "channel_name": ch_map.get(p["channel"], p["channel"]),
+                "start": start.isoformat(),
+                "stop": stop.isoformat(),
+                "start_ts": int(start.timestamp()),
+                "stop_ts": int(stop.timestamp()),
+                "duration": int((stop - start).total_seconds()),
+            }
+        )
 
     results.sort(key=lambda r: r["start_ts"])
     results = results[:limit]

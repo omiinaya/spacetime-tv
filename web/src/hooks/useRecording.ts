@@ -20,7 +20,9 @@ interface UseRecordingReturn {
 }
 
 export function useRecording(): UseRecordingReturn {
-  const [activeRecordingId, setActiveRecordingId] = useState<string | null>(null);
+  const [activeRecordingId, setActiveRecordingId] = useState<string | null>(
+    null,
+  );
   const recordingIdRef = useRef<string | null>(null);
 
   const isRecording = activeRecordingId !== null;
@@ -31,7 +33,9 @@ export function useRecording(): UseRecordingReturn {
       if (name) params.set("stream_name", name);
       const r = await fetch(`/api/record/start?${params}`, { method: "POST" });
       if (!r.ok) {
-        toast.error("Failed to start recording", { description: `Server responded with ${r.status}` });
+        toast.error("Failed to start recording", {
+          description: `Server responded with ${r.status}`,
+        });
         return null;
       }
       const data = await r.json();
@@ -48,7 +52,9 @@ export function useRecording(): UseRecordingReturn {
     const rid = recordingIdRef.current;
     if (!rid) return;
     try {
-      const r = await fetch(`/api/record/stop?recording_id=${rid}`, { method: "POST" });
+      const r = await fetch(`/api/record/stop?recording_id=${rid}`, {
+        method: "POST",
+      });
       if (r.ok) {
         recordingIdRef.current = null;
         setActiveRecordingId(null);
@@ -63,7 +69,9 @@ export function useRecording(): UseRecordingReturn {
     return () => {
       const rid = recordingIdRef.current;
       if (rid) {
-        fetch(`/api/record/stop?recording_id=${rid}`, { method: "POST" }).catch(() => {});
+        fetch(`/api/record/stop?recording_id=${rid}`, { method: "POST" }).catch(
+          () => {},
+        );
       }
     };
   }, []);
@@ -102,7 +110,7 @@ export function useRecordings() {
     try {
       const r = await fetch(`/api/recordings/${id}`, { method: "DELETE" });
       if (r.ok) {
-        setRecordings(prev => prev.filter(rec => rec.id !== id));
+        setRecordings((prev) => prev.filter((rec) => rec.id !== id));
       }
     } catch (e) {
       toast.error("Failed to delete recording");

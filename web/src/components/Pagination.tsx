@@ -7,7 +7,11 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
 }
 
-export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
+export function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: PaginationProps) {
   const [jumpValue, setJumpValue] = useState("");
 
   const handleJump = useCallback(() => {
@@ -45,7 +49,10 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
 
       {pages.map((p, i) =>
         p === "..." ? (
-          <span key={`ellipsis-${i}`} className="px-1 text-muted-foreground text-sm">
+          <span
+            key={`ellipsis-${i}`}
+            className="px-1 text-muted-foreground text-sm"
+          >
             …
           </span>
         ) : (
@@ -60,7 +67,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
           >
             {p}
           </button>
-        )
+        ),
       )}
 
       <button

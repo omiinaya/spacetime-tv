@@ -22,6 +22,7 @@ def test_health_includes_cached_categories(client):
 def test_health_after_cache_populated(client_with_cache):
     """Pre-populated cache should show up in health stats."""
     from state import _cache
+
     test_data = [{"stream_id": 1, "name": "Test"}]
     _cache["vod_1"] = (1000.0, test_data)
     _cache["vod_categories"] = (1000.0, [{"category_id": 1, "category_name": "Movies"}])
@@ -63,14 +64,18 @@ def test_cors_unknown_origin_rejected(client):
 
 # ── /api/error (POST) ─────────────────────────────────────────────────
 
+
 def test_error_endpoint_accepts_body(client):
     """POST /api/error should accept a JSON error report and return ok."""
-    resp = client.post("/api/v1/error", json={
-        "message": "Test error",
-        "stack": "Error: test\n    at Component (file.tsx:10:5)",
-        "componentStack": "div > Button > Component",
-        "url": "http://localhost:5180/movies",
-    })
+    resp = client.post(
+        "/api/v1/error",
+        json={
+            "message": "Test error",
+            "stack": "Error: test\n    at Component (file.tsx:10:5)",
+            "componentStack": "div > Button > Component",
+            "url": "http://localhost:5180/movies",
+        },
+    )
     assert resp.status_code == 200
     assert resp.json() == {"ok": True}
 

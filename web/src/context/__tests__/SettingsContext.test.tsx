@@ -47,7 +47,9 @@ function TestConsumer() {
     <div>
       <p data-testid="quality">{settings.quality}</p>
       <p data-testid="showAdult">{String(settings.showAdult)}</p>
-      <p data-testid="hiddenCount">{String(settings.hiddenCategories.length)}</p>
+      <p data-testid="hiddenCount">
+        {String(settings.hiddenCategories.length)}
+      </p>
       <button
         data-testid="update-quality"
         onClick={() => update({ quality: "high" })}
@@ -60,10 +62,7 @@ function TestConsumer() {
       >
         Show Adult
       </button>
-      <button
-        data-testid="reset-btn"
-        onClick={() => reset()}
-      >
+      <button data-testid="reset-btn" onClick={() => reset()}>
         Reset
       </button>
     </div>
@@ -162,8 +161,12 @@ describe("SettingsContext", () => {
   it("returns defaults when useSettings is called outside provider", async () => {
     // useSettings returns the default context values when no provider is present
     const { container } = render(<TestConsumer />);
-    expect(container.querySelector('[data-testid="quality"]')?.textContent).toBe("auto");
-    expect(container.querySelector('[data-testid="showAdult"]')?.textContent).toBe("false");
+    expect(
+      container.querySelector('[data-testid="quality"]')?.textContent,
+    ).toBe("auto");
+    expect(
+      container.querySelector('[data-testid="showAdult"]')?.textContent,
+    ).toBe("false");
   });
 });
 
@@ -206,10 +209,16 @@ describe("SettingsContext — theme application", () => {
       const { update } = useSettings();
       return (
         <div>
-          <button data-testid="set-light" onClick={() => update({ theme: "light" })}>
+          <button
+            data-testid="set-light"
+            onClick={() => update({ theme: "light" })}
+          >
             Set Light
           </button>
-          <button data-testid="set-dark" onClick={() => update({ theme: "dark" })}>
+          <button
+            data-testid="set-dark"
+            onClick={() => update({ theme: "dark" })}
+          >
             Set Dark
           </button>
         </div>

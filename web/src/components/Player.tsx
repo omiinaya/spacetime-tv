@@ -5,7 +5,10 @@ import { useKeyboard } from "@/hooks/useKeyboard";
 import { useVideoPlayer, fmtTime } from "@/hooks/useVideoPlayer";
 import { useControlsVisibility } from "@/hooks/useControlsVisibility";
 import { useSwipeToGoBack } from "@/hooks/useSwipeToGoBack";
-import { DocumentWithWebkit, VideoElementWithWebkit } from "@/hooks/usePlayerTypes";
+import {
+  DocumentWithWebkit,
+  VideoElementWithWebkit,
+} from "@/hooks/usePlayerTypes";
 import PlayerLoadingOverlay from "@/components/PlayerLoadingOverlay";
 import PlayerErrorOverlay from "@/components/PlayerErrorOverlay";
 import PlayerResumePrompt from "@/components/PlayerResumePrompt";
@@ -20,7 +23,9 @@ import { useDocumentPiP } from "@/hooks/useDocumentPiP";
 import { useFrameRateDetector } from "@/hooks/useFrameRateDetector";
 
 // ── Types ─────────────────────────────────────────────────────
-interface PlayerProps { type: "live" | "movie" | "series"; }
+interface PlayerProps {
+  type: "live" | "movie" | "series";
+}
 
 // ── Component ─────────────────────────────────────────────────
 export default function Player({ type }: PlayerProps) {
@@ -31,38 +36,81 @@ export default function Player({ type }: PlayerProps) {
   // ── Timeshift / catch-up mode ──────────────────────────────
   const tsParam = searchParams.get("ts");
   const timeshiftDuration = tsParam ? parseInt(tsParam, 10) : undefined;
-  const isTimeshiftMode = timeshiftDuration !== undefined && timeshiftDuration > 0;
+  const isTimeshiftMode =
+    timeshiftDuration !== undefined && timeshiftDuration > 0;
 
-  const setTimeshift = useCallback((durationSeconds: number) => {
-    setSearchParams({ ts: String(durationSeconds) });
-  }, [setSearchParams]);
+  const setTimeshift = useCallback(
+    (durationSeconds: number) => {
+      setSearchParams({ ts: String(durationSeconds) });
+    },
+    [setSearchParams],
+  );
 
   const goLive = useCallback(() => {
     setSearchParams({});
   }, [setSearchParams]);
 
   // ── Controls visibility ─────────────────────────────────────
-  const { controlsVisible, showControls, hideControls } = useControlsVisibility();
+  const { controlsVisible, showControls, hideControls } =
+    useControlsVisibility();
 
   // ── Swipe-to-go-back gesture ─────────────────────────────────
   const centerTouched = useRef(false);
-  const { goBack, handleTouchStart, handleTouchMove, handleTouchEnd } = useSwipeToGoBack();
+  const { goBack, handleTouchStart, handleTouchMove, handleTouchEnd } =
+    useSwipeToGoBack();
 
   // ── Video player hook (core playback logic) ──────────────────
   const {
-    videoRef, containerRef, phase, errorMsg, errorType, loadingStep, transcoding,
-    volume, muted, playbackRate, qualityIdx, currentTime, duration, buffered,
-    resumePos, showResumePrompt, isLive, isVod,
-    togglePlay, seekTo, seek, setVolume, toggleMute, setSpeed, setQuality,
-    resumePlayback, startFromBeginning,
-    retryStream, isBehindLive, secondsBehindLive, seekToLive,
-    liveSeekableStart, liveSeekableEnd, switchAudioTrack,
-    connectionQuality, stallCount, suggestLowerQuality, downloadSpeed,
+    videoRef,
+    containerRef,
+    phase,
+    errorMsg,
+    errorType,
+    loadingStep,
+    transcoding,
+    volume,
+    muted,
+    playbackRate,
+    qualityIdx,
+    currentTime,
+    duration,
+    buffered,
+    resumePos,
+    showResumePrompt,
+    isLive,
+    isVod,
+    togglePlay,
+    seekTo,
+    seek,
+    setVolume,
+    toggleMute,
+    setSpeed,
+    setQuality,
+    resumePlayback,
+    startFromBeginning,
+    retryStream,
+    isBehindLive,
+    secondsBehindLive,
+    seekToLive,
+    liveSeekableStart,
+    liveSeekableEnd,
+    switchAudioTrack,
+    connectionQuality,
+    stallCount,
+    suggestLowerQuality,
+    downloadSpeed,
   } = useVideoPlayer({
-    type, id, seriesId, epId, timeshiftDuration,
-    onAutoAdvance: useCallback((url: string) => {
-      navigate(url);
-    }, [navigate]),
+    type,
+    id,
+    seriesId,
+    epId,
+    timeshiftDuration,
+    onAutoAdvance: useCallback(
+      (url: string) => {
+        navigate(url);
+      },
+      [navigate],
+    ),
   });
 
   // ── Fullscreen ───────────────────────────────────────────────
@@ -79,7 +127,9 @@ export default function Player({ type }: PlayerProps) {
       setIsFullscreen(false);
     } else {
       const el = video as VideoElementWithWebkit;
-      el.requestFullscreen?.().then(() => setIsFullscreen(true)).catch(() => {});
+      el.requestFullscreen?.()
+        .then(() => setIsFullscreen(true))
+        .catch(() => {});
       el.webkitRequestFullscreen?.();
       el.webkitEnterFullscreen?.();
       setIsFullscreen(true);
@@ -107,13 +157,23 @@ export default function Player({ type }: PlayerProps) {
   }, [isRecording, stopRecording, startRecording, type, id]);
 
   // ── Document Picture-in-Picture ──────────────────────────────
-  const { isPiPActive, enterPiP, exitPiP } = useDocumentPiP(videoRef, containerRef);
+  const { isPiPActive, enterPiP, exitPiP } = useDocumentPiP(
+    videoRef,
+    containerRef,
+  );
 
   // ── Frame rate detection ─────────────────────────────────────
   const frameRate = useFrameRateDetector(videoRef, phase === "playing");
 
   // ── Keyboard ─────────────────────────────────────────────────
-  useKeyboard({ togglePlay, seek, toggleFullscreen, toggleMute, setVolume, volume });
+  useKeyboard({
+    togglePlay,
+    seek,
+    toggleFullscreen,
+    toggleMute,
+    setVolume,
+    volume,
+  });
 
   // ── Force a fresh video element on each mount ────────────────
   const mountKey = useRef(Date.now()).current;
@@ -123,23 +183,36 @@ export default function Player({ type }: PlayerProps) {
     if (type !== "live" || !id) return;
     const sid = parseInt(id, 10);
     if (!sid) return;
-    api.live.info([sid]).then((res) => {
-      const ch = res.streams[0];
-      saveRecentChannel({ stream_id: sid, name: ch?.name || `Channel ${sid}`, icon: ch?.stream_icon || "" });
-    }).catch(() => {
-      saveRecentChannel({ stream_id: sid, name: `Channel ${sid}`, icon: "" });
-    });
+    api.live
+      .info([sid])
+      .then((res) => {
+        const ch = res.streams[0];
+        saveRecentChannel({
+          stream_id: sid,
+          name: ch?.name || `Channel ${sid}`,
+          icon: ch?.stream_icon || "",
+        });
+      })
+      .catch(() => {
+        saveRecentChannel({ stream_id: sid, name: `Channel ${sid}`, icon: "" });
+      });
   }, [type, id]);
 
   // ── Derived ──────────────────────────────────────────────────
   const progressPct = isLive
-    ? (liveSeekableEnd - liveSeekableStart > 0
-        ? ((currentTime - liveSeekableStart) / (liveSeekableEnd - liveSeekableStart)) * 100
-        : 0)
-    : duration > 0 ? (currentTime / duration) * 100 : 0;
+    ? liveSeekableEnd - liveSeekableStart > 0
+      ? ((currentTime - liveSeekableStart) /
+          (liveSeekableEnd - liveSeekableStart)) *
+        100
+      : 0
+    : duration > 0
+      ? (currentTime / duration) * 100
+      : 0;
   const bufferedPct = isLive
     ? 100
-    : duration > 0 ? (buffered / duration) * 100 : 0;
+    : duration > 0
+      ? (buffered / duration) * 100
+      : 0;
 
   // ── Touch handler: toggle controls on tap while tracking swipe ─
   const onContainerTouchStart = (e: React.TouchEvent) => {
@@ -153,7 +226,9 @@ export default function Player({ type }: PlayerProps) {
       ref={containerRef}
       className="relative w-full bg-black group"
       onMouseMove={() => showControls(true)}
-      onMouseLeave={() => { if (phase === "playing") hideControls(); }}
+      onMouseLeave={() => {
+        if (phase === "playing") hideControls();
+      }}
       onTouchStart={onContainerTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={(e) => handleTouchEnd(e, type)}
@@ -173,10 +248,19 @@ export default function Player({ type }: PlayerProps) {
       <div className="absolute inset-0 z-[1]" onClick={togglePlay} />
 
       {/* Loading */}
-      <PlayerLoadingOverlay phase={phase} loadingStep={loadingStep} errorMsg={errorMsg} />
+      <PlayerLoadingOverlay
+        phase={phase}
+        loadingStep={loadingStep}
+        errorMsg={errorMsg}
+      />
 
       {/* Error */}
-      <PlayerErrorOverlay phase={phase} errorMsg={errorMsg} errorType={errorType} onRetry={retryStream} />
+      <PlayerErrorOverlay
+        phase={phase}
+        errorMsg={errorMsg}
+        errorType={errorType}
+        onRetry={retryStream}
+      />
 
       {/* Resume prompt */}
       <PlayerResumePrompt
@@ -203,7 +287,9 @@ export default function Player({ type }: PlayerProps) {
         phase={phase}
         onTogglePlay={togglePlay}
         onSeek={seek}
-        onCenterTouch={() => { centerTouched.current = true; }}
+        onCenterTouch={() => {
+          centerTouched.current = true;
+        }}
       />
 
       {/* ── Bottom controls ─────────────────────────────────── */}

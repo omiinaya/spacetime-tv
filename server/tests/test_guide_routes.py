@@ -54,6 +54,7 @@ SAMPLE_EPG = {
 
 # ── tv_guide: cache rebuild path ────────────────────────────────────────
 
+
 class TestTvGuideCache:
     """tv_guide() cache rebuilding when guide cache is stale."""
 
@@ -78,6 +79,7 @@ class TestTvGuideCache:
 
 
 # ── tv_guide: is_live recomputation parse error ────────────────────────
+
 
 class TestTvGuideIsLiveParseError:
     """tv_guide() handles malformed programme timestamps gracefully during is_live recompute."""
@@ -137,6 +139,7 @@ class TestTvGuideIsLiveParseError:
 
 # ── guide_now: programme parse error ────────────────────────────────────
 
+
 class TestGuideNowParseError:
     """guide_now() handles malformed programme timestamps gracefully."""
 
@@ -171,9 +174,12 @@ class TestGuideNowParseError:
         epg_cache["data"] = epg_data
         epg_cache["fetched"] = time.time()
 
-        _cache["live_all"] = (time.time(), [
-            {"stream_id": 101, "name": "Chan1", "stream_icon": "", "category_id": "1", "epg_channel_id": "C1"},
-        ])
+        _cache["live_all"] = (
+            time.time(),
+            [
+                {"stream_id": 101, "name": "Chan1", "stream_icon": "", "category_id": "1", "epg_channel_id": "C1"},
+            ],
+        )
 
         resp = client_with_cache.get("/api/v1/guide/now?stream_ids=101")
         assert resp.status_code == 200
@@ -188,6 +194,7 @@ class TestGuideNowParseError:
 
 # ── guide_catchup ───────────────────────────────────────────────────────
 
+
 class TestGuideCatchup:
     """guide_catchup(): /api/guide/catchup endpoint."""
 
@@ -198,10 +205,18 @@ class TestGuideCatchup:
         epg_cache["data"] = SAMPLE_EPG
         epg_cache["fetched"] = time.time()
 
-        _cache["live_all"] = (time.time(), [
-            {"stream_id": 101, "name": "BBC One HD", "stream_icon": "", "category_id": "1",
-             "epg_channel_id": "BBC1.uk"},
-        ])
+        _cache["live_all"] = (
+            time.time(),
+            [
+                {
+                    "stream_id": 101,
+                    "name": "BBC One HD",
+                    "stream_icon": "",
+                    "category_id": "1",
+                    "epg_channel_id": "BBC1.uk",
+                },
+            ],
+        )
 
         resp = client_with_cache.get("/api/v1/guide/catchup?stream_id=101&hours=4")
         assert resp.status_code == 200
@@ -229,10 +244,18 @@ class TestGuideCatchup:
         epg_cache["data"] = SAMPLE_EPG
         epg_cache["fetched"] = time.time()
 
-        _cache["live_all"] = (time.time(), [
-            {"stream_id": 101, "name": "BBC One HD", "stream_icon": "", "category_id": "1",
-             "epg_channel_id": "BBC1.uk"},
-        ])
+        _cache["live_all"] = (
+            time.time(),
+            [
+                {
+                    "stream_id": 101,
+                    "name": "BBC One HD",
+                    "stream_icon": "",
+                    "category_id": "1",
+                    "epg_channel_id": "BBC1.uk",
+                },
+            ],
+        )
 
         resp = client_with_cache.get("/api/v1/guide/catchup?stream_id=999&hours=4")
         assert resp.status_code == 200
@@ -286,10 +309,12 @@ class TestGuideCatchup:
         epg_cache["data"] = epg_data
         epg_cache["fetched"] = time.time()
 
-        _cache["live_all"] = (time.time(), [
-            {"stream_id": 101, "name": "Chan1", "stream_icon": "", "category_id": "1",
-             "epg_channel_id": "C1"},
-        ])
+        _cache["live_all"] = (
+            time.time(),
+            [
+                {"stream_id": 101, "name": "Chan1", "stream_icon": "", "category_id": "1", "epg_channel_id": "C1"},
+            ],
+        )
 
         resp = client_with_cache.get("/api/v1/guide/catchup?stream_id=101&hours=4")
         assert resp.status_code == 200
@@ -343,10 +368,12 @@ class TestGuideCatchup:
         epg_cache["data"] = epg_data
         epg_cache["fetched"] = time.time()
 
-        _cache["live_all"] = (time.time(), [
-            {"stream_id": 101, "name": "Chan1", "stream_icon": "", "category_id": "1",
-             "epg_channel_id": "C1"},
-        ])
+        _cache["live_all"] = (
+            time.time(),
+            [
+                {"stream_id": 101, "name": "Chan1", "stream_icon": "", "category_id": "1", "epg_channel_id": "C1"},
+            ],
+        )
 
         resp = client_with_cache.get("/api/v1/guide/catchup?stream_id=101&hours=4")
         assert resp.status_code == 200
@@ -356,6 +383,7 @@ class TestGuideCatchup:
 
 
 # ── guide_enrich: CLI error paths ──────────────────────────────────────
+
 
 class TestGuideEnrich:
     """guide_enrich(): TMDB enrichment CLI error handling."""
@@ -436,6 +464,7 @@ class TestGuideEnrich:
 
 # ── guide_enrich direct tests (for coverage of error paths) ───────────
 
+
 @pytest.mark.asyncio
 class TestGuideEnrichDirect:
     """Direct tests for guide_enrich exception paths (via function call, not HTTP)."""
@@ -476,12 +505,14 @@ class TestGuideEnrichDirect:
 
 # ── SSE event stream ────────────────────────────────────────────────────
 
+
 class TestEpgSseStreaming:
     """epg_sse(): SSE streaming endpoint — verify route registration and headers."""
 
     def test_sse_route_exists(self, client):
         """SSE endpoint is registered — verify via app.url_path_for."""
         from main import app
+
         try:
             path = app.url_path_for("epg_sse")
             assert path == "/api/v1/epg/events"
@@ -492,6 +523,7 @@ class TestEpgSseStreaming:
         """epg_sse route uses StreamingResponse for SSE."""
 
         from routes.guide_routes import epg_sse
+
         # Verify the route handler exists and is callable
         assert callable(epg_sse)
         # The function is a route handler that returns StreamingResponse
@@ -499,6 +531,7 @@ class TestEpgSseStreaming:
 
 
 # ── guide_now: live_all fetch error ─────────────────────────────────────
+
 
 class TestGuideNowLiveAllError:
     """guide_now() handles cached_fetch failure gracefully."""
@@ -527,6 +560,7 @@ class TestGuideNowLiveAllError:
 
 
 # ── guide_now: past programme skip ──────────────────────────────────────
+
 
 class TestGuideNowPastProgramme:
     """guide_now() skips programmes that ended before cutoff_past."""
@@ -571,10 +605,12 @@ class TestGuideNowPastProgramme:
         }
         epg_cache["fetched"] = time.time()
 
-        _cache["live_all"] = (time.time(), [
-            {"stream_id": 101, "name": "Chan1", "stream_icon": "", "category_id": "1",
-             "epg_channel_id": "C1"},
-        ])
+        _cache["live_all"] = (
+            time.time(),
+            [
+                {"stream_id": 101, "name": "Chan1", "stream_icon": "", "category_id": "1", "epg_channel_id": "C1"},
+            ],
+        )
 
         resp = client_with_cache.get("/api/v1/guide/now?stream_ids=101")
         assert resp.status_code == 200
@@ -586,6 +622,7 @@ class TestGuideNowPastProgramme:
 
 
 # ── guide_catchup: live_all fetch error ─────────────────────────────────
+
 
 class TestGuideCatchupLiveAllError:
     """guide_catchup() handles cached_fetch failure gracefully."""
@@ -612,6 +649,7 @@ class TestGuideCatchupLiveAllError:
 
 # ── guide_enrich: cache hit with non-None data ──────────────────────────
 
+
 class TestGuideEnrichCacheHit:
     """guide_enrich() returns cached data when cache is fresh."""
 
@@ -637,6 +675,7 @@ class TestGuideEnrichCacheHit:
 
 
 # ── guide_search: EPG Search ────────────────────────────────────────────
+
 
 class TestGuideSearch:
     """EPG search endpoint — /api/guide/search."""

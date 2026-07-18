@@ -1,7 +1,13 @@
 import { useState, useCallback } from "react";
 import {
-  Volume2, VolumeX, Maximize, Minimize, Download, Circle,
-  Settings, RadioTower,
+  Volume2,
+  VolumeX,
+  Maximize,
+  Minimize,
+  Download,
+  Circle,
+  Settings,
+  RadioTower,
 } from "lucide-react";
 import { QUALITIES, SPEEDS } from "@/hooks/useVideoPlayer";
 import { SleepTimer } from "@/components/SleepTimer";
@@ -54,17 +60,22 @@ interface PlayerBottomControlsProps {
 }
 
 function ConnectionIndicator({
-  connectionQuality, downloadSpeed, stallCount,
+  connectionQuality,
+  downloadSpeed,
+  stallCount,
 }: {
   connectionQuality: string;
   downloadSpeed: number;
   stallCount: number;
 }) {
   const level =
-    connectionQuality === "excellent" ? 4
-    : connectionQuality === "good" ? 3
-    : connectionQuality === "fair" ? 2
-    : 1;
+    connectionQuality === "excellent"
+      ? 4
+      : connectionQuality === "good"
+        ? 3
+        : connectionQuality === "fair"
+          ? 2
+          : 1;
 
   return (
     <span
@@ -75,9 +86,11 @@ function ConnectionIndicator({
       {[0, 1, 2, 3].map((i) => {
         const active = i < level;
         const color =
-          connectionQuality === "poor" ? "bg-red-500"
-          : connectionQuality === "fair" ? "bg-yellow-400"
-          : "bg-green-500";
+          connectionQuality === "poor"
+            ? "bg-red-500"
+            : connectionQuality === "fair"
+              ? "bg-yellow-400"
+              : "bg-green-500";
         return (
           <span
             key={i}
@@ -92,7 +105,13 @@ function ConnectionIndicator({
   );
 }
 
-function FrameRateIndicator({ videoFps, label }: { videoFps: number; label: string }) {
+function FrameRateIndicator({
+  videoFps,
+  label,
+}: {
+  videoFps: number;
+  label: string;
+}) {
   if (videoFps <= 0) return null;
   return (
     <span
@@ -106,18 +125,44 @@ function FrameRateIndicator({ videoFps, label }: { videoFps: number; label: stri
 }
 
 export default function PlayerBottomControls({
-  controlsVisible, phase,
-  isLive, isVod, isFullscreen, isRecording,
-  muted, volume, playbackRate, qualityIdx,
-  currentTime, duration,
-  progressPct, bufferedPct,
-  isBehindLive, secondsBehindLive,
-  liveSeekableStart, liveSeekableEnd,
-  transcoding, connectionQuality, downloadSpeed, stallCount,
-  frameRate, suggestLowerQuality,
-  type, id, epId, videoRef, fullscreenBtnRef,
-  onSeekTo, onToggleMute, onSetVolume, onSetSpeed, onSetQuality,
-  onSeekToLive, onRecordToggle, onShowControls, fmtTime,
+  controlsVisible,
+  phase,
+  isLive,
+  isVod,
+  isFullscreen,
+  isRecording,
+  muted,
+  volume,
+  playbackRate,
+  qualityIdx,
+  currentTime,
+  duration,
+  progressPct,
+  bufferedPct,
+  isBehindLive,
+  secondsBehindLive,
+  liveSeekableStart,
+  liveSeekableEnd,
+  transcoding,
+  connectionQuality,
+  downloadSpeed,
+  stallCount,
+  frameRate,
+  suggestLowerQuality,
+  type,
+  id,
+  epId,
+  videoRef,
+  fullscreenBtnRef,
+  onSeekTo,
+  onToggleMute,
+  onSetVolume,
+  onSetSpeed,
+  onSetQuality,
+  onSeekToLive,
+  onRecordToggle,
+  onShowControls,
+  fmtTime,
   switchAudioTrack,
 }: PlayerBottomControlsProps) {
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
@@ -140,7 +185,9 @@ export default function PlayerBottomControls({
   return (
     <div
       className={`absolute inset-x-0 bottom-0 z-20 transition-opacity duration-300 ${
-        controlsVisible || phase !== "playing" ? "opacity-100" : "opacity-0 pointer-events-none"
+        controlsVisible || phase !== "playing"
+          ? "opacity-100"
+          : "opacity-0 pointer-events-none"
       }`}
       onTouchStart={(e) => e.stopPropagation()}
     >
@@ -148,7 +195,9 @@ export default function PlayerBottomControls({
 
       <div
         className="relative px-3 pb-3 sm:px-4 sm:pb-3 pt-10 sm:pt-8"
-        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }}
+        style={{
+          paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
+        }}
       >
         {/* Timeline */}
         <PlayerProgressBar
@@ -175,11 +224,13 @@ export default function PlayerBottomControls({
               </span>
             )}
             {isLive && (
-              <span className={`text-xs font-bold tracking-wider px-2 py-0.5 rounded whitespace-nowrap flex items-center gap-1 ${
-                isBehindLive
-                  ? "text-yellow-400 bg-yellow-400/10"
-                  : "text-red-500 bg-red-500/10"
-              }`}>
+              <span
+                className={`text-xs font-bold tracking-wider px-2 py-0.5 rounded whitespace-nowrap flex items-center gap-1 ${
+                  isBehindLive
+                    ? "text-yellow-400 bg-yellow-400/10"
+                    : "text-red-500 bg-red-500/10"
+                }`}
+              >
                 {isBehindLive ? (
                   <>
                     <RadioTower className="h-3 w-3" />
@@ -200,7 +251,10 @@ export default function PlayerBottomControls({
               downloadSpeed={downloadSpeed}
               stallCount={stallCount}
             />
-            <FrameRateIndicator videoFps={frameRate.videoFps} label={frameRate.label} />
+            <FrameRateIndicator
+              videoFps={frameRate.videoFps}
+              label={frameRate.label}
+            />
           </div>
 
           <div className="flex-1" />
@@ -235,7 +289,11 @@ export default function PlayerBottomControls({
             className="text-white/80 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
           >
-            {isFullscreen ? <Minimize className="w-5 h-5" aria-hidden="true" /> : <Maximize className="w-5 h-5" aria-hidden="true" />}
+            {isFullscreen ? (
+              <Minimize className="w-5 h-5" aria-hidden="true" />
+            ) : (
+              <Maximize className="w-5 h-5" aria-hidden="true" />
+            )}
           </button>
         </div>
 
@@ -248,23 +306,44 @@ export default function PlayerBottomControls({
               className="text-white/60 hover:text-white/80 transition-colors p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center"
               aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
             >
-              {muted || volume === 0 ? <VolumeX className="w-4 h-4" aria-hidden="true" /> : <Volume2 className="w-4 h-4" aria-hidden="true" />}
+              {muted || volume === 0 ? (
+                <VolumeX className="w-4 h-4" aria-hidden="true" />
+              ) : (
+                <Volume2 className="w-4 h-4" aria-hidden="true" />
+              )}
             </button>
             {showVolumeSlider && (
               <div className="absolute bottom-full mb-2 left-0 flex flex-col items-center gap-2 bg-zinc-900/95 border border-white/10 rounded-lg px-1.5 py-3 shadow-xl z-30">
-                <button onClick={() => { toggleMute(); }} className="text-white/60 hover:text-white/80">
-                  {muted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                <button
+                  onClick={() => {
+                    toggleMute();
+                  }}
+                  className="text-white/60 hover:text-white/80"
+                >
+                  {muted || volume === 0 ? (
+                    <VolumeX className="w-4 h-4" />
+                  ) : (
+                    <Volume2 className="w-4 h-4" />
+                  )}
                 </button>
                 <input
                   type="range"
-                  min="0" max="1" step="0.05"
+                  min="0"
+                  max="1"
+                  step="0.05"
                   value={muted ? 0 : volume}
-                  onChange={e => setVolume(parseFloat(e.target.value))}
+                  onChange={(e) => setVolume(parseFloat(e.target.value))}
                   aria-label="Volume"
                   className="h-24 w-1 accent-blue-500 cursor-pointer"
-                  style={{ WebkitAppearance: "slider-vertical", writingMode: "vertical-lr", direction: "rtl" }}
+                  style={{
+                    WebkitAppearance: "slider-vertical",
+                    writingMode: "vertical-lr",
+                    direction: "rtl",
+                  }}
                 />
-                <span className="text-[10px] text-white/40 tabular-nums">{Math.round((muted ? 0 : volume) * 100)}%</span>
+                <span className="text-[10px] text-white/40 tabular-nums">
+                  {Math.round((muted ? 0 : volume) * 100)}%
+                </span>
               </div>
             )}
           </div>
@@ -280,10 +359,17 @@ export default function PlayerBottomControls({
             </button>
             {showSpeedMenu && (
               <div className="absolute bottom-full mb-2 left-0 bg-zinc-900/95 border border-white/10 rounded-lg py-1 min-w-[5rem] shadow-xl z-30">
-                {SPEEDS.map(s => (
-                  <button key={s} onClick={() => { onSetSpeed(s); setShowSpeedMenu(false); }}
+                {SPEEDS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => {
+                      onSetSpeed(s);
+                      setShowSpeedMenu(false);
+                    }}
                     className={`block w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors ${playbackRate === s ? "text-blue-400" : "text-white/70"}`}
-                  >{s}x</button>
+                  >
+                    {s}x
+                  </button>
                 ))}
               </div>
             )}
@@ -291,9 +377,12 @@ export default function PlayerBottomControls({
 
           {/* Volume slider — desktop only */}
           <input
-            type="range" min="0" max="1" step="0.05"
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
             value={muted ? 0 : volume}
-            onChange={e => setVolume(parseFloat(e.target.value))}
+            onChange={(e) => setVolume(parseFloat(e.target.value))}
             aria-label="Volume"
             className="w-14 sm:w-20 h-1 accent-blue-500 cursor-pointer hidden sm:block"
           />
@@ -309,7 +398,9 @@ export default function PlayerBottomControls({
               aria-label="More options"
             >
               <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-                <circle cx="3" cy="8" r="1.5" /><circle cx="8" cy="8" r="1.5" /><circle cx="13" cy="8" r="1.5" />
+                <circle cx="3" cy="8" r="1.5" />
+                <circle cx="8" cy="8" r="1.5" />
+                <circle cx="13" cy="8" r="1.5" />
               </svg>
             </button>
             {showMoreMenu && (
@@ -326,12 +417,19 @@ export default function PlayerBottomControls({
                 )}
                 {type === "live" && (
                   <button
-                    onClick={() => { handleRecordToggle(); setShowMoreMenu(false); }}
+                    onClick={() => {
+                      handleRecordToggle();
+                      setShowMoreMenu(false);
+                    }}
                     className={`flex items-center gap-2 w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                      isRecording ? "text-red-400 hover:bg-red-500/10" : "text-white/70 hover:bg-white/10"
+                      isRecording
+                        ? "text-red-400 hover:bg-red-500/10"
+                        : "text-white/70 hover:bg-white/10"
                     }`}
                   >
-                    <Circle className={`w-4 h-4 ${isRecording ? "animate-pulse fill-current" : ""}`} />
+                    <Circle
+                      className={`w-4 h-4 ${isRecording ? "animate-pulse fill-current" : ""}`}
+                    />
                     {isRecording ? "Stop Recording" : "Record"}
                   </button>
                 )}
@@ -339,18 +437,24 @@ export default function PlayerBottomControls({
                   <SleepTimer
                     onPause={() => {
                       const v = videoRef.current;
-                      if (v && !v.paused) { v.pause(); }
+                      if (v && !v.paused) {
+                        v.pause();
+                      }
                     }}
                   />
                 </div>
                 <button
                   onClick={() => {
                     setShowMoreMenu(false);
-                    window.dispatchEvent(new CustomEvent("stv:toggle-shortcuts"));
+                    window.dispatchEvent(
+                      new CustomEvent("stv:toggle-shortcuts"),
+                    );
                   }}
                   className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-sm text-white/70 hover:bg-white/10 transition-colors"
                 >
-                  <span className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-mono text-white/60">{"?"}</span>
+                  <span className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-mono text-white/60">
+                    {"?"}
+                  </span>
                   Shortcuts
                 </button>
                 <div className="px-2">
@@ -369,12 +473,20 @@ export default function PlayerBottomControls({
                 </div>
                 {isLive && (
                   <div className="border-t border-white/10 mt-1 pt-1 px-2">
-                    <p className="px-2 py-1 text-[10px] text-white/40 uppercase tracking-wider">Quality</p>
+                    <p className="px-2 py-1 text-[10px] text-white/40 uppercase tracking-wider">
+                      Quality
+                    </p>
                     {QUALITIES.map((q, i) => (
-                      <button key={q.label}
-                        onClick={() => { onSetQuality(i); setShowMoreMenu(false); }}
+                      <button
+                        key={q.label}
+                        onClick={() => {
+                          onSetQuality(i);
+                          setShowMoreMenu(false);
+                        }}
                         className={`block w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors rounded ${qualityIdx === i ? "text-blue-400" : "text-white/70"}`}
-                      >{q.label}</button>
+                      >
+                        {q.label}
+                      </button>
                     ))}
                   </div>
                 )}
@@ -387,18 +499,25 @@ export default function PlayerBottomControls({
             <SleepTimer
               onPause={() => {
                 const v = videoRef.current;
-                if (v && !v.paused) { v.pause(); }
+                if (v && !v.paused) {
+                  v.pause();
+                }
               }}
             />
             {type === "live" && (
               <button
                 onClick={handleRecordToggle}
                 className={`p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center transition-colors ${
-                  isRecording ? "text-red-500" : "text-white/60 hover:text-white/80"
+                  isRecording
+                    ? "text-red-500"
+                    : "text-white/60 hover:text-white/80"
                 }`}
                 aria-label={isRecording ? "Stop recording" : "Start recording"}
               >
-                <Circle className={`w-4 h-4 ${isRecording ? "animate-pulse fill-current" : ""}`} aria-hidden="true" />
+                <Circle
+                  className={`w-4 h-4 ${isRecording ? "animate-pulse fill-current" : ""}`}
+                  aria-hidden="true"
+                />
               </button>
             )}
             {isVod && (
@@ -433,10 +552,16 @@ export default function PlayerBottomControls({
                 {showQualityMenu && (
                   <div className="absolute bottom-full mb-2 right-0 bg-zinc-900/95 border border-white/10 rounded-lg py-1 min-w-[7rem] shadow-xl z-30">
                     {QUALITIES.map((q, i) => (
-                      <button key={q.label}
-                        onClick={() => { onSetQuality(i); setShowQualityMenu(false); }}
+                      <button
+                        key={q.label}
+                        onClick={() => {
+                          onSetQuality(i);
+                          setShowQualityMenu(false);
+                        }}
                         className={`block w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors ${qualityIdx === i ? "text-blue-400" : "text-white/70"}`}
-                      >{q.label}</button>
+                      >
+                        {q.label}
+                      </button>
                     ))}
                   </div>
                 )}

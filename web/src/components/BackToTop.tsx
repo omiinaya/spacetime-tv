@@ -33,7 +33,7 @@ export function BackToTop() {
         "fixed bottom-6 right-6 z-50 p-3 rounded-full bg-primary/90 hover:bg-primary text-primary-foreground shadow-lg shadow-black/30 transition-all duration-300",
         visible
           ? "opacity-100 translate-y-0 pointer-events-auto"
-          : "opacity-0 translate-y-4 pointer-events-none"
+          : "opacity-0 translate-y-4 pointer-events-none",
       )}
       aria-label="Scroll to top"
       title="Back to top"

@@ -2,6 +2,7 @@
 
 Extracted from guide.py during decomposition of the 434-line monolithic file.
 """
+
 import asyncio
 import json
 import logging
@@ -39,8 +40,9 @@ async def load_epg() -> dict:
             log.warning(f"EPG cache file corrupted: {e} — will refetch")
 
     from iptv_client import fetch_epg_all_providers, get_enabled_providers, iptv_xmltv_url
+
     providers = get_enabled_providers()
-    
+
     if len(providers) <= 1:
         # Single provider — use direct fetch (backward compatible)
         log.info("Fetching EPG XMLTV from single provider ...")
@@ -169,28 +171,32 @@ async def _build_guide_cache() -> tuple[list[dict], int]:
             ch_id = p["channel"]
             if ch_id not in by_channel:
                 by_channel[ch_id] = []
-            by_channel[ch_id].append({
-                "start": p["start"],
-                "stop": p["stop"],
-                "title": p.get("title", ""),
-                "subtitle": p.get("subtitle", ""),
-                "desc": p.get("desc", ""),
-                "category": p.get("category", ""),
-                "is_live": start <= now <= stop,
-            })
+            by_channel[ch_id].append(
+                {
+                    "start": p["start"],
+                    "stop": p["stop"],
+                    "title": p.get("title", ""),
+                    "subtitle": p.get("subtitle", ""),
+                    "desc": p.get("desc", ""),
+                    "category": p.get("category", ""),
+                    "is_live": start <= now <= stop,
+                }
+            )
         except (ValueError, IndexError):
             continue
 
     channel_groups = []
     for ch_id, progs in by_channel.items():
         progs.sort(key=lambda p: p["start"])
-        channel_groups.append({
-            "channel_id": ch_id,
-            "channel_name": ch_map.get(ch_id, ch_id),
-            "channel_icon": ch_icon_map.get(ch_id, ""),
-            "stream_id": ch_to_stream.get(ch_id),
-            "programmes": progs,
-        })
+        channel_groups.append(
+            {
+                "channel_id": ch_id,
+                "channel_name": ch_map.get(ch_id, ch_id),
+                "channel_icon": ch_icon_map.get(ch_id, ""),
+                "stream_id": ch_to_stream.get(ch_id),
+                "programmes": progs,
+            }
+        )
 
     channel_groups.sort(key=lambda g: g["channel_name"].lower())
     total = len(channel_groups)

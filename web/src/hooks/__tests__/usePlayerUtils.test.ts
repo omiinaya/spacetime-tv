@@ -203,7 +203,9 @@ describe("probeStream", () => {
   });
 
   it("returns { codec: 'unknown' } on fetch error", async () => {
-    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("Network error"));
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(
+      new Error("Network error"),
+    );
     const result = await probeStream("/api/movie/probe/5");
     expect(result).toEqual({ codec: "unknown" });
   });
@@ -213,7 +215,11 @@ describe("probeStream", () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
       (_url: string, opts: RequestInit) =>
         new Promise((_resolve, reject) => {
-          opts.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+          opts.signal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          );
         }),
     );
     const promise = probeStream("/api/movie/probe/5", controller.signal);
@@ -227,7 +233,11 @@ describe("probeStream", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(
       (_url: string, opts: RequestInit) =>
         new Promise((_resolve, reject) => {
-          opts.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+          opts.signal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          );
         }),
     );
     const promise = probeStream("/api/movie/probe/5");
@@ -246,7 +256,9 @@ import { saveSeriesProgress, saveMovieProgress } from "@/lib/continueWatching";
 import { queueProgress } from "@/lib/watchProgressSync";
 
 describe("saveProgress", () => {
-  function createMockVideo(overrides: Partial<HTMLVideoElement> = {}): HTMLVideoElement {
+  function createMockVideo(
+    overrides: Partial<HTMLVideoElement> = {},
+  ): HTMLVideoElement {
     return {
       paused: false,
       currentTime: 100,
@@ -342,7 +354,10 @@ describe("saveProgress", () => {
       "stv_series_meta_7",
       JSON.stringify({ name: "Series", durationSeconds: 1200 }),
     );
-    sessionStorage.setItem("stv_series_episodes_7_1", JSON.stringify([{ id: "101", episode_num: 1, title: "E1" }]));
+    sessionStorage.setItem(
+      "stv_series_episodes_7_1",
+      JSON.stringify([{ id: "101", episode_num: 1, title: "E1" }]),
+    );
     sessionStorage.setItem("stv_series_current_idx_7", "0");
 
     saveProgress({

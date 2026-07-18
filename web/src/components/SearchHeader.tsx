@@ -42,7 +42,9 @@ export default function SearchHeader({
           <p className="text-sm text-muted-foreground">
             {resultCount != null
               ? `${resultCount.toLocaleString()} result${resultCount !== 1 ? "s" : ""} · ${(totalCount ?? 0).toLocaleString()} total` +
-                (activeFilter && activeFilter !== "all" ? ` (${activeFilter})` : "")
+                (activeFilter && activeFilter !== "all"
+                  ? ` (${activeFilter})`
+                  : "")
               : "Search across all live TV channels, movies, and series"}
           </p>
         </div>

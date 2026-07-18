@@ -15,7 +15,11 @@ interface AudioSelectorProps {
   onSwitchTrack?: (audioIndex: number) => void;
 }
 
-export function AudioSelector({ mediaType, streamId, onSwitchTrack }: AudioSelectorProps) {
+export function AudioSelector({
+  mediaType,
+  streamId,
+  onSwitchTrack,
+}: AudioSelectorProps) {
   const [tracks, setTracks] = useState<AudioTrack[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,15 +39,21 @@ export function AudioSelector({ mediaType, streamId, onSwitchTrack }: AudioSelec
         setLoading(false);
       })
       .catch((e) => {
-        if (!cancelled) { setError(e.message); setLoading(false); }
+        if (!cancelled) {
+          setError(e.message);
+          setLoading(false);
+        }
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [mediaType, streamId]);
 
   const label = (t: AudioTrack) => {
     const parts: string[] = [];
-    if (t.language && t.language !== "und") parts.push(t.language.toUpperCase());
+    if (t.language && t.language !== "und")
+      parts.push(t.language.toUpperCase());
     if (t.title) parts.push(t.title);
     parts.push(t.codec.toUpperCase());
     if (t.channels > 0) parts.push(`${t.channels}ch`);

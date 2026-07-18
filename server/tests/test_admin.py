@@ -15,6 +15,7 @@ TEST_ADMIN_KEY = "test-admin-key-insecure"
 def _admin_client():
     """Create TestClient with admin key header."""
     from main import app
+
     c = TestClient(app)
     c.headers.setdefault("X-Admin-Key", TEST_ADMIN_KEY)
     return c
@@ -71,6 +72,7 @@ def test_admin_stats_returns_structure(client: TestClient):
 def test_admin_stats_cache_empty_on_fresh_start(client: TestClient):
     """Fresh start should show 0 cache entries and 0 hits/misses."""
     from state import _error_log, _search_queries, _stream_hits
+
     # Explicitly clear shared state to prevent test-ordering leaks
     _stream_hits.clear()
     _search_queries.clear()
@@ -216,30 +218,42 @@ def test_admin_stream_health_returns_structure(client: TestClient):
 
     now = time.time()
     # Populate with a variety of probe entries
-    _probe_cache["live_100"] = (now, {
-        "codec": "h264",
-        "width": 1920,
-        "height": 1080,
-        "error": "",
-    })
-    _probe_cache["vod_200"] = (now - 1800, {
-        "codec": "h265",
-        "width": 3840,
-        "height": 2160,
-        "error": "",
-    })
-    _probe_cache["series_300"] = (now - 7200, {
-        "codec": "h264",
-        "width": 1280,
-        "height": 720,
-        "error": "timeout",
-    })
-    _probe_cache["unknown_400"] = (now - 100, {
-        "codec": "av1",
-        "width": 0,
-        "height": 0,
-        "error": "",
-    })
+    _probe_cache["live_100"] = (
+        now,
+        {
+            "codec": "h264",
+            "width": 1920,
+            "height": 1080,
+            "error": "",
+        },
+    )
+    _probe_cache["vod_200"] = (
+        now - 1800,
+        {
+            "codec": "h265",
+            "width": 3840,
+            "height": 2160,
+            "error": "",
+        },
+    )
+    _probe_cache["series_300"] = (
+        now - 7200,
+        {
+            "codec": "h264",
+            "width": 1280,
+            "height": 720,
+            "error": "timeout",
+        },
+    )
+    _probe_cache["unknown_400"] = (
+        now - 100,
+        {
+            "codec": "av1",
+            "width": 0,
+            "height": 0,
+            "error": "",
+        },
+    )
 
     with _admin_client() as c:
         resp = c.get("/api/v1/admin/stream-health")
@@ -283,18 +297,24 @@ def test_admin_stream_health_stale_marker(client: TestClient):
     from routes.stream import _probe_cache
 
     now = time.time()
-    _probe_cache["live_500"] = (now - 3600, {
-        "codec": "h264",
-        "width": 640,
-        "height": 480,
-        "error": "",
-    })
-    _probe_cache["live_501"] = (now - 3601, {
-        "codec": "h264",
-        "width": 640,
-        "height": 480,
-        "error": "",
-    })
+    _probe_cache["live_500"] = (
+        now - 3600,
+        {
+            "codec": "h264",
+            "width": 640,
+            "height": 480,
+            "error": "",
+        },
+    )
+    _probe_cache["live_501"] = (
+        now - 3601,
+        {
+            "codec": "h264",
+            "width": 640,
+            "height": 480,
+            "error": "",
+        },
+    )
 
     with _admin_client() as c:
         resp = c.get("/api/v1/admin/stream-health")
@@ -307,6 +327,7 @@ def test_admin_stream_health_stale_marker(client: TestClient):
 def test_admin_stream_health_empty_cache(client: TestClient):
     """GET /api/admin/stream-health should handle empty probe cache."""
     from routes.stream import _probe_cache
+
     _probe_cache.clear()
 
     with _admin_client() as c:
@@ -327,18 +348,24 @@ def test_admin_stream_health_error_field_in_recent(client: TestClient):
 
     from routes.stream import _probe_cache
 
-    _probe_cache["live_600"] = (time.time(), {
-        "codec": "h264",
-        "width": 1920,
-        "height": 1080,
-        "error": "",
-    })
-    _probe_cache["live_601"] = (time.time(), {
-        "codec": "h264",
-        "width": 1920,
-        "height": 1080,
-        "error": "connection refused",
-    })
+    _probe_cache["live_600"] = (
+        time.time(),
+        {
+            "codec": "h264",
+            "width": 1920,
+            "height": 1080,
+            "error": "",
+        },
+    )
+    _probe_cache["live_601"] = (
+        time.time(),
+        {
+            "codec": "h264",
+            "width": 1920,
+            "height": 1080,
+            "error": "connection refused",
+        },
+    )
 
     with _admin_client() as c:
         resp = c.get("/api/v1/admin/stream-health")
@@ -356,18 +383,24 @@ def test_admin_stream_health_nonstandard_resolution(client: TestClient):
 
     from routes.stream import _probe_cache
 
-    _probe_cache["live_700"] = (time.time(), {
-        "codec": "h264",
-        "width": 960,
-        "height": 540,
-        "error": "",
-    })
-    _probe_cache["live_701"] = (time.time(), {
-        "codec": "h264",
-        "width": 720,
-        "height": 400,
-        "error": "",
-    })
+    _probe_cache["live_700"] = (
+        time.time(),
+        {
+            "codec": "h264",
+            "width": 960,
+            "height": 540,
+            "error": "",
+        },
+    )
+    _probe_cache["live_701"] = (
+        time.time(),
+        {
+            "codec": "h264",
+            "width": 720,
+            "height": 400,
+            "error": "",
+        },
+    )
 
     with _admin_client() as c:
         resp = c.get("/api/v1/admin/stream-health")
@@ -386,6 +419,7 @@ def test_admin_warm_cache_already_in_progress(client: TestClient):
     import asyncio
 
     from routes.cache_warmer import _warm_task as wt
+
     old = wt
 
     # Create a not-done task (an incomplete asyncio future)
@@ -393,6 +427,7 @@ def test_admin_warm_cache_already_in_progress(client: TestClient):
     try:
         # Monkey-patch the module-level _warm_task
         import routes.cache_warmer as cw
+
         cw._warm_task = pending  # not None and not done()
 
         with _admin_client() as c:
@@ -452,6 +487,7 @@ def test_admin_key_auto_generates_when_empty(client: TestClient):
 
         # Now config.ADMIN_API_KEY is auto-generated (random hex)
         from main import app
+
         c = TestClient(app)
         r = c.get("/api/v1/admin/stats")
         # No key sent → 401 (no credentials provided)

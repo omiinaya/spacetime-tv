@@ -1,4 +1,5 @@
 """Spacetime-TV Backend — IPTV proxy + EPG parser."""
+
 import asyncio
 import logging
 import os
@@ -29,6 +30,7 @@ from state import _load_stream_hits  # re-exported for tests
 async def lifespan(app: FastAPI):
     _load_stream_hits()
     from config import _AUTO_GEN_KEY, ADMIN_API_KEY
+
     if _AUTO_GEN_KEY:
         log.info(f"🔑 Admin API key auto-generated: {ADMIN_API_KEY}")
         log.info("   Set ADMIN_API_KEY in server/.env to use a fixed key")
@@ -36,6 +38,7 @@ async def lifespan(app: FastAPI):
     # ── Ensure default profile on startup ────────────────────────────
     try:
         from auth import ensure_default_profile
+
         result = ensure_default_profile()
         if result:
             log.info(f"[PROFILES] Created default profile: {result['name']} ({result['profile_id']})")
@@ -95,7 +98,7 @@ app.include_router(misc_router)
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
     """Check auth for all /api/ endpoints except health/error.
-    
+
     Verifies X-Admin-Key or X-Device-Token. Device tokens are verified
     against stored SHA-256 hashes (same pattern as cloud_sync).
     """
@@ -107,13 +110,19 @@ async def auth_middleware(request: Request, call_next):
         return await call_next(request)
 
     # Allow health, error reporting, and non-API paths
-    if path in ("/api/health", "/api/error") or path.startswith("/api/health") or path.startswith("/api/v1/cloud/backup") or path.startswith("/api/v1/profiles"):
+    if (
+        path in ("/api/health", "/api/error")
+        or path.startswith("/api/health")
+        or path.startswith("/api/v1/cloud/backup")
+        or path.startswith("/api/v1/profiles")
+    ):
         return await call_next(request)
     if not path.startswith("/api/"):
         return await call_next(request)
     # Check admin key first (fast path)
     admin_key = request.headers.get("X-Admin-Key", "")
     from config import ADMIN_API_KEY
+
     if admin_key and admin_key == ADMIN_API_KEY:
         return await call_next(request)
     # Check device token
@@ -122,10 +131,12 @@ async def auth_middleware(request: Request, call_next):
         # Extract device_id from path or query params (typically /api/v1/cloud/backup/{device_id})
         # For generic endpoints, verify token exists in any known backup
         from auth import verify_device_token_generic
+
         if verify_device_token_generic(device_token):
             return await call_next(request)
         # Device token provided but invalid — 403
         from fastapi.responses import JSONResponse
+
         return JSONResponse(
             status_code=403,
             content={"detail": "Invalid device token."},
@@ -133,16 +144,19 @@ async def auth_middleware(request: Request, call_next):
     # Auth credential provided but wrong — 403
     if admin_key or device_token:
         from fastapi.responses import JSONResponse
+
         return JSONResponse(
             status_code=403,
             content={"detail": "Invalid authentication credentials."},
         )
     # No auth provided at all — 401
     from fastapi.responses import JSONResponse
+
     return JSONResponse(
         status_code=401,
         content={"detail": "Authentication required. Provide X-Admin-Key or X-Device-Token header."},
     )
+
 
 # ── HTTPS redirect middleware (when ENFORCE_HTTPS=true) ──────────
 @app.middleware("http")
@@ -153,18 +167,23 @@ async def https_redirect_middleware(request: Request, call_next):
     If no X-Forwarded-Proto, assume direct internal connection (no redirect).
     """
     from config import ENFORCE_HTTPS
+
     if ENFORCE_HTTPS:
         forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
         if forwarded_proto:
             if forwarded_proto == "http":
                 from fastapi.responses import RedirectResponse
+
                 url = request.url.replace(scheme="https", port=443)
                 return RedirectResponse(url, status_code=301)
         elif request.url.scheme == "http":
             from fastapi.responses import RedirectResponse
+
             url = request.url.replace(scheme="https", port=443)
             return RedirectResponse(url, status_code=301)
     return await call_next(request)
+
+
 # ── Backward compatibility redirect: /api/... → /api/v1/... ─────────────
 # NOTE: This is done as a middleware rather than a catch-all route because
 # Starlette matches catch-all patterns before included-router partial matches,
@@ -186,6 +205,7 @@ async def api_redirect_middleware(request: Request, call_next):
         return RedirectResponse(url=url)
     return await call_next(request)
 
+
 # ── Rate Limiting (in-memory fixed window) ──────────────────────────────────
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
@@ -194,11 +214,13 @@ _rate_limits: dict[str, tuple[float, int]] = {}
 
 MAX_CONTENT_LENGTH = 1_048_576  # 1 MB default for request bodies
 
+
 class RequestBodySizeMiddleware(BaseHTTPMiddleware):
     """Reject requests with body content exceeding MAX_CONTENT_LENGTH.
 
     Handles both Content-Length headers and chunked transfer encoding.
     """
+
     async def dispatch(self, request: StarletteRequest, call_next):
         if request.method in ("POST", "PUT", "PATCH"):
             content_length = request.headers.get("content-length")
@@ -219,6 +241,7 @@ class RequestBodySizeMiddleware(BaseHTTPMiddleware):
                         media_type="application/json",
                     )
         return await call_next(request)
+
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: StarletteRequest, call_next):
@@ -247,10 +270,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         _rate_limits[key] = (window_start, count + 1)
         return await call_next(request)
 
+
 app.add_middleware(RequestBodySizeMiddleware)
 app.add_middleware(RateLimitMiddleware)
 
 # ── Security Headers (CSP, HSTS, XFO, XCTO, Referrer-Policy) ──────────────
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add security headers to all responses.
@@ -285,6 +310,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if os.getenv("ADMIN_API_KEY") or ENFORCE_HTTPS:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
         return response
+
 
 app.add_middleware(SecurityHeadersMiddleware)
 
@@ -338,6 +364,7 @@ async def cleanup_stale_cache():
             try:
                 if entry.is_dir():
                     import shutil
+
                     shutil.rmtree(entry)
                 else:
                     entry.unlink()
@@ -370,6 +397,7 @@ def start_cleanup_task():
     if _cleanup_task is None or _cleanup_task.done():
         _cleanup_task = asyncio.create_task(cleanup_loop())
         log.info(f"[CLEANUP] Started — TTL={CLEANUP_TTL_HOURS}h, interval={CLEANUP_INTERVAL}s")
+
 
 # ─── Static file mount (after all routes are registered) ───────────────────
 

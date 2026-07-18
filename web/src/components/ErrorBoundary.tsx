@@ -26,7 +26,10 @@ export default class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     const section = this.props.name ? `[${this.props.name}]` : "";
     console.error(`${section} [ErrorBoundary] Uncaught error:`, error);
-    console.error(`${section} [ErrorBoundary] Component stack:`, info.componentStack);
+    console.error(
+      `${section} [ErrorBoundary] Component stack:`,
+      info.componentStack,
+    );
     reportRenderError(error, info.componentStack ?? "");
   }
 
@@ -55,7 +58,13 @@ export default class ErrorBoundary extends Component<Props, State> {
             </div>
             <h1 className="text-lg font-semibold mb-2">Something went wrong</h1>
             <p className="text-sm text-muted-foreground mb-6">
-              {this.props.name ? <>Error in <strong>{this.props.name}</strong> section.</> : "An unexpected error occurred."}
+              {this.props.name ? (
+                <>
+                  Error in <strong>{this.props.name}</strong> section.
+                </>
+              ) : (
+                "An unexpected error occurred."
+              )}
               Try refreshing the page or going home.
             </p>
             <div className="flex items-center justify-center gap-3">

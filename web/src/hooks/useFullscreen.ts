@@ -17,7 +17,7 @@ export function useFullscreen() {
     const handler = () => {
       const doc = document as DocumentWithWebkit;
       setIsFullscreen(
-        !!(document.fullscreenElement || doc.webkitFullscreenElement)
+        !!(document.fullscreenElement || doc.webkitFullscreenElement),
       );
     };
     document.addEventListener("fullscreenchange", handler);

@@ -76,7 +76,7 @@ export default function WatchlistPopover({ onClose }: { onClose: () => void }) {
                 rating: info.rating || "0",
                 type: "series" as const,
               };
-            })
+            }),
           );
           if (cancelled) return;
           for (const r of results) {
@@ -92,7 +92,9 @@ export default function WatchlistPopover({ onClose }: { onClose: () => void }) {
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Close on outside click
@@ -115,10 +117,13 @@ export default function WatchlistPopover({ onClose }: { onClose: () => void }) {
     return () => document.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  const goTo = useCallback((path: string) => {
-    navigate(path);
-    onClose();
-  }, [navigate, onClose]);
+  const goTo = useCallback(
+    (path: string) => {
+      navigate(path);
+      onClose();
+    },
+    [navigate, onClose],
+  );
 
   return (
     <div
@@ -151,7 +156,9 @@ export default function WatchlistPopover({ onClose }: { onClose: () => void }) {
         {!loading && !error && items.length === 0 && total === 0 && (
           <div className="flex flex-col items-center py-8 px-4 text-center">
             <Heart className="h-8 w-8 text-muted-foreground/20 mb-2" />
-            <p className="text-xs text-muted-foreground">Your watchlist is empty</p>
+            <p className="text-xs text-muted-foreground">
+              Your watchlist is empty
+            </p>
             <button
               onClick={() => goTo("/movies")}
               className="mt-3 text-xs text-primary hover:text-primary/80 transition-colors"
@@ -212,7 +219,9 @@ export default function WatchlistPopover({ onClose }: { onClose: () => void }) {
                     </p>
                     <div className="flex items-center gap-2 mt-0.5">
                       {item.year && (
-                        <span className="text-[10px] text-muted-foreground/60">{item.year}</span>
+                        <span className="text-[10px] text-muted-foreground/60">
+                          {item.year}
+                        </span>
                       )}
                       {!isNaN(rating) && rating > 0 && (
                         <span className="text-[10px] flex items-center gap-0.5 text-yellow-400">

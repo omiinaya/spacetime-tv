@@ -64,7 +64,10 @@ describe("useCloudBackup", () => {
     // Override handler for this test to return 500
     server.use(
       http.post("/api/cloud/backup", () =>
-        HttpResponse.json({ status: "error", detail: "Server error" }, { status: 500 }),
+        HttpResponse.json(
+          { status: "error", detail: "Server error" },
+          { status: 500 },
+        ),
       ),
     );
 
@@ -96,7 +99,9 @@ describe("useCloudBackup", () => {
     // loading should become true after React processes the update
     await waitFor(() => expect(result.current.backupStatus.loading).toBe(true));
     // Wait for the upload to complete
-    await waitFor(() => expect(result.current.backupStatus.loading).toBe(false));
+    await waitFor(() =>
+      expect(result.current.backupStatus.loading).toBe(false),
+    );
   });
 
   it("uploadBackup handles empty favorites gracefully", async () => {
@@ -119,7 +124,10 @@ describe("useCloudBackup", () => {
   it("downloadBackup succeeds and returns favorites/watchlist", async () => {
     const { result } = renderHook(() => useCloudBackup());
 
-    let data: { favorites: number[]; watchlist: Record<string, boolean> } | null = null;
+    let data: {
+      favorites: number[];
+      watchlist: Record<string, boolean>;
+    } | null = null;
     await act(async () => {
       data = await result.current.downloadBackup();
     });
@@ -135,7 +143,10 @@ describe("useCloudBackup", () => {
   it("downloadBackup returns null on server error", async () => {
     server.use(
       http.get("/api/cloud/backup", () =>
-        HttpResponse.json({ status: "error", detail: "Not found" }, { status: 404 }),
+        HttpResponse.json(
+          { status: "error", detail: "Not found" },
+          { status: 404 },
+        ),
       ),
     );
 
@@ -154,7 +165,10 @@ describe("useCloudBackup", () => {
     server.use(
       http.get("/api/cloud/backup", async () => {
         await new Promise((r) => setTimeout(r, 50));
-        return HttpResponse.json({ status: "ok", data: { favorites: [], watchlist: {} } });
+        return HttpResponse.json({
+          status: "ok",
+          data: { favorites: [], watchlist: {} },
+        });
       }),
     );
 
@@ -162,7 +176,9 @@ describe("useCloudBackup", () => {
 
     result.current.downloadBackup();
     await waitFor(() => expect(result.current.backupStatus.loading).toBe(true));
-    await waitFor(() => expect(result.current.backupStatus.loading).toBe(false));
+    await waitFor(() =>
+      expect(result.current.backupStatus.loading).toBe(false),
+    );
   });
 
   // ── mergeFavorites ──────────────────────────────────────────
@@ -187,7 +203,10 @@ describe("useCloudBackup", () => {
   it("mergeFavorites returns null on server error", async () => {
     server.use(
       http.post("/api/cloud/merge", () =>
-        HttpResponse.json({ status: "error", detail: "Merge conflict" }, { status: 409 }),
+        HttpResponse.json(
+          { status: "error", detail: "Merge conflict" },
+          { status: 409 },
+        ),
       ),
     );
 
@@ -235,7 +254,9 @@ describe("useCloudBackup", () => {
 
     result.current.mergeFavorites();
     await waitFor(() => expect(result.current.backupStatus.loading).toBe(true));
-    await waitFor(() => expect(result.current.backupStatus.loading).toBe(false));
+    await waitFor(() =>
+      expect(result.current.backupStatus.loading).toBe(false),
+    );
   });
 
   // ── Error state reset ───────────────────────────────────────
@@ -288,8 +309,9 @@ describe("useCloudBackup", () => {
 
   it("handles network failure on download", async () => {
     server.use(
-      http.get("/api/cloud/backup", () =>
-        HttpResponse.error(), // Simulates network error
+      http.get(
+        "/api/cloud/backup",
+        () => HttpResponse.error(), // Simulates network error
       ),
     );
 
@@ -304,11 +326,7 @@ describe("useCloudBackup", () => {
   });
 
   it("handles network failure on upload", async () => {
-    server.use(
-      http.post("/api/cloud/backup", () =>
-        HttpResponse.error(),
-      ),
-    );
+    server.use(http.post("/api/cloud/backup", () => HttpResponse.error()));
 
     const { result } = renderHook(() => useCloudBackup());
 

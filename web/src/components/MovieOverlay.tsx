@@ -9,7 +9,13 @@ import {
   ChevronDown,
   Heart,
 } from "lucide-react";
-import { api, MovieInfo, UnifiedMovie, MovieLanguage, tmdbSrcset } from "@/lib/api";
+import {
+  api,
+  MovieInfo,
+  UnifiedMovie,
+  MovieLanguage,
+  tmdbSrcset,
+} from "@/lib/api";
 import MediaOverlay from "@/components/MediaOverlay";
 import SimilarMovies from "@/components/SimilarMovies";
 import TmdbSimilarMovies from "@/components/TmdbSimilarMovies";
@@ -21,12 +27,35 @@ interface MovieOverlayProps {
 }
 
 const LANG_LABELS: Record<string, string> = {
-  EN: "English", FR: "French", DE: "German", ES: "Spanish", IT: "Italian",
-  PT: "Portuguese", BR: "Brazilian", RU: "Russian", GR: "Greek", TR: "Turkish",
-  NL: "Dutch", PL: "Polish", IN: "Indian", IR: "Persian", IL: "Hebrew",
-  QC: "Canadian French", SO: "Somali", LA: "Latin", AF: "Afrikaans",
-  RO: "Romanian", BG: "Bulgarian", AL: "Albanian", PK: "Urdu", KU: "Kurdish",
-  PH: "Filipino", BN: "Bengali", BE: "Belarusian", MT: "Maltese", CN: "Chinese",
+  EN: "English",
+  FR: "French",
+  DE: "German",
+  ES: "Spanish",
+  IT: "Italian",
+  PT: "Portuguese",
+  BR: "Brazilian",
+  RU: "Russian",
+  GR: "Greek",
+  TR: "Turkish",
+  NL: "Dutch",
+  PL: "Polish",
+  IN: "Indian",
+  IR: "Persian",
+  IL: "Hebrew",
+  QC: "Canadian French",
+  SO: "Somali",
+  LA: "Latin",
+  AF: "Afrikaans",
+  RO: "Romanian",
+  BG: "Bulgarian",
+  AL: "Albanian",
+  PK: "Urdu",
+  KU: "Kurdish",
+  PH: "Filipino",
+  BN: "Bengali",
+  BE: "Belarusian",
+  MT: "Maltese",
+  CN: "Chinese",
 };
 
 function langLabel(code: string): string {
@@ -46,11 +75,15 @@ interface TmdbMovieEnrichment {
 
 export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   const navigate = useNavigate();
-  const [selectedLang, setSelectedLang] = useState<MovieLanguage>(movie.languages[0]);
+  const [selectedLang, setSelectedLang] = useState<MovieLanguage>(
+    movie.languages[0],
+  );
   const [showLangMenu, setShowLangMenu] = useState(false);
   const langMenuRef = useRef<HTMLDivElement>(null);
   const currentStreamId = selectedLang.stream_id;
-  const [inWatchlist, setInWatchlist] = useState(() => isInWatchlist(movie.stream_id));
+  const [inWatchlist, setInWatchlist] = useState(() =>
+    isInWatchlist(movie.stream_id),
+  );
 
   const [info, setInfo] = useState<MovieInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,22 +94,29 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   const tmdbIdFromMovie = movie.tmdb ? parseInt(movie.tmdb, 10) : null;
 
   // Trailer — always from the EN version (or first language if no EN)
-  const enLang = movie.languages.find((l) => l.code === "EN") || movie.languages[0];
+  const enLang =
+    movie.languages.find((l) => l.code === "EN") || movie.languages[0];
   const [enTrailer, setEnTrailer] = useState<string>("");
   const [showTrailer, setShowTrailer] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    api.movies.details(enLang.stream_id).then((d) => {
-      if (cancelled) return;
-      setEnTrailer(d.info?.youtube_trailer || "");
-    }).catch(() => {});
-    return () => { cancelled = true; };
+    api.movies
+      .details(enLang.stream_id)
+      .then((d) => {
+        if (cancelled) return;
+        setEnTrailer(d.info?.youtube_trailer || "");
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [enLang.stream_id]);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
 
     const providerP = api.movies.details(currentStreamId);
     const tmdbP = tmdbIdFromMovie
@@ -104,15 +144,22 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
         }
       })
       .catch((e) => setError(e.message))
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [currentStreamId, tmdbIdFromMovie]);
 
   // Close language menu on outside click
   useEffect(() => {
     if (!showLangMenu) return;
     const handler = (e: MouseEvent) => {
-      if (langMenuRef.current && !langMenuRef.current.contains(e.target as Node)) {
+      if (
+        langMenuRef.current &&
+        !langMenuRef.current.contains(e.target as Node)
+      ) {
         setShowLangMenu(false);
       }
     };
@@ -121,24 +168,61 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   }, [showLangMenu]);
 
   // ── Derived ───────────────────────────────────────────────────
-  const bannerUrl = info?.backdrop_path?.[0] || info?.cover_big || (tmdb?.backdrop_path ? `https://image.tmdb.org/t/p/original${tmdb.backdrop_path}` : "") || movie.stream_icon || "";
-  const posterUrl = info?.movie_image || info?.cover_big || (tmdb?.poster_path ? `https://image.tmdb.org/t/p/w600${tmdb.poster_path}` : "") || movie.stream_icon || "";
+  const bannerUrl =
+    info?.backdrop_path?.[0] ||
+    info?.cover_big ||
+    (tmdb?.backdrop_path
+      ? `https://image.tmdb.org/t/p/original${tmdb.backdrop_path}`
+      : "") ||
+    movie.stream_icon ||
+    "";
+  const posterUrl =
+    info?.movie_image ||
+    info?.cover_big ||
+    (tmdb?.poster_path
+      ? `https://image.tmdb.org/t/p/w600${tmdb.poster_path}`
+      : "") ||
+    movie.stream_icon ||
+    "";
   // Only generate srcset when the TMDB path actually wins the priority chain
-  const useTmdbBanner = !info?.backdrop_path?.[0] && !info?.cover_big && !!tmdb?.backdrop_path;
-  const useTmdbPoster = !info?.movie_image && !info?.cover_big && !!tmdb?.poster_path;
-  const bannerSrcset = useTmdbBanner && tmdb?.backdrop_path ? tmdbSrcset(tmdb.backdrop_path) : undefined;
-  const posterSrcset = useTmdbPoster && tmdb?.poster_path ? tmdbSrcset(tmdb.poster_path) : undefined;
-  const rating = info?.rating || movie.rating || (tmdb?.vote_average ? tmdb.vote_average.toFixed(1) : "") || "";
+  const useTmdbBanner =
+    !info?.backdrop_path?.[0] && !info?.cover_big && !!tmdb?.backdrop_path;
+  const useTmdbPoster =
+    !info?.movie_image && !info?.cover_big && !!tmdb?.poster_path;
+  const bannerSrcset =
+    useTmdbBanner && tmdb?.backdrop_path
+      ? tmdbSrcset(tmdb.backdrop_path)
+      : undefined;
+  const posterSrcset =
+    useTmdbPoster && tmdb?.poster_path
+      ? tmdbSrcset(tmdb.poster_path)
+      : undefined;
+  const rating =
+    info?.rating ||
+    movie.rating ||
+    (tmdb?.vote_average ? tmdb.vote_average.toFixed(1) : "") ||
+    "";
   const year = (info?.releasedate || tmdb?.release_date || "").slice(0, 4);
   const genre = info?.genre || "";
   const plot = tmdb?.overview || info?.plot || info?.description || "";
   const cast = info?.cast || info?.actors || "";
   const director = info?.director || "";
-  const duration = info?.duration || (tmdb?.runtime ? `${tmdb.runtime}m` : "") || "";
+  const duration =
+    info?.duration || (tmdb?.runtime ? `${tmdb.runtime}m` : "") || "";
   const trailer = enTrailer;
-  const tmdbId = info?.tmdb_id || movie.tmdb || (tmdbIdFromMovie?.toString()) || "";
-  const extension = (selectedLang.container_extension || movie.container_extension || "").toUpperCase();
-  const providerGenres = genre ? genre.split(",").map((g) => g.trim()).filter(Boolean) : [];
+  const tmdbId =
+    info?.tmdb_id || movie.tmdb || tmdbIdFromMovie?.toString() || "";
+  const extension = (
+    selectedLang.container_extension ||
+    movie.container_extension ||
+    ""
+  ).toUpperCase();
+  const providerGenres = genre
+    ? genre
+        .split(",")
+        .map((g) => g.trim())
+        .filter(Boolean)
+    : [];
   const tmdbGenreNames = tmdb?.genres?.map((g) => g.name) || [];
   const genres = tmdbGenreNames.length > 0 ? tmdbGenreNames : providerGenres;
   const displayName = movie.languages.length > 1 ? movie.base_name : movie.name;
@@ -146,11 +230,14 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
   const play = () => {
     // Save movie metadata for Continue Watching
     try {
-      sessionStorage.setItem("stv_movie_meta", JSON.stringify({
-        id: currentStreamId,
-        name: displayName || movie.name || movie.base_name || "",
-        poster: movie.stream_icon || "",
-      }));
+      sessionStorage.setItem(
+        "stv_movie_meta",
+        JSON.stringify({
+          id: currentStreamId,
+          name: displayName || movie.name || movie.base_name || "",
+          poster: movie.stream_icon || "",
+        }),
+      );
     } catch {} // DOMException: storage quota
     navigate(`/watch/movie/${currentStreamId}`);
     onClose();
@@ -192,9 +279,14 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
               {movie.languages.map((l) => (
                 <button
                   key={l.code}
-                  onClick={() => { setSelectedLang(l); setShowLangMenu(false); }}
+                  onClick={() => {
+                    setSelectedLang(l);
+                    setShowLangMenu(false);
+                  }}
                   className={`w-full text-left px-3 py-2 text-sm hover:bg-white/10 transition-colors flex items-center gap-2 ${
-                    l.code === selectedLang.code ? "text-white font-medium" : "text-white/60"
+                    l.code === selectedLang.code
+                      ? "text-white font-medium"
+                      : "text-white/60"
                   }`}
                 >
                   <span className="w-4 text-center text-[10px] font-bold opacity-50">
@@ -217,33 +309,43 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
             Play
           </button>
           <button
-            onClick={() => { toggleWatchlist(movie.stream_id); setInWatchlist(!inWatchlist); }}
+            onClick={() => {
+              toggleWatchlist(movie.stream_id);
+              setInWatchlist(!inWatchlist);
+            }}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 text-xs sm:text-sm text-white/60 hover:bg-white/10 hover:text-white/80 transition-colors"
-            aria-label={inWatchlist ? "Remove from watchlist" : "Add to watchlist"}
+            aria-label={
+              inWatchlist ? "Remove from watchlist" : "Add to watchlist"
+            }
           >
-            <Heart className={`h-3.5 w-3.5 ${inWatchlist ? "fill-red-500 text-red-500" : ""}`} />
+            <Heart
+              className={`h-3.5 w-3.5 ${inWatchlist ? "fill-red-500 text-red-500" : ""}`}
+            />
           </button>
           {trailer && (
             <button
               onClick={() => setShowTrailer(!showTrailer)}
               className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-white/5 text-xs sm:text-sm text-white/60 hover:bg-white/10 hover:text-white/80 transition-colors"
             >
-              <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> {showTrailer ? "Hide" : "Trailer"}
+              <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4" />{" "}
+              {showTrailer ? "Hide" : "Trailer"}
             </button>
           )}
         </div>
       }
-      trailerEmbed={showTrailer && trailer ? (
-        <div className="mt-4 aspect-video rounded-lg overflow-hidden bg-black">
-          <iframe
-            src={`https://www.youtube.com/embed/${trailer}?autoplay=1&rel=0`}
-            className="w-full h-full"
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-            title="Movie Trailer"
-          />
-        </div>
-      ) : null}
+      trailerEmbed={
+        showTrailer && trailer ? (
+          <div className="mt-4 aspect-video rounded-lg overflow-hidden bg-black">
+            <iframe
+              src={`https://www.youtube.com/embed/${trailer}?autoplay=1&rel=0`}
+              className="w-full h-full"
+              allow="autoplay; encrypted-media"
+              allowFullScreen
+              title="Movie Trailer"
+            />
+          </div>
+        ) : null
+      }
     >
       {/* Cast, Director, Extra info */}
       {!loading && !error && (
@@ -260,7 +362,9 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/person/${encodeURIComponent(name.trim())}`);
+                            navigate(
+                              `/person/${encodeURIComponent(name.trim())}`,
+                            );
                           }}
                           className="hover:text-primary transition-colors cursor-pointer inline"
                         >
@@ -271,30 +375,47 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
                   </span>
                 </div>
               )}
-              {director && <div><span className="text-white/30">Director: </span><span className="text-white/60">{director}</span></div>}
+              {director && (
+                <div>
+                  <span className="text-white/30">Director: </span>
+                  <span className="text-white/60">{director}</span>
+                </div>
+              )}
             </div>
           )}
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-white/40">
             {info?.releasedate && (
-              <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{info.releasedate}</span>
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {info.releasedate}
+              </span>
             )}
             {duration && (
-              <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{duration}</span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {duration}
+              </span>
             )}
-            {tmdb?.status && (
-              <span>{tmdb.status}</span>
-            )}
+            {tmdb?.status && <span>{tmdb.status}</span>}
             {tmdbId && (
-              <a href={`https://www.themoviedb.org/movie/${tmdbId}`} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 hover:text-white/70 transition-colors">
-                <ExternalLink className="h-3 w-3" />TMDB
+              <a
+                href={`https://www.themoviedb.org/movie/${tmdbId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 hover:text-white/70 transition-colors"
+              >
+                <ExternalLink className="h-3 w-3" />
+                TMDB
               </a>
             )}
           </div>
         </>
       )}
       {/* More Like This */}
-      <SimilarMovies categoryId={movie.category_id} currentId={movie.stream_id} />
+      <SimilarMovies
+        categoryId={movie.category_id}
+        currentId={movie.stream_id}
+      />
       {/* TMDB Recommendations */}
       <TmdbSimilarMovies tmdbId={tmdbIdFromMovie} />
     </MediaOverlay>

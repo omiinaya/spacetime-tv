@@ -169,8 +169,9 @@ describe("api.msw — MSW integration tests", () => {
   describe("error states", () => {
     it("handle 500 errors from MSW handlers", async () => {
       server.use(
-        http.get("/api/series/categories", () =>
-          new HttpResponse(null, { status: 500 }),
+        http.get(
+          "/api/series/categories",
+          () => new HttpResponse(null, { status: 500 }),
         ),
       );
       await expect(api.series.categories()).rejects.toThrow("API error 500");

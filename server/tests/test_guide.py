@@ -80,6 +80,7 @@ def _setup_epg_cache(epg_cache):
 def test_guide_returns_structure(client):
     """GET /api/guide should return the expected response shape."""
     from state import epg_cache
+
     _setup_epg_cache(epg_cache)
 
     resp = client.get("/api/v1/guide")
@@ -100,6 +101,7 @@ def test_guide_returns_structure(client):
 def test_guide_channel_group_shape(client):
     """Each channel group should have the expected fields."""
     from state import epg_cache
+
     _setup_epg_cache(epg_cache)
 
     resp = client.get("/api/v1/guide")
@@ -118,6 +120,7 @@ def test_guide_channel_group_shape(client):
 def test_guide_channel_filter(client):
     """GET /api/guide?channel=BBC1.uk should return only that channel."""
     from state import epg_cache
+
     _setup_epg_cache(epg_cache)
 
     resp = client.get("/api/v1/guide?channel=BBC1.uk")
@@ -134,6 +137,7 @@ def test_guide_channel_filter(client):
 def test_guide_pagination(client):
     """Offset and limit should slice channel groups."""
     from state import epg_cache
+
     _setup_epg_cache(epg_cache)
 
     resp_all = client.get("/api/v1/guide")
@@ -158,6 +162,7 @@ def test_guide_pagination(client):
 def test_guide_programme_fields(client):
     """Each programme should have the expected fields including is_live flag."""
     from state import epg_cache
+
     _setup_epg_cache(epg_cache)
 
     resp = client.get("/api/v1/guide")
@@ -178,6 +183,7 @@ def test_guide_programme_fields(client):
 def test_guide_empty_epg_recovers_gracefully(client):
     """When EPG has no data, guide should still return a valid response structure."""
     from state import epg_cache
+
     # Set empty cached EPG so no real fetch is attempted
     epg_cache["data"] = {"channels": [], "programmes": []}
     epg_cache["fetched"] = time.time()
@@ -194,6 +200,7 @@ def test_guide_empty_epg_recovers_gracefully(client):
 def test_guide_now_returns_structure(client):
     """GET /api/guide/now should return programme lookups by stream_id."""
     from state import epg_cache
+
     _setup_epg_cache(epg_cache)
 
     resp = client.get("/api/v1/guide/now?stream_ids=1,2,3")
@@ -214,6 +221,7 @@ def test_guide_now_no_stream_ids(client):
 def test_guide_now_invalid_ids_ignored(client):
     """GET /api/guide/now should ignore non-numeric stream_id parts."""
     from state import epg_cache
+
     _setup_epg_cache(epg_cache)
 
     resp = client.get("/api/v1/guide/now?stream_ids=abc,def,xyz")
@@ -225,13 +233,29 @@ def test_guide_now_invalid_ids_ignored(client):
 def test_guide_now_with_cache_mapping(client_with_cache):
     """When live_all cache has epg_channel_id mappings, /api/guide/now should resolve programmes."""
     from state import _cache, epg_cache
+
     _setup_epg_cache(epg_cache)
 
     # Pre-populate live_all with stream-to-EPG-channel mapping
-    _cache["live_all"] = (time.time(), [
-        {"stream_id": 101, "name": "BBC One HD", "epg_channel_id": "BBC1.uk", "stream_icon": "", "category_id": "1"},
-        {"stream_id": 201, "name": "BBC Two HD", "epg_channel_id": "BBC2.uk", "stream_icon": "", "category_id": "1"},
-    ])
+    _cache["live_all"] = (
+        time.time(),
+        [
+            {
+                "stream_id": 101,
+                "name": "BBC One HD",
+                "epg_channel_id": "BBC1.uk",
+                "stream_icon": "",
+                "category_id": "1",
+            },
+            {
+                "stream_id": 201,
+                "name": "BBC Two HD",
+                "epg_channel_id": "BBC2.uk",
+                "stream_icon": "",
+                "category_id": "1",
+            },
+        ],
+    )
 
     resp = client_with_cache.get("/api/v1/guide/now?stream_ids=101,201")
     assert resp.status_code == 200
@@ -244,6 +268,7 @@ def test_guide_now_with_cache_mapping(client_with_cache):
 def test_guide_now_unknown_stream_id_returns_null(client_with_cache):
     """Stream IDs not in live_all cache should return None for the programme."""
     from state import epg_cache
+
     _setup_epg_cache(epg_cache)
 
     resp = client_with_cache.get("/api/v1/guide/now?stream_ids=999")
@@ -260,6 +285,7 @@ def test_guide_now_with_empty_epg_returns_unknown(client):
 
     import routes.guide_routes
     from routes.guide_epg import EPG_CACHE_FILE
+
     # Ensure the on-disk EPG cache is also cleared to force empty EPG
     if EPG_CACHE_FILE.exists():
         EPG_CACHE_FILE.unlink()

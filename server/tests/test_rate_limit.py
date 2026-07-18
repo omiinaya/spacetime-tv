@@ -23,6 +23,7 @@ import pytest
 def clear_rate_limits():
     """Clear the shared rate limit state before each test."""
     import main as m
+
     m._rate_limits.clear()
     yield
 
@@ -98,7 +99,7 @@ def test_image_proxy_rate_limit(small_limits, client):
         resp = client.get("/api/v1/image-proxy?url=http://example.com/img.jpg")
         # image-proxy may return various statuses (mock returns empty/malformed),
         # but should NOT be 429 yet
-        assert resp.status_code != 429, f"Expected non-429 on request {_+1}"
+        assert resp.status_code != 429, f"Expected non-429 on request {_ + 1}"
 
     # 4th should be blocked
     resp = client.get("/api/v1/image-proxy?url=http://example.com/img.jpg")

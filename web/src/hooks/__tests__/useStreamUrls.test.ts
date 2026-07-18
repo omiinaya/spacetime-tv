@@ -10,7 +10,13 @@ import { useStreamUrls } from "@/hooks/useStreamUrls";
 
 describe("useStreamUrls", () => {
   describe("live type", () => {
-    const params = { type: "live" as const, id: "55", seriesId: undefined, epId: undefined, qualityIdx: 0 };
+    const params = {
+      type: "live" as const,
+      id: "55",
+      seriesId: undefined,
+      epId: undefined,
+      qualityIdx: 0,
+    };
 
     it("isLive=true, isVod=false", () => {
       const { result } = renderHook(() => useStreamUrls(params));
@@ -35,12 +41,18 @@ describe("useStreamUrls", () => {
 
     it("builds transcodePath for qualityIdx=0 (null height → /transcode)", () => {
       const { result } = renderHook(() => useStreamUrls(params));
-      expect(result.current.transcodePath).toBe("/api/stream/live/55/transcode");
+      expect(result.current.transcodePath).toBe(
+        "/api/stream/live/55/transcode",
+      );
     });
 
     it("builds transcodePath with height for qualityIdx=2 (720p)", () => {
-      const { result } = renderHook(() => useStreamUrls({ ...params, qualityIdx: 2 }));
-      expect(result.current.transcodePath).toBe("/api/stream/live/55/quality/720");
+      const { result } = renderHook(() =>
+        useStreamUrls({ ...params, qualityIdx: 2 }),
+      );
+      expect(result.current.transcodePath).toBe(
+        "/api/stream/live/55/quality/720",
+      );
     });
 
     it("returns null for remuxUrl, vodTranscodeUrl, hlsInitUrl on live", () => {
@@ -58,7 +70,13 @@ describe("useStreamUrls", () => {
   });
 
   describe("movie type", () => {
-    const params = { type: "movie" as const, id: "42", seriesId: undefined, epId: undefined, qualityIdx: 0 };
+    const params = {
+      type: "movie" as const,
+      id: "42",
+      seriesId: undefined,
+      epId: undefined,
+      qualityIdx: 0,
+    };
 
     it("isLive=false, isVod=true", () => {
       const { result } = renderHook(() => useStreamUrls(params));
@@ -78,7 +96,9 @@ describe("useStreamUrls", () => {
 
     it("builds vodTranscodeUrl", () => {
       const { result } = renderHook(() => useStreamUrls(params));
-      expect(result.current.vodTranscodeUrl).toBe("/api/stream/movie/42/transcode");
+      expect(result.current.vodTranscodeUrl).toBe(
+        "/api/stream/movie/42/transcode",
+      );
     });
 
     it("builds hlsInitUrl", () => {
@@ -97,7 +117,9 @@ describe("useStreamUrls", () => {
     });
 
     it("returns null transcodePath for VOD (qualityIdx ignored for VOD)", () => {
-      const { result } = renderHook(() => useStreamUrls({ ...params, qualityIdx: 2 }));
+      const { result } = renderHook(() =>
+        useStreamUrls({ ...params, qualityIdx: 2 }),
+      );
       expect(result.current.transcodePath).toBeNull();
     });
 
@@ -113,7 +135,13 @@ describe("useStreamUrls", () => {
   });
 
   describe("series type", () => {
-    const params = { type: "series" as const, id: undefined, seriesId: "7", epId: "101", qualityIdx: 0 };
+    const params = {
+      type: "series" as const,
+      id: undefined,
+      seriesId: "7",
+      epId: "101",
+      qualityIdx: 0,
+    };
 
     it("isLive=false, isVod=true", () => {
       const { result } = renderHook(() => useStreamUrls(params));
@@ -133,7 +161,9 @@ describe("useStreamUrls", () => {
 
     it("builds vodTranscodeUrl", () => {
       const { result } = renderHook(() => useStreamUrls(params));
-      expect(result.current.vodTranscodeUrl).toBe("/api/stream/series/7/101/transcode");
+      expect(result.current.vodTranscodeUrl).toBe(
+        "/api/stream/series/7/101/transcode",
+      );
     });
 
     it("builds hlsInitUrl", () => {
@@ -143,7 +173,9 @@ describe("useStreamUrls", () => {
 
     it("builds dashUrl", () => {
       const { result } = renderHook(() => useStreamUrls(params));
-      expect(result.current.dashUrl).toBe("/api/stream/series/7/101/manifest.mpd");
+      expect(result.current.dashUrl).toBe(
+        "/api/stream/series/7/101/manifest.mpd",
+      );
     });
 
     it("builds probeUrl", () => {
@@ -170,16 +202,30 @@ describe("useStreamUrls", () => {
   describe("edge cases", () => {
     it("handles missing seriesId/epId gracefully (series)", () => {
       const { result } = renderHook(() =>
-        useStreamUrls({ type: "series", id: undefined, seriesId: undefined, epId: undefined, qualityIdx: 0 }),
+        useStreamUrls({
+          type: "series",
+          id: undefined,
+          seriesId: undefined,
+          epId: undefined,
+          qualityIdx: 0,
+        }),
       );
-      expect(result.current.streamPath).toBe("/api/stream/series/undefined/undefined");
+      expect(result.current.streamPath).toBe(
+        "/api/stream/series/undefined/undefined",
+      );
       expect(result.current.streamId).toBe("");
       expect(result.current.dashUrl).toBeNull();
     });
 
     it("handles missing id gracefully (movie)", () => {
       const { result } = renderHook(() =>
-        useStreamUrls({ type: "movie", id: undefined, seriesId: undefined, epId: undefined, qualityIdx: 0 }),
+        useStreamUrls({
+          type: "movie",
+          id: undefined,
+          seriesId: undefined,
+          epId: undefined,
+          qualityIdx: 0,
+        }),
       );
       expect(result.current.streamPath).toBe("/api/stream/movie/undefined");
       expect(result.current.watchKey).toBe("vod_undefined");

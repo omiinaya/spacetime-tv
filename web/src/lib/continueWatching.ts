@@ -40,7 +40,7 @@ export function saveSeriesProgress(progress: SeriesProgress) {
         i.seriesId === progress.seriesId &&
         i.seasonNumber === progress.seasonNumber &&
         i.episodeNum === progress.episodeNum
-      )
+      ),
   );
   filtered.unshift({ ...progress, updatedAt: Date.now() });
   // Keep top N
@@ -88,7 +88,10 @@ export function saveMovieProgress(progress: MovieProgress) {
   const filtered = items.filter((i) => i.movieId !== progress.movieId);
   filtered.unshift({ ...progress, updatedAt: Date.now() });
   try {
-    localStorage.setItem(MOVIE_KEY, JSON.stringify(filtered.slice(0, MAX_ITEMS)));
+    localStorage.setItem(
+      MOVIE_KEY,
+      JSON.stringify(filtered.slice(0, MAX_ITEMS)),
+    );
   } catch {} // DOMException: localStorage quota
 }
 
@@ -101,8 +104,12 @@ export function removeMovieProgress(movieId: number) {
 
 /** Clear all continue-watching progress (series + movies) */
 export function clearAllProgress() {
-  try { localStorage.removeItem(KEY); } catch {} // DOMException: storage quota
-  try { localStorage.removeItem(MOVIE_KEY); } catch {} // DOMException: storage quota
+  try {
+    localStorage.removeItem(KEY);
+  } catch {} // DOMException: storage quota
+  try {
+    localStorage.removeItem(MOVIE_KEY);
+  } catch {} // DOMException: storage quota
 }
 
 /**
@@ -110,10 +117,16 @@ export function clearAllProgress() {
  * Returns a map keyed by "season:episodeNum" → progress info.
  */
 export function getSeriesProgress(
-  seriesId: number
-): Map<string, { progressSeconds: number; durationSeconds: number; updatedAt: number }> {
+  seriesId: number,
+): Map<
+  string,
+  { progressSeconds: number; durationSeconds: number; updatedAt: number }
+> {
   const items = getContinueWatching().filter((i) => i.seriesId === seriesId);
-  const map = new Map<string, { progressSeconds: number; durationSeconds: number; updatedAt: number }>();
+  const map = new Map<
+    string,
+    { progressSeconds: number; durationSeconds: number; updatedAt: number }
+  >();
   for (const item of items) {
     map.set(`${item.seasonNumber}:${item.episodeNum}`, {
       progressSeconds: item.progressSeconds,
@@ -132,7 +145,7 @@ import { api, type ServerProgressEntry } from "@/lib/api";
  * Convert server progress entries into local SeriesProgress[] format.
  */
 function seriesFromServerEntry(
-  entry: ServerProgressEntry
+  entry: ServerProgressEntry,
 ): SeriesProgress | null {
   if (!entry.seriesData) return null;
   return {
@@ -153,7 +166,7 @@ function seriesFromServerEntry(
  * Convert server progress entries into local MovieProgress[] format.
  */
 function movieFromServerEntry(
-  entry: ServerProgressEntry
+  entry: ServerProgressEntry,
 ): MovieProgress | null {
   if (!entry.movieData) return null;
   return {

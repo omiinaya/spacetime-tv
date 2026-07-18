@@ -74,8 +74,14 @@ describe("useFullscreen", () => {
     const removeSpy = vi.spyOn(document, "removeEventListener");
     const { unmount } = renderHook(() => useFullscreen());
     unmount();
-    expect(removeSpy).toHaveBeenCalledWith("fullscreenchange", expect.any(Function));
-    expect(removeSpy).toHaveBeenCalledWith("webkitfullscreenchange", expect.any(Function));
+    expect(removeSpy).toHaveBeenCalledWith(
+      "fullscreenchange",
+      expect.any(Function),
+    );
+    expect(removeSpy).toHaveBeenCalledWith(
+      "webkitfullscreenchange",
+      expect.any(Function),
+    );
     removeSpy.mockRestore();
   });
 });

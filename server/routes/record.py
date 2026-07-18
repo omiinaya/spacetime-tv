@@ -46,7 +46,6 @@ def _save_meta(meta: dict[str, dict]) -> None:
     META_FILE.write_text(json.dumps(meta, indent=2, default=str))
 
 
-
 @router.post("/record/start")
 async def start_recording(
     stream_id: int = Query(..., description="Live stream ID to record"),
@@ -80,14 +79,22 @@ async def start_recording(
 
     cmd = [
         "/usr/bin/ffmpeg",
-        "-loglevel", "warning",
-        "-user_agent", UA_STR,
-        "-headers", f"Referer: {iptv_referer()}\r\n",
-        "-i", url,
-        "-c", "copy",
-        "-bsf:a", "aac_adtstoasc",
-        "-f", "mp4",
-        "-movflags", "+frag_keyframe+empty_moov+faststart",
+        "-loglevel",
+        "warning",
+        "-user_agent",
+        UA_STR,
+        "-headers",
+        f"Referer: {iptv_referer()}\r\n",
+        "-i",
+        url,
+        "-c",
+        "copy",
+        "-bsf:a",
+        "aac_adtstoasc",
+        "-f",
+        "mp4",
+        "-movflags",
+        "+frag_keyframe+empty_moov+faststart",
         str(out_path),
     ]
 

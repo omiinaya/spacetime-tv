@@ -2,6 +2,7 @@
 
 Extracted from stream.py during decomposition of the 1105-line monolithic file.
 """
+
 import asyncio
 import logging
 from pathlib import Path
@@ -33,11 +34,22 @@ async def download_mkv(stream_id: str, stream_type: str, cache_key: str) -> Path
     ua = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     log.info(f"[HLS] Downloading {cache_key} → {mkv_path}")
     cmd = [
-        "curl", "-sS", "-L",
-        "--retry", "10", "--retry-delay", "5",
-        "--retry-max-time", "600", "--max-time", "900",
-        "-H", f"User-Agent: {ua}",
-        "-o", str(mkv_path), url,
+        "curl",
+        "-sS",
+        "-L",
+        "--retry",
+        "10",
+        "--retry-delay",
+        "5",
+        "--retry-max-time",
+        "600",
+        "--max-time",
+        "900",
+        "-H",
+        f"User-Agent: {ua}",
+        "-o",
+        str(mkv_path),
+        url,
     ]
     proc = await asyncio.create_subprocess_exec(*cmd)
     _mkv_downloaders[cache_key] = proc
@@ -46,7 +58,7 @@ async def download_mkv(stream_id: str, stream_type: str, cache_key: str) -> Path
     if proc.returncode != 0 or not mkv_path.exists():
         log.error(f"[HLS] Download failed for {cache_key}")
         return None  # pragma: no cover — subprocess download, runtime only
-    log.info(f"[HLS] Downloaded {cache_key}: {mkv_path.stat().st_size/1024/1024:.0f} MB")
+    log.info(f"[HLS] Downloaded {cache_key}: {mkv_path.stat().st_size / 1024 / 1024:.0f} MB")
     return mkv_path
 
 
@@ -60,13 +72,22 @@ async def run_hls_segmenter(cache_key: str, input_path: Path):
     if pl_path.exists():
         pl_path.unlink()
     ffmpeg_args = [
-        "/usr/bin/ffmpeg", "-loglevel", "warning", "-y",
-        "-i", str(input_path),
-        "-c", "copy",
-        "-f", "hls",
-        "-hls_time", "4",
-        "-hls_list_size", "0",
-        "-hls_flags", "delete_segments",
+        "/usr/bin/ffmpeg",
+        "-loglevel",
+        "warning",
+        "-y",
+        "-i",
+        str(input_path),
+        "-c",
+        "copy",
+        "-f",
+        "hls",
+        "-hls_time",
+        "4",
+        "-hls_list_size",
+        "0",
+        "-hls_flags",
+        "delete_segments",
         str(seg_dir / "playlist.m3u8"),
     ]
     old = _hls_procs.pop(cache_key, None)
@@ -123,7 +144,10 @@ async def movie_hls_start(stream_id: int, start: float = 0):
     cache_key = f"movie_{stream_id}"
     pl_path = HLS_DIR / cache_key / "playlist.m3u8"
     if pl_path.exists():
-        return {"status": "ready", "playlist": f"/api/hls/movie/{stream_id}/playlist.m3u8"}  # pragma: no cover — requires real HLS output
+        return {
+            "status": "ready",
+            "playlist": f"/api/hls/movie/{stream_id}/playlist.m3u8",
+        }  # pragma: no cover — requires real HLS output
     return {"status": "preparing", "message": "Downloading and segmenting..."}
 
 
@@ -134,7 +158,10 @@ async def series_hls_start(series_id: int, episode_id: int, start: float = 0):
     cache_key = f"series_{episode_id}"
     pl_path = HLS_DIR / cache_key / "playlist.m3u8"
     if pl_path.exists():
-        return {"status": "ready", "playlist": f"/api/hls/series/{episode_id}/playlist.m3u8"}  # pragma: no cover — requires real HLS output
+        return {
+            "status": "ready",
+            "playlist": f"/api/hls/series/{episode_id}/playlist.m3u8",
+        }  # pragma: no cover — requires real HLS output
     return {"status": "preparing", "message": "Downloading and segmenting..."}
 
 
@@ -148,6 +175,10 @@ async def serve_hls_file(stream_type: str, stream_id: str, filename: str):
     if not file_path.exists():
         raise HTTPException(404, "Segment not found")
     media = "application/vnd.apple.mpegurl" if filename.endswith(".m3u8") else "video/mp2t"
-    return FileResponse(file_path, media_type=media, headers={  # pragma: no cover — requires real HLS file
-        "Cache-Control": "no-cache",
-    })
+    return FileResponse(
+        file_path,
+        media_type=media,
+        headers={  # pragma: no cover — requires real HLS file
+            "Cache-Control": "no-cache",
+        },
+    )

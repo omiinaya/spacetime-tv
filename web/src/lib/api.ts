@@ -4,14 +4,16 @@ const API = "/api";
 // Also sanitizes malformed concatenated URLs (provider data quirk)
 export function imageUrl(raw: string): string {
   if (!raw) return "";
-  
+
   // Fix concatenated TMDB URLs: "image.tmdb.https//image.tmdb.org/t/p/original/X.jpgorg/t/p/w600..."
   // Extract the first valid TMDB image URL and fix any missing protocol colon
   const m = raw.match(
-    /(https?:?\/\/image\.tmdb\.org\/t\/p\/\w+\/[a-zA-Z0-9]+\.(?:jpg|jpeg|png|webp))/i
+    /(https?:?\/\/image\.tmdb\.org\/t\/p\/\w+\/[a-zA-Z0-9]+\.(?:jpg|jpeg|png|webp))/i,
   );
   if (m) {
-    return m[1].replace(/^https\/\//, "https://").replace(/^http\/\//, "http://");
+    return m[1]
+      .replace(/^https\/\//, "https://")
+      .replace(/^http\/\//, "http://");
   }
 
   if (raw.includes("cmc.exchange-cdn.com") || raw.includes("photo-tmdb.com")) {
@@ -44,16 +46,21 @@ export function tmdbImageUrl(path: string, size: string = "w342"): string {
 export function tmdbSrcset(path: string): string {
   if (!path) return "";
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  return POSTER_SIZES
-    .map((s) => `${TMDB_IMG_BASE}/${s}${cleanPath} ${s === "w92" ? "92w" : s === "w154" ? "154w" : s === "w185" ? "185w" : s === "w342" ? "342w" : s === "w500" ? "500w" : "780w"}`)
-    .join(", ");
+  return POSTER_SIZES.map(
+    (s) =>
+      `${TMDB_IMG_BASE}/${s}${cleanPath} ${s === "w92" ? "92w" : s === "w154" ? "154w" : s === "w185" ? "185w" : s === "w342" ? "342w" : s === "w500" ? "500w" : "780w"}`,
+  ).join(", ");
 }
 
 /**
  * Get src + srcSet + sizes props for a responsive TMDB image.
  * Spread directly onto an `<img>` element.
  */
-export function tmdbImgProps(path: string, defaultSize: string = "w342", sizes: string = "(max-width: 640px) 185px, (max-width: 1024px) 342px, 500px") {
+export function tmdbImgProps(
+  path: string,
+  defaultSize: string = "w342",
+  sizes: string = "(max-width: 640px) 185px, (max-width: 1024px) 342px, 500px",
+) {
   const src = tmdbImageUrl(path, defaultSize);
   const srcSet = tmdbSrcset(path);
   return { src, srcSet, sizes, loading: "lazy" as const };
@@ -64,21 +71,24 @@ const MAX_RETRIES = 1;
 
 export async function fetchWithTimeout(
   url: string,
-  options: RequestInit & { timeout?: number } = {}
+  options: RequestInit & { timeout?: number } = {},
 ): Promise<Response> {
   const { timeout = FETCH_TIMEOUT, ...fetchOptions } = options;
   const controller = new AbortController();
   const existingSignal = fetchOptions.signal;
-  
+
   // Merge external signal with our timeout signal
   if (existingSignal) {
     existingSignal.addEventListener("abort", () => controller.abort());
   }
-  
+
   const timeoutId = setTimeout(() => controller.abort(), timeout);
-  
+
   try {
-    const res = await fetch(url, { ...fetchOptions, signal: controller.signal });
+    const res = await fetch(url, {
+      ...fetchOptions,
+      signal: controller.signal,
+    });
     return res;
   } finally {
     clearTimeout(timeoutId);
@@ -87,11 +97,11 @@ export async function fetchWithTimeout(
 
 export async function fetchWithRetry(
   url: string,
-  options: RequestInit & { timeout?: number; retries?: number } = {}
+  options: RequestInit & { timeout?: number; retries?: number } = {},
 ): Promise<Response> {
   const { retries = MAX_RETRIES, ...fetchOptions } = options;
   let lastError: Error | null = null;
-  
+
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       return await fetchWithTimeout(url, fetchOptions);
@@ -116,66 +126,98 @@ async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
 
 export const api = {
   live: {
-    categories: (signal?: AbortSignal) => get<{ categories: Category[] }>("/live/categories", signal),
+    categories: (signal?: AbortSignal) =>
+      get<{ categories: Category[] }>("/live/categories", signal),
     streams: (catId: string, signal?: AbortSignal) =>
-      get<{ streams: LiveStream[] }>(`/live/streams?category_id=${catId}`, signal),
-    all: (signal?: AbortSignal) => get<{ streams: LiveStream[] }>("/live/all", signal),
+      get<{ streams: LiveStream[] }>(
+        `/live/streams?category_id=${catId}`,
+        signal,
+      ),
+    all: (signal?: AbortSignal) =>
+      get<{ streams: LiveStream[] }>("/live/all", signal),
     allSlim: (signal?: AbortSignal) =>
       get<{ streams: LiveStream[] }>("/live/all-slim", signal),
     info: (ids: number[], signal?: AbortSignal) =>
-      get<{ streams: { stream_id: number; name: string; stream_icon: string }[] }>(
-        `/live/info?ids=${ids.join(",")}`, signal
-      ),
+      get<{
+        streams: { stream_id: number; name: string; stream_icon: string }[];
+      }>(`/live/info?ids=${ids.join(",")}`, signal),
   },
   movies: {
-    categories: (signal?: AbortSignal) => get<{ categories: Category[] }>("/movies/categories", signal),
+    categories: (signal?: AbortSignal) =>
+      get<{ categories: Category[] }>("/movies/categories", signal),
     list: (catId: string, limit = 20, offset = 0, signal?: AbortSignal) =>
       get<{ movies: Movie[]; total: number; offset: number; limit: number }>(
-        `/movies?category_id=${catId}&limit=${limit}&offset=${offset}`, signal
+        `/movies?category_id=${catId}&limit=${limit}&offset=${offset}`,
+        signal,
       ),
-    details: (id: number, signal?: AbortSignal) => get<{ info: MovieInfo }>(`/movies/${id}`, signal),
+    details: (id: number, signal?: AbortSignal) =>
+      get<{ info: MovieInfo }>(`/movies/${id}`, signal),
     unified: (limit = 50, offset = 0, q?: string, signal?: AbortSignal) => {
-      const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+      const params = new URLSearchParams({
+        limit: String(limit),
+        offset: String(offset),
+      });
       if (q) params.set("q", q);
-      return get<{ movies: UnifiedMovie[]; total: number; offset: number; limit: number }>(
-        `/movies/unified?${params}`, signal
-      );
+      return get<{
+        movies: UnifiedMovie[];
+        total: number;
+        offset: number;
+        limit: number;
+      }>(`/movies/unified?${params}`, signal);
     },
   },
   series: {
-    categories: (signal?: AbortSignal) => get<{ categories: Category[] }>("/series/categories", signal),
+    categories: (signal?: AbortSignal) =>
+      get<{ categories: Category[] }>("/series/categories", signal),
     list: (catId: string, limit = 20, offset = 0, signal?: AbortSignal) =>
       get<{ series: Series[]; total: number; offset: number; limit: number }>(
-        `/series?category_id=${catId}&limit=${limit}&offset=${offset}`, signal
+        `/series?category_id=${catId}&limit=${limit}&offset=${offset}`,
+        signal,
       ),
-    details: (id: number, signal?: AbortSignal) => get<SeriesDetails>(`/series/${id}`, signal),
-    probe: (id: number, signal?: AbortSignal) => get<ProbeResult>(`/series/probe/${id}`, signal),
+    details: (id: number, signal?: AbortSignal) =>
+      get<SeriesDetails>(`/series/${id}`, signal),
+    probe: (id: number, signal?: AbortSignal) =>
+      get<ProbeResult>(`/series/probe/${id}`, signal),
   },
   guide: {
     get: (offset = 0, limit = 60, signal?: AbortSignal) =>
-      get<GuideResponse>(
-        `/guide?offset=${offset}&limit=${limit}`, signal
-      ),
+      get<GuideResponse>(`/guide?offset=${offset}&limit=${limit}`, signal),
     enrich: (q: string, signal?: AbortSignal) =>
       get<GuideEnrichResponse>(
-        `/guide/enrich?q=${encodeURIComponent(q)}`, signal
+        `/guide/enrich?q=${encodeURIComponent(q)}`,
+        signal,
       ),
     now: (streamIds: number[], signal?: AbortSignal) =>
       get<GuideNowResponse>(
-        `/guide/now?stream_ids=${streamIds.join(",")}`, signal
+        `/guide/now?stream_ids=${streamIds.join(",")}`,
+        signal,
       ),
     catchup: (streamId: number, hours = 4, signal?: AbortSignal) =>
       get<CatchupTimelineResponse>(
-        `/guide/catchup?stream_id=${streamId}&hours=${hours}`, signal
+        `/guide/catchup?stream_id=${streamId}&hours=${hours}`,
+        signal,
       ),
     search: (q: string, signal?: AbortSignal, futureOnly = true) =>
       get<GuideSearchResponse>(
-        `/guide/search?q=${encodeURIComponent(q)}&future_only=${futureOnly}&limit=50`, signal
+        `/guide/search?q=${encodeURIComponent(q)}&future_only=${futureOnly}&limit=50`,
+        signal,
       ),
   },
-  search: (q: string, signal?: AbortSignal, limit = 20, offset = 0, section?: string) =>
-    get<{ live: LiveStream[]; movies: Movie[]; series: Series[]; totals: { live: number; movies: number; series: number } }>(
-      `/search?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}${section ? `&section=${section}` : ""}`, signal
+  search: (
+    q: string,
+    signal?: AbortSignal,
+    limit = 20,
+    offset = 0,
+    section?: string,
+  ) =>
+    get<{
+      live: LiveStream[];
+      movies: Movie[];
+      series: Series[];
+      totals: { live: number; movies: number; series: number };
+    }>(
+      `/search?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}${section ? `&section=${section}` : ""}`,
+      signal,
     ),
   searchEnrich: (
     movies: { stream_id: number; tmdb_id: string }[],
@@ -190,43 +232,65 @@ export const api = {
     }).then((r) => r.json()) as Promise<SearchEnrichResponse>,
   watchlist: {
     progress: (signal?: AbortSignal) =>
-      get<{ progress: Record<string, ServerProgressEntry[]> }>("/watchlist/progress", signal),
+      get<{ progress: Record<string, ServerProgressEntry[]> }>(
+        "/watchlist/progress",
+        signal,
+      ),
   },
   tmdb: {
-    trending: (timeWindow: "day" | "week" = "week", page = 1, signal?: AbortSignal) =>
+    trending: (
+      timeWindow: "day" | "week" = "week",
+      page = 1,
+      signal?: AbortSignal,
+    ) =>
       get<TmdbTrendingResponse>(
-        `/tmdb/trending?time_window=${timeWindow}&page=${page}`, signal
+        `/tmdb/trending?time_window=${timeWindow}&page=${page}`,
+        signal,
       ),
     search: (q: string, page = 1, signal?: AbortSignal) =>
       get<TmdbSearchResponse>(
-        `/tmdb/search?q=${encodeURIComponent(q)}&page=${page}`, signal
+        `/tmdb/search?q=${encodeURIComponent(q)}&page=${page}`,
+        signal,
       ),
     details: (tmdbId: number, signal?: AbortSignal) =>
       get<TmdbDetailsResponse>(`/tmdb/movie/${tmdbId}`, signal),
     similar: (tmdbId: number, page = 1, signal?: AbortSignal) =>
-      get<TmdbSimilarResponse>(`/tmdb/movie/${tmdbId}/similar?page=${page}`, signal),
+      get<TmdbSimilarResponse>(
+        `/tmdb/movie/${tmdbId}/similar?page=${page}`,
+        signal,
+      ),
     configuration: (signal?: AbortSignal) =>
       get<TmdbConfigResponse>(`/tmdb/configuration`, signal),
     // ── TV / Series TMDB endpoints ────────────────────────────────
     tv: {
-      trending: (timeWindow: "day" | "week" = "week", page = 1, signal?: AbortSignal) =>
+      trending: (
+        timeWindow: "day" | "week" = "week",
+        page = 1,
+        signal?: AbortSignal,
+      ) =>
         get<TmdbTvTrendingResponse>(
-          `/tmdb/tv/trending?time_window=${timeWindow}&page=${page}`, signal
+          `/tmdb/tv/trending?time_window=${timeWindow}&page=${page}`,
+          signal,
         ),
       search: (q: string, page = 1, signal?: AbortSignal) =>
         get<TmdbTvSearchResponse>(
-          `/tmdb/tv/search?q=${encodeURIComponent(q)}&page=${page}`, signal
+          `/tmdb/tv/search?q=${encodeURIComponent(q)}&page=${page}`,
+          signal,
         ),
       details: (seriesId: number, signal?: AbortSignal) =>
         get<TmdbTvDetailsResponse>(`/tmdb/tv/${seriesId}`, signal),
       similar: (seriesId: number, page = 1, signal?: AbortSignal) =>
-        get<TmdbTvSimilarResponse>(`/tmdb/tv/${seriesId}/similar?page=${page}`, signal),
+        get<TmdbTvSimilarResponse>(
+          `/tmdb/tv/${seriesId}/similar?page=${page}`,
+          signal,
+        ),
     },
     // ── Person / Cast TMDB endpoints ──────────────────────────────────
     person: {
       search: (q: string, page = 1, signal?: AbortSignal) =>
         get<TmdbPersonSearchResponse>(
-          `/tmdb/person/search?q=${encodeURIComponent(q)}&page=${page}`, signal
+          `/tmdb/person/search?q=${encodeURIComponent(q)}&page=${page}`,
+          signal,
         ),
       details: (personId: number, signal?: AbortSignal) =>
         get<TmdbPersonDetailsResponse>(`/tmdb/person/${personId}`, signal),

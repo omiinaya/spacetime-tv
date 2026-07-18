@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { getSearchHistory, addSearchHistory, clearSearchHistory } from "./searchHistory";
+import {
+  getSearchHistory,
+  addSearchHistory,
+  clearSearchHistory,
+} from "./searchHistory";
 
 const KEY = "stv_search_history";
 

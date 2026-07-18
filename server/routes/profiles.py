@@ -3,6 +3,7 @@
 Extends the x-device-token auth pattern to support multiple user profiles
 per device, each with their own PIN for access control.
 """
+
 import logging
 import time
 
@@ -173,6 +174,7 @@ async def api_clear_profile_history(profile_id: str):
 
 # ── Profile favorites ───────────────────────────────────────────
 
+
 @router.get("/profiles/{profile_id}/favorites")
 async def api_get_profile_favorites(profile_id: str):
     """Get favorites for a profile."""
@@ -201,24 +203,25 @@ async def api_remove_profile_favorite(profile_id: str, watch_key: str):
 
 # ── Profile authentication / session ────────────────────────────
 
+
 @router.post("/profiles/{profile_id}/auth")
 async def api_profile_auth(profile_id: str, payload: dict, request: Request):
     """Verify profile PIN and return a profile session token.
-    
+
     Body: {"pin": "1234"}
     Returns: {"token": "...", "profile": {...}}
     """
     pin = payload.get("pin", "").strip()
     if not pin:
         raise HTTPException(400, "PIN is required")
-    
+
     if not verify_profile_pin(profile_id, pin):
         raise HTTPException(403, "Invalid PIN")
-    
+
     device_id = request.headers.get("X-Device-Token", "device")
     token = generate_profile_token(profile_id, device_id)
     profile = get_profile(profile_id)
-    
+
     return {"token": token, "profile": profile}
 
 
@@ -240,7 +243,7 @@ async def api_get_current_profile(request: Request):
 @router.post("/profiles/session")
 async def api_switch_profile(payload: dict, request: Request):
     """Switch active profile by verifying PIN. Returns new session token.
-    
+
     Body: {"profile_id": "...", "pin": "1234"}
     """
     profile_id = payload.get("profile_id", "")
@@ -249,11 +252,11 @@ async def api_switch_profile(payload: dict, request: Request):
         raise HTTPException(400, "profile_id and pin are required")
     if not verify_profile_pin(profile_id, pin):
         raise HTTPException(403, "Invalid PIN")
-    
+
     device_id = request.headers.get("X-Device-Token", "device")
     token = generate_profile_token(profile_id, device_id)
     profile = get_profile(profile_id)
-    
+
     return {"token": token, "profile": profile}
 
 
@@ -266,10 +269,8 @@ async def api_refresh_profile_token(request: Request):
     result = verify_profile_token(token)
     if not result:
         raise HTTPException(401, "Invalid or expired profile token")
-    
+
     new_token = generate_profile_token(result["profile_id"], result["device_id"])
     profile = get_profile(result["profile_id"])
-    
+
     return {"token": new_token, "profile": profile}
-
-

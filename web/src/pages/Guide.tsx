@@ -12,8 +12,17 @@ export default function Guide() {
   const { settings } = useSettings();
   const { favorites, toggleFavorite } = useChannelFavorites();
   const {
-    filteredChannels, allData, totalChannels, loading, loadingMore,
-    error, sentinelRef, timeSlots, now, nowPct, loadPage,
+    filteredChannels,
+    allData,
+    totalChannels,
+    loading,
+    loadingMore,
+    error,
+    sentinelRef,
+    timeSlots,
+    now,
+    nowPct,
+    loadPage,
   } = useGuideData();
 
   // ── Guide search ──────────────────────────────────────────────
@@ -30,7 +39,7 @@ export default function Guide() {
             p.title.toLowerCase().includes(q) ||
             p.subtitle.toLowerCase().includes(q) ||
             p.category.toLowerCase().includes(q) ||
-            p.desc.toLowerCase().includes(q)
+            p.desc.toLowerCase().includes(q),
         );
         if (matchingProgs.length === 0) return null;
         return { ...ch, programmes: matchingProgs };
@@ -43,7 +52,8 @@ export default function Guide() {
     return searchedChannels.reduce((acc, ch) => acc + ch.programmes.length, 0);
   }, [searchedChannels, q]);
 
-  const showEmpty = !loading && searchedChannels.length === 0 && allData.length > 0;
+  const showEmpty =
+    !loading && searchedChannels.length === 0 && allData.length > 0;
 
   const clearSearch = useCallback(() => setSearchQuery(""), []);
 
@@ -55,9 +65,10 @@ export default function Guide() {
   // Focus the element at (focusedRow, focusedCol) on change
   useEffect(() => {
     if (focusedRow < 0 || focusedCol < -1) return;
-    const sel = focusedCol === -1
-      ? `[data-guide-row="${focusedRow}"][data-guide-target="channel"]`
-      : `[data-guide-row="${focusedRow}"][data-guide-col="${focusedCol}"]`;
+    const sel =
+      focusedCol === -1
+        ? `[data-guide-row="${focusedRow}"][data-guide-target="channel"]`
+        : `[data-guide-row="${focusedRow}"][data-guide-col="${focusedCol}"]`;
     const el = guideRef.current?.querySelector<HTMLElement>(sel);
     if (el) {
       el.focus();
@@ -65,59 +76,62 @@ export default function Guide() {
     }
   }, [focusedRow, focusedCol]);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (focusedRow < 0) return;
-    // Don't hijack focus when user is typing in search
-    if ((e.target as HTMLElement)?.tagName === "INPUT") return;
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (focusedRow < 0) return;
+      // Don't hijack focus when user is typing in search
+      if ((e.target as HTMLElement)?.tagName === "INPUT") return;
 
-    const rowCount = searchedChannels.length;
-    if (rowCount === 0) return;
+      const rowCount = searchedChannels.length;
+      if (rowCount === 0) return;
 
-    const maxCol = searchedChannels[focusedRow]?.programmes.length ?? 0;
+      const maxCol = searchedChannels[focusedRow]?.programmes.length ?? 0;
 
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault();
-        setFocusedRow((prev) => Math.min(prev + 1, rowCount - 1));
-        setFocusedCol(-1);
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        setFocusedRow((prev) => Math.max(prev - 1, 0));
-        setFocusedCol(-1);
-        break;
-      case "ArrowRight":
-        e.preventDefault();
-        if (focusedCol < maxCol - 1) {
-          setFocusedCol((prev) => Math.min(prev + 1, maxCol - 1));
-        }
-        break;
-      case "ArrowLeft":
-        e.preventDefault();
-        if (focusedCol > -1) {
-          setFocusedCol((prev) => Math.max(prev - 1, -1));
-        }
-        break;
-      case "Enter":
-      case " ":
-        e.preventDefault();
-        if (focusedCol === -1) {
-          // Focused on channel name — play
-          const ch = searchedChannels[focusedRow];
-          if (ch.stream_id) navigate(`/watch/live/${ch.stream_id}`);
-        } else {
-          // Focused on a programme card — play channel
-          const ch = searchedChannels[focusedRow];
-          if (ch.stream_id) navigate(`/watch/live/${ch.stream_id}`);
-        }
-        break;
-      case "Escape":
-        e.preventDefault();
-        setFocusedRow(-1);
-        setFocusedCol(-1);
-        break;
-    }
-  }, [focusedRow, focusedCol, searchedChannels, navigate]);
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setFocusedRow((prev) => Math.min(prev + 1, rowCount - 1));
+          setFocusedCol(-1);
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setFocusedRow((prev) => Math.max(prev - 1, 0));
+          setFocusedCol(-1);
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          if (focusedCol < maxCol - 1) {
+            setFocusedCol((prev) => Math.min(prev + 1, maxCol - 1));
+          }
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          if (focusedCol > -1) {
+            setFocusedCol((prev) => Math.max(prev - 1, -1));
+          }
+          break;
+        case "Enter":
+        case " ":
+          e.preventDefault();
+          if (focusedCol === -1) {
+            // Focused on channel name — play
+            const ch = searchedChannels[focusedRow];
+            if (ch.stream_id) navigate(`/watch/live/${ch.stream_id}`);
+          } else {
+            // Focused on a programme card — play channel
+            const ch = searchedChannels[focusedRow];
+            if (ch.stream_id) navigate(`/watch/live/${ch.stream_id}`);
+          }
+          break;
+        case "Escape":
+          e.preventDefault();
+          setFocusedRow(-1);
+          setFocusedCol(-1);
+          break;
+      }
+    },
+    [focusedRow, focusedCol, searchedChannels, navigate],
+  );
 
   // Global keydown listener when guide is focused
   useEffect(() => {
@@ -128,7 +142,13 @@ export default function Guide() {
   }, [handleKeyDown]);
 
   return (
-    <div ref={guideRef} className="space-y-5" tabIndex={0} role="grid" aria-label="TV Guide">
+    <div
+      ref={guideRef}
+      className="space-y-5"
+      tabIndex={0}
+      role="grid"
+      aria-label="TV Guide"
+    >
       {/* Header */}
       {loading ? (
         <div className="flex items-center gap-4">
@@ -147,7 +167,8 @@ export default function Guide() {
             <div>
               <h1 className="text-xl font-semibold">TV Guide</h1>
               <p className="text-sm text-muted-foreground">
-                {totalChannels.toLocaleString()} channels · showing {searchedChannels.length.toLocaleString()}
+                {totalChannels.toLocaleString()} channels · showing{" "}
+                {searchedChannels.length.toLocaleString()}
                 {settings.languages.length > 0 && (
                   <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
                     {settings.languages.join(", ")}
@@ -203,7 +224,10 @@ export default function Guide() {
         <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm pb-2 -mx-0">
           <div className="flex items-end h-8 pl-[200px] pr-4 relative">
             {timeSlots.map((slot, i) => (
-              <div key={i} className="flex-1 text-[10px] text-muted-foreground/60 font-medium whitespace-nowrap">
+              <div
+                key={i}
+                className="flex-1 text-[10px] text-muted-foreground/60 font-medium whitespace-nowrap"
+              >
                 {formatTime(slot)}
               </div>
             ))}
@@ -224,7 +248,10 @@ export default function Guide() {
       {loading ? (
         <div className="space-y-0">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 py-3 px-4 border-b border-border/30">
+            <div
+              key={i}
+              className="flex items-center gap-3 py-3 px-4 border-b border-border/30"
+            >
               <Skeleton className="w-[184px] h-10 rounded-lg shrink-0" />
               <div className="flex gap-2 flex-1 overflow-hidden">
                 {Array.from({ length: 4 }).map((_, j) => (
@@ -239,17 +266,25 @@ export default function Guide() {
           {q ? (
             <>
               <Search className="h-10 w-10 text-muted-foreground/20 mb-3" />
-              <p className="text-sm text-muted-foreground">No programmes matching &quot;{searchQuery}&quot;</p>
-              <button onClick={clearSearch} className="mt-2 text-xs text-primary hover:underline">
+              <p className="text-sm text-muted-foreground">
+                No programmes matching &quot;{searchQuery}&quot;
+              </p>
+              <button
+                onClick={clearSearch}
+                className="mt-2 text-xs text-primary hover:underline"
+              >
                 Clear search
               </button>
             </>
           ) : (
             <>
               <Tv className="h-10 w-10 text-muted-foreground/20 mb-3" />
-              <p className="text-sm text-muted-foreground">No channels match your settings</p>
+              <p className="text-sm text-muted-foreground">
+                No channels match your settings
+              </p>
               <p className="text-xs text-muted-foreground/50 mt-1">
-                {allData.length.toLocaleString()} channels available — adjust filters to see them
+                {allData.length.toLocaleString()} channels available — adjust
+                filters to see them
               </p>
             </>
           )}
@@ -272,8 +307,14 @@ export default function Guide() {
                   navigate(`/watch/live/${group.stream_id}`);
                 }
               }}
-              isFavorite={group.stream_id ? favorites.has(group.stream_id) : false}
-              onToggleFavorite={group.stream_id ? () => toggleFavorite(group.stream_id as number) : undefined}
+              isFavorite={
+                group.stream_id ? favorites.has(group.stream_id) : false
+              }
+              onToggleFavorite={
+                group.stream_id
+                  ? () => toggleFavorite(group.stream_id as number)
+                  : undefined
+              }
             />
           ))}
         </div>

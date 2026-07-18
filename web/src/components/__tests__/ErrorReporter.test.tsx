@@ -11,7 +11,10 @@ import ErrorReporter from "@/components/ErrorReporter";
 describe("ErrorReporter", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: true })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true })),
+    );
   });
 
   afterEach(() => {
@@ -27,7 +30,10 @@ describe("ErrorReporter", () => {
     const addSpy = vi.spyOn(window, "addEventListener");
     render(<ErrorReporter />);
     expect(addSpy).toHaveBeenCalledWith("error", expect.any(Function));
-    expect(addSpy).toHaveBeenCalledWith("unhandledrejection", expect.any(Function));
+    expect(addSpy).toHaveBeenCalledWith(
+      "unhandledrejection",
+      expect.any(Function),
+    );
   });
 
   it("removes listeners on unmount", () => {
@@ -35,7 +41,10 @@ describe("ErrorReporter", () => {
     const { unmount } = render(<ErrorReporter />);
     unmount();
     expect(removeSpy).toHaveBeenCalledWith("error", expect.any(Function));
-    expect(removeSpy).toHaveBeenCalledWith("unhandledrejection", expect.any(Function));
+    expect(removeSpy).toHaveBeenCalledWith(
+      "unhandledrejection",
+      expect.any(Function),
+    );
   });
 
   it("POSTs to /api/error on window error event", () => {

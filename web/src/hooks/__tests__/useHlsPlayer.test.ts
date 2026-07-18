@@ -21,8 +21,15 @@ import { useHlsPlayer, type HlsPlayerCallbacks } from "@/hooks/useHlsPlayer";
 let HlsSupported = true;
 
 vi.mock("hls.js", () => {
-  const Events = { MANIFEST_PARSED: "manifest_parsed", ERROR: "hls_error", MEDIA_ATTACHED: "media_attached" };
-  const ErrorTypes = { NETWORK_ERROR: "networkError", MEDIA_ERROR: "mediaError" };
+  const Events = {
+    MANIFEST_PARSED: "manifest_parsed",
+    ERROR: "hls_error",
+    MEDIA_ATTACHED: "media_attached",
+  };
+  const ErrorTypes = {
+    NETWORK_ERROR: "networkError",
+    MEDIA_ERROR: "mediaError",
+  };
   return {
     default: class MockHls {
       static isSupported = vi.fn(() => HlsSupported);
@@ -56,7 +63,10 @@ vi.mock("hls.js", () => {
 });
 
 // ── Hls event helpers ───────────────────────────────────────
-const hlsListeners: Record<string, Array<(event: string, data: unknown) => void>> = {};
+const hlsListeners: Record<
+  string,
+  Array<(event: string, data: unknown) => void>
+> = {};
 let lastHls: {
   loadSource: ReturnType<typeof vi.fn>;
   attachMedia: ReturnType<typeof vi.fn>;
@@ -68,17 +78,19 @@ let lastHls: {
 } | null = null;
 
 function fireHlsEvent(event: string, data: Record<string, unknown> = {}) {
-  for (const cb of (hlsListeners[event] || [])) cb(event, data);
+  for (const cb of hlsListeners[event] || []) cb(event, data);
 }
 
 function resetTestState() {
   HlsSupported = true;
-  Object.keys(hlsListeners).forEach(k => delete hlsListeners[k]);
+  Object.keys(hlsListeners).forEach((k) => delete hlsListeners[k]);
   lastHls = null;
 }
 
 // ── Helpers ─────────────────────────────────────────────────
-function mockVideo(overrides: Partial<HTMLVideoElement> = {}): HTMLVideoElement {
+function mockVideo(
+  overrides: Partial<HTMLVideoElement> = {},
+): HTMLVideoElement {
   return {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
@@ -116,7 +128,10 @@ describe("useHlsPlayer — hls.js supported", () => {
   let videoRef: { current: HTMLVideoElement };
   let cb: HlsPlayerCallbacks;
 
-  beforeEach(() => { resetTestState(); vi.clearAllMocks(); });
+  beforeEach(() => {
+    resetTestState();
+    vi.clearAllMocks();
+  });
   beforeEach(() => {
     videoRef = { current: mockVideo() };
     cb = makeCallbacks();
@@ -126,8 +141,12 @@ describe("useHlsPlayer — hls.js supported", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8"); });
-    expect(lastHls?.loadSource).toHaveBeenCalledWith("http://example.com/playlist.m3u8");
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8");
+    });
+    expect(lastHls?.loadSource).toHaveBeenCalledWith(
+      "http://example.com/playlist.m3u8",
+    );
     expect(lastHls?.attachMedia).toHaveBeenCalledWith(videoRef.current);
     unmount();
   });
@@ -136,8 +155,12 @@ describe("useHlsPlayer — hls.js supported", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8"); });
-    act(() => { fireHlsEvent("manifest_parsed"); });
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8");
+    });
+    act(() => {
+      fireHlsEvent("manifest_parsed");
+    });
     expect(cb.onPhaseChange).toHaveBeenCalledWith("playing");
     expect(cb.onDuration).toHaveBeenCalled();
     expect(videoRef.current.play).toHaveBeenCalled();
@@ -148,8 +171,12 @@ describe("useHlsPlayer — hls.js supported", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8", 120); });
-    act(() => { fireHlsEvent("manifest_parsed"); });
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8", 120);
+    });
+    act(() => {
+      fireHlsEvent("manifest_parsed");
+    });
     expect(videoRef.current.currentTime).toBe(120);
     unmount();
   });
@@ -158,8 +185,12 @@ describe("useHlsPlayer — hls.js supported", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8", 3); });
-    act(() => { fireHlsEvent("manifest_parsed"); });
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8", 3);
+    });
+    act(() => {
+      fireHlsEvent("manifest_parsed");
+    });
     expect(videoRef.current.currentTime).toBe(0);
     unmount();
   });
@@ -168,8 +199,12 @@ describe("useHlsPlayer — hls.js supported", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8"); });
-    act(() => { fireHlsEvent("hls_error", { type: "networkError", fatal: true }); });
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8");
+    });
+    act(() => {
+      fireHlsEvent("hls_error", { type: "networkError", fatal: true });
+    });
     expect(lastHls?.startLoad).toHaveBeenCalled();
     expect(cb.onError).not.toHaveBeenCalled();
     unmount();
@@ -179,8 +214,12 @@ describe("useHlsPlayer — hls.js supported", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8"); });
-    act(() => { fireHlsEvent("hls_error", { type: "mediaError", fatal: true }); });
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8");
+    });
+    act(() => {
+      fireHlsEvent("hls_error", { type: "mediaError", fatal: true });
+    });
     expect(lastHls?.recoverMediaError).toHaveBeenCalled();
     expect(cb.onError).not.toHaveBeenCalled();
     unmount();
@@ -190,10 +229,16 @@ describe("useHlsPlayer — hls.js supported", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8"); });
-    act(() => { fireHlsEvent("hls_error", { type: "otherError", fatal: true }); });
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8");
+    });
+    act(() => {
+      fireHlsEvent("hls_error", { type: "otherError", fatal: true });
+    });
     expect(cb.onError).toHaveBeenCalledWith("stream_error", expect.any(String));
-    expect(cb.onHlsFatalError).toHaveBeenCalledWith("http://example.com/playlist.m3u8");
+    expect(cb.onHlsFatalError).toHaveBeenCalledWith(
+      "http://example.com/playlist.m3u8",
+    );
     unmount();
   });
 
@@ -201,8 +246,12 @@ describe("useHlsPlayer — hls.js supported", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8"); });
-    act(() => { fireHlsEvent("hls_error", { type: "networkError", fatal: false }); });
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8");
+    });
+    act(() => {
+      fireHlsEvent("hls_error", { type: "networkError", fatal: false });
+    });
     expect(cb.onError).not.toHaveBeenCalled();
     expect(cb.onHlsFatalError).not.toHaveBeenCalled();
     unmount();
@@ -213,8 +262,12 @@ describe("useHlsPlayer — hls.js supported", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8"); });
-    act(() => { vi.advanceTimersByTime(15000); });
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8");
+    });
+    act(() => {
+      vi.advanceTimersByTime(15000);
+    });
     expect(cb.onError).toHaveBeenCalledWith("timeout", expect.any(String));
     vi.useRealTimers();
     unmount();
@@ -225,8 +278,12 @@ describe("useHlsPlayer — hls.js supported", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8"); });
-    act(() => { vi.advanceTimersByTime(2000); });
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8");
+    });
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
     expect(cb.onError).toHaveBeenCalledWith("empty_stream", expect.any(String));
     vi.useRealTimers();
     unmount();
@@ -236,11 +293,25 @@ describe("useHlsPlayer — hls.js supported", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8"); });
-    expect(videoRef.current.addEventListener).toHaveBeenCalledWith("timeupdate", expect.any(Function));
-    expect(videoRef.current.addEventListener).toHaveBeenCalledWith("durationchange", expect.any(Function));
-    expect(videoRef.current.addEventListener).toHaveBeenCalledWith("ended", expect.any(Function));
-    expect(videoRef.current.addEventListener).toHaveBeenCalledWith("waiting", expect.any(Function));
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8");
+    });
+    expect(videoRef.current.addEventListener).toHaveBeenCalledWith(
+      "timeupdate",
+      expect.any(Function),
+    );
+    expect(videoRef.current.addEventListener).toHaveBeenCalledWith(
+      "durationchange",
+      expect.any(Function),
+    );
+    expect(videoRef.current.addEventListener).toHaveBeenCalledWith(
+      "ended",
+      expect.any(Function),
+    );
+    expect(videoRef.current.addEventListener).toHaveBeenCalledWith(
+      "waiting",
+      expect.any(Function),
+    );
     unmount();
   });
 
@@ -248,7 +319,9 @@ describe("useHlsPlayer — hls.js supported", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8"); });
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8");
+    });
     expect(videoRef.current.removeAttribute).toHaveBeenCalledWith("src");
     unmount();
   });
@@ -261,7 +334,10 @@ describe("useHlsPlayer — native HLS (Safari)", () => {
   let videoRef: { current: HTMLVideoElement };
   let cb: HlsPlayerCallbacks;
 
-  beforeEach(() => { resetTestState(); vi.clearAllMocks(); });
+  beforeEach(() => {
+    resetTestState();
+    vi.clearAllMocks();
+  });
   beforeEach(() => {
     HlsSupported = false; // No hls.js support
     videoRef = { current: mockVideo({ canPlayType: vi.fn(() => "probably") }) };
@@ -272,7 +348,9 @@ describe("useHlsPlayer — native HLS (Safari)", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8"); });
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8");
+    });
     expect(videoRef.current.src).toBe("http://example.com/playlist.m3u8");
     unmount();
   });
@@ -281,11 +359,19 @@ describe("useHlsPlayer — native HLS (Safari)", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8"); });
-    const addCalls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
-    const loadedMetaCb = addCalls.find(([e]: [string]) => e === "loadedmetadata");
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8");
+    });
+    const addCalls = (
+      videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+    ).mock.calls;
+    const loadedMetaCb = addCalls.find(
+      ([e]: [string]) => e === "loadedmetadata",
+    );
     expect(loadedMetaCb).toBeDefined();
-    act(() => { loadedMetaCb?.[1](); });
+    act(() => {
+      loadedMetaCb?.[1]();
+    });
     expect(cb.onDuration).toHaveBeenCalledWith(videoRef.current.duration);
     expect(cb.onPhaseChange).toHaveBeenCalledWith("playing");
     expect(videoRef.current.play).toHaveBeenCalled();
@@ -296,10 +382,18 @@ describe("useHlsPlayer — native HLS (Safari)", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8", 120); });
-    const addCalls = (videoRef.current.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
-    const loadedMetaCb = addCalls.find(([e]: [string]) => e === "loadedmetadata");
-    act(() => { loadedMetaCb?.[1](); });
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8", 120);
+    });
+    const addCalls = (
+      videoRef.current.addEventListener as ReturnType<typeof vi.fn>
+    ).mock.calls;
+    const loadedMetaCb = addCalls.find(
+      ([e]: [string]) => e === "loadedmetadata",
+    );
+    act(() => {
+      loadedMetaCb?.[1]();
+    });
     expect(videoRef.current.currentTime).toBe(120);
     unmount();
   });
@@ -312,7 +406,10 @@ describe("useHlsPlayer — unsupported browser", () => {
   let videoRef: { current: HTMLVideoElement };
   let cb: HlsPlayerCallbacks;
 
-  beforeEach(() => { resetTestState(); vi.clearAllMocks(); });
+  beforeEach(() => {
+    resetTestState();
+    vi.clearAllMocks();
+  });
   beforeEach(() => {
     HlsSupported = false;
     videoRef = { current: mockVideo({ canPlayType: vi.fn(() => "") }) };
@@ -323,8 +420,13 @@ describe("useHlsPlayer — unsupported browser", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8"); });
-    expect(cb.onError).toHaveBeenCalledWith("not_supported", expect.any(String));
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8");
+    });
+    expect(cb.onError).toHaveBeenCalledWith(
+      "not_supported",
+      expect.any(String),
+    );
     expect(cb.onPhaseChange).not.toHaveBeenCalled();
     unmount();
   });
@@ -337,7 +439,10 @@ describe("useHlsPlayer — cleanup and destroy", () => {
   let videoRef: { current: HTMLVideoElement };
   let cb: HlsPlayerCallbacks;
 
-  beforeEach(() => { resetTestState(); vi.clearAllMocks(); });
+  beforeEach(() => {
+    resetTestState();
+    vi.clearAllMocks();
+  });
   beforeEach(() => {
     videoRef = { current: mockVideo() };
     cb = makeCallbacks();
@@ -347,8 +452,12 @@ describe("useHlsPlayer — cleanup and destroy", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8"); });
-    act(() => { unmount(); });
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8");
+    });
+    act(() => {
+      unmount();
+    });
     expect(lastHls?.destroy).toHaveBeenCalled();
   });
 
@@ -356,11 +465,17 @@ describe("useHlsPlayer — cleanup and destroy", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/first.m3u8"); });
+    act(() => {
+      result.current.playHLS("http://example.com/first.m3u8");
+    });
     const firstHls = lastHls;
-    act(() => { result.current.playHLS("http://example.com/second.m3u8"); });
+    act(() => {
+      result.current.playHLS("http://example.com/second.m3u8");
+    });
     expect(firstHls?.destroy).toHaveBeenCalled();
-    expect(lastHls?.loadSource).toHaveBeenCalledWith("http://example.com/second.m3u8");
+    expect(lastHls?.loadSource).toHaveBeenCalledWith(
+      "http://example.com/second.m3u8",
+    );
     unmount();
   });
 
@@ -368,12 +483,28 @@ describe("useHlsPlayer — cleanup and destroy", () => {
     const { result, unmount } = renderHook(() =>
       useHlsPlayer(videoRef as React.RefObject<HTMLVideoElement>, cb),
     );
-    act(() => { result.current.playHLS("http://example.com/playlist.m3u8"); });
-    act(() => { result.current.playHLS("http://example.com/another.m3u8"); });
-    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith("timeupdate", expect.any(Function));
-    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith("durationchange", expect.any(Function));
-    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith("ended", expect.any(Function));
-    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith("waiting", expect.any(Function));
+    act(() => {
+      result.current.playHLS("http://example.com/playlist.m3u8");
+    });
+    act(() => {
+      result.current.playHLS("http://example.com/another.m3u8");
+    });
+    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith(
+      "timeupdate",
+      expect.any(Function),
+    );
+    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith(
+      "durationchange",
+      expect.any(Function),
+    );
+    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith(
+      "ended",
+      expect.any(Function),
+    );
+    expect(videoRef.current.removeEventListener).toHaveBeenCalledWith(
+      "waiting",
+      expect.any(Function),
+    );
     unmount();
   });
 });

@@ -29,7 +29,10 @@ export default function SearchFilterBar({
   return (
     <>
       {/* Category filter tabs */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin" style={{ touchAction: "manipulation" }}>
+      <div
+        className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin"
+        style={{ touchAction: "manipulation" }}
+      >
         {[
           { key: "all" as FilterTab, label: "All", count: total },
           { key: "live" as FilterTab, label: "Live", count: liveCount },
@@ -48,7 +51,9 @@ export default function SearchFilterBar({
           >
             {tab.label}
             {tab.count != null && tab.count > 0 && (
-              <span className="text-[10px] opacity-60">{tab.count.toLocaleString()}</span>
+              <span className="text-[10px] opacity-60">
+                {tab.count.toLocaleString()}
+              </span>
             )}
           </button>
         ))}
@@ -62,7 +67,11 @@ export default function SearchFilterBar({
         </span>
         <div className="flex gap-1">
           {[
-            { key: "relevance" as SortBy, label: "Relevance", icon: TrendingUp },
+            {
+              key: "relevance" as SortBy,
+              label: "Relevance",
+              icon: TrendingUp,
+            },
             { key: "name" as SortBy, label: "Name A–Z", icon: ArrowUpAZ },
             { key: "rating" as SortBy, label: "Rating", icon: Star },
           ].map((opt) => {

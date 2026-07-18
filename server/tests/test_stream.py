@@ -14,12 +14,28 @@ import pytest
 def test_live_dash_manifest_returns_mpd(client_with_cache):
     """GET /api/stream/live/{id}/manifest.mpd returns valid MPD XML."""
     from state import _cache
-    _cache["live_all"] = (1000.0, [
-        {"stream_id": 999, "name": "Test Channel", "stream_icon": "", "category_id": "1",
-         "epg_channel_id": "", "num": 1, "stream_type": "live", "added": "", "is_adult": 0,
-         "category_ids": ["1"], "custom_sid": None, "tv_archive": 0, "direct_source": "",
-         "tv_archive_duration": 0},
-    ])
+
+    _cache["live_all"] = (
+        1000.0,
+        [
+            {
+                "stream_id": 999,
+                "name": "Test Channel",
+                "stream_icon": "",
+                "category_id": "1",
+                "epg_channel_id": "",
+                "num": 1,
+                "stream_type": "live",
+                "added": "",
+                "is_adult": 0,
+                "category_ids": ["1"],
+                "custom_sid": None,
+                "tv_archive": 0,
+                "direct_source": "",
+                "tv_archive_duration": 0,
+            },
+        ],
+    )
 
     resp = client_with_cache.get("/api/v1/stream/live/999/manifest.mpd")
     assert resp.status_code == 200
@@ -30,12 +46,28 @@ def test_live_dash_manifest_returns_mpd(client_with_cache):
 def test_live_dash_manifest_has_cors_headers(client_with_cache):
     """DASH manifest should include CORS headers."""
     from state import _cache
-    _cache["live_all"] = (1000.0, [
-        {"stream_id": 999, "name": "Test Channel", "stream_icon": "", "category_id": "1",
-         "epg_channel_id": "", "num": 1, "stream_type": "live", "added": "", "is_adult": 0,
-         "category_ids": ["1"], "custom_sid": None, "tv_archive": 0, "direct_source": "",
-         "tv_archive_duration": 0},
-    ])
+
+    _cache["live_all"] = (
+        1000.0,
+        [
+            {
+                "stream_id": 999,
+                "name": "Test Channel",
+                "stream_icon": "",
+                "category_id": "1",
+                "epg_channel_id": "",
+                "num": 1,
+                "stream_type": "live",
+                "added": "",
+                "is_adult": 0,
+                "category_ids": ["1"],
+                "custom_sid": None,
+                "tv_archive": 0,
+                "direct_source": "",
+                "tv_archive_duration": 0,
+            },
+        ],
+    )
 
     client_with_cache.get("/api/v1/stream/live/999/manifest.mpd")
 
@@ -51,12 +83,25 @@ def test_live_dash_manifest_nonexistent_stream(client_with_cache):
 def test_movie_dash_manifest_with_cache(client_with_cache):
     """Movie DASH manifest returns valid MPD when cache is populated."""
     from state import _cache
+
     _cache["vod_categories"] = (1000.0, [{"category_id": 10, "category_name": "Test"}])
-    _cache["vod_10"] = (1000.0, [
-        {"stream_id": 500, "name": "Test Movie", "stream_icon": "", "container_extension": "mkv",
-         "category_id": "10", "added": "", "category_ids": ["10"], "custom_sid": None,
-         "direct_source": "", "rating": ""},
-    ])
+    _cache["vod_10"] = (
+        1000.0,
+        [
+            {
+                "stream_id": 500,
+                "name": "Test Movie",
+                "stream_icon": "",
+                "container_extension": "mkv",
+                "category_id": "10",
+                "added": "",
+                "category_ids": ["10"],
+                "custom_sid": None,
+                "direct_source": "",
+                "rating": "",
+            },
+        ],
+    )
 
     resp = client_with_cache.get("/api/v1/stream/movie/500/manifest.mpd")
     assert resp.status_code == 200
@@ -67,12 +112,25 @@ def test_movie_dash_manifest_with_cache(client_with_cache):
 def test_series_dash_manifest_with_cache(client_with_cache):
     """Series DASH manifest returns valid MPD when cache is populated."""
     from state import _cache
+
     _cache["series_categories"] = (1000.0, [{"category_id": 5, "category_name": "Drama"}])
-    _cache["series_5"] = (1000.0, [
-        {"series_id": 300, "name": "Test Series", "cover": "", "container_extension": "mp4",
-         "category_id": ["5"], "category_ids": ["5"], "stream_type": "series", "num": 1,
-         "series_episodes": [], "release_date": ""},
-    ])
+    _cache["series_5"] = (
+        1000.0,
+        [
+            {
+                "series_id": 300,
+                "name": "Test Series",
+                "cover": "",
+                "container_extension": "mp4",
+                "category_id": ["5"],
+                "category_ids": ["5"],
+                "stream_type": "series",
+                "num": 1,
+                "series_episodes": [],
+                "release_date": "",
+            },
+        ],
+    )
 
     resp = client_with_cache.get("/api/v1/stream/series/300/42/manifest.mpd")
     assert resp.status_code == 200
@@ -82,6 +140,7 @@ def test_series_dash_manifest_with_cache(client_with_cache):
 def test_probe_live_with_prepopulated_cache(client_with_cache):
     """Probe endpoint returns cached result when probe cache is populated."""
     from routes.stream import _probe_cache
+
     _probe_cache["live_888"] = (
         time.time(),
         {"codec": "h264", "width": 1920, "height": 1080, "duration": None},
@@ -98,6 +157,7 @@ def test_probe_live_with_prepopulated_cache(client_with_cache):
 def test_probe_movie_with_prepopulated_cache(client_with_cache):
     """Movie probe returns cached ffprobe result."""
     from routes.stream import _probe_cache
+
     _probe_cache["movie_777"] = (
         time.time(),
         {"codec": "hevc", "width": 3840, "height": 2160, "duration": 5432.1},
@@ -113,6 +173,7 @@ def test_probe_movie_with_prepopulated_cache(client_with_cache):
 def test_probe_series_with_prepopulated_cache(client_with_cache):
     """Series probe returns cached ffprobe result."""
     from routes.stream import _probe_cache
+
     _probe_cache["series_666"] = (
         time.time(),
         {"codec": "h264", "width": 1280, "height": 720, "duration": 1800.0},
@@ -142,9 +203,11 @@ def test_stream_info_missing_live(client):
 
 # ── Pure function tests ─────────────────────────────────────────────
 
+
 def test_mime_from_url():
     """_mime_from_url maps extensions correctly."""
     from routes.stream import _mime_from_url
+
     assert _mime_from_url("http://example.com/video.ts") == "video/mp2t"
     assert _mime_from_url("http://example.com/video.mkv") == "video/x-matroska"
     assert _mime_from_url("http://example.com/video.mp4") == "video/mp4"
@@ -159,10 +222,11 @@ def test_mime_from_url():
 def test_generate_live_mpd_structure():
     """generate_live_mpd produces valid MPD XML with dynamic type."""
     from routes.stream import generate_live_mpd
+
     xml = generate_live_mpd(42, "http://cdn.example.com/live/42.ts")
     assert "<MPD" in xml
     assert 'type="dynamic"' in xml
-    assert 'urn:mpeg:dash:schema:mpd:2011' in xml
+    assert "urn:mpeg:dash:schema:mpd:2011" in xml
     assert str(42) in xml
     assert "cdn.example.com" in xml
     assert 'minBufferTime="PT15S"' in xml
@@ -171,17 +235,19 @@ def test_generate_live_mpd_structure():
 def test_generate_vod_mpd_structure():
     """generate_vod_mpd produces valid MPD XML with static type."""
     from routes.stream import generate_vod_mpd
+
     xml = generate_vod_mpd(100, "movie", "http://cdn.example.com/movie/100.mkv")
     assert "<MPD" in xml
     assert 'type="static"' in xml
-    assert 'urn:mpeg:dash:schema:mpd:2011' in xml
+    assert "urn:mpeg:dash:schema:mpd:2011" in xml
     assert "cdn.example.com" in xml
 
 
 def test_generate_mpd_escapes_xml_chars():
     """MPD generation escapes special XML characters in URLs."""
     from routes.stream import generate_live_mpd, generate_vod_mpd
-    url = "http://cdn.example.com/stream?id=42&token=a<b>c\"d"
+
+    url = 'http://cdn.example.com/stream?id=42&token=a<b>c"d'
     live = generate_live_mpd(1, url)
     assert "&amp;" in live
     assert "&lt;" in live
@@ -195,15 +261,20 @@ def test_generate_mpd_escapes_xml_chars():
 
 # ── _lookup_extension tests ─────────────────────────────────────────
 
+
 def test_lookup_extension_cache_hit_movie(client_with_cache):
     """_lookup_extension returns extension from cache for a movie."""
     import asyncio
 
     from routes.stream import _lookup_extension
     from state import _cache
-    _cache["vod_10"] = (1000.0, [
-        {"stream_id": 500, "name": "Test", "container_extension": "mkv"},
-    ])
+
+    _cache["vod_10"] = (
+        1000.0,
+        [
+            {"stream_id": 500, "name": "Test", "container_extension": "mkv"},
+        ],
+    )
     result = asyncio.run(_lookup_extension(500, "movie"))
     assert result == "mkv"
 
@@ -214,9 +285,13 @@ def test_lookup_extension_cache_hit_series(client_with_cache):
 
     from routes.stream import _lookup_extension
     from state import _cache
-    _cache["ext_lookup_series_300"] = (1000.0, [
-        {"series_id": 300, "name": "Test Series", "container_extension": "mp4"},
-    ])
+
+    _cache["ext_lookup_series_300"] = (
+        1000.0,
+        [
+            {"series_id": 300, "name": "Test Series", "container_extension": "mp4"},
+        ],
+    )
     result = asyncio.run(_lookup_extension(300, "series"))
     assert result == "mp4"
 
@@ -227,9 +302,13 @@ def test_lookup_extension_defaults_to_mp4_when_no_ext(client_with_cache):
 
     from routes.stream import _lookup_extension
     from state import _cache
-    _cache["ext_lookup_movie_1"] = (1000.0, [
-        {"stream_id": 1, "name": "No Ext", "container_extension": ""},
-    ])
+
+    _cache["ext_lookup_movie_1"] = (
+        1000.0,
+        [
+            {"stream_id": 1, "name": "No Ext", "container_extension": ""},
+        ],
+    )
     result = asyncio.run(_lookup_extension(1, "movie"))
     assert result == "mp4"
 
@@ -292,11 +371,13 @@ def test_lookup_extension_api_series_info_path(client_with_cache):
 
 # ── build_stream_url tests ─────────────────────────────────────────
 
+
 def test_build_stream_url_live_uses_ts():
     """build_stream_url returns live TS URL for live streams."""
     import asyncio
 
     from routes.stream import build_stream_url
+
     url = asyncio.run(build_stream_url(42, "live"))
     assert "live/test_user/test_pass/42.ts" in url or "/live/" in url
     assert url.startswith("http://test-iptv.live")
@@ -308,15 +389,20 @@ def test_build_stream_url_movie(client_with_cache):
 
     from routes.stream import build_stream_url
     from state import _cache
-    _cache["vod_10"] = (1000.0, [
-        {"stream_id": 500, "name": "Test", "container_extension": "mkv"},
-    ])
+
+    _cache["vod_10"] = (
+        1000.0,
+        [
+            {"stream_id": 500, "name": "Test", "container_extension": "mkv"},
+        ],
+    )
     url = asyncio.run(build_stream_url(500, "movie"))
     assert "movie/" in url
     assert url.endswith(".mkv")
 
 
 # ── get_content_length tests ───────────────────────────────────────
+
 
 def test_get_content_length_from_content_range():
     """get_content_length parses Content-Range header correctly."""
@@ -395,6 +481,7 @@ def test_get_content_length_handles_exception():
 
 # ── stream_proxy tests ─────────────────────────────────────────────
 
+
 def test_stream_proxy_returns_502_on_error():
     """stream_proxy returns 502 when underlying stream fails by consuming response."""
     import asyncio
@@ -410,16 +497,21 @@ def test_stream_proxy_returns_502_on_error():
 
 # ── probe_stream tests ─────────────────────────────────────────────
 
+
 def test_probe_stream_skips_ffprobe_for_mp4(client_with_cache):
     """probe_stream returns native H.264 for mp4/m4v without calling ffprobe."""
     import asyncio
 
     from routes.stream import probe_stream
     from state import _cache
+
     # Populate cache so extension lookup returns mp4
-    _cache["ext_lookup_movie_10"] = (1000.0, [
-        {"stream_id": 10, "name": "MP4 Movie", "container_extension": "mp4"},
-    ])
+    _cache["ext_lookup_movie_10"] = (
+        1000.0,
+        [
+            {"stream_id": 10, "name": "MP4 Movie", "container_extension": "mp4"},
+        ],
+    )
     result = asyncio.run(probe_stream(10, "movie"))
     assert result["codec"] == "h264"
     assert result.get("native") is True
@@ -431,6 +523,7 @@ def test_probe_stream_cache_hit_returns_cached():
     import time
 
     from routes.stream import _probe_cache, probe_stream
+
     cached = {"codec": "hevc", "width": 3840, "height": 2160}
     _probe_cache["live_555"] = (time.time(), cached)
     result = asyncio.run(probe_stream(555, "live"))
@@ -445,11 +538,20 @@ def test_probe_stream_ffprobe_success_returns_codec():
 
     from routes.stream import probe_stream
 
-    ffprobe_output = json.dumps({
-        "streams": [{"codec_name": "h264", "codec_long_name": "H.264 / AVC",
-                    "width": 1920, "height": 1080, "profile": "High"}],
-        "format": {"format_name": "matroska"},
-    })
+    ffprobe_output = json.dumps(
+        {
+            "streams": [
+                {
+                    "codec_name": "h264",
+                    "codec_long_name": "H.264 / AVC",
+                    "width": 1920,
+                    "height": 1080,
+                    "profile": "High",
+                }
+            ],
+            "format": {"format_name": "matroska"},
+        }
+    )
 
     proc = AsyncMock()
     proc.returncode = 0
@@ -517,8 +619,10 @@ def test_probe_stream_nonzero_exit_no_405():
             resp.status_code = 404
             return resp
 
-    with patch("asyncio.create_subprocess_exec", return_value=proc), \
-         patch("routes.stream_core.httpx.AsyncClient") as MockClient:
+    with (
+        patch("asyncio.create_subprocess_exec", return_value=proc),
+        patch("routes.stream_core.httpx.AsyncClient") as MockClient,
+    ):
         MockClient.return_value.__aenter__.return_value = _MockHttpxCtx()
         result = asyncio.run(probe_stream(333, "live"))
     assert result["codec"] == "unknown"
@@ -546,15 +650,18 @@ def test_probe_stream_ffprobe_returns_405_curl_cffi_fallback():
         """Run the callable directly instead of in a thread pool."""
         return fn()
 
-    with patch("asyncio.create_subprocess_exec", return_value=proc), \
-         patch("routes.stream_probe.CurlReq.get", mock_get), \
-         patch("asyncio.get_event_loop") as mock_loop:
+    with (
+        patch("asyncio.create_subprocess_exec", return_value=proc),
+        patch("routes.stream_probe.CurlReq.get", mock_get),
+        patch("asyncio.get_event_loop") as mock_loop,
+    ):
         mock_loop.return_value.run_in_executor = _mock_run_in_executor
         result = asyncio.run(probe_stream(444, "live"))
         assert result["codec"] == "h264"
 
 
 # ── serve_cached_mp4 tests ──────────────────────────────────────────
+
 
 def test_serve_cached_mp4_no_range_returns_200():
     """serve_cached_mp4 returns full file when no Range header."""
@@ -596,7 +703,8 @@ def test_serve_cached_mp4_range_returns_206():
 
     try:
         scope = {
-            "type": "http", "method": "GET",
+            "type": "http",
+            "method": "GET",
             "headers": [(b"range", b"bytes=100-299")],
             "path": str(path),
         }
@@ -610,9 +718,11 @@ def test_serve_cached_mp4_range_returns_206():
 
 # ── Convert endpoint tests ──────────────────────────────────────────
 
+
 def test_convert_movie_ready(client_with_cache):
     """convert_movie returns 'ready' when MP4 file already cached."""
     from routes.stream import CACHE_DIR
+
     cache_key = "movie_999999"
     output_path = CACHE_DIR / f"{cache_key}.mp4"
     try:
@@ -629,6 +739,7 @@ def test_convert_movie_ready(client_with_cache):
 def test_convert_movie_converting_lock(client_with_cache):
     """convert_movie returns 'converting' when lock file exists."""
     from routes.stream import CACHE_DIR
+
     cache_key = "movie_999998"
     lock_path = CACHE_DIR / f"{cache_key}.converting"
     try:
@@ -645,12 +756,15 @@ def test_convert_movie_converting_lock(client_with_cache):
 def test_convert_movie_new_conversion(client_with_cache):
     """convert_movie starts a new conversion when nothing cached."""
     from routes.stream import CACHE_DIR, _converting
+
     cache_key = "movie_999997"
     output_path = CACHE_DIR / f"{cache_key}.mp4"
     lock_path = CACHE_DIR / f"{cache_key}.converting"
     # Clean up any previous state
-    if output_path.exists(): output_path.unlink()
-    if lock_path.exists(): lock_path.unlink()
+    if output_path.exists():
+        output_path.unlink()
+    if lock_path.exists():
+        lock_path.unlink()
     _converting.pop(cache_key, None)
 
     resp = client_with_cache.get("/api/v1/movie/convert/999997")
@@ -662,6 +776,7 @@ def test_convert_movie_new_conversion(client_with_cache):
 def test_convert_series_ep_ready(client_with_cache):
     """convert_series_ep returns 'ready' when MP4 already cached."""
     from routes.stream import CACHE_DIR
+
     cache_key = "series_777777"
     output_path = CACHE_DIR / f"{cache_key}.mp4"
     try:
@@ -678,6 +793,7 @@ def test_convert_series_ep_ready(client_with_cache):
 def test_convert_series_ep_with_retry(client_with_cache):
     """convert_series_ep with retry=true removes stale files and starts fresh."""
     from routes.stream import CACHE_DIR, _converting
+
     cache_key = "series_666666"
     output_path = CACHE_DIR / f"{cache_key}.mp4"
     try:
@@ -695,6 +811,7 @@ def test_convert_series_ep_with_retry(client_with_cache):
 def test_convert_movie_with_retry(client_with_cache):
     """convert_movie with retry=true removes stale files and starts fresh."""
     from routes.stream import CACHE_DIR, _converting
+
     cache_key = "movie_555555"
     output_path = CACHE_DIR / f"{cache_key}.mp4"
     mkv_path = CACHE_DIR / f"{cache_key}.mkv"
@@ -708,8 +825,10 @@ def test_convert_movie_with_retry(client_with_cache):
         assert not output_path.exists()
         assert not mkv_path.exists()
     finally:
-        if output_path.exists(): output_path.unlink()
-        if mkv_path.exists(): mkv_path.unlink()
+        if output_path.exists():
+            output_path.unlink()
+        if mkv_path.exists():
+            mkv_path.unlink()
 
 
 def test_serve_mp4_not_found_returns_404(client_with_cache):
@@ -747,6 +866,7 @@ def test_hls_segment_not_found_returns_404(client_with_cache):
 
 
 # ── Route error handler tests ──────────────────────────────────────
+
 
 def test_stream_live_returns_streaming_response(client_with_cache):
     """stream_live returns a StreamingResponse (not error) for valid live stream."""
@@ -823,6 +943,7 @@ def test_series_dash_manifest_nonexistent(client_with_cache):
 
 # ── Helper tests ──────────────────────────────────────────────────
 
+
 async def _gather(agen):
     """Collect all items from an async generator into a list."""
     result = []
@@ -898,8 +1019,7 @@ def test_http_iter_chunks_accepts_206_with_vod():
     with patch("routes.stream_core.aiohttp.ClientSession") as MockSession:
         MockSession.return_value.__aenter__.return_value = mock_session
         MockSession.return_value.__aexit__.return_value = None
-        chunks = asyncio.run(_gather(
-            _http_iter_chunks("http://test/stream", status_ok=(200, 206))))
+        chunks = asyncio.run(_gather(_http_iter_chunks("http://test/stream", status_ok=(200, 206))))
     assert chunks == [b"data"]
 
 
@@ -925,6 +1045,7 @@ def test_http_iter_chunks_passes_range_header():
             cm.__aenter__ = AsyncMock(return_value=mock_resp)
             cm.__aexit__ = AsyncMock(return_value=None)
             return cm
+
         return side_effect
 
     mock_session = MagicMock()
@@ -933,9 +1054,7 @@ def test_http_iter_chunks_passes_range_header():
     with patch("routes.stream_core.aiohttp.ClientSession") as MockSession:
         MockSession.return_value.__aenter__.return_value = mock_session
         MockSession.return_value.__aexit__.return_value = None
-        asyncio.run(_gather(
-            _http_iter_chunks("http://test/stream", range_header="bytes=0-999",
-                              status_ok=(200, 206))))
+        asyncio.run(_gather(_http_iter_chunks("http://test/stream", range_header="bytes=0-999", status_ok=(200, 206))))
     assert captured.get("range") == "bytes=0-999"
     assert captured.get("url") == "http://test/stream"
 
@@ -964,6 +1083,7 @@ def test_ffmpeg_pipe_yields_stdout():
 
 # ── Tests for stream_live ────────────────────────────────────────────────
 
+
 def test_stream_live_timeshift_route(client_with_cache):
     """stream_live_timeshift returns StreamingResponse or 502."""
     resp = client_with_cache.get("/api/v1/stream/live/5/timeshift", params={"duration": 3600})
@@ -984,17 +1104,20 @@ def test_stream_live_timeshift_non_existent(client_with_cache):
 
 # ── Tests for stream_vod_bytes ────────────────────────────────────────────
 
+
 def test_stream_vod_bytes_accepts_206():
     """stream_vod_bytes should accept 200 OR 206 status codes."""
     # Thin wrapper test — verify the status_ok tuple includes 206
     import inspect
 
     from routes.stream_core import stream_vod_bytes
+
     source = inspect.getsource(stream_vod_bytes)
     assert "status_ok=(200, 206)" in source or "206" in source
 
 
 # ── Tests for _safe_convert ───────────────────────────────────────────────
+
 
 def test_safe_convert_handles_exception():
     """_safe_convert should catch exceptions and remove from _converting."""
@@ -1005,6 +1128,7 @@ def test_safe_convert_handles_exception():
 
     with patch("routes.stream_convert.convert_to_mp4", side_effect=OSError("test error")):
         import asyncio
+
         asyncio.run(_safe_convert("1", "movie", "test"))
 
     assert "test" not in _converting
@@ -1070,9 +1194,11 @@ async def test_convert_to_mp4_ffmpeg_fails(tmp_path):
 
 # ── Tests for build_timeshift_url ─────────────────────────────────────────
 
+
 def test_build_timeshift_url_uses_correct_format():
     """build_timeshift_url produces the Xtream Codes timeshift URL format."""
     from routes.stream_core import build_timeshift_url
+
     url = build_timeshift_url(42, 3600)
     assert "/live/" in url
     assert "/42/timeshift/3600.ts" in url or "/42/timeshift/3600.ts" in url
@@ -1081,6 +1207,7 @@ def test_build_timeshift_url_uses_correct_format():
 def test_build_timeshift_url_with_custom_duration():
     """build_timeshift_url uses the provided duration."""
     from routes.stream_core import build_timeshift_url
+
     url = build_timeshift_url(100, 7200)
     assert "7200" in url
 
@@ -1088,20 +1215,34 @@ def test_build_timeshift_url_with_custom_duration():
 def test_build_timeshift_url_with_various_ids():
     """build_timeshift_url works with different stream IDs."""
     from routes.stream_core import build_timeshift_url
+
     url = build_timeshift_url(1, 300)
     assert "300" in url
 
 
 # ── Tests for handle_vod_request routes ──────────────────────────────────
 
+
 def test_vod_movie_route_accessible(client_with_cache):
     """VOD movie route is accessible (not a 404)."""
     from state import _cache
-    _cache["vod_1"] = (1000.0, [
-        {"stream_id": 1, "name": "Test Movie", "container_extension": "mp4",
-         "category_id": "1", "stream_type": "movie", "added": "", "num": 1,
-         "category_ids": ["1"], "direct_source": ""},
-    ])
+
+    _cache["vod_1"] = (
+        1000.0,
+        [
+            {
+                "stream_id": 1,
+                "name": "Test Movie",
+                "container_extension": "mp4",
+                "category_id": "1",
+                "stream_type": "movie",
+                "added": "",
+                "num": 1,
+                "category_ids": ["1"],
+                "direct_source": "",
+            },
+        ],
+    )
     try:
         resp = client_with_cache.get("/api/v1/stream/movie/1")
         assert resp.status_code != 404
@@ -1113,11 +1254,23 @@ def test_vod_movie_route_accessible(client_with_cache):
 def test_vod_movie_route_with_range(client_with_cache):
     """VOD movie route handles Range header (not a 404)."""
     from state import _cache
-    _cache["vod_1"] = (1000.0, [
-        {"stream_id": 99, "name": "Test Movie Range", "container_extension": "mp4",
-         "category_id": "1", "stream_type": "movie", "added": "", "num": 1,
-         "category_ids": ["1"], "direct_source": ""},
-    ])
+
+    _cache["vod_1"] = (
+        1000.0,
+        [
+            {
+                "stream_id": 99,
+                "name": "Test Movie Range",
+                "container_extension": "mp4",
+                "category_id": "1",
+                "stream_type": "movie",
+                "added": "",
+                "num": 1,
+                "category_ids": ["1"],
+                "direct_source": "",
+            },
+        ],
+    )
     try:
         resp = client_with_cache.get("/api/v1/stream/movie/99", headers={"Range": "bytes=0-"})
         assert resp.status_code != 404
@@ -1128,11 +1281,22 @@ def test_vod_movie_route_with_range(client_with_cache):
 def test_vod_series_route_accessible(client_with_cache):
     """VOD series episode route is accessible (not a 404)."""
     from state import _cache
-    _cache["series_"] = (1000.0, [
-        {"series_id": 3, "name": "Test Series", "container_extension": "mkv",
-         "category_id": "1", "stream_type": "series", "num": 1,
-         "category_ids": ["1"], "direct_source": ""},
-    ])
+
+    _cache["series_"] = (
+        1000.0,
+        [
+            {
+                "series_id": 3,
+                "name": "Test Series",
+                "container_extension": "mkv",
+                "category_id": "1",
+                "stream_type": "series",
+                "num": 1,
+                "category_ids": ["1"],
+                "direct_source": "",
+            },
+        ],
+    )
     try:
         resp = client_with_cache.get("/api/v1/stream/series/3/42")
         assert resp.status_code != 404
@@ -1142,11 +1306,13 @@ def test_vod_series_route_accessible(client_with_cache):
 
 # ── Tests for stream_vod_mpegts / stream_vod_transcode ───────────────────
 
+
 def test_stream_vod_mpegts_includes_start_time():
     """stream_vod_mpegts should include -ss when start_time given."""
     import inspect
 
     from routes.stream_vod import stream_vod_mpegts
+
     source = inspect.getsource(stream_vod_mpegts)
     assert "start_time" in source
     assert "-ss" in source
@@ -1157,6 +1323,7 @@ def test_stream_vod_transcode_uses_h264():
     import inspect
 
     from routes.stream_vod import stream_vod_transcode
+
     source = inspect.getsource(stream_vod_transcode)
     assert "libx264" in source
     assert "aac" in source
@@ -1181,14 +1348,18 @@ def test_ffmpeg_pipe_kills_on_generator_exit():
         await asyncio.sleep(0.1)
 
     with patch("asyncio.create_subprocess_exec", return_value=proc):
+
         async def run():
             gen = _ffmpeg_pipe(["/ffmpeg"], fake_feed)
             async for _chunk in gen:
                 break
+
         asyncio.run(run())
     assert proc.kill.called
 
+
 # ── Error handler paths for stream_live ──────────────────────────────
+
 
 def test_stream_live_handles_inner_stream_error(client_with_cache):
     """stream_live returns 502 when stream_bytes raises during iteration."""
@@ -1230,6 +1401,7 @@ def test_stream_live_has_error_handler():
     import inspect
 
     from routes.stream_live import stream_live
+
     source = inspect.getsource(stream_live)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
@@ -1240,6 +1412,7 @@ def test_stream_live_transcode_has_error_handler():
     import inspect
 
     from routes.stream_live import stream_live_transcode
+
     source = inspect.getsource(stream_live_transcode)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
@@ -1250,6 +1423,7 @@ def test_stream_live_timeshift_has_error_handler():
     import inspect
 
     from routes.stream_live import stream_live_timeshift
+
     source = inspect.getsource(stream_live_timeshift)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
@@ -1260,12 +1434,14 @@ def test_stream_live_quality_has_error_handler():
     import inspect
 
     from routes.stream_live import stream_live_quality
+
     source = inspect.getsource(stream_live_quality)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
 
 
 # ── Error handler paths for stream_vod ────────────────────────────────
+
 
 def test_stream_movie_remux_route_exists(client_with_cache):
     """Movie remux route is accessible."""
@@ -1293,15 +1469,18 @@ def test_stream_series_transcode_route_exists(client_with_cache):
 
 # ── _lookup_extension skip paths ─────────────────────────────────────
 
+
 def test_lookup_extension_skips_non_matching_prefix(client_with_cache):
     """_lookup_extension skips cache keys that don't match the prefix."""
     from state import _cache
+
     _cache["series_1"] = (1000.0, [{"series_id": 1, "container_extension": "mkv"}])
 
     # Asking for a movie (prefix "vod_") should skip series_ keys
     import asyncio
 
     from routes.stream_core import _lookup_extension
+
     result = asyncio.run(_lookup_extension(1, "movie"))
     # No cache hit — falls through to API fallback which fails in tests
     assert isinstance(result, str)  # Should return a string (defaults to "mkv")
@@ -1310,22 +1489,26 @@ def test_lookup_extension_skips_non_matching_prefix(client_with_cache):
 def test_lookup_extension_skips_non_list_data(client_with_cache):
     """_lookup_extension skips cache entries where data isn't a list."""
     from state import _cache
+
     _cache["vod_1"] = (1000.0, "not a list")
 
     import asyncio
 
     from routes.stream_core import _lookup_extension
+
     result = asyncio.run(_lookup_extension(1, "movie"))
     assert isinstance(result, str)
 
 
 # ── stream_vod_mpegts with start_time ─────────────────────────────────
 
+
 def test_stream_vod_mpegts_with_start_time_uses_seek():
     """stream_vod_mpegts includes -ss and range_header when start_time > 0."""
     import inspect
 
     from routes.stream_vod import stream_vod_mpegts
+
     source = inspect.getsource(stream_vod_mpegts)
     assert "-ss" in source
     assert "range_header" in source
@@ -1350,6 +1533,7 @@ def test_movie_remux_has_error_handler():
     import inspect
 
     from routes.stream_vod import stream_movie_remux
+
     source = inspect.getsource(stream_movie_remux)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
@@ -1360,6 +1544,7 @@ def test_series_remux_has_error_handler():
     import inspect
 
     from routes.stream_vod import stream_series_remux
+
     source = inspect.getsource(stream_series_remux)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
@@ -1370,6 +1555,7 @@ def test_movie_transcode_has_error_handler():
     import inspect
 
     from routes.stream_vod import stream_movie_transcode
+
     source = inspect.getsource(stream_movie_transcode)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
@@ -1380,6 +1566,7 @@ def test_series_transcode_has_error_handler():
     import inspect
 
     from routes.stream_vod import stream_series_transcode
+
     source = inspect.getsource(stream_series_transcode)
     assert "except" in source
     assert "JSONResponse(status_code=502" in source
@@ -1435,28 +1622,48 @@ async def test_stream_vod_mpegts_start_time_zero_no_seek():
 # These verify both live and VOD streaming paths deliver playable content.
 # The httpx 405 regression that hit live streams would hit VOD too.
 
+
 def test_live_stream_route_accessible(client_with_cache):
     """Live stream returns 200 or 502 (not 404)."""
     resp = client_with_cache.get("/api/v1/stream/live/2")
     assert resp.status_code != 404
 
+
 def test_live_dash_manifest_content_type(client_with_cache):
     """Live DASH manifest returns XML."""
     from state import _cache
-    _cache["live_all"] = (time.time() + 3600, [
-        {"stream_id": 999, "name": "Test Channel", "stream_icon": "", "category_id": "1",
-         "epg_channel_id": "", "num": 1, "stream_type": "live", "added": "", "is_adult": 0,
-         "category_ids": ["1"], "custom_sid": None, "tv_archive": 0, "direct_source": "",
-         "tv_archive_duration": 0},
-    ])
+
+    _cache["live_all"] = (
+        time.time() + 3600,
+        [
+            {
+                "stream_id": 999,
+                "name": "Test Channel",
+                "stream_icon": "",
+                "category_id": "1",
+                "epg_channel_id": "",
+                "num": 1,
+                "stream_type": "live",
+                "added": "",
+                "is_adult": 0,
+                "category_ids": ["1"],
+                "custom_sid": None,
+                "tv_archive": 0,
+                "direct_source": "",
+                "tv_archive_duration": 0,
+            },
+        ],
+    )
     resp = client_with_cache.get("/api/v1/stream/live/999/manifest.mpd")
     # Note: HTTPS redirect middleware may cause 301, CDN errors cause 502
     assert resp.status_code not in (404, 405), f"Unexpected {resp.status_code}"
+
 
 def test_movie_dash_manifest_accessible(client_with_cache):
     """Movie DASH manifest route is accessible (not 404)."""
     resp = client_with_cache.get("/api/v1/stream/movie/1/manifest.mpd")
     assert resp.status_code != 404
+
 
 def test_series_dash_manifest_accessible(client_with_cache):
     """Series DASH manifest route is accessible (not 404)."""
@@ -1467,14 +1674,15 @@ def test_series_dash_manifest_accessible(client_with_cache):
         # Route exists even if runtime fails
         pass
 
+
 def test_vod_range_accessible(client_with_cache):
     """VOD with Range header is accessible (not 404)."""
     try:
-        resp = client_with_cache.get("/api/v1/stream/movie/1",
-                                      headers={"range": "bytes=0-100"})
+        resp = client_with_cache.get("/api/v1/stream/movie/1", headers={"range": "bytes=0-100"})
         assert resp.status_code != 404
     except Exception:
         pass
+
 
 def test_vod_proxy_fallback_accessible(client_with_cache):
     """VOD proxy path is accessible (not 404)."""
@@ -1484,6 +1692,7 @@ def test_vod_proxy_fallback_accessible(client_with_cache):
     except Exception:
         pass
 
+
 def test_vod_series_fallback_accessible(client_with_cache):
     """VOD series proxy path is accessible (not 404)."""
     try:
@@ -1492,9 +1701,11 @@ def test_vod_series_fallback_accessible(client_with_cache):
     except Exception:
         pass
 
+
 def _make_error_client():
     """Create a TestClient with raise_server_exceptions=False for testing 500s."""
     import os
+
     os.environ.setdefault("IPTV_BASE", "http://test-iptv.live")
     os.environ.setdefault("IPTV_USER", "test_user")
     os.environ.setdefault("IPTV_PASS", "test_pass")
@@ -1504,12 +1715,14 @@ def _make_error_client():
     from fastapi.testclient import TestClient
 
     from main import app
+
     client = TestClient(app, raise_server_exceptions=False)
     client.headers.setdefault("X-Admin-Key", "test-admin-key-insecure")
     return client
 
     """Create a TestClient with raise_server_exceptions=False for testing 500s."""
     import os
+
     os.environ.setdefault("IPTV_BASE", "http://test-iptv.live")
     os.environ.setdefault("IPTV_USER", "test_user")
     os.environ.setdefault("IPTV_PASS", "test_pass")
@@ -1518,6 +1731,7 @@ def _make_error_client():
     from fastapi.testclient import TestClient
 
     from main import app
+
     return TestClient(app, raise_server_exceptions=False)
 
 

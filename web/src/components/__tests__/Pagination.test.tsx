@@ -13,7 +13,7 @@ describe("Pagination", () => {
 
   it("renders nothing when totalPages <= 1", () => {
     const { container } = render(
-      <Pagination {...defaultProps} totalPages={1} />
+      <Pagination {...defaultProps} totalPages={1} />,
     );
     expect(container.firstChild).toBeNull();
   });
@@ -48,14 +48,26 @@ describe("Pagination", () => {
 
   it("calls onPageChange with prev page on Previous click", () => {
     const onPageChange = vi.fn();
-    render(<Pagination {...defaultProps} currentPage={5} onPageChange={onPageChange} />);
+    render(
+      <Pagination
+        {...defaultProps}
+        currentPage={5}
+        onPageChange={onPageChange}
+      />,
+    );
     fireEvent.click(screen.getByLabelText("Previous page"));
     expect(onPageChange).toHaveBeenCalledWith(4);
   });
 
   it("calls onPageChange with next page on Next click", () => {
     const onPageChange = vi.fn();
-    render(<Pagination {...defaultProps} currentPage={5} onPageChange={onPageChange} />);
+    render(
+      <Pagination
+        {...defaultProps}
+        currentPage={5}
+        onPageChange={onPageChange}
+      />,
+    );
     fireEvent.click(screen.getByLabelText("Next page"));
     expect(onPageChange).toHaveBeenCalledWith(6);
   });
@@ -86,7 +98,13 @@ describe("Pagination", () => {
 
   it("calls onPageChange with page number on click", () => {
     const onPageChange = vi.fn();
-    render(<Pagination {...defaultProps} currentPage={5} onPageChange={onPageChange} />);
+    render(
+      <Pagination
+        {...defaultProps}
+        currentPage={5}
+        onPageChange={onPageChange}
+      />,
+    );
     fireEvent.click(screen.getByText("5"));
     expect(onPageChange).toHaveBeenCalledWith(5);
   });

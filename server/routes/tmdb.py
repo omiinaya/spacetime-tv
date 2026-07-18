@@ -3,6 +3,7 @@
 Pure API proxy layer — no dependencies on main.py.
 All TMDB endpoints are self-contained with in-memory caching.
 """
+
 import asyncio
 import json
 import logging
@@ -53,6 +54,7 @@ async def tmdb_fetch(path: str) -> dict | None:
 
 
 # ── Movies ───────────────────────────────────────────────────────
+
 
 @router.get("/tmdb/trending")
 async def tmdb_trending(
@@ -143,6 +145,7 @@ async def tmdb_configuration():
 
 # ── TV / Series ──────────────────────────────────────────────────
 
+
 @router.get("/tmdb/tv/trending")
 async def tmdb_tv_trending(
     time_window: str = Query("week", pattern="^(day|week)$"),
@@ -231,7 +234,9 @@ async def tmdb_enrich_cli(*args: str) -> dict | None:
         return None
     try:
         proc = await asyncio.create_subprocess_exec(
-            TMDB_ENRICH_PATH, "--json", *args,
+            TMDB_ENRICH_PATH,
+            "--json",
+            *args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

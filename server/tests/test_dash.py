@@ -2,6 +2,7 @@
 
 Uses the real generate_mpd functions imported from main.
 """
+
 import xml.etree.ElementTree as ET
 
 from routes.stream import generate_live_mpd, generate_vod_mpd

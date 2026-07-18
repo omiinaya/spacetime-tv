@@ -41,41 +41,61 @@ class TestUploadBackup:
 
     def test_upload_favorites(self, client):
         """Upload a backup with favorites."""
-        resp = client.post("/api/v1/cloud/backup", json={
-            "device_id": "test-device-123",
-            "favorites": [100, 200, 300],
-        }, headers=_headers())
+        resp = client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "test-device-123",
+                "favorites": [100, 200, 300],
+            },
+            headers=_headers(),
+        )
         assert resp.status_code == 200
         assert resp.json()["status"] == "ok"
 
     def test_upload_with_watchlist(self, client):
         """Upload a backup with watchlist."""
-        resp = client.post("/api/v1/cloud/backup", json={
-            "device_id": "device-abc-xyz",
-            "favorites": [42],
-            "watchlist": {"movie_550": True, "series_1399": True},
-        }, headers=_headers())
+        resp = client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "device-abc-xyz",
+                "favorites": [42],
+                "watchlist": {"movie_550": True, "series_1399": True},
+            },
+            headers=_headers(),
+        )
         assert resp.json()["status"] == "ok"
 
     def test_upload_with_settings(self, client):
         """Upload a backup with settings."""
-        resp = client.post("/api/v1/cloud/backup", json={
-            "device_id": "device-settings",
-            "favorites": [],
-            "settings": {"theme": "dark", "language": "en"},
-        }, headers=_headers())
+        resp = client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "device-settings",
+                "favorites": [],
+                "settings": {"theme": "dark", "language": "en"},
+            },
+            headers=_headers(),
+        )
         assert resp.json()["status"] == "ok"
 
     def test_upload_overwrites_previous(self, client):
         """Uploading twice for same device updates the entry."""
-        client.post("/api/v1/cloud/backup", json={
-            "device_id": "overwrite-me-plz",
-            "favorites": [1, 2],
-        }, headers=_headers())
-        client.post("/api/v1/cloud/backup", json={
-            "device_id": "overwrite-me-plz",
-            "favorites": [3, 4],
-        }, headers=_headers())
+        client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "overwrite-me-plz",
+                "favorites": [1, 2],
+            },
+            headers=_headers(),
+        )
+        client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "overwrite-me-plz",
+                "favorites": [3, 4],
+            },
+            headers=_headers(),
+        )
         resp = client.get("/api/v1/cloud/backup?device_id=overwrite-me-plz", headers=_headers())
         assert resp.json()["data"]["favorites"] == [3, 4]
 
@@ -86,26 +106,38 @@ class TestUploadBackup:
 
     def test_upload_short_device_id(self, client):
         """Too-short device_id returns error."""
-        resp = client.post("/api/v1/cloud/backup", json={
-            "device_id": "short",
-            "favorites": [1],
-        }, headers=_headers())
+        resp = client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "short",
+                "favorites": [1],
+            },
+            headers=_headers(),
+        )
         assert resp.json()["status"] == "error"
 
     def test_upload_non_string_device_id(self, client):
         """Non-string device_id returns error."""
-        resp = client.post("/api/v1/cloud/backup", json={
-            "device_id": 12345,
-            "favorites": [1],
-        }, headers=_headers())
+        resp = client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": 12345,
+                "favorites": [1],
+            },
+            headers=_headers(),
+        )
         assert resp.json()["status"] == "error"
 
     def test_upload_auto_timestamps(self, client):
         """Upload auto-fills timestamp if not provided."""
-        client.post("/api/v1/cloud/backup", json={
-            "device_id": "auto-ts-device-xx",
-            "favorites": [1],
-        }, headers=_headers())
+        client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "auto-ts-device-xx",
+                "favorites": [1],
+            },
+            headers=_headers(),
+        )
         resp = client.get("/api/v1/cloud/backup?device_id=auto-ts-device-xx", headers=_headers())
         data = resp.json()["data"]
         assert "timestamp" in data
@@ -114,10 +146,14 @@ class TestUploadBackup:
     def test_upload_prunes_old_devices(self, client):
         """After 50 devices, oldest are pruned."""
         for i in range(55):
-            client.post("/api/v1/cloud/backup", json={
-                "device_id": f"device-{i:04d}",
-                "favorites": [i],
-            }, headers=_headers())
+            client.post(
+                "/api/v1/cloud/backup",
+                json={
+                    "device_id": f"device-{i:04d}",
+                    "favorites": [i],
+                },
+                headers=_headers(),
+            )
         # The first 5 should be pruned
         resp = client.get("/api/v1/cloud/backup?device_id=device-0000", headers=_headers())
         assert resp.json()["data"]["favorites"] == []
@@ -138,10 +174,14 @@ class TestGetBackup:
 
     def test_get_backup_returns_data(self, client):
         """GET returns uploaded backup data."""
-        client.post("/api/v1/cloud/backup", json={
-            "device_id": "get-test-device",
-            "favorites": [7, 8, 9],
-        }, headers=_headers())
+        client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "get-test-device",
+                "favorites": [7, 8, 9],
+            },
+            headers=_headers(),
+        )
         resp = client.get("/api/v1/cloud/backup?device_id=get-test-device", headers=_headers())
         assert resp.json()["data"]["favorites"] == [7, 8, 9]
 
@@ -161,10 +201,14 @@ class TestGetBackup:
 
     def test_get_backup_response_structure(self, client):
         """Response has expected shape."""
-        client.post("/api/v1/cloud/backup", json={
-            "device_id": "struct-test-device",
-            "favorites": [1, 2],
-        }, headers=_headers())
+        client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "struct-test-device",
+                "favorites": [1, 2],
+            },
+            headers=_headers(),
+        )
         resp = client.get("/api/v1/cloud/backup?device_id=struct-test-device", headers=_headers())
         data = resp.json()
         assert "status" in data
@@ -184,54 +228,86 @@ class TestMergeFavorites:
 
     def test_merge_adds_new_favorites(self, client):
         """Merge adds new favorites to existing set."""
-        client.post("/api/v1/cloud/backup", json={
-            "device_id": "merge-test-device",
-            "favorites": [1, 2, 3],
-        }, headers=_headers())
-        resp = client.post("/api/v1/cloud/merge", json={
-            "device_id": "merge-test-device",
-            "favorites": [4, 5],
-        }, headers=_headers())
+        client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "merge-test-device",
+                "favorites": [1, 2, 3],
+            },
+            headers=_headers(),
+        )
+        resp = client.post(
+            "/api/v1/cloud/merge",
+            json={
+                "device_id": "merge-test-device",
+                "favorites": [4, 5],
+            },
+            headers=_headers(),
+        )
         assert sorted(resp.json()["favorites"]) == [1, 2, 3, 4, 5]
 
     def test_merge_deduplicates(self, client):
         """Merge does not add duplicates."""
-        client.post("/api/v1/cloud/backup", json={
-            "device_id": "dedup-test-device",
-            "favorites": [1, 2, 3],
-        }, headers=_headers())
-        resp = client.post("/api/v1/cloud/merge", json={
-            "device_id": "dedup-test-device",
-            "favorites": [2, 3, 4],
-        }, headers=_headers())
+        client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "dedup-test-device",
+                "favorites": [1, 2, 3],
+            },
+            headers=_headers(),
+        )
+        resp = client.post(
+            "/api/v1/cloud/merge",
+            json={
+                "device_id": "dedup-test-device",
+                "favorites": [2, 3, 4],
+            },
+            headers=_headers(),
+        )
         assert sorted(resp.json()["favorites"]) == [1, 2, 3, 4]
 
     def test_merge_empty_works(self, client):
         """Merge with empty favorites array is fine."""
-        client.post("/api/v1/cloud/backup", json={
-            "device_id": "empty-merge-device",
-            "favorites": [1, 2],
-        }, headers=_headers())
-        resp = client.post("/api/v1/cloud/merge", json={
-            "device_id": "empty-merge-device",
-            "favorites": [],
-        }, headers=_headers())
+        client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "empty-merge-device",
+                "favorites": [1, 2],
+            },
+            headers=_headers(),
+        )
+        resp = client.post(
+            "/api/v1/cloud/merge",
+            json={
+                "device_id": "empty-merge-device",
+                "favorites": [],
+            },
+            headers=_headers(),
+        )
         assert sorted(resp.json()["favorites"]) == [1, 2]
 
     def test_merge_no_existing_creates_new(self, client):
         """Merge with no existing backup creates a new entry."""
-        resp = client.post("/api/v1/cloud/merge", json={
-            "device_id": "new-merge-device",
-            "favorites": [10, 20],
-        }, headers=_headers())
+        resp = client.post(
+            "/api/v1/cloud/merge",
+            json={
+                "device_id": "new-merge-device",
+                "favorites": [10, 20],
+            },
+            headers=_headers(),
+        )
         assert sorted(resp.json()["favorites"]) == [10, 20]
 
     def test_merge_invalid_device_id(self, client):
         """Short device_id returns error."""
-        resp = client.post("/api/v1/cloud/merge", json={
-            "device_id": "ab",
-            "favorites": [1],
-        }, headers=_headers())
+        resp = client.post(
+            "/api/v1/cloud/merge",
+            json={
+                "device_id": "ab",
+                "favorites": [1],
+            },
+            headers=_headers(),
+        )
         assert resp.json()["status"] == "error"
 
 
@@ -249,10 +325,13 @@ class TestDeviceTokenAuth:
         """POST /cloud/backup without token registers the device (first upload = registration)."""
         # client fixture injects X-Admin-Key by default — clear it for this test
         client.headers.clear()
-        resp = client.post("/api/v1/cloud/backup", json={
-            "device_id": "no-token-device",
-            "favorites": [1],
-        })
+        resp = client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "no-token-device",
+                "favorites": [1],
+            },
+        )
         # No token = first upload registers the device (no existing backup to protect)
         assert resp.status_code == 200
         assert resp.json()["status"] == "ok"
@@ -268,10 +347,14 @@ class TestDeviceTokenAuth:
     def test_upload_rejects_wrong_token(self, client):
         """After registering with one token, a different token is rejected."""
         # Register with TEST_TOKEN (client fixture has admin key — ignore for registration)
-        client.post("/api/v1/cloud/backup", json={
-            "device_id": "wrong-token-device",
-            "favorites": [1, 2, 3],
-        }, headers=_headers())
+        client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "wrong-token-device",
+                "favorites": [1, 2, 3],
+            },
+            headers=_headers(),
+        )
 
         # Try to read with a different token — clear admin key to test device auth only
         client.headers.clear()
@@ -285,10 +368,14 @@ class TestDeviceTokenAuth:
 
     def test_get_rejects_wrong_token(self, client):
         """GET with wrong token after registration returns unauthorized."""
-        client.post("/api/v1/cloud/backup", json={
-            "device_id": "wrong-get-device",
-            "favorites": [99],
-        }, headers=_headers())
+        client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "wrong-get-device",
+                "favorites": [99],
+            },
+            headers=_headers(),
+        )
 
         client.headers.clear()
         resp = client.get(
@@ -299,17 +386,25 @@ class TestDeviceTokenAuth:
 
     def test_merge_rejects_wrong_token(self, client):
         """Merge with wrong token after registration returns unauthorized."""
-        client.post("/api/v1/cloud/backup", json={
-            "device_id": "wrong-merge-device",
-            "favorites": [1, 2],
-        }, headers=_headers())
+        client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "wrong-merge-device",
+                "favorites": [1, 2],
+            },
+            headers=_headers(),
+        )
 
         # Clear default admin key so device token auth is enforced
         client.headers.clear()
-        resp = client.post("/api/v1/cloud/merge", json={
-            "device_id": "wrong-merge-device",
-            "favorites": [3],
-        }, headers={"X-Device-Token": "wrong-token-xyz-789"})
+        resp = client.post(
+            "/api/v1/cloud/merge",
+            json={
+                "device_id": "wrong-merge-device",
+                "favorites": [3],
+            },
+            headers={"X-Device-Token": "wrong-token-xyz-789"},
+        )
         # Auth middleware may return 403 before cloud handler, or
         # cloud handler returns {"status": "error"} with matching admin key
         if resp.status_code == 403:
@@ -320,10 +415,14 @@ class TestDeviceTokenAuth:
     def test_correct_token_works_after_registration(self, client):
         """The same token that registered can read and write."""
         client.headers.clear()
-        client.post("/api/v1/cloud/backup", json={
-            "device_id": "correct-token-device",
-            "favorites": [10, 20],
-        }, headers=_headers())
+        client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "correct-token-device",
+                "favorites": [10, 20],
+            },
+            headers=_headers(),
+        )
 
         # Read with same token (no admin key)
         client.headers.clear()
@@ -335,18 +434,26 @@ class TestDeviceTokenAuth:
 
         # Merge with same token (no admin key)
         client.headers.clear()
-        resp = client.post("/api/v1/cloud/merge", json={
-            "device_id": "correct-token-device",
-            "favorites": [30],
-        }, headers=_headers())
+        resp = client.post(
+            "/api/v1/cloud/merge",
+            json={
+                "device_id": "correct-token-device",
+                "favorites": [30],
+            },
+            headers=_headers(),
+        )
         assert sorted(resp.json()["favorites"]) == [10, 20, 30]
 
     def test_short_token_rejected(self, client):
         """Token shorter than 8 chars is rejected."""
-        resp = client.post("/api/v1/cloud/backup", json={
-            "device_id": "short-token-dev",
-            "favorites": [1],
-        }, headers={"X-Device-Token": "short"})
+        resp = client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "short-token-dev",
+                "favorites": [1],
+            },
+            headers={"X-Device-Token": "short"},
+        )
         assert resp.status_code == 200
         assert resp.json()["status"] == "error"
 

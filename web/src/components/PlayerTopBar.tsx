@@ -10,13 +10,19 @@ interface PlayerTopBarProps {
 }
 
 export default function PlayerTopBar({
-  controlsVisible, phase, isPiPActive,
-  onBack, onEnterPiP, onExitPiP,
+  controlsVisible,
+  phase,
+  isPiPActive,
+  onBack,
+  onEnterPiP,
+  onExitPiP,
 }: PlayerTopBarProps) {
   return (
     <div
       className={`absolute inset-x-0 top-0 z-20 transition-opacity duration-300 ${
-        controlsVisible || phase !== "playing" ? "opacity-100" : "opacity-0 pointer-events-none"
+        controlsVisible || phase !== "playing"
+          ? "opacity-100"
+          : "opacity-0 pointer-events-none"
       }`}
       onTouchStart={(e) => e.stopPropagation()}
     >
@@ -35,13 +41,24 @@ export default function PlayerTopBar({
         </button>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => { if (isPiPActive) { onExitPiP(); } else { onEnterPiP(); } }}
+            onClick={() => {
+              if (isPiPActive) {
+                onExitPiP();
+              } else {
+                onEnterPiP();
+              }
+            }}
             className={`text-white/80 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center ${
               isPiPActive ? "text-white bg-white/10 rounded-lg" : ""
             }`}
-            aria-label={isPiPActive ? "Exit Picture in Picture" : "Picture in Picture"}
+            aria-label={
+              isPiPActive ? "Exit Picture in Picture" : "Picture in Picture"
+            }
           >
-            <PictureInPicture2 className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
+            <PictureInPicture2
+              className="w-4 h-4 sm:w-5 sm:h-5"
+              aria-hidden="true"
+            />
           </button>
         </div>
       </div>

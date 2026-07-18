@@ -34,77 +34,94 @@ export function useGuideData() {
     return map;
   }, []);
 
-  const loadPage = useCallback(
-    async (offset: number) => {
-      if (offset === 0) {
-        try {
-          const cached = sessionStorage.getItem(CACHE_KEY);
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            if (parsed.data && Date.now() - parsed.ts < 300000) {
-              setAllData(parsed.data);
-              setTotalChannels(parsed.total);
-              setLoading(false);
-              fetchedRef.current = parsed.data.length;
-              // Background refresh
-              api.guide.get(0, PAGE_SIZE).then((d) => {
+  const loadPage = useCallback(async (offset: number) => {
+    if (offset === 0) {
+      try {
+        const cached = sessionStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.data && Date.now() - parsed.ts < 300000) {
+            setAllData(parsed.data);
+            setTotalChannels(parsed.total);
+            setLoading(false);
+            fetchedRef.current = parsed.data.length;
+            // Background refresh
+            api.guide
+              .get(0, PAGE_SIZE)
+              .then((d) => {
                 const groups = d.channel_groups;
                 setAllData(groups);
                 setTotalChannels(d.total_channels);
                 fetchedRef.current = groups.length;
                 sessionStorage.setItem(
                   CACHE_KEY,
-                  JSON.stringify({ data: groups, total: d.total_channels, ts: Date.now() })
+                  JSON.stringify({
+                    data: groups,
+                    total: d.total_channels,
+                    ts: Date.now(),
+                  }),
                 );
-              }).catch(() => {});
-              return;
-            }
+              })
+              .catch(() => {});
+            return;
           }
-        } catch {} // DOMException: storage quota or SyntaxError: malformed stored data
-      }
-
-      if (offset === 0) setLoading(true);
-      else setLoadingMore(true);
-
-      try {
-        const d = await api.guide.get(offset, PAGE_SIZE);
-        const groups = d.channel_groups;
-        setTotalChannels(d.total_channels);
-
-        if (offset === 0) {
-          setAllData(groups);
-          fetchedRef.current = groups.length;
-          try {
-            sessionStorage.setItem(
-              CACHE_KEY,
-              JSON.stringify({ data: groups, total: d.total_channels, ts: Date.now() })
-            );
-          } catch {} // DOMException: storage quota
-        } else {
-          setAllData((prev) => {
-            const seen = new Set(prev.map((g) => g.channel_id));
-            const newGroups = groups.filter((g) => !seen.has(g.channel_id));
-            return [...prev, ...newGroups];
-          });
-          fetchedRef.current = offset + groups.length;
         }
-      } catch (e: unknown) {
-        setError((e as Error).message);
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
-      }
-    },
-    [],
-  );
+      } catch {} // DOMException: storage quota or SyntaxError: malformed stored data
+    }
 
-  useEffect(() => { loadPage(0); }, [loadPage]);
+    if (offset === 0) setLoading(true);
+    else setLoadingMore(true);
+
+    try {
+      const d = await api.guide.get(offset, PAGE_SIZE);
+      const groups = d.channel_groups;
+      setTotalChannels(d.total_channels);
+
+      if (offset === 0) {
+        setAllData(groups);
+        fetchedRef.current = groups.length;
+        try {
+          sessionStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({
+              data: groups,
+              total: d.total_channels,
+              ts: Date.now(),
+            }),
+          );
+        } catch {} // DOMException: storage quota
+      } else {
+        setAllData((prev) => {
+          const seen = new Set(prev.map((g) => g.channel_id));
+          const newGroups = groups.filter((g) => !seen.has(g.channel_id));
+          return [...prev, ...newGroups];
+        });
+        fetchedRef.current = offset + groups.length;
+      }
+    } catch (e: unknown) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPage(0);
+  }, [loadPage]);
 
   // Infinite scroll
   useEffect(() => {
     const sentinel = sentinelRef.current;
     const root = document.querySelector("main");
-    if (!sentinel || !root || allData.length >= totalChannels || loading || loadingMore) return;
+    if (
+      !sentinel ||
+      !root ||
+      allData.length >= totalChannels ||
+      loading ||
+      loadingMore
+    )
+      return;
     const obs = new IntersectionObserver(
       ([e]) => {
         if (e.isIntersecting) loadPage(allData.length);
@@ -126,7 +143,9 @@ export function useGuideData() {
 
       evt.addEventListener("update", () => {
         // Invalidate sessionStorage cache and reload
-        try { sessionStorage.removeItem(CACHE_KEY); } catch {} // DOMException: storage quota
+        try {
+          sessionStorage.removeItem(CACHE_KEY);
+        } catch {} // DOMException: storage quota
         loadPage(0);
       });
 
@@ -164,7 +183,11 @@ export function useGuideData() {
 
   // Settings-based filtering
   const filteredChannels = useMemo(() => {
-    if (!settings.languages.length && !settings.hiddenCategories.length && settings.showAdult) {
+    if (
+      !settings.languages.length &&
+      !settings.hiddenCategories.length &&
+      settings.showAdult
+    ) {
       return allData;
     }
     return allData.filter((g) => {
@@ -193,7 +216,7 @@ export function useGuideData() {
 
   const nowPct = useMemo(() => {
     const totalMs = 4 * 60 * 60 * 1000;
-    const elapsedMs = (now.getTime() - timeSlots[0]?.getTime()) || 0;
+    const elapsedMs = now.getTime() - timeSlots[0]?.getTime() || 0;
     return Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100));
   }, [now, timeSlots]);
 

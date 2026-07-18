@@ -16,7 +16,9 @@ describe("SubtitleSelector", () => {
     vi.clearAllMocks();
     vi.stubGlobal("fetch", vi.fn());
     // Clear any existing track elements from the video mock
-    Array.from(videoRef.current.querySelectorAll("track")).forEach((t) => t.remove());
+    Array.from(videoRef.current.querySelectorAll("track")).forEach((t) =>
+      t.remove(),
+    );
   });
 
   afterEach(() => {
@@ -39,11 +41,7 @@ describe("SubtitleSelector", () => {
   it("renders Subtitles button", () => {
     mockFetchSuccess({ tracks: sampleTracks });
     render(
-      <SubtitleSelector
-        mediaType="movie"
-        streamId="123"
-        videoRef={videoRef}
-      />,
+      <SubtitleSelector mediaType="movie" streamId="123" videoRef={videoRef} />,
     );
     expect(screen.getByLabelText("Subtitles")).toBeInTheDocument();
   });
@@ -51,11 +49,7 @@ describe("SubtitleSelector", () => {
   it("opens dropdown on button click and shows 'Off' option", async () => {
     mockFetchSuccess({ tracks: sampleTracks });
     render(
-      <SubtitleSelector
-        mediaType="movie"
-        streamId="123"
-        videoRef={videoRef}
-      />,
+      <SubtitleSelector mediaType="movie" streamId="123" videoRef={videoRef} />,
     );
 
     fireEvent.click(screen.getByLabelText("Subtitles"));
@@ -69,11 +63,7 @@ describe("SubtitleSelector", () => {
   it("fetches subtitles from correct probe URL", async () => {
     mockFetchSuccess({ tracks: sampleTracks });
     render(
-      <SubtitleSelector
-        mediaType="movie"
-        streamId="123"
-        videoRef={videoRef}
-      />,
+      <SubtitleSelector mediaType="movie" streamId="123" videoRef={videoRef} />,
     );
 
     await waitFor(() => {
@@ -84,11 +74,7 @@ describe("SubtitleSelector", () => {
   it("selecting a track adds a <track> element to the video", async () => {
     mockFetchSuccess({ tracks: sampleTracks });
     render(
-      <SubtitleSelector
-        mediaType="movie"
-        streamId="123"
-        videoRef={videoRef}
-      />,
+      <SubtitleSelector mediaType="movie" streamId="123" videoRef={videoRef} />,
     );
 
     fireEvent.click(screen.getByLabelText("Subtitles"));
@@ -114,11 +100,7 @@ describe("SubtitleSelector", () => {
 
     mockFetchSuccess({ tracks: sampleTracks });
     render(
-      <SubtitleSelector
-        mediaType="movie"
-        streamId="123"
-        videoRef={videoRef}
-      />,
+      <SubtitleSelector mediaType="movie" streamId="123" videoRef={videoRef} />,
     );
 
     fireEvent.click(screen.getByLabelText("Subtitles"));
@@ -135,11 +117,7 @@ describe("SubtitleSelector", () => {
   it("shows loading state while fetching", () => {
     (fetch as ReturnType<typeof vi.fn>).mockReturnValue(new Promise(() => {}));
     render(
-      <SubtitleSelector
-        mediaType="movie"
-        streamId="123"
-        videoRef={videoRef}
-      />,
+      <SubtitleSelector mediaType="movie" streamId="123" videoRef={videoRef} />,
     );
 
     fireEvent.click(screen.getByLabelText("Subtitles"));
@@ -149,11 +127,7 @@ describe("SubtitleSelector", () => {
   it("shows error state when probe returns error", async () => {
     mockFetchSuccess({ error: "No subtitles" });
     render(
-      <SubtitleSelector
-        mediaType="movie"
-        streamId="123"
-        videoRef={videoRef}
-      />,
+      <SubtitleSelector mediaType="movie" streamId="123" videoRef={videoRef} />,
     );
 
     fireEvent.click(screen.getByLabelText("Subtitles"));
@@ -165,11 +139,7 @@ describe("SubtitleSelector", () => {
   it('shows "No subtitles available" when tracks === 0', async () => {
     mockFetchSuccess({ tracks: [] });
     render(
-      <SubtitleSelector
-        mediaType="movie"
-        streamId="123"
-        videoRef={videoRef}
-      />,
+      <SubtitleSelector mediaType="movie" streamId="123" videoRef={videoRef} />,
     );
 
     fireEvent.click(screen.getByLabelText("Subtitles"));
@@ -181,11 +151,7 @@ describe("SubtitleSelector", () => {
   it("selecting a track adds a <track> element with correct attributes", async () => {
     mockFetchSuccess({ tracks: sampleTracks });
     render(
-      <SubtitleSelector
-        mediaType="movie"
-        streamId="123"
-        videoRef={videoRef}
-      />,
+      <SubtitleSelector mediaType="movie" streamId="123" videoRef={videoRef} />,
     );
 
     fireEvent.click(screen.getByLabelText("Subtitles"));
@@ -214,11 +180,7 @@ describe("SubtitleSelector", () => {
       new Error("Failed to fetch"),
     );
     render(
-      <SubtitleSelector
-        mediaType="movie"
-        streamId="123"
-        videoRef={videoRef}
-      />,
+      <SubtitleSelector mediaType="movie" streamId="123" videoRef={videoRef} />,
     );
 
     fireEvent.click(screen.getByLabelText("Subtitles"));
@@ -230,11 +192,7 @@ describe("SubtitleSelector", () => {
   it("renders with series type", async () => {
     mockFetchSuccess({ tracks: sampleTracks });
     render(
-      <SubtitleSelector
-        mediaType="series"
-        streamId="42"
-        videoRef={videoRef}
-      />,
+      <SubtitleSelector mediaType="series" streamId="42" videoRef={videoRef} />,
     );
 
     await waitFor(() => {
@@ -249,11 +207,7 @@ describe("SubtitleSelector", () => {
     ];
     mockFetchSuccess({ tracks: tracksWithTitles });
     render(
-      <SubtitleSelector
-        mediaType="movie"
-        streamId="123"
-        videoRef={videoRef}
-      />,
+      <SubtitleSelector mediaType="movie" streamId="123" videoRef={videoRef} />,
     );
 
     fireEvent.click(screen.getByLabelText("Subtitles"));

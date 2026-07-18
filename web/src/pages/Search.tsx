@@ -1,7 +1,14 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { Search, AlertCircle } from "lucide-react";
-import { api, type LiveStream, type Movie, type Series, type TmdbEnrichData, type GuideSearchResult } from "@/lib/api";
+import {
+  api,
+  type LiveStream,
+  type Movie,
+  type Series,
+  type TmdbEnrichData,
+  type GuideSearchResult,
+} from "@/lib/api";
 import { addSearchHistory } from "@/components/SearchHistory";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import SearchHeader from "@/components/SearchHeader";
@@ -40,8 +47,13 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<SearchResults | null>(null);
-  const [enrichData, setEnrichData] = useState<Record<string, TmdbEnrichData> | null>(null);
-  const [epgResults, setEpgResults] = useState<GuideSearchResult[] | null>(null);
+  const [enrichData, setEnrichData] = useState<Record<
+    string,
+    TmdbEnrichData
+  > | null>(null);
+  const [epgResults, setEpgResults] = useState<GuideSearchResult[] | null>(
+    null,
+  );
   const [epgLoading, setEpgLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [filter, setFilter] = useState<FilterTab>("all");
@@ -80,47 +92,53 @@ export default function SearchPage() {
   };
   const setCached = (q: string, r: SearchResultsWithTotals) => {
     try {
-      sessionStorage.setItem(SEARCH_CACHE_PREFIX + q, JSON.stringify({ results: r, ts: Date.now() }));
+      sessionStorage.setItem(
+        SEARCH_CACHE_PREFIX + q,
+        JSON.stringify({ results: r, ts: Date.now() }),
+      );
     } catch {} // DOMException: storage quota or disabled
   };
 
   // ── Single unified search pipeline ────────────────────────────
-  const runSearch = useCallback(async (q: string) => {
-    const trimmed = q.trim();
-    if (trimmed.length < 2) {
-      setResults(null);
-      setTotals(null);
+  const runSearch = useCallback(
+    async (q: string) => {
+      const trimmed = q.trim();
+      if (trimmed.length < 2) {
+        setResults(null);
+        setTotals(null);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
+      cancelPending();
+
+      const myId = ++searchIdRef.current;
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      setLoading(true);
       setError(null);
-      setLoading(false);
-      return;
-    }
 
-    cancelPending();
-
-    const myId = ++searchIdRef.current;
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const r = await api.search(trimmed, controller.signal);
-      if (searchIdRef.current === myId && !controller.signal.aborted) {
-        setCached(trimmed, r);
-        setResults(r);
-        setTotals(r.totals ?? null);
-        setLoading(false);
+      try {
+        const r = await api.search(trimmed, controller.signal);
+        if (searchIdRef.current === myId && !controller.signal.aborted) {
+          setCached(trimmed, r);
+          setResults(r);
+          setTotals(r.totals ?? null);
+          setLoading(false);
+        }
+      } catch (e: unknown) {
+        const err = e as Error;
+        if (err.name === "AbortError") return;
+        if (searchIdRef.current === myId) {
+          setError(err.message || "Search failed");
+          setLoading(false);
+        }
       }
-    } catch (e: unknown) {
-      const err = e as Error;
-      if (err.name === "AbortError") return;
-      if (searchIdRef.current === myId) {
-        setError(err.message || "Search failed");
-        setLoading(false);
-      }
-    }
-  }, [cancelPending]);
+    },
+    [cancelPending],
+  );
 
   // ── EPG search ────────────────────────────────────────────────
   const runEpgSearch = useCallback(async (q: string) => {
@@ -142,47 +160,54 @@ export default function SearchPage() {
   }, []);
 
   // ── Load more results for a specific section ────────────────
-  const loadMore = useCallback(async (section: "live" | "movies" | "series") => {
-    if (!results || loadingMore) return;
-    const trimmed = query.trim();
-    if (trimmed.length < 2) return;
+  const loadMore = useCallback(
+    async (section: "live" | "movies" | "series") => {
+      if (!results || loadingMore) return;
+      const trimmed = query.trim();
+      if (trimmed.length < 2) return;
 
-    setLoadingMore(section);
+      setLoadingMore(section);
 
-    try {
-      const offset = results[section].length;
-      const r = await api.search(trimmed, undefined, 20, offset, section);
-      if (r && r[section]) {
-        setResults((prev) => {
-          if (!prev) return prev;
-          const existingIds = new Set(
-            prev[section].map((item: { stream_id?: number; series_id?: number }) => item.stream_id ?? item.series_id)
-          );
-          const newItems = r[section].filter(
-            (item: { stream_id?: number; series_id?: number }) => !existingIds.has(item.stream_id ?? item.series_id)
-          );
-          const merged: SearchResults = {
-            live: prev.live,
-            movies: prev.movies,
-            series: prev.series,
-          };
-          if (section === "live") {
-            merged.live = [...prev.live, ...(newItems as LiveStream[])];
-          } else if (section === "movies") {
-            merged.movies = [...prev.movies, ...(newItems as Movie[])];
-          } else if (section === "series") {
-            merged.series = [...prev.series, ...(newItems as Series[])];
-          }
-          return merged;
-        });
-        setTotals(r.totals ?? null);
+      try {
+        const offset = results[section].length;
+        const r = await api.search(trimmed, undefined, 20, offset, section);
+        if (r && r[section]) {
+          setResults((prev) => {
+            if (!prev) return prev;
+            const existingIds = new Set(
+              prev[section].map(
+                (item: { stream_id?: number; series_id?: number }) =>
+                  item.stream_id ?? item.series_id,
+              ),
+            );
+            const newItems = r[section].filter(
+              (item: { stream_id?: number; series_id?: number }) =>
+                !existingIds.has(item.stream_id ?? item.series_id),
+            );
+            const merged: SearchResults = {
+              live: prev.live,
+              movies: prev.movies,
+              series: prev.series,
+            };
+            if (section === "live") {
+              merged.live = [...prev.live, ...(newItems as LiveStream[])];
+            } else if (section === "movies") {
+              merged.movies = [...prev.movies, ...(newItems as Movie[])];
+            } else if (section === "series") {
+              merged.series = [...prev.series, ...(newItems as Series[])];
+            }
+            return merged;
+          });
+          setTotals(r.totals ?? null);
+        }
+      } catch {
+        // SyntaxError or network error — silently ignore, non-critical
+      } finally {
+        setLoadingMore(null);
       }
-    } catch {
-      // SyntaxError or network error — silently ignore, non-critical
-    } finally {
-      setLoadingMore(null);
-    }
-  }, [results, query, loadingMore]);
+    },
+    [results, query, loadingMore],
+  );
 
   // ── Auto-search from URL (Back navigation / direct link) ──────
   const bgRefreshRef = useRef(false);
@@ -200,7 +225,9 @@ export default function SearchPage() {
       setError(null);
       if (!bgRefreshRef.current) {
         bgRefreshRef.current = true;
-        runSearch(trimmed).finally(() => { bgRefreshRef.current = false; });
+        runSearch(trimmed).finally(() => {
+          bgRefreshRef.current = false;
+        });
       }
       runEpgSearch(trimmed);
     } else {
@@ -225,41 +252,52 @@ export default function SearchPage() {
       setEnrichData({});
       return;
     }
-    api.searchEnrich(movies, series).then((data) => {
-      setEnrichData({ ...data.movies, ...data.series });
-    }).catch(() => {});
+    api
+      .searchEnrich(movies, series)
+      .then((data) => {
+        setEnrichData({ ...data.movies, ...data.series });
+      })
+      .catch(() => {});
   }, [results]);
 
   // ── Debounced auto-search as user types ───────────────────────
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleQueryChange = useCallback((value: string) => {
-    setQuery(value);
+  const handleQueryChange = useCallback(
+    (value: string) => {
+      setQuery(value);
 
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (value.trim().length >= 2) {
-      debounceRef.current = setTimeout(() => {
-        setSearchParams({ q: value }, { replace: true });
-        runSearch(value);
-      }, 300);
-    } else {
-      setSearchParams({}, { replace: true });
-      cancelPending();
-      setResults(null);
-      setTotals(null);
-      setError(null);
-      setLoading(false);
-    }
-  }, [setSearchParams, runSearch, cancelPending]);
+      if (value.trim().length >= 2) {
+        debounceRef.current = setTimeout(() => {
+          setSearchParams({ q: value }, { replace: true });
+          runSearch(value);
+        }, 300);
+      } else {
+        setSearchParams({}, { replace: true });
+        cancelPending();
+        setResults(null);
+        setTotals(null);
+        setError(null);
+        setLoading(false);
+      }
+    },
+    [setSearchParams, runSearch, cancelPending],
+  );
 
   useEffect(() => {
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, []);
 
   // ── Manual search (Enter key / button click) ──────────────────
   const doSearch = useCallback(() => {
     if (query.trim().length < 2) return;
-    if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
     addSearchHistory(query);
     setShowHistory(false);
     setSearchParams({ q: query }, { replace: true });
@@ -268,21 +306,24 @@ export default function SearchPage() {
   }, [query, setSearchParams, runSearch, runEpgSearch]);
 
   // ── Derived ───────────────────────────────────────────────────
-  const total =
-    results
-      ? results.live.length + results.movies.length + results.series.length
-      : 0;
+  const total = results
+    ? results.live.length + results.movies.length + results.series.length
+    : 0;
   const liveCount = results?.live.length ?? 0;
   const movieCount = results?.movies.length ?? 0;
   const seriesCount = results?.series.length ?? 0;
 
   // ── Sort helper ────────────────────────────────────────────────
   const getSortValue = useCallback(
-    (item: Movie | Series | LiveStream, section: "movies" | "series"): number => {
+    (
+      item: Movie | Series | LiveStream,
+      section: "movies" | "series",
+    ): number => {
       if (sortBy === "rating") {
-        const id = section === "movies"
-          ? (item as Movie).stream_id
-          : (item as Series).series_id;
+        const id =
+          section === "movies"
+            ? (item as Movie).stream_id
+            : (item as Series).series_id;
         const enr = enrichData?.[String(id)];
         if (enr?.rating != null) return -enr.rating;
         const rb = (item as Movie).rating_5based ?? 0;
@@ -293,9 +334,12 @@ export default function SearchPage() {
     [sortBy, enrichData],
   );
 
-  const sortByName = useCallback((a: { name?: string }, b: { name?: string }) => {
-    return (a.name || "").localeCompare(b.name || "");
-  }, []);
+  const sortByName = useCallback(
+    (a: { name?: string }, b: { name?: string }) => {
+      return (a.name || "").localeCompare(b.name || "");
+    },
+    [],
+  );
 
   const filteredResults = useMemo(() => {
     if (!results) return null;
@@ -335,10 +379,11 @@ export default function SearchPage() {
     return filtered;
   }, [results, filter, sortBy, sortByName, getSortValue]);
 
-  const filteredTotal =
-    filteredResults
-      ? filteredResults.live.length + filteredResults.movies.length + filteredResults.series.length
-      : 0;
+  const filteredTotal = filteredResults
+    ? filteredResults.live.length +
+      filteredResults.movies.length +
+      filteredResults.series.length
+    : 0;
 
   // ── Now-playing EPG for live search results ──────────────────
   const nowPlayingStreamIds = useMemo(() => {
@@ -353,17 +398,26 @@ export default function SearchPage() {
     setTotals(null);
     setError(null);
     cancelPending();
-    if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
     setSearchParams({}, { replace: true });
   }, [setSearchParams, cancelPending]);
 
-  const handleHistorySelect = useCallback((q: string) => {
-    setQuery(q);
-    if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
-    addSearchHistory(q);
-    setSearchParams({ q }, { replace: true });
-    runSearch(q);
-  }, [setSearchParams, runSearch]);
+  const handleHistorySelect = useCallback(
+    (q: string) => {
+      setQuery(q);
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+      addSearchHistory(q);
+      setSearchParams({ q }, { replace: true });
+      runSearch(q);
+    },
+    [setSearchParams, runSearch],
+  );
 
   return (
     <div className="space-y-6">
@@ -374,7 +428,9 @@ export default function SearchPage() {
         onQueryChange={handleQueryChange}
         onSearch={doSearch}
         onClear={handleClear}
-        onFocus={() => { if (!query) setShowHistory(true); }}
+        onFocus={() => {
+          if (!query) setShowHistory(true);
+        }}
         onHistorySelect={handleHistorySelect}
         onHistoryClose={() => setShowHistory(false)}
         resultCount={filteredTotal > 0 ? filteredTotal : undefined}
@@ -404,43 +460,51 @@ export default function SearchPage() {
       )}
 
       {filter === "epg" ? (
-        <EpgSearchResults results={epgResults} loading={epgLoading} query={query} />
-      ) : filteredResults && (
-        <div className="space-y-8">
-          <LiveSearchResults
-            streams={filteredResults.live}
-            totalCount={totals?.live ?? 0}
-            loadingMore={loadingMore === "live"}
-            onLoadMore={() => loadMore("live")}
-            showLoadMore={filter === "all" || filter === "live"}
-            getNowPlaying={getNowPlaying}
-          />
+        <EpgSearchResults
+          results={epgResults}
+          loading={epgLoading}
+          query={query}
+        />
+      ) : (
+        filteredResults && (
+          <div className="space-y-8">
+            <LiveSearchResults
+              streams={filteredResults.live}
+              totalCount={totals?.live ?? 0}
+              loadingMore={loadingMore === "live"}
+              onLoadMore={() => loadMore("live")}
+              showLoadMore={filter === "all" || filter === "live"}
+              getNowPlaying={getNowPlaying}
+            />
 
-          <MovieSearchResults
-            movies={filteredResults.movies}
-            enrichData={enrichData}
-            totalCount={totals?.movies ?? 0}
-            loadingMore={loadingMore === "movies"}
-            onLoadMore={() => loadMore("movies")}
-            showLoadMore={filter === "all" || filter === "movies"}
-          />
+            <MovieSearchResults
+              movies={filteredResults.movies}
+              enrichData={enrichData}
+              totalCount={totals?.movies ?? 0}
+              loadingMore={loadingMore === "movies"}
+              onLoadMore={() => loadMore("movies")}
+              showLoadMore={filter === "all" || filter === "movies"}
+            />
 
-          <SeriesSearchResults
-            series={filteredResults.series}
-            enrichData={enrichData}
-            totalCount={totals?.series ?? 0}
-            loadingMore={loadingMore === "series"}
-            onLoadMore={() => loadMore("series")}
-            showLoadMore={filter === "all" || filter === "series"}
-          />
+            <SeriesSearchResults
+              series={filteredResults.series}
+              enrichData={enrichData}
+              totalCount={totals?.series ?? 0}
+              loadingMore={loadingMore === "series"}
+              onLoadMore={() => loadMore("series")}
+              showLoadMore={filter === "all" || filter === "series"}
+            />
 
-          {total > 0 && filteredTotal === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Search className="h-10 w-10 text-muted-foreground/20 mb-3" />
-              <p className="text-sm text-muted-foreground">No results for &quot;{query}&quot; in this category</p>
-            </div>
-          )}
-        </div>
+            {total > 0 && filteredTotal === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <Search className="h-10 w-10 text-muted-foreground/20 mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  No results for &quot;{query}&quot; in this category
+                </p>
+              </div>
+            )}
+          </div>
+        )
       )}
 
       {/* Empty state */}

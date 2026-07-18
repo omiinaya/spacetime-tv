@@ -1,4 +1,5 @@
 """Credentials encryption at rest using Fernet symmetric encryption."""
+
 import base64
 import binascii
 import logging
@@ -13,6 +14,8 @@ except ImportError:
 log = logging.getLogger("spacetime-tv")
 _KEY_FILE = None
 _cipher = None
+
+
 def _get_or_create_key():
     global _KEY_FILE
     env_key = os.getenv("STV_ENCRYPT_KEY", "")
@@ -37,6 +40,7 @@ def _get_or_create_key():
         except OSError:
             pass
     from cryptography.fernet import Fernet as _F
+
     new_key = _F.generate_key()
     try:
         _KEY_FILE.write_bytes(new_key)
@@ -45,6 +49,8 @@ def _get_or_create_key():
     except OSError as e:
         log.warning(f"Could not persist encryption key: {e}")
     return new_key
+
+
 def get_cipher():
     global _cipher
     if _cipher is None:
@@ -53,12 +59,16 @@ def get_cipher():
         key = _get_or_create_key()
         _cipher = Fernet(key)
     return _cipher
+
+
 def encrypt(plaintext: str) -> str:
     if not plaintext:
         return ""
     cipher = get_cipher()
     token = cipher.encrypt(plaintext.encode("utf-8"))
     return "enc:" + token.decode("utf-8")
+
+
 def decrypt(encrypted: str) -> str:
     if not encrypted:
         return ""
@@ -71,13 +81,19 @@ def decrypt(encrypted: str) -> str:
     except (InvalidToken, TypeError, ValueError) as e:
         log.error(f"Decryption failed: {e}")
         return ""
+
+
 def is_encrypted(value: str) -> bool:
     return bool(value and value.startswith("enc:"))
+
+
 def encrypt_provider_password(provider: dict) -> dict:
     provider = dict(provider)
     if provider.get("password") and not is_encrypted(provider["password"]):
         provider["password"] = encrypt(provider["password"])
     return provider
+
+
 def decrypt_provider_password(provider: dict) -> dict:
     provider = dict(provider)
     if provider.get("password") and is_encrypted(provider["password"]):

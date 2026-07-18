@@ -50,8 +50,23 @@ describe("loadSettings / saveSettings", () => {
   });
 
   it("new key takes precedence over old key", () => {
-    localStorage.setItem(KEY_OLD, JSON.stringify({ languages: ["FR"], hiddenCategories: [], showAdult: false, services: [] }));
-    const custom = { languages: ["EN"], hiddenCategories: [], showAdult: false, services: [], adultPin: "", theme: "dark" as const };
+    localStorage.setItem(
+      KEY_OLD,
+      JSON.stringify({
+        languages: ["FR"],
+        hiddenCategories: [],
+        showAdult: false,
+        services: [],
+      }),
+    );
+    const custom = {
+      languages: ["EN"],
+      hiddenCategories: [],
+      showAdult: false,
+      services: [],
+      adultPin: "",
+      theme: "dark" as const,
+    };
     saveSettings(custom);
     expect(loadSettings()).toEqual(custom);
   });
@@ -196,7 +211,10 @@ describe("filterCategories", () => {
   // ── Adult filter ───────────────────────────────────────
 
   it("filters out adult categories when showAdult is false", () => {
-    const filtered = filterCategories(categories, { ...allOn, showAdult: false });
+    const filtered = filterCategories(categories, {
+      ...allOn,
+      showAdult: false,
+    });
     expect(filtered).not.toContainEqual(categories[4]);
     expect(filtered).toHaveLength(6);
   });
@@ -204,7 +222,10 @@ describe("filterCategories", () => {
   // ── Hidden categories ──────────────────────────────────
 
   it("filters out hidden categories by id", () => {
-    const filtered = filterCategories(categories, { ...allOn, hiddenCategories: ["2", "6"] });
+    const filtered = filterCategories(categories, {
+      ...allOn,
+      hiddenCategories: ["2", "6"],
+    });
     expect(filtered).not.toContainEqual(categories[1]);
     expect(filtered).not.toContainEqual(categories[5]);
     expect(filtered).toHaveLength(5);
@@ -213,7 +234,11 @@ describe("filterCategories", () => {
   // ── Language filter (non-live) ─────────────────────────
 
   it("filters by language prefix for non-live TV", () => {
-    const filtered = filterCategories(categories, { ...allOn, languages: ["US"], showAdult: false }, false);
+    const filtered = filterCategories(
+      categories,
+      { ...allOn, languages: ["US"], showAdult: false },
+      false,
+    );
     // US| ENTERTAINMENT, US| SPORTS should pass (matching prefix)
     // NETFLIX MOVIES, KIDS should pass (no prefix — services empty, so pass)
     // EN| DRAMA and FR| FILMS should be filtered (wrong prefix)
@@ -231,7 +256,11 @@ describe("filterCategories", () => {
   // ── Language filter (live TV) ──────────────────────────
 
   it("for live TV, no-prefix categories are always kept", () => {
-    const filtered = filterCategories(categories, { ...allOn, languages: ["US"], showAdult: false }, true);
+    const filtered = filterCategories(
+      categories,
+      { ...allOn, languages: ["US"], showAdult: false },
+      true,
+    );
     // Same as above plus NETFLIX and KIDS (no-prefix) pass
     expect(filtered).toContainEqual(categories[0]); // US|
     expect(filtered).toContainEqual(categories[3]); // NETFLIX (no prefix)
@@ -243,7 +272,11 @@ describe("filterCategories", () => {
   // ── Service filter (non-live) ──────────────────────────
 
   it("filters by service prefix for non-live TV", () => {
-    const filtered = filterCategories(categories, { ...allOn, services: ["NETFLIX"], showAdult: false }, false);
+    const filtered = filterCategories(
+      categories,
+      { ...allOn, services: ["NETFLIX"], showAdult: false },
+      false,
+    );
     // NETFLIX MOVIES should pass (matches service). No-prefix categories (KIDS) pass.
     // Categories with language prefixes (US|, EN|, FR|) have no service prefix and pass.
     expect(filtered).toContainEqual(categories[3]); // NETFLIX
@@ -258,7 +291,11 @@ describe("filterCategories", () => {
       { category_id: "b", category_name: "HBO SERIES" },
       { category_id: "c", category_name: "KIDS" },
     ];
-    const filtered = filterCategories(cats, { ...allOn, services: ["NETFLIX"] }, false);
+    const filtered = filterCategories(
+      cats,
+      { ...allOn, services: ["NETFLIX"] },
+      false,
+    );
     expect(filtered).toContainEqual(cats[0]); // NETFLIX
     expect(filtered).toContainEqual(cats[2]); // KIDS (no service prefix)
     expect(filtered).not.toContainEqual(cats[1]); // HBO
@@ -268,24 +305,34 @@ describe("filterCategories", () => {
   // ── Combined filters ───────────────────────────────────
 
   it("combines adult + language filter correctly", () => {
-    const filtered = filterCategories(categories, {
-      languages: ["US"],
-      hiddenCategories: [],
-      showAdult: false,
-      services: [],
-    }, false);
+    const filtered = filterCategories(
+      categories,
+      {
+        languages: ["US"],
+        hiddenCategories: [],
+        showAdult: false,
+        services: [],
+      },
+      false,
+    );
     // Should have US| ENTERTAINMENT, US| SPORTS, NETFLIX, KIDS = 4
     expect(filtered).toHaveLength(4);
-    expect(filtered.every((c) => c.category_name !== "ADULT CHANNEL")).toBe(true);
+    expect(filtered.every((c) => c.category_name !== "ADULT CHANNEL")).toBe(
+      true,
+    );
   });
 
   it("combines adult + hidden categories correctly", () => {
-    const filtered = filterCategories(categories, {
-      languages: [],
-      hiddenCategories: ["1", "7"],
-      showAdult: false,
-      services: [],
-    }, false);
+    const filtered = filterCategories(
+      categories,
+      {
+        languages: [],
+        hiddenCategories: ["1", "7"],
+        showAdult: false,
+        services: [],
+      },
+      false,
+    );
     expect(filtered).not.toContainEqual(categories[4]); // ADULT
     expect(filtered).not.toContainEqual(categories[0]); // US| ENTERTAINMENT (hidden)
     expect(filtered).not.toContainEqual(categories[6]); // US| SPORTS (hidden)
@@ -295,9 +342,16 @@ describe("filterCategories", () => {
 describe("collectAllPrefixes", () => {
   it("collects unique prefixes from all category lists", () => {
     const live = [{ category_name: "US| NEWS" }];
-    const movies = [{ category_name: "EN| MOVIES" }, { category_name: "US| FILMS" }];
+    const movies = [
+      { category_name: "EN| MOVIES" },
+      { category_name: "US| FILMS" },
+    ];
     const series = [{ category_name: "FR| SERIES" }];
-    expect(collectAllPrefixes(live, movies, series)).toEqual(["EN", "FR", "US"]);
+    expect(collectAllPrefixes(live, movies, series)).toEqual([
+      "EN",
+      "FR",
+      "US",
+    ]);
   });
 
   it("returns empty array when no prefixes exist", () => {
@@ -312,9 +366,19 @@ describe("collectAllPrefixes", () => {
 
 describe("collectAllServices", () => {
   it("collects unique services from movie and series categories", () => {
-    const movies = [{ category_name: "NETFLIX MOVIES" }, { category_name: "HBO SERIES" }];
-    const series = [{ category_name: "DISNEY+ KIDS" }, { category_name: "NETFLIX ANIME" }];
-    expect(collectAllServices(movies, series)).toEqual(["DISNEY+", "HBO", "NETFLIX"]);
+    const movies = [
+      { category_name: "NETFLIX MOVIES" },
+      { category_name: "HBO SERIES" },
+    ];
+    const series = [
+      { category_name: "DISNEY+ KIDS" },
+      { category_name: "NETFLIX ANIME" },
+    ];
+    expect(collectAllServices(movies, series)).toEqual([
+      "DISNEY+",
+      "HBO",
+      "NETFLIX",
+    ]);
   });
 
   it("returns empty array when no services", () => {

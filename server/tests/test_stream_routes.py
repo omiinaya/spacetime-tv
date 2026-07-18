@@ -15,6 +15,7 @@ Probe endpoints tested:
 
 # ── Probe endpoints ───────────────────────────────────────────────────────────
 
+
 def test_live_probe_returns_json(client):
     """Probe endpoint returns JSON with codec field."""
     resp = client.get("/api/v1/live/probe/99999")

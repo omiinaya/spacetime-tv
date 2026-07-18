@@ -10,8 +10,14 @@
 export type ConnectionQuality = "excellent" | "good" | "fair" | "poor";
 
 export interface ProbeResult {
-  codec: string; codec_long?: string; width?: number; height?: number;
-  profile?: string; container?: string; error?: string; native?: boolean;
+  codec: string;
+  codec_long?: string;
+  width?: number;
+  height?: number;
+  profile?: string;
+  container?: string;
+  error?: string;
+  native?: boolean;
 }
 
 // WebKit-prefixed fullscreen API (not in standard TS DOM types)
@@ -28,13 +34,12 @@ export interface VideoElementWithWebkit extends HTMLVideoElement {
 export type PlayPhase = "probing" | "loading" | "playing" | "paused" | "error";
 
 export type ErrorType =
-  | "timeout"           // Generic loading timeout
+  | "timeout" // Generic loading timeout
   | "transcode_timeout" // ffmpeg transcode took too long
-  | "retry_exhausted"   // Live TV gave up after 5 retries
-  | "stream_error"      // mpegts/HLS internal error
-  | "not_supported"     // Browser can't play this format
-  | "empty_stream"      // CDN returned 0 bytes / 405
-  ;
+  | "retry_exhausted" // Live TV gave up after 5 retries
+  | "stream_error" // mpegts/HLS internal error
+  | "not_supported" // Browser can't play this format
+  | "empty_stream"; // CDN returned 0 bytes / 405
 
 // ── Quality / Speed tiers ────────────────────────────────────
 export const QUALITIES = [

@@ -20,12 +20,14 @@ from routes.cache_warmer import _verify_cache_coherence, start_cache_warmer, war
 # RateLimitMiddleware — security-critical, completely untested
 # ════════════════════════════════════════════════════════════════════════════
 
+
 class TestRateLimiter:
     """Cover RateLimitMiddleware (main.py lines 78-96)."""
 
     def test_allows_request_under_limit(self, client):
         """First request from an IP gets through."""
         from main import _rate_limits
+
         _rate_limits.clear()
         r = client.get("/api/v1/health")
         assert r.status_code == 200
@@ -123,12 +125,14 @@ class TestRateLimiter:
         r = c2.get("/api/v1/health")
         assert r.status_code == 200
 
+
 class TestWarmCache:
     """Cover warm_cache (main.py lines 120-217)."""
 
     async def test_warm_cache_disabled_returns_early(self):
         """When cw.CACHE_WARM_ENABLED=False, warm_cache returns immediately."""
         import routes.cache_warmer as cw
+
         old = cw.CACHE_WARM_ENABLED
         try:
             cw.CACHE_WARM_ENABLED = False
@@ -158,7 +162,9 @@ class TestWarmCache:
                 return []
 
             with patch("iptv_client.cached_fetch", mock_cached_fetch):
-                with patch("routes.guide.load_epg", return_value={"channels": [{"id": "c1"}], "programmes": []}) as mock_epg:
+                with patch(
+                    "routes.guide.load_epg", return_value={"channels": [{"id": "c1"}], "programmes": []}
+                ) as mock_epg:
                     await warm_cache()
 
             mock_epg.assert_called_once()
@@ -213,7 +219,9 @@ class TestWarmCache:
 
             async def mock_cached_fetch(key, action, **params):
                 if "live" in action.lower():
-                    from fastapi import HTTPException; raise HTTPException(502, "Live upstream down")
+                    from fastapi import HTTPException
+
+                    raise HTTPException(502, "Live upstream down")
                 if "vod_categories" in action:
                     return [{"category_id": 1}]
                 if "series_categories" in action:
@@ -243,7 +251,9 @@ class TestWarmCache:
                 if "live" in action:
                     return []
                 if "vod_categories" in action:
-                    from fastapi import HTTPException; raise HTTPException(502, "VOD upstream down")
+                    from fastapi import HTTPException
+
+                    raise HTTPException(502, "VOD upstream down")
                 if "series_categories" in action:
                     return [{"category_id": 10}]
                 if "series" in action:
@@ -278,7 +288,9 @@ class TestWarmCache:
                 if "vod_streams" in action:
                     call_count["count"] += 1
                     if call_count["count"] == 1:
-                        from fastapi import HTTPException; raise HTTPException(502, "Temporary failure")
+                        from fastapi import HTTPException
+
+                        raise HTTPException(502, "Temporary failure")
                     return [{"id": 1}]
                 if "series" in action:
                     return [{"id": 1}]
@@ -356,6 +368,7 @@ class TestWarmCache:
 # Cache coherence verification
 # ════════════════════════════════════════════════════════════════════════════
 
+
 class TestVerifyCacheCoherence:
     """Cover _verify_cache_coherence (main.py lines 228-244)."""
 
@@ -399,6 +412,7 @@ class TestVerifyCacheCoherence:
 # ════════════════════════════════════════════════════════════════════════════
 # Cache warmer lifecycle (start_cache_warmer)
 # ════════════════════════════════════════════════════════════════════════════
+
 
 class TestStartCacheWarmer:
     """Cover start_cache_warmer (main.py lines 248-252)."""
@@ -453,6 +467,7 @@ class TestStartCacheWarmer:
 
         old_task = cw._warm_task
         try:
+
             async def never_done():
                 await asyncio.sleep(3600)
 
@@ -473,6 +488,7 @@ class TestStartCacheWarmer:
 # ════════════════════════════════════════════════════════════════════════════
 # Cleanup loop
 # ════════════════════════════════════════════════════════════════════════════
+
 
 class TestCleanupLoop:
     """Cover cleanup_loop (main.py lines 309-316)."""
@@ -533,6 +549,7 @@ class TestCleanupLoop:
 # Touch access / get last access
 # ════════════════════════════════════════════════════════════════════════════
 
+
 class TestTouchAccess:
     """Cover touch_access and get_last_access (main.py lines 265-275)."""
 
@@ -547,6 +564,7 @@ class TestTouchAccess:
             if "_test_touch" in f.name:
                 if f.is_dir():
                     import shutil
+
                     shutil.rmtree(f, ignore_errors=True)
                 else:
                     f.unlink(missing_ok=True)
@@ -596,10 +614,10 @@ class TestTouchAccess:
 # ════════════════════════════════════════════════════════════════════════════
 
 
-
 # ════════════════════════════════════════════════════════════════════════════
 # WarmCache additional edge cases (series retry, empty series cats)
 # ════════════════════════════════════════════════════════════════════════════
+
 
 class TestWarmCacheSeries:
     """Cover series-specific warm_cache paths."""
@@ -627,7 +645,9 @@ class TestWarmCacheSeries:
                 if "get_series" in action:
                     call_count["count"] += 1
                     if call_count["count"] == 1:
-                        from fastapi import HTTPException; raise HTTPException(502, "Temporary failure")
+                        from fastapi import HTTPException
+
+                        raise HTTPException(502, "Temporary failure")
                     return [{"id": 1}]
                 return []
 
@@ -689,7 +709,9 @@ class TestWarmCacheSeries:
                     return []
                 if "vod_streams" in action:
                     call_count["count"] += 1
-                    from fastapi import HTTPException; raise HTTPException(502, "Persistent failure")
+                    from fastapi import HTTPException
+
+                    raise HTTPException(502, "Persistent failure")
                 return []
 
             with patch("iptv_client.cached_fetch", mock_cached_fetch):

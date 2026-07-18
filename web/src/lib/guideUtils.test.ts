@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { parseXmltvTime, formatTime, programmeProgress, programmeTimeRange } from "./guideUtils";
+import {
+  parseXmltvTime,
+  formatTime,
+  programmeProgress,
+  programmeTimeRange,
+} from "./guideUtils";
 
 describe("parseXmltvTime", () => {
   it("parses standard XMLTV timestamp with +0200 offset", () => {

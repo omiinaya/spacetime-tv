@@ -19,7 +19,9 @@ export function addSearchHistory(query: string): void {
   try {
     const current = getSearchHistory();
     // Remove duplicate if exists, then prepend
-    const deduped = current.filter((q) => q.toLowerCase() !== trimmed.toLowerCase());
+    const deduped = current.filter(
+      (q) => q.toLowerCase() !== trimmed.toLowerCase(),
+    );
     const updated = [trimmed, ...deduped].slice(0, MAX);
     localStorage.setItem(KEY, JSON.stringify(updated));
   } catch {} // DOMException: localStorage quota
@@ -34,7 +36,9 @@ export function clearSearchHistory(): void {
 export function removeSearchHistory(query: string): void {
   try {
     const current = getSearchHistory();
-    const updated = current.filter((q) => q.toLowerCase() !== query.toLowerCase());
+    const updated = current.filter(
+      (q) => q.toLowerCase() !== query.toLowerCase(),
+    );
     localStorage.setItem(KEY, JSON.stringify(updated));
   } catch {} // DOMException: localStorage quota
 }

@@ -89,7 +89,12 @@ export const sampleMovies: import("@/lib/api").UnifiedMovie[] = [
     container_extension: "mp4",
     base_name: "The Matrix",
     languages: [
-      { code: "en", name: "English", stream_id: 201, container_extension: "mp4" },
+      {
+        code: "en",
+        name: "English",
+        stream_id: 201,
+        container_extension: "mp4",
+      },
     ],
     language_count: 1,
     added: "2024-01-01",
@@ -106,8 +111,18 @@ export const sampleMovies: import("@/lib/api").UnifiedMovie[] = [
     container_extension: "mkv",
     base_name: "Inception",
     languages: [
-      { code: "en", name: "English", stream_id: 202, container_extension: "mkv" },
-      { code: "fr", name: "French", stream_id: 203, container_extension: "mkv" },
+      {
+        code: "en",
+        name: "English",
+        stream_id: 202,
+        container_extension: "mkv",
+      },
+      {
+        code: "fr",
+        name: "French",
+        stream_id: 203,
+        container_extension: "mkv",
+      },
     ],
     language_count: 2,
     added: "2024-01-02",
@@ -115,8 +130,28 @@ export const sampleMovies: import("@/lib/api").UnifiedMovie[] = [
 ];
 
 export const sampleLiveStreams: import("@/lib/api").LiveStream[] = [
-  { num: 1, name: "CNN", stream_type: "live", stream_id: 301, stream_icon: "https://example.com/cnn.png", epg_channel_id: "CNN.us", category_id: "1", tv_archive: 1, tv_archive_duration: 168 },
-  { num: 2, name: "BBC World", stream_type: "live", stream_id: 302, stream_icon: "", epg_channel_id: "BBCW.us", category_id: "2", tv_archive: 0, tv_archive_duration: 0 },
+  {
+    num: 1,
+    name: "CNN",
+    stream_type: "live",
+    stream_id: 301,
+    stream_icon: "https://example.com/cnn.png",
+    epg_channel_id: "CNN.us",
+    category_id: "1",
+    tv_archive: 1,
+    tv_archive_duration: 168,
+  },
+  {
+    num: 2,
+    name: "BBC World",
+    stream_type: "live",
+    stream_id: 302,
+    stream_icon: "",
+    epg_channel_id: "BBCW.us",
+    category_id: "2",
+    tv_archive: 0,
+    tv_archive_duration: 0,
+  },
 ];
 
 export const sampleChannelGroups: import("@/lib/api").ChannelGroup[] = [
@@ -126,13 +161,27 @@ export const sampleChannelGroups: import("@/lib/api").ChannelGroup[] = [
     channel_icon: "https://example.com/cnn.png",
     stream_id: 301,
     programmes: [
-      { start: "2026-06-27 06:00", stop: "2026-06-27 07:00", title: "Morning News", subtitle: "", desc: "Morning news coverage", category: "news", is_live: true },
+      {
+        start: "2026-06-27 06:00",
+        stop: "2026-06-27 07:00",
+        title: "Morning News",
+        subtitle: "",
+        desc: "Morning news coverage",
+        category: "news",
+        is_live: true,
+      },
     ],
   },
 ];
 
 export const sampleTrending: Record<string, unknown>[] = [
-  { id: 1396, name: "Breaking Bad", poster_path: "/bb.jpg", vote_average: 9.5, first_air_date: "2008-01-20" },
+  {
+    id: 1396,
+    name: "Breaking Bad",
+    poster_path: "/bb.jpg",
+    vote_average: 9.5,
+    first_air_date: "2008-01-20",
+  },
 ];
 
 // ── Handlers ─────────────────────────────────────────────────────
@@ -148,7 +197,12 @@ export const handlers = [
     const url = new URL(request.url);
     const catId = url.searchParams.get("category_id") || "";
     const filtered = sampleSeries.filter((s) => s.category_id === catId);
-    return HttpResponse.json({ series: filtered, total: filtered.length, offset: 0, limit: 20 });
+    return HttpResponse.json({
+      series: filtered,
+      total: filtered.length,
+      offset: 0,
+      limit: 20,
+    });
   }),
 
   http.get(`${API}/series/:id`, ({ params }) => {
@@ -225,7 +279,12 @@ export const handlers = [
         m.name.toLowerCase().includes(q.toLowerCase()),
       );
     }
-    return HttpResponse.json({ movies: results, total: results.length, offset: 0, limit: 50 });
+    return HttpResponse.json({
+      movies: results,
+      total: results.length,
+      offset: 0,
+      limit: 50,
+    });
   }),
 
   http.get(`${API}/movies/:id`, ({ params }) => {
@@ -263,7 +322,13 @@ export const handlers = [
   ),
 
   http.get(`${API}/live/info`, () =>
-    HttpResponse.json({ streams: sampleLiveStreams.map((s) => ({ stream_id: s.stream_id, name: s.name, stream_icon: s.stream_icon })) }),
+    HttpResponse.json({
+      streams: sampleLiveStreams.map((s) => ({
+        stream_id: s.stream_id,
+        name: s.name,
+        stream_icon: s.stream_icon,
+      })),
+    }),
   ),
 
   // ── Guide / EPG ─────────────────────────────────────────────
@@ -281,7 +346,13 @@ export const handlers = [
   http.get(`${API}/guide/now`, () =>
     HttpResponse.json({
       programmes: Object.fromEntries(
-        sampleChannelGroups.map((g) => [g.stream_id, { title: g.programmes[0]?.title || null, channel_name: g.channel_name }]),
+        sampleChannelGroups.map((g) => [
+          g.stream_id,
+          {
+            title: g.programmes[0]?.title || null,
+            channel_name: g.channel_name,
+          },
+        ]),
       ),
     }),
   ),
@@ -294,9 +365,15 @@ export const handlers = [
   http.get(`${API}/search`, ({ request }) => {
     const url = new URL(request.url);
     const q = url.searchParams.get("q")?.toLowerCase() || "";
-    const matchedMovies = sampleMovies.filter((m) => m.name.toLowerCase().includes(q));
-    const matchedSeries = sampleSeries.filter((s) => s.name.toLowerCase().includes(q));
-    const matchedLive = sampleLiveStreams.filter((s) => s.name.toLowerCase().includes(q));
+    const matchedMovies = sampleMovies.filter((m) =>
+      m.name.toLowerCase().includes(q),
+    );
+    const matchedSeries = sampleSeries.filter((s) =>
+      s.name.toLowerCase().includes(q),
+    );
+    const matchedLive = sampleLiveStreams.filter((s) =>
+      s.name.toLowerCase().includes(q),
+    );
     return HttpResponse.json({
       live: matchedLive,
       movies: matchedMovies,
@@ -311,11 +388,21 @@ export const handlers = [
 
   // ── TMDB ────────────────────────────────────────────────────
   http.get(`${API}/tmdb/tv/trending`, () =>
-    HttpResponse.json({ trending: sampleTrending, total_pages: 1, total_results: sampleTrending.length, enabled: false }),
+    HttpResponse.json({
+      trending: sampleTrending,
+      total_pages: 1,
+      total_results: sampleTrending.length,
+      enabled: false,
+    }),
   ),
 
   http.get(`${API}/tmdb/trending`, () =>
-    HttpResponse.json({ trending: sampleTrending, total_pages: 1, total_results: sampleTrending.length, enabled: false }),
+    HttpResponse.json({
+      trending: sampleTrending,
+      total_pages: 1,
+      total_results: sampleTrending.length,
+      enabled: false,
+    }),
   ),
 
   http.get(`${API}/tmdb/configuration`, () =>
@@ -324,15 +411,21 @@ export const handlers = [
 
   // ── Cloud Backup ────────────────────────────────────────────
   http.post(`${API}/cloud/backup`, async ({ request }) => {
-    const body = await request.json() as Record<string, unknown>;
+    const body = (await request.json()) as Record<string, unknown>;
     const token = request.headers.get("X-Device-Token");
     if (!token || token.length < 8) {
-      return HttpResponse.json({ status: "error", detail: "Missing or invalid X-Device-Token" }, { status: 401 });
+      return HttpResponse.json(
+        { status: "error", detail: "Missing or invalid X-Device-Token" },
+        { status: 401 },
+      );
     }
     if (body.device_id && body.favorites) {
       return HttpResponse.json({ status: "ok", timestamp: Date.now() / 1000 });
     }
-    return HttpResponse.json({ status: "error", detail: "Invalid payload" }, { status: 400 });
+    return HttpResponse.json(
+      { status: "error", detail: "Invalid payload" },
+      { status: 400 },
+    );
   }),
 
   http.get(`${API}/cloud/backup`, ({ request }) => {
@@ -340,33 +433,49 @@ export const handlers = [
     const deviceId = url.searchParams.get("device_id");
     const token = request.headers.get("X-Device-Token");
     if (!token || token.length < 8) {
-      return HttpResponse.json({ status: "error", detail: "Missing or invalid X-Device-Token" }, { status: 401 });
+      return HttpResponse.json(
+        { status: "error", detail: "Missing or invalid X-Device-Token" },
+        { status: 401 },
+      );
     }
     if (deviceId) {
       return HttpResponse.json({
         status: "ok",
-        data: { favorites: [101, 202, 303], watchlist: { "1": true, "2": false } },
+        data: {
+          favorites: [101, 202, 303],
+          watchlist: { "1": true, "2": false },
+        },
       });
     }
-    return HttpResponse.json({ status: "error", detail: "Missing device_id" }, { status: 400 });
+    return HttpResponse.json(
+      { status: "error", detail: "Missing device_id" },
+      { status: 400 },
+    );
   }),
 
   http.post(`${API}/cloud/merge`, async ({ request }) => {
-    const body = await request.json() as Record<string, unknown>;
+    const body = (await request.json()) as Record<string, unknown>;
     const token = request.headers.get("X-Device-Token");
     if (!token || token.length < 8) {
-      return HttpResponse.json({ status: "error", detail: "Missing or invalid X-Device-Token" }, { status: 401 });
+      return HttpResponse.json(
+        { status: "error", detail: "Missing or invalid X-Device-Token" },
+        { status: 401 },
+      );
     }
     if (body.device_id && body.favorites) {
-      return HttpResponse.json({ status: "ok", favorites: [101, 202, 303, 404] });
+      return HttpResponse.json({
+        status: "ok",
+        favorites: [101, 202, 303, 404],
+      });
     }
-    return HttpResponse.json({ status: "error", detail: "Merge failed" }, { status: 400 });
+    return HttpResponse.json(
+      { status: "error", detail: "Merge failed" },
+      { status: 400 },
+    );
   }),
 
   // ── Watchlist / Progress ────────────────────────────────────
-  http.get(`${API}/:path*`, () =>
-    new HttpResponse(null, { status: 404 }),
-  ),
+  http.get(`${API}/:path*`, () => new HttpResponse(null, { status: 404 })),
 
   // ── Watchlist / Progress ────────────────────────────────────
   http.get(`${API}/watchlist/progress`, () =>

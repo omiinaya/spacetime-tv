@@ -157,7 +157,9 @@ describe("useKeyboard", () => {
     document.body.appendChild(input);
     input.focus();
     // Dispatch on input so event target is the input element
-    input.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: " ", bubbles: true }),
+    );
     expect(cb.togglePlay).not.toHaveBeenCalled();
     document.body.removeChild(input);
   });
@@ -192,9 +194,12 @@ describe("useKeyboard", () => {
 
   it("updates handler when volume changes", () => {
     const cb = createCallbacks();
-    const { rerender } = renderHook(({ v }) => useKeyboard({ ...cb, volume: v }), {
-      initialProps: { v: 0.5 },
-    });
+    const { rerender } = renderHook(
+      ({ v }) => useKeyboard({ ...cb, volume: v }),
+      {
+        initialProps: { v: 0.5 },
+      },
+    );
     fireKey("ArrowUp");
     expect(cb.setVolume).toHaveBeenCalledWith(0.6);
 

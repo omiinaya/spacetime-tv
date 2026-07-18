@@ -17,16 +17,19 @@ let mockHandle = 100;
 function setupRVFCOnPrototype() {
   // Direct assignment instead of vi.spyOn because jsdom doesn't have these
   // properties on HTMLVideoElement.prototype at all.
-  (HTMLVideoElement.prototype as any).requestVideoFrameCallback =
-    function (this: HTMLVideoElement, cb: VideoFrameCb) {
-      mockCallback = cb;
-      return mockHandle++;
-    };
+  (HTMLVideoElement.prototype as any).requestVideoFrameCallback = function (
+    this: HTMLVideoElement,
+    cb: VideoFrameCb,
+  ) {
+    mockCallback = cb;
+    return mockHandle++;
+  };
 
-  (HTMLVideoElement.prototype as any).cancelVideoFrameCallback =
-    function (_id: number) {
-      mockCallback = null;
-    };
+  (HTMLVideoElement.prototype as any).cancelVideoFrameCallback = function (
+    _id: number,
+  ) {
+    mockCallback = null;
+  };
 }
 
 function removeRVFCFromPrototype() {

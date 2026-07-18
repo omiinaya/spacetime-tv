@@ -61,6 +61,7 @@ from state import _cache
 def override_lifespan():
     """Replace app.lifespan_context with a no-op to prevent background tasks."""
     import contextlib
+
     app.lifespan_context = contextlib.nullcontext
     yield
 
@@ -72,6 +73,7 @@ def reset_shared_state():
     # (e.g. test_live_all_with_cache sets _cache["live_all"] which would
     #  otherwise contaminate test_live_info_empty_when_cache_empty)
     from state import _progress_store, epg_cache
+
     _cache.clear()
     epg_cache["data"] = None
     epg_cache["fetched"] = 0
@@ -80,14 +82,17 @@ def reset_shared_state():
     # Clear rate limiter state — otherwise test ordering can cause 429s
     # on image-proxy tests that run later in the suite
     from main import _rate_limits
+
     _rate_limits.clear()
     # Clear search query log so admin stats test doesn't leak
     from state import _search_queries, _stream_hits
+
     _search_queries.clear()
     _stream_hits.clear()
     # Clear provider HTTP clients to avoid stale loop references
     from iptv_client import _provider_clients
     from iptv_client import client as _global_client
+
     for _k, c in list(_provider_clients.items()):
         with contextlib.suppress(Exception):
             c.aclose()
@@ -99,14 +104,17 @@ def reset_shared_state():
         pass
     # Clear stream hit counters
     from state import _stream_hits
+
     _stream_hits.clear()
     # Also wipe stream_hits.json on disk to prevent stale loads
     from config import DATA_DIR as _data_dir
+
     _hits_file = _data_dir / "stream_hits.json"
     if _hits_file.exists():
         _hits_file.unlink()
     # Clear probe cache to prevent test ordering leaks
     from routes.stream_core import _probe_cache
+
     _probe_cache.clear()
     yield
 
@@ -114,9 +122,10 @@ def reset_shared_state():
 @pytest.fixture
 def client():
     """App TestClient — upstream IPTV calls are mocked to return empty data.
-    
+
     Patches cached_fetch in iptv_client so ALL route modules see the mock.
     """
+
     async def mock_cached_fetch(key, action, **params):
         """Mock cached_fetch that:
         - Returns fresh cache data if available
@@ -126,6 +135,7 @@ def client():
         import time
 
         from state import CACHE_TTL
+
         now = time.time()
         if key in _cache:
             ts, cached_data = _cache[key]
@@ -158,10 +168,12 @@ def client():
 @pytest.fixture
 def client_with_cache():
     """App TestClient with cached_fetch that respects pre-populated cache but prevents upstream calls."""
+
     async def mock_cached_fetch(key, action, **params):
         import time
 
         from state import CACHE_TTL
+
         now = time.time()
         if key in _cache:
             ts, cached_data = _cache[key]

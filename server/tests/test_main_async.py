@@ -2,6 +2,7 @@
 
 Targets uncovered lines: 121, 146–154, 261–287, 303–305, 310–311.
 """
+
 import asyncio
 import contextlib
 import time
@@ -162,7 +163,6 @@ class TestFetchIptv:
         async def mock_fetch(provider, action, **params):
             raise HTTPException(502, "IPTV provider error: Connection refused")
 
-
         with patch("iptv_client._fetch_single_provider", mock_fetch):
             with pytest.raises(HTTPException) as exc_info:
                 await fetch_iptv("test_action")
@@ -190,6 +190,7 @@ class TestCleanupStaleCache:
             if f.name.startswith("_test_cleanup") or f.name.startswith("._test_cleanup"):
                 if f.is_dir():
                     import shutil
+
                     shutil.rmtree(f)
                 else:
                     f.unlink()
@@ -296,6 +297,7 @@ class TestStartCleanupTask:
     async def test_creates_and_starts_cleanup_task(self):
         """start_cleanup_task stores a non-done asyncio task."""
         import main as m
+
         old_task = m._cleanup_task
         # Reset to None to force task creation
         m._cleanup_task = None

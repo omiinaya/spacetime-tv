@@ -28,9 +28,7 @@ export default function MovieSearchResults({
     <section>
       <div className="flex items-center gap-2 mb-3">
         <Film className="h-4 w-4 text-primary" />
-        <h2 className="text-sm font-semibold">
-          Movies ({movies.length})
-        </h2>
+        <h2 className="text-sm font-semibold">Movies ({movies.length})</h2>
       </div>
       <div className="poster-grid">
         {movies.map((m) => {
@@ -54,7 +52,11 @@ export default function MovieSearchResults({
                   <img
                     src={posterSrc}
                     srcSet={posterSrcset}
-                    sizes={posterSrcset ? "(max-width: 640px) 342px, 500px" : undefined}
+                    sizes={
+                      posterSrcset
+                        ? "(max-width: 640px) 342px, 500px"
+                        : undefined
+                    }
                     alt={m.name ? `${m.name} poster` : ""}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     loading="lazy"

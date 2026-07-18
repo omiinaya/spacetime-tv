@@ -22,9 +22,12 @@ def test_search_enrich_no_body(client):
 
 def test_search_enrich_with_movies_structure(client):
     """POST /api/search/enrich with movies returns structured response."""
-    resp = client.post("/api/v1/search/enrich", json={
-        "movies": [{"stream_id": 1, "tmdb_id": "550"}],
-    })
+    resp = client.post(
+        "/api/v1/search/enrich",
+        json={
+            "movies": [{"stream_id": 1, "tmdb_id": "550"}],
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert "movies" in data
@@ -36,10 +39,13 @@ def test_search_enrich_with_movies_structure(client):
 
 def test_search_enrich_with_both_sections(client):
     """POST /api/search/enrich with movies and series returns both sections."""
-    resp = client.post("/api/v1/search/enrich", json={
-        "movies": [{"stream_id": 1, "tmdb_id": "550"}],
-        "series": [{"series_id": 10, "tmdb_id": "1399"}],
-    })
+    resp = client.post(
+        "/api/v1/search/enrich",
+        json={
+            "movies": [{"stream_id": 1, "tmdb_id": "550"}],
+            "series": [{"series_id": 10, "tmdb_id": "1399"}],
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert "movies" in data
@@ -48,10 +54,13 @@ def test_search_enrich_with_both_sections(client):
 
 def test_search_enrich_invalid_body_handled(client):
     """POST /api/search/enrich with null items gracefully handled."""
-    resp = client.post("/api/v1/search/enrich", json={
-        "movies": None,
-        "series": None,
-    })
+    resp = client.post(
+        "/api/v1/search/enrich",
+        json={
+            "movies": None,
+            "series": None,
+        },
+    )
     assert resp.status_code == 200
     data = resp.json()
     assert data == {"movies": {}, "series": {}}

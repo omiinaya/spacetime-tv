@@ -90,7 +90,10 @@ describe("useGuideData", () => {
       instance.url = url;
       return instance;
     }
-    vi.stubGlobal("EventSource", MockEventSource as unknown as typeof EventSource);
+    vi.stubGlobal(
+      "EventSource",
+      MockEventSource as unknown as typeof EventSource,
+    );
   });
 
   afterEach(() => {
@@ -99,9 +102,7 @@ describe("useGuideData", () => {
 
   it("starts in loading state", () => {
     // Deliberately not setting up MSW — fetch never resolves
-    server.use(
-      http.get("*/guide", () => new Promise(() => {})),
-    );
+    server.use(http.get("*/guide", () => new Promise(() => {})));
     const { result } = renderHook(() => useGuideData());
     expect(result.current.loading).toBe(true);
     expect(result.current.error).toBeNull();
@@ -114,9 +115,7 @@ describe("useGuideData", () => {
         const url = new URL(request.url);
         const offset = Number(url.searchParams.get("offset"));
         return HttpResponse.json({
-          channel_groups: offset === 0
-            ? sampleGuideData.channel_groups
-            : [],
+          channel_groups: offset === 0 ? sampleGuideData.channel_groups : [],
           total_channels: sampleGuideData.total_channels,
         });
       }),
@@ -134,9 +133,7 @@ describe("useGuideData", () => {
   });
 
   it("sets error on API failure", async () => {
-    server.use(
-      http.get("*/guide", () => HttpResponse.error()),
-    );
+    server.use(http.get("*/guide", () => HttpResponse.error()));
 
     const { result } = renderHook(() => useGuideData());
 
@@ -149,7 +146,12 @@ describe("useGuideData", () => {
   it("loads from sessionStorage cache when available and fresh", async () => {
     const cachedData = {
       data: [
-        { channel_id: 99, channel_name: "Cached Channel", stream_id: 999, programmes: [] },
+        {
+          channel_id: 99,
+          channel_name: "Cached Channel",
+          stream_id: 999,
+          programmes: [],
+        },
       ],
       total: 1,
       ts: Date.now(),
@@ -183,7 +185,9 @@ describe("useGuideData", () => {
 
   it("ignores stale cache (>5 min) and fetches fresh", async () => {
     const staleData = {
-      data: [{ channel_id: 1, channel_name: "Stale", stream_id: 1, programmes: [] }],
+      data: [
+        { channel_id: 1, channel_name: "Stale", stream_id: 1, programmes: [] },
+      ],
       total: 1,
       ts: Date.now() - 600_000, // 10 minutes ago
     };
@@ -212,7 +216,12 @@ describe("useGuideData", () => {
     // Set up sessionStorage with channel→category mapping
     sessionStorage.setItem(
       "stv_live_all_slim",
-      JSON.stringify({ a: [{ id: 100, c: "cat_hidden" }, { id: 200, c: "cat_visible" }] }),
+      JSON.stringify({
+        a: [
+          { id: 100, c: "cat_hidden" },
+          { id: 200, c: "cat_visible" },
+        ],
+      }),
     );
 
     mockSettings.hiddenCategories = ["cat_hidden"];
@@ -269,15 +278,30 @@ describe("useGuideData", () => {
         if (offset === 0) {
           return HttpResponse.json({
             channel_groups: [
-              { channel_id: 1, channel_name: "Ch 1", stream_id: 1, programmes: [] },
-              { channel_id: 2, channel_name: "Ch 2", stream_id: 2, programmes: [] },
+              {
+                channel_id: 1,
+                channel_name: "Ch 1",
+                stream_id: 1,
+                programmes: [],
+              },
+              {
+                channel_id: 2,
+                channel_name: "Ch 2",
+                stream_id: 2,
+                programmes: [],
+              },
             ],
             total_channels: 10,
           });
         }
         return HttpResponse.json({
           channel_groups: [
-            { channel_id: 3, channel_name: "Ch 3", stream_id: 3, programmes: [] },
+            {
+              channel_id: 3,
+              channel_name: "Ch 3",
+              stream_id: 3,
+              programmes: [],
+            },
           ],
           total_channels: 10,
         });

@@ -32,7 +32,8 @@ export function CatchupTimeline({
     let cancelled = false;
     setLoading(true);
     setError(null);
-    api.guide.catchup(streamId, 4)
+    api.guide
+      .catchup(streamId, 4)
       .then((data) => {
         if (cancelled) return;
         setProgrammes(data.programmes || []);
@@ -44,20 +45,31 @@ export function CatchupTimeline({
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [streamId]);
 
-  const totalWindow = programmes.length > 0
-    ? programmes[0].start_offset + programmes[0].duration
-    : 14400; // fallback to 4h in seconds
+  const totalWindow =
+    programmes.length > 0
+      ? programmes[0].start_offset + programmes[0].duration
+      : 14400; // fallback to 4h in seconds
 
-  const getWidth = useCallback((prog: CatchupProgramme) => {
-    return Math.max((prog.duration / totalWindow) * 100, 4);
-  }, [totalWindow]);
+  const getWidth = useCallback(
+    (prog: CatchupProgramme) => {
+      return Math.max((prog.duration / totalWindow) * 100, 4);
+    },
+    [totalWindow],
+  );
 
-  const getLeft = useCallback((prog: CatchupProgramme) => {
-    return ((totalWindow - prog.start_offset - prog.duration) / totalWindow) * 100;
-  }, [totalWindow]);
+  const getLeft = useCallback(
+    (prog: CatchupProgramme) => {
+      return (
+        ((totalWindow - prog.start_offset - prog.duration) / totalWindow) * 100
+      );
+    },
+    [totalWindow],
+  );
 
   if (loading) {
     return (
@@ -125,7 +137,9 @@ export function CatchupTimeline({
               style={{
                 left: `${left}%`,
                 width: `${width}%`,
-                backgroundColor: isHovered ? "rgba(59, 130, 246, 0.35)" : "rgba(59, 130, 246, 0.2)",
+                backgroundColor: isHovered
+                  ? "rgba(59, 130, 246, 0.35)"
+                  : "rgba(59, 130, 246, 0.2)",
                 zIndex: isHovered ? 10 : 1,
               }}
               onMouseEnter={() => setHoveredProgramme(i)}

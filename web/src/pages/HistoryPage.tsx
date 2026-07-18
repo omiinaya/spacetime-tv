@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Tv, Film, Tv2, Clock, Trash2, History } from "lucide-react";
-import { getRecentChannels, clearRecentChannels, type RecentChannel } from "@/lib/recentChannels";
+import {
+  getRecentChannels,
+  clearRecentChannels,
+  type RecentChannel,
+} from "@/lib/recentChannels";
 import {
   getContinueWatching,
   getMovieContinueWatching,
@@ -30,7 +34,8 @@ export default function HistoryPage() {
     setMovieCW([]);
   };
 
-  const hasAny = channels.length > 0 || seriesCW.length > 0 || movieCW.length > 0;
+  const hasAny =
+    channels.length > 0 || seriesCW.length > 0 || movieCW.length > 0;
 
   return (
     <div className="space-y-8">
@@ -96,14 +101,18 @@ export default function HistoryPage() {
                     alt={`${ch.name} logo`}
                     className="w-full h-10 object-contain mb-2 rounded opacity-80"
                     loading="lazy"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
                   />
                 ) : (
                   <div className="w-full h-10 bg-muted rounded mb-2 flex items-center justify-center">
                     <Tv className="h-4 w-4 text-muted-foreground/40" />
                   </div>
                 )}
-                <p className="text-xs font-medium leading-tight line-clamp-1">{ch.name}</p>
+                <p className="text-xs font-medium leading-tight line-clamp-1">
+                  {ch.name}
+                </p>
               </button>
             ))}
           </div>
@@ -122,7 +131,9 @@ export default function HistoryPage() {
               <button
                 key={`history-s-${s.seriesId}-${s.episodeId}`}
                 className="shrink-0 w-[150px] group text-left focus:outline-none"
-                onClick={() => navigate(`/watch/series/${s.seriesId}/${s.episodeId}`)}
+                onClick={() =>
+                  navigate(`/watch/series/${s.seriesId}/${s.episodeId}`)
+                }
               >
                 <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-0 group-focus:ring-2 group-focus:ring-primary/60 transition-all">
                   {s.cover ? (
@@ -131,7 +142,9 @@ export default function HistoryPage() {
                       alt={`${s.seriesName} poster`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
                       loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-[#141420]">
@@ -142,12 +155,16 @@ export default function HistoryPage() {
                     <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
                       <div
                         className="h-full bg-primary"
-                        style={{ width: `${Math.min(100, (s.progressSeconds / s.durationSeconds) * 100)}%` }}
+                        style={{
+                          width: `${Math.min(100, (s.progressSeconds / s.durationSeconds) * 100)}%`,
+                        }}
                       />
                     </div>
                   )}
                 </div>
-                <p className="text-xs font-medium leading-tight line-clamp-2">{s.seriesName}</p>
+                <p className="text-xs font-medium leading-tight line-clamp-2">
+                  {s.seriesName}
+                </p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   S{s.seasonNumber} · E{s.episodeNum}
                 </p>
@@ -178,7 +195,9 @@ export default function HistoryPage() {
                       alt={`${m.movieName} poster`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
                       loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-[#141420]">
@@ -189,12 +208,16 @@ export default function HistoryPage() {
                     <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
                       <div
                         className="h-full bg-primary"
-                        style={{ width: `${Math.min(100, (m.progressSeconds / m.durationSeconds) * 100)}%` }}
+                        style={{
+                          width: `${Math.min(100, (m.progressSeconds / m.durationSeconds) * 100)}%`,
+                        }}
                       />
                     </div>
                   )}
                 </div>
-                <p className="text-xs font-medium leading-tight line-clamp-2">{m.movieName}</p>
+                <p className="text-xs font-medium leading-tight line-clamp-2">
+                  {m.movieName}
+                </p>
               </button>
             ))}
           </div>

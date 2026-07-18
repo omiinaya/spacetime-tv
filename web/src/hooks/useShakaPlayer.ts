@@ -8,7 +8,11 @@
  */
 import { useEffect, useRef, useCallback } from "react";
 import shaka from "shaka-player";
-import { tryAutoplay, saveProgress, registerProgressSync } from "./usePlayerUtils";
+import {
+  tryAutoplay,
+  saveProgress,
+  registerProgressSync,
+} from "./usePlayerUtils";
 import type { PlayPhase, ErrorType, VideoSourceType } from "./usePlayerTypes";
 
 export interface ShakaPlayerCallbacks {
@@ -47,38 +51,55 @@ export function useShakaPlayer(
         shakaCleanupRef.current();
         shakaCleanupRef.current = null;
       }
-      if (playerRef.current) { playerRef.current.destroy(); playerRef.current = null; }
+      if (playerRef.current) {
+        playerRef.current.destroy();
+        playerRef.current = null;
+      }
       video.removeAttribute("src");
 
       // shaka-player may not be compiled with HLS support; polyfill if needed
       if (shaka.Player.isBrowserSupported()) {
         const player = new shaka.Player();
         playerRef.current = player;
-        player.attach(video, /* preferNativeHls= */ false).then(() => {
-          // Configure: prefer HLS, enable live sync
-          player.configure({
-            streaming: {
-              alwaysStreamText: false,
-              liveSync: { enabled: true, latencyTarget: 15 },
-              bufferingGoal: 30,
-              rebufferingGoal: 10,
-            },
-            preferNativeHls: false,
-          });
-
-          player.load(playlistUrl, startPos ?? undefined, mimeType).then(() => {
-            callbacks.onPhaseChange("playing");
-            callbacks.onDuration(video.duration || 0);
-            tryAutoplay(video, callbacks.onAutoplayMuted).then((started) => {
-              if (!started) callbacks.onPhaseChange("paused");
+        player
+          .attach(video, /* preferNativeHls= */ false)
+          .then(() => {
+            // Configure: prefer HLS, enable live sync
+            player.configure({
+              streaming: {
+                alwaysStreamText: false,
+                liveSync: { enabled: true, latencyTarget: 15 },
+                bufferingGoal: 30,
+                rebufferingGoal: 10,
+              },
+              preferNativeHls: false,
             });
-          }).catch((err) => {
-            callbacks.onError("stream_error", `shaka-player load failed: ${err?.message || "unknown"}`);
+
+            player
+              .load(playlistUrl, startPos ?? undefined, mimeType)
+              .then(() => {
+                callbacks.onPhaseChange("playing");
+                callbacks.onDuration(video.duration || 0);
+                tryAutoplay(video, callbacks.onAutoplayMuted).then(
+                  (started) => {
+                    if (!started) callbacks.onPhaseChange("paused");
+                  },
+                );
+              })
+              .catch((err) => {
+                callbacks.onError(
+                  "stream_error",
+                  `shaka-player load failed: ${err?.message || "unknown"}`,
+                );
+              });
+          })
+          .catch(() => {
+            callbacks.onError(
+              "not_supported",
+              "shaka-player failed to attach to video element.",
+            );
+            return;
           });
-        }).catch(() => {
-          callbacks.onError("not_supported", "shaka-player failed to attach to video element.");
-          return;
-        });
 
         player.addEventListener("error", (event) => {
           const data = (event as CustomEvent<shaka.util.Error>).detail;
@@ -93,22 +114,32 @@ export function useShakaPlayer(
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
         // Native HLS fallback (Safari)
         video.src = playlistUrl;
-        video.addEventListener("loadedmetadata", () => {
-          callbacks.onDuration(video.duration || 0);
-          if (startPos && startPos > 5) video.currentTime = startPos;
-          callbacks.onPhaseChange("playing");
-          tryAutoplay(video, callbacks.onAutoplayMuted).then((started) => {
-            if (!started) callbacks.onPhaseChange("paused");
-          });
-        }, { once: true });
+        video.addEventListener(
+          "loadedmetadata",
+          () => {
+            callbacks.onDuration(video.duration || 0);
+            if (startPos && startPos > 5) video.currentTime = startPos;
+            callbacks.onPhaseChange("playing");
+            tryAutoplay(video, callbacks.onAutoplayMuted).then((started) => {
+              if (!started) callbacks.onPhaseChange("paused");
+            });
+          },
+          { once: true },
+        );
       } else {
-        callbacks.onError("not_supported", "This video format is not supported by your browser.");
+        callbacks.onError(
+          "not_supported",
+          "This video format is not supported by your browser.",
+        );
         return;
       }
 
       const onTimeUpdate = () => {
         const buf = video.buffered;
-        callbacks.onTimeUpdate(video.currentTime, buf.length > 0 ? buf.end(buf.length - 1) : 0);
+        callbacks.onTimeUpdate(
+          video.currentTime,
+          buf.length > 0 ? buf.end(buf.length - 1) : 0,
+        );
       };
       const onDurationChange = () => {
         const d = video.duration;
@@ -126,20 +157,34 @@ export function useShakaPlayer(
       if (watchKey) {
         let syncCounter = 0;
         saveInterval = setInterval(() => {
-          saveProgress({ video, watchKey, type: type || "movie", seriesId, epId, id, onAutoAdvance });
+          saveProgress({
+            video,
+            watchKey,
+            type: type || "movie",
+            seriesId,
+            epId,
+            id,
+            onAutoAdvance,
+          });
           syncCounter++;
           if (syncCounter % 6 === 0) registerProgressSync();
         }, 5000);
       }
 
       const timeout = setTimeout(() => {
-        callbacks.onError("timeout", "Video is taking too long to start. Try again.");
+        callbacks.onError(
+          "timeout",
+          "Video is taking too long to start. Try again.",
+        );
       }, 15000);
 
       const emptyCheck = setInterval(() => {
         if (video.readyState === 0) {
           clearInterval(emptyCheck);
-          callbacks.onError("empty_stream", "Stream returned empty data. The content may not be available on this server.");
+          callbacks.onError(
+            "empty_stream",
+            "Stream returned empty data. The content may not be available on this server.",
+          );
         } else if (video.readyState > 0) {
           clearInterval(emptyCheck);
         }
@@ -159,8 +204,13 @@ export function useShakaPlayer(
   );
 
   const destroy = useCallback(() => {
-    if (shakaCleanupRef.current) { shakaCleanupRef.current(); shakaCleanupRef.current = null; }
-    try { playerRef.current?.destroy(); } catch {} // cleanup — errors expected if already destroyed
+    if (shakaCleanupRef.current) {
+      shakaCleanupRef.current();
+      shakaCleanupRef.current = null;
+    }
+    try {
+      playerRef.current?.destroy();
+    } catch {} // cleanup — errors expected if already destroyed
     playerRef.current = null;
   }, []);
 

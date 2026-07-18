@@ -2,6 +2,7 @@
 
 Extracted from main.py during P1.1 Phase 6 decomposition.
 """
+
 import logging
 import re
 
@@ -96,12 +97,14 @@ async def movies_unified(
         langs = grp["languages"]
         lang_list = [{"code": code, **info} for code, info in langs.items()]
         lang_list.sort(key=lambda x: (x["code"] != "EN", x["code"]))
-        unified.append({
-            **movie,
-            "base_name": grp["base_name"],
-            "languages": lang_list,
-            "language_count": len(lang_list),
-        })
+        unified.append(
+            {
+                **movie,
+                "base_name": grp["base_name"],
+                "languages": lang_list,
+                "language_count": len(lang_list),
+            }
+        )
 
     if q:
         ql = q.lower()

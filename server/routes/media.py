@@ -2,6 +2,7 @@
 
 Extracted from main.py during P1.1 Phase 6 decomposition.
 """
+
 import asyncio
 import contextlib
 import json
@@ -33,7 +34,13 @@ async def probe_subtitles(media_type: str, stream_id: int):
     url = _vod_url(stream_id, media_type)
     try:
         proc = await asyncio.create_subprocess_exec(
-            "/usr/bin/ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", url,
+            "/usr/bin/ffprobe",
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
+            "-show_streams",
+            url,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -45,12 +52,14 @@ async def probe_subtitles(media_type: str, stream_id: int):
         for s in info.get("streams", []):
             if s.get("codec_type") == "subtitle":
                 tags = s.get("tags", {})
-                tracks.append({
-                    "index": s.get("index", 0),
-                    "language": tags.get("language", "und"),
-                    "title": tags.get("title", ""),
-                    "codec": s.get("codec_name", "unknown"),
-                })
+                tracks.append(
+                    {
+                        "index": s.get("index", 0),
+                        "language": tags.get("language", "und"),
+                        "title": tags.get("title", ""),
+                        "codec": s.get("codec_name", "unknown"),
+                    }
+                )
         SUBTITLE_CACHE[cache_key] = tracks
         return {"tracks": tracks, "cached": False}
     except TimeoutError:
@@ -72,10 +81,14 @@ async def get_subtitles(media_type: str, stream_id: int, track_index: int):
     url = _vod_url(stream_id, media_type)
     try:
         proc = await asyncio.create_subprocess_exec(
-            "/usr/bin/ffmpeg", "-y",
-            "-i", url,
-            "-map", f"0:s:{track_index}",
-            "-f", "webvtt",
+            "/usr/bin/ffmpeg",
+            "-y",
+            "-i",
+            url,
+            "-map",
+            f"0:s:{track_index}",
+            "-f",
+            "webvtt",
             "pipe:1",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -109,7 +122,13 @@ async def probe_audio(media_type: str, stream_id: int):
     url = _vod_url(stream_id, media_type)
     try:
         proc = await asyncio.create_subprocess_exec(
-            "/usr/bin/ffprobe", "-v", "quiet", "-print_format", "json", "-show_streams", url,
+            "/usr/bin/ffprobe",
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
+            "-show_streams",
+            url,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -121,13 +140,15 @@ async def probe_audio(media_type: str, stream_id: int):
         for s in info.get("streams", []):
             if s.get("codec_type") == "audio":
                 tags = s.get("tags", {})
-                tracks.append({
-                    "index": s.get("index", 0),
-                    "language": tags.get("language", "und"),
-                    "title": tags.get("title", ""),
-                    "codec": s.get("codec_name", "unknown"),
-                    "channels": s.get("channels", 0),
-                })
+                tracks.append(
+                    {
+                        "index": s.get("index", 0),
+                        "language": tags.get("language", "und"),
+                        "title": tags.get("title", ""),
+                        "codec": s.get("codec_name", "unknown"),
+                        "channels": s.get("channels", 0),
+                    }
+                )
         AUDIO_CACHE[cache_key] = tracks
         return {"tracks": tracks, "cached": False}
     except TimeoutError:
@@ -142,12 +163,18 @@ async def stream_audio_track(media_type: str, stream_id: int, audio_index: int):
     url = _vod_url(stream_id, media_type)
     try:
         proc = await asyncio.create_subprocess_exec(
-            "/usr/bin/ffmpeg", "-y",
-            "-i", url,
-            "-map", "0:v:0",
-            "-map", f"0:a:{audio_index}",
-            "-c", "copy",
-            "-f", "mpegts",
+            "/usr/bin/ffmpeg",
+            "-y",
+            "-i",
+            url,
+            "-map",
+            "0:v:0",
+            "-map",
+            f"0:a:{audio_index}",
+            "-c",
+            "copy",
+            "-f",
+            "mpegts",
             "pipe:1",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,

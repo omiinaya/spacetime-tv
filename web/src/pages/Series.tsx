@@ -1,13 +1,6 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router";
-import {
-  Tv2,
-  Loader2,
-  AlertCircle,
-  RotateCcw,
-  Search,
-  X,
-} from "lucide-react";
+import { Tv2, Loader2, AlertCircle, RotateCcw, Search, X } from "lucide-react";
 import { toggleSeriesWatchlist as toggleSeriesWl } from "@/lib/watchlist";
 import { api, Category, Series } from "@/lib/api";
 import ContentRow from "@/components/ContentRow";
@@ -37,7 +30,7 @@ function useSeriesWatchlistToggle() {
   const [, setV] = useState(0);
   return useCallback((seriesId: number) => {
     toggleSeriesWl(seriesId);
-    setV(v => v + 1);
+    setV((v) => v + 1);
   }, []);
 }
 
@@ -46,7 +39,11 @@ export default function SeriesPage() {
   const toggleSeriesWatchlist = useSeriesWatchlistToggle();
 
   // ── Cache helper ───────────────────────────────────────────────
-  const loadCache = <T,>(key: string, field: string, ttl = 900000): T | null => {
+  const loadCache = <T,>(
+    key: string,
+    field: string,
+    ttl = 900000,
+  ): T | null => {
     try {
       const raw = sessionStorage.getItem(key);
       if (!raw) return null;
@@ -57,11 +54,13 @@ export default function SeriesPage() {
   };
 
   const [categories, setCategories] = useState<Category[]>(
-    () => loadCache("stv_series_cats", "categories") ?? []
+    () => loadCache("stv_series_cats", "categories") ?? [],
   );
   const [rows, setRows] = useState<Map<string, RowState>>(new Map());
   const [visibleRows, setVisibleRows] = useState(ROWS_PER_PAGE);
-  const [loading, setLoading] = useState(() => !loadCache("stv_series_cats", "categories"));
+  const [loading, setLoading] = useState(
+    () => !loadCache("stv_series_cats", "categories"),
+  );
   const [error, setError] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const fetchingRef = useRef<Set<string>>(new Set());
@@ -70,10 +69,12 @@ export default function SeriesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get("q") || "";
   const setSearchQuery = useCallback(
-    (q: string) => { if (q) setSearchParams({ q }); else setSearchParams({}); },
-    [setSearchParams]
+    (q: string) => {
+      if (q) setSearchParams({ q });
+      else setSearchParams({});
+    },
+    [setSearchParams],
   );
-
 
   // ── "Show All" mode ────────────────────────────────────────────
   const [showAllCatId, setShowAllCatId] = useState<string | null>(null);
@@ -82,9 +83,6 @@ export default function SeriesPage() {
   const [showAllTotal, setShowAllTotal] = useState(0);
   const [showAllPage, setShowAllPage] = useState(1);
   const [showAllLoading, setShowAllLoading] = useState(false);
-
-
-
 
   // Overlay state
   const [overlaySeries, setOverlaySeries] = useState<Series | null>(null);
@@ -107,7 +105,10 @@ export default function SeriesPage() {
       // Search loaded rows for the series
       for (const [, row] of rows) {
         const found = row.series.find((s) => s.series_id === id);
-        if (found) { setOverlaySeries(found); return; }
+        if (found) {
+          setOverlaySeries(found);
+          return;
+        }
       }
       // Not yet loaded — search endpoint can find it (use api.search)
       // Navigate without ?open= to prevent re-triggering
@@ -120,7 +121,7 @@ export default function SeriesPage() {
   // Filter categories by settings
   const filteredCatsBySettings = useMemo(
     () => filterCategories(categories, settings, false, adultUnlocked),
-    [categories, settings, adultUnlocked]
+    [categories, settings, adultUnlocked],
   );
 
   // Load categories (with 15-min sessionStorage cache)
@@ -139,7 +140,10 @@ export default function SeriesPage() {
       .categories()
       .then((d) => {
         setCategories(d.categories);
-        sessionStorage.setItem("stv_series_cats", JSON.stringify({ categories: d.categories, ts: Date.now() }));
+        sessionStorage.setItem(
+          "stv_series_cats",
+          JSON.stringify({ categories: d.categories, ts: Date.now() }),
+        );
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -152,10 +156,12 @@ export default function SeriesPage() {
     const obs = new IntersectionObserver(
       ([e]) => {
         if (e.isIntersecting) {
-          setVisibleRows((v) => Math.min(v + ROWS_PER_PAGE, filteredCatsBySettings.length));
+          setVisibleRows((v) =>
+            Math.min(v + ROWS_PER_PAGE, filteredCatsBySettings.length),
+          );
         }
       },
-      { rootMargin: "400px" }
+      { rootMargin: "400px" },
     );
     obs.observe(sentinel);
     return () => obs.disconnect();
@@ -180,7 +186,13 @@ export default function SeriesPage() {
       const d = await api.series.list(key, SERIES_PER_ROW, 0);
       setRows((prev) => {
         const next = new Map(prev);
-        next.set(key, { cat, series: d.series, total: d.total, loading: false, loaded: true });
+        next.set(key, {
+          cat,
+          series: d.series,
+          total: d.total,
+          loading: false,
+          loaded: true,
+        });
         return next;
       });
     } catch {
@@ -188,7 +200,13 @@ export default function SeriesPage() {
       setRows((prev) => {
         const next = new Map(prev);
         const cur = prev.get(key);
-        next.set(key, { cat, series: cur?.series || [], total: cur?.total || 0, loading: false, loaded: true });
+        next.set(key, {
+          cat,
+          series: cur?.series || [],
+          total: cur?.total || 0,
+          loading: false,
+          loaded: true,
+        });
         return next;
       });
     } finally {
@@ -204,38 +222,43 @@ export default function SeriesPage() {
       if (current.series.length >= current.total) return;
       fetchingRef.current.add(key);
       try {
-        const d = await api.series.list(key, SERIES_PER_ROW, current.series.length);
+        const d = await api.series.list(
+          key,
+          SERIES_PER_ROW,
+          current.series.length,
+        );
         setRows((prev) => {
           const next = new Map(prev);
           const existing = next.get(key)!;
-          next.set(key, { ...existing, series: [...existing.series, ...d.series], total: d.total });
+          next.set(key, {
+            ...existing,
+            series: [...existing.series, ...d.series],
+            total: d.total,
+          });
           return next;
         });
       } finally {
         fetchingRef.current.delete(key);
       }
     },
-    [rows]
+    [rows],
   );
 
   // ── "Show All" fetch + pagination ─────────────────────────────
-  const fetchShowAll = useCallback(
-    async (catId: string, page: number) => {
-      setShowAllLoading(true);
-      const offset = (page - 1) * SHOW_ALL_PAGE_SIZE;
-      try {
-        const d = await api.series.list(catId, SHOW_ALL_PAGE_SIZE, offset);
-        setShowAllSeries(d.series);
-        setShowAllTotal(d.total);
-        setShowAllPage(page);
-      } catch {
-        // SyntaxError or network error — silent; empty state handles it
-      } finally {
-        setShowAllLoading(false);
-      }
-    },
-    []
-  );
+  const fetchShowAll = useCallback(async (catId: string, page: number) => {
+    setShowAllLoading(true);
+    const offset = (page - 1) * SHOW_ALL_PAGE_SIZE;
+    try {
+      const d = await api.series.list(catId, SHOW_ALL_PAGE_SIZE, offset);
+      setShowAllSeries(d.series);
+      setShowAllTotal(d.total);
+      setShowAllPage(page);
+    } catch {
+      // SyntaxError or network error — silent; empty state handles it
+    } finally {
+      setShowAllLoading(false);
+    }
+  }, []);
 
   const openShowAll = useCallback(
     (cat: Category) => {
@@ -243,7 +266,7 @@ export default function SeriesPage() {
       setShowAllCatName(cat.category_name);
       fetchShowAll(cat.category_id, 1);
     },
-    [fetchShowAll]
+    [fetchShowAll],
   );
 
   const closeShowAll = useCallback(() => {
@@ -262,7 +285,7 @@ export default function SeriesPage() {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     },
-    [showAllCatId, fetchShowAll]
+    [showAllCatId, fetchShowAll],
   );
 
   // Lazy-fetch visible rows (after settings filter)
@@ -293,7 +316,7 @@ export default function SeriesPage() {
       if (!q) return list;
       return list.filter((s) => s.name.toLowerCase().includes(q));
     },
-    [q]
+    [q],
   );
 
   if (loading) {
@@ -321,7 +344,6 @@ export default function SeriesPage() {
       </div>
     );
   }
-
 
   return (
     <div className="space-y-6">
@@ -370,7 +392,10 @@ export default function SeriesPage() {
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span className="truncate">{error}</span>
           <button
-            onClick={() => { setError(null); window.location.reload(); }}
+            onClick={() => {
+              setError(null);
+              window.location.reload();
+            }}
             className="ml-auto shrink-0 flex items-center gap-1 px-2 py-1 rounded text-xs border border-border hover:bg-muted"
           >
             <RotateCcw className="h-3 w-3" />
@@ -433,7 +458,11 @@ export default function SeriesPage() {
               );
             }
 
-            if (q && filtered.length === 0 && !cat.category_name.toLowerCase().includes(q)) {
+            if (
+              q &&
+              filtered.length === 0 &&
+              !cat.category_name.toLowerCase().includes(q)
+            ) {
               return null;
             }
 
@@ -443,7 +472,9 @@ export default function SeriesPage() {
                 title={cat.category_name}
                 itemCount={q ? filtered.length : row.total}
                 loading={row.loading && seriesList.length > 0}
-                onScrollEnd={q ? undefined : hasMore ? () => loadMore(cat) : undefined}
+                onScrollEnd={
+                  q ? undefined : hasMore ? () => loadMore(cat) : undefined
+                }
                 action={
                   !q && row.total > SERIES_PER_ROW
                     ? { label: "Show All", onClick: () => openShowAll(cat) }
@@ -474,7 +505,9 @@ export default function SeriesPage() {
       {!showAllCatId && filteredCatsBySettings.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Tv2 className="h-10 w-10 text-muted-foreground/20 mb-3" />
-          <p className="text-sm text-muted-foreground">No categories match your filters</p>
+          <p className="text-sm text-muted-foreground">
+            No categories match your filters
+          </p>
           <p className="text-xs text-muted-foreground/50 mt-1">
             Adjust your language or service settings to see more content
           </p>
@@ -491,5 +524,3 @@ export default function SeriesPage() {
     </div>
   );
 }
-
-

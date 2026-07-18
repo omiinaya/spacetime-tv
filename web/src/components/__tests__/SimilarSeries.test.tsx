@@ -27,9 +27,42 @@ vi.mock("@/lib/api", () => ({
 import { api } from "@/lib/api";
 
 const sampleSeries = [
-  { series_id: 1, name: "Series One", cover: "/covers/series1.jpg", rating: "9.0", category_id: ["1"], category_ids: ["1"], stream_type: "series", num: 1, series_episodes: [], release_date: "" },
-  { series_id: 2, name: "Series Two", cover: "/covers/series2.jpg", rating: "8.2", category_id: ["1"], category_ids: ["1"], stream_type: "series", num: 2, series_episodes: [], release_date: "" },
-  { series_id: 3, name: "Series Three", cover: "", rating: "", category_id: ["1"], category_ids: ["1"], stream_type: "series", num: 3, series_episodes: [], release_date: "" },
+  {
+    series_id: 1,
+    name: "Series One",
+    cover: "/covers/series1.jpg",
+    rating: "9.0",
+    category_id: ["1"],
+    category_ids: ["1"],
+    stream_type: "series",
+    num: 1,
+    series_episodes: [],
+    release_date: "",
+  },
+  {
+    series_id: 2,
+    name: "Series Two",
+    cover: "/covers/series2.jpg",
+    rating: "8.2",
+    category_id: ["1"],
+    category_ids: ["1"],
+    stream_type: "series",
+    num: 2,
+    series_episodes: [],
+    release_date: "",
+  },
+  {
+    series_id: 3,
+    name: "Series Three",
+    cover: "",
+    rating: "",
+    category_id: ["1"],
+    category_ids: ["1"],
+    stream_type: "series",
+    num: 3,
+    series_episodes: [],
+    release_date: "",
+  },
 ];
 
 describe("SimilarSeries", () => {

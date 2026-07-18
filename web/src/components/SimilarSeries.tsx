@@ -8,30 +8,45 @@ interface SimilarSeriesProps {
   currentId: number;
 }
 
-export default function SimilarSeries({ categoryId, currentId }: SimilarSeriesProps) {
+export default function SimilarSeries({
+  categoryId,
+  currentId,
+}: SimilarSeriesProps) {
   const navigate = useNavigate();
   const [seriesList, setSeriesList] = useState<Series[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    api.series.list(categoryId, 12, 0).then((d) => {
-      if (!cancelled) {
-        setSeriesList(d.series.filter((s) => s.series_id !== currentId).slice(0, 10));
-      }
-    }).catch(() => {});
-    return () => { cancelled = true; };
+    api.series
+      .list(categoryId, 12, 0)
+      .then((d) => {
+        if (!cancelled) {
+          setSeriesList(
+            d.series.filter((s) => s.series_id !== currentId).slice(0, 10),
+          );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
   }, [categoryId, currentId]);
 
   if (seriesList.length === 0) return null;
 
   const openSeries = (s: Series) => {
-    navigate('/series', { state: { openSeries: s } });
+    navigate("/series", { state: { openSeries: s } });
   };
 
   return (
     <div className="mt-6">
-      <h3 className="text-sm font-semibold text-white/50 mb-3">More Like This</h3>
-      <div className="flex gap-3 overflow-x-auto pb-2" style={{ touchAction: "manipulation" }}>
+      <h3 className="text-sm font-semibold text-white/50 mb-3">
+        More Like This
+      </h3>
+      <div
+        className="flex gap-3 overflow-x-auto pb-2"
+        style={{ touchAction: "manipulation" }}
+      >
         {seriesList.map((s) => (
           <button
             key={s.series_id}
@@ -42,7 +57,7 @@ export default function SimilarSeries({ categoryId, currentId }: SimilarSeriesPr
               {s.cover ? (
                 <img
                   src={imageUrl(s.cover)}
-                  alt={s.name ? `${s.name} poster` : ''}
+                  alt={s.name ? `${s.name} poster` : ""}
                   className="w-full h-full object-cover"
                   loading="lazy"
                   onError={(e) => {

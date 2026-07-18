@@ -19,7 +19,11 @@ describe("ContentRow", () => {
   });
 
   it("renders itemCount when provided", () => {
-    render(<ContentRow title="Movies" itemCount={42}>{defaultChildren}</ContentRow>);
+    render(
+      <ContentRow title="Movies" itemCount={42}>
+        {defaultChildren}
+      </ContentRow>,
+    );
     expect(screen.getByText("42")).toBeInTheDocument();
   });
 
@@ -30,7 +34,11 @@ describe("ContentRow", () => {
   });
 
   it("renders itemCount with locale formatting", () => {
-    render(<ContentRow title="Movies" itemCount={10000}>{defaultChildren}</ContentRow>);
+    render(
+      <ContentRow title="Movies" itemCount={10000}>
+        {defaultChildren}
+      </ContentRow>,
+    );
     expect(screen.getByText("10,000")).toBeInTheDocument();
   });
 
@@ -38,7 +46,11 @@ describe("ContentRow", () => {
 
   it("renders action button when action prop provided", () => {
     const action = { label: "View all →", onClick: vi.fn() };
-    render(<ContentRow title="Movies" action={action}>{defaultChildren}</ContentRow>);
+    render(
+      <ContentRow title="Movies" action={action}>
+        {defaultChildren}
+      </ContentRow>,
+    );
     expect(screen.getByText("View all →")).toBeInTheDocument();
   });
 
@@ -47,7 +59,7 @@ describe("ContentRow", () => {
     render(
       <ContentRow title="Movies" action={{ label: "View all", onClick }}>
         {defaultChildren}
-      </ContentRow>
+      </ContentRow>,
     );
     fireEvent.click(screen.getByText("View all"));
     expect(onClick).toHaveBeenCalledOnce();
@@ -69,21 +81,21 @@ describe("ContentRow", () => {
 
   it("assigns data-row-idx attributes for keyboard nav", () => {
     render(<ContentRow title="Movies">{defaultChildren}</ContentRow>);
-    expect(screen.getByText("Card 1").closest("[data-row-idx]")).toHaveAttribute(
-      "data-row-idx",
-      "0"
-    );
-    expect(screen.getByText("Card 2").closest("[data-row-idx]")).toHaveAttribute(
-      "data-row-idx",
-      "1"
-    );
+    expect(
+      screen.getByText("Card 1").closest("[data-row-idx]"),
+    ).toHaveAttribute("data-row-idx", "0");
+    expect(
+      screen.getByText("Card 2").closest("[data-row-idx]"),
+    ).toHaveAttribute("data-row-idx", "1");
   });
 
   // ── Loading indicator ───────────────────────────────────
 
   it("shows loading skeleton items when loading is true", () => {
     const { container } = render(
-      <ContentRow title="Movies" loading>{defaultChildren}</ContentRow>
+      <ContentRow title="Movies" loading>
+        {defaultChildren}
+      </ContentRow>,
     );
     // Should have skeleton placeholders with min-w-[120px]
     const loadingArea = container.querySelector(".min-w-\\[120px\\]");
@@ -92,7 +104,7 @@ describe("ContentRow", () => {
 
   it("does not show loading indicator when loading is false", () => {
     const { container } = render(
-      <ContentRow title="Movies">{defaultChildren}</ContentRow>
+      <ContentRow title="Movies">{defaultChildren}</ContentRow>,
     );
     const loadingArea = container.querySelector(".min-w-\\[120px\\]");
     expect(loadingArea).toBeFalsy();
@@ -118,7 +130,9 @@ describe("ContentRow", () => {
   it("renders content row with keyboard support setup", () => {
     render(<ContentRow title="Movies">{defaultChildren}</ContentRow>);
     // The scroll container should have touch-action: manipulation
-    const scrollContainer = screen.getByText("Card 1").closest(".overflow-x-auto");
+    const scrollContainer = screen
+      .getByText("Card 1")
+      .closest(".overflow-x-auto");
     expect(scrollContainer).toBeInTheDocument();
   });
 
@@ -145,7 +159,9 @@ describe("ContentRow", () => {
   });
 
   it("has group/row class on the outer container", () => {
-    const { container } = render(<ContentRow title="Movies">{defaultChildren}</ContentRow>);
+    const { container } = render(
+      <ContentRow title="Movies">{defaultChildren}</ContentRow>,
+    );
     const outer = container.firstChild as HTMLElement;
     expect(outer.className).toContain("group/row");
   });
@@ -161,7 +177,7 @@ describe("ContentRow", () => {
     render(
       <ContentRow title="Movies" onScrollEnd={onScrollEnd}>
         {defaultChildren}
-      </ContentRow>
+      </ContentRow>,
     );
     expect(screen.getByText("Card 1")).toBeInTheDocument();
   });

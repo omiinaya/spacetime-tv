@@ -27,12 +27,14 @@ def _epg_timestamp(dt=None):
 
 # ── _parse_ts ─────────────────────────────────────────────────────────
 
+
 class TestParseTs:
     """_parse_ts: XMLTV timestamp parsing."""
 
     def test_parse_ts_valid(self):
         """A well-formed XMLTV timestamp is parsed to datetime."""
         from routes.guide_epg import _parse_ts
+
         ts = "20260628123000 +0000"
         dt = _parse_ts(ts)
         assert dt.year == 2026
@@ -45,6 +47,7 @@ class TestParseTs:
     def test_parse_ts_specific(self):
         """Parse a timestamp with specific time."""
         from routes.guide_epg import _parse_ts
+
         ts = "20240704081530 +0000"
         dt = _parse_ts(ts)
         assert dt == datetime(2024, 7, 4, 8, 15, 30, tzinfo=UTC)
@@ -52,6 +55,7 @@ class TestParseTs:
     def test_parse_ts_midnight(self):
         """Parse a midnight timestamp."""
         from routes.guide_epg import _parse_ts
+
         ts = "20250101000000 +0000"
         dt = _parse_ts(ts)
         assert dt.hour == 0
@@ -59,6 +63,7 @@ class TestParseTs:
 
 
 # ── load_epg ────────────────────────────────────────────────────────────
+
 
 class TestLoadEpg:
     """load_epg(): EPG loading from cache, disk, or HTTP."""
@@ -153,7 +158,9 @@ class TestLoadEpg:
         mock_cache_file.exists.return_value = False
 
         mock_response = MagicMock()
-        mock_response.text = '<?xml version="1.0"?><tv><channel id="C1"><display-name>Chan1</display-name></channel></tv>'
+        mock_response.text = (
+            '<?xml version="1.0"?><tv><channel id="C1"><display-name>Chan1</display-name></channel></tv>'
+        )
         mock_response.raise_for_status = MagicMock()
         mock_client.get.return_value = mock_response
 
@@ -237,6 +244,7 @@ class TestLoadEpg:
 
 # ── load_epg_background ─────────────────────────────────────────────────
 
+
 class TestLoadEpgBackground:
     """load_epg_background(): background refresh task management."""
 
@@ -266,6 +274,7 @@ class TestLoadEpgBackground:
         import routes.guide_epg as _ge
         from routes.guide_epg import load_epg_background
         from state import epg_cache
+
         _ge._epg_refresh_task = None
 
         old_time = time.time() - 99999
@@ -298,6 +307,7 @@ class TestLoadEpgBackground:
 
 # ── _refresh_epg_background ─────────────────────────────────────────────
 
+
 class TestRefreshEpgBackground:
     """_refresh_epg_background(): wraps load_epg exception-free."""
 
@@ -329,6 +339,7 @@ class TestRefreshEpgBackground:
 
 # ── _build_guide_cache ──────────────────────────────────────────────────
 
+
 class TestBuildGuideCache:
     """_build_guide_cache(): guide cache building edge cases."""
 
@@ -341,15 +352,17 @@ class TestBuildGuideCache:
         now = datetime.now(UTC)
         epg_data = {
             "channels": [{"id": "BBC1.uk", "name": "BBC One", "icon": ""}],
-            "programmes": [{
-                "channel": "BBC1.uk",
-                "start": _epg_timestamp(now - timedelta(hours=1)),
-                "stop": _epg_timestamp(now + timedelta(hours=1)),
-                "title": "Show1",
-                "subtitle": "",
-                "desc": "A show",
-                "category": "",
-            }],
+            "programmes": [
+                {
+                    "channel": "BBC1.uk",
+                    "start": _epg_timestamp(now - timedelta(hours=1)),
+                    "stop": _epg_timestamp(now + timedelta(hours=1)),
+                    "title": "Show1",
+                    "subtitle": "",
+                    "desc": "A show",
+                    "category": "",
+                }
+            ],
         }
         mock_load_bg.return_value = epg_data
 
@@ -373,15 +386,17 @@ class TestBuildGuideCache:
         now = datetime.now(UTC)
         epg_data = {
             "channels": [{"id": "BBC1.uk", "name": "BBC One", "icon": ""}],
-            "programmes": [{
-                "channel": "BBC1.uk",
-                "start": _epg_timestamp(now - timedelta(hours=1)),
-                "stop": _epg_timestamp(now + timedelta(hours=1)),
-                "title": "Show1",
-                "subtitle": "",
-                "desc": "A show",
-                "category": "",
-            }],
+            "programmes": [
+                {
+                    "channel": "BBC1.uk",
+                    "start": _epg_timestamp(now - timedelta(hours=1)),
+                    "stop": _epg_timestamp(now + timedelta(hours=1)),
+                    "title": "Show1",
+                    "subtitle": "",
+                    "desc": "A show",
+                    "category": "",
+                }
+            ],
         }
         mock_load_bg.return_value = epg_data
 
@@ -405,15 +420,17 @@ class TestBuildGuideCache:
         now = datetime.now(UTC)
         epg_data = {
             "channels": [{"id": "C1", "name": "Chan1", "icon": ""}],
-            "programmes": [{
-                "channel": "C1",
-                "start": _epg_timestamp(now - timedelta(hours=1)),
-                "stop": _epg_timestamp(now + timedelta(hours=1)),
-                "title": "Show1",
-                "subtitle": "Ep1",
-                "desc": "A show",
-                "category": "entertainment",
-            }],
+            "programmes": [
+                {
+                    "channel": "C1",
+                    "start": _epg_timestamp(now - timedelta(hours=1)),
+                    "stop": _epg_timestamp(now + timedelta(hours=1)),
+                    "title": "Show1",
+                    "subtitle": "Ep1",
+                    "desc": "A show",
+                    "category": "entertainment",
+                }
+            ],
         }
         mock_load_bg.return_value = epg_data
 
@@ -605,6 +622,7 @@ class TestBuildGuideCache:
 
 
 # ── _epg_broadcast_loop ──────────────────────────────────────────────────
+
 
 class TestEpgBroadcastLoop:
     """_epg_broadcast_loop(): SSE broadcast loop (tested via single iteration)."""

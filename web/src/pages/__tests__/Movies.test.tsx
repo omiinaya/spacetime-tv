@@ -20,11 +20,24 @@ vi.mock("@/lib/api", () => ({
   api: {
     movies: {
       unified: (...args: unknown[]) =>
-        (mockMoviesUnified as unknown as (...a: unknown[]) => Promise<{ movies: UnifiedMovie[]; total: number; offset: number; limit: number }>)(...args),
+        (
+          mockMoviesUnified as unknown as (
+            ...a: unknown[]
+          ) => Promise<{
+            movies: UnifiedMovie[];
+            total: number;
+            offset: number;
+            limit: number;
+          }>
+        )(...args),
     },
     tmdb: {
       trending: (...args: unknown[]) =>
-        (mockTmdbTrending as unknown as (...a: unknown[]) => Promise<{ trending: unknown[]; enabled: boolean }>)(...args),
+        (
+          mockTmdbTrending as unknown as (
+            ...a: unknown[]
+          ) => Promise<{ trending: unknown[]; enabled: boolean }>
+        )(...args),
     },
     watchlist: { progress: vi.fn() },
   },
@@ -44,42 +57,84 @@ vi.mock("@/lib/watchlist", () => ({
 
 // ── Mock continueWatching ────────────────────────────────
 const mockGetMovieCW = vi.fn<() => unknown[]>(() => []);
-const mockLoadServerProgress = vi.fn<() => Promise<unknown>>(() => Promise.resolve({ series: [], movies: [] }));
+const mockLoadServerProgress = vi.fn<() => Promise<unknown>>(() =>
+  Promise.resolve({ series: [], movies: [] }),
+);
 const mockRemoveMovieProgress = vi.fn();
 
 vi.mock("@/lib/continueWatching", () => ({
   getMovieContinueWatching: (...args: unknown[]) =>
     (mockGetMovieCW as (...a: unknown[]) => unknown[])(...args),
   loadServerProgress: (...args: unknown[]) =>
-    (mockLoadServerProgress as (...a: unknown[]) => Promise<{ series: unknown[]; movies: unknown[] }>)(...args),
+    (
+      mockLoadServerProgress as (
+        ...a: unknown[]
+      ) => Promise<{ series: unknown[]; movies: unknown[] }>
+    )(...args),
   removeMovieProgress: (...args: unknown[]) =>
     (mockRemoveMovieProgress as (...a: unknown[]) => void)(...args),
 }));
 
 // ── Mock child components ────────────────────────────────
 vi.mock("@/components/MovieOverlay", () => ({
-  default: ({ movie, onClose }: { movie: { name?: string }; onClose: () => void }) =>
+  default: ({
+    movie,
+    onClose,
+  }: {
+    movie: { name?: string };
+    onClose: () => void;
+  }) => (
     <div data-testid="movie-overlay">
       <span>{movie?.name} overlay</span>
-      <button onClick={onClose} aria-label="Close overlay">Close</button>
-    </div>,
+      <button onClick={onClose} aria-label="Close overlay">
+        Close
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("@/components/ContentRow", () => ({
-  default: ({ title, children }: { title: string; children: React.ReactNode }) =>
+  default: ({
+    title,
+    children,
+  }: {
+    title: string;
+    children: React.ReactNode;
+  }) => (
     <div data-testid="content-row">
       <h3>{title}</h3>
       {children}
-    </div>,
+    </div>
+  ),
 }));
 
 vi.mock("@/components/Pagination", () => ({
-  Pagination: ({ currentPage, totalPages, onPageChange }: { currentPage: number; totalPages: number; onPageChange: (p: number) => void }) =>
+  Pagination: ({
+    currentPage,
+    totalPages,
+    onPageChange,
+  }: {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (p: number) => void;
+  }) =>
     totalPages <= 1 ? null : (
       <div data-testid="pagination">
-        <button onClick={() => onPageChange(currentPage - 1)} aria-label="Previous page">Prev</button>
-        <span>{currentPage} / {totalPages}</span>
-        <button onClick={() => onPageChange(currentPage + 1)} aria-label="Next page">Next</button>
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          aria-label="Previous page"
+        >
+          Prev
+        </button>
+        <span>
+          {currentPage} / {totalPages}
+        </span>
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          aria-label="Next page"
+        >
+          Next
+        </button>
       </div>
     ),
 }));
@@ -93,23 +148,29 @@ vi.mock("@/components/SearchHistory", () => ({
 // ── Mock IntersectionObserver (jsdom polyfill) ────────────
 const mockIntersectionObserve = vi.fn();
 const mockIntersectionDisconnect = vi.fn();
-vi.stubGlobal("IntersectionObserver", vi.fn(function MockIntersectionObserver() {
-  this.observe = mockIntersectionObserve;
-  this.disconnect = mockIntersectionDisconnect;
-  this.unobserve = vi.fn();
-  this.takeRecords = vi.fn(() => []);
-  return this;
-}));
+vi.stubGlobal(
+  "IntersectionObserver",
+  vi.fn(function MockIntersectionObserver() {
+    this.observe = mockIntersectionObserve;
+    this.disconnect = mockIntersectionDisconnect;
+    this.unobserve = vi.fn();
+    this.takeRecords = vi.fn(() => []);
+    return this;
+  }),
+);
 
 // ── Mock ResizeObserver (jsdom polyfill) ─────────────────
 const mockResizeObserve = vi.fn();
 const mockResizeDisconnect = vi.fn();
-vi.stubGlobal("ResizeObserver", vi.fn(function MockResizeObserver() {
-  this.observe = mockResizeObserve;
-  this.disconnect = mockResizeDisconnect;
-  this.unobserve = vi.fn();
-  return this;
-}));
+vi.stubGlobal(
+  "ResizeObserver",
+  vi.fn(function MockResizeObserver() {
+    this.observe = mockResizeObserve;
+    this.disconnect = mockResizeDisconnect;
+    this.unobserve = vi.fn();
+    return this;
+  }),
+);
 
 // ── Sample data ──────────────────────────────────────────
 const sampleMovies: UnifiedMovie[] = [
@@ -124,7 +185,14 @@ const sampleMovies: UnifiedMovie[] = [
     category_id: "10",
     container_extension: "mp4",
     base_name: "Inception",
-    languages: [{ code: "EN", name: "English", stream_id: 101, container_extension: "mp4" }],
+    languages: [
+      {
+        code: "EN",
+        name: "English",
+        stream_id: 101,
+        container_extension: "mp4",
+      },
+    ],
     language_count: 1,
     added: "1700000000",
   },
@@ -140,8 +208,18 @@ const sampleMovies: UnifiedMovie[] = [
     container_extension: "mp4",
     base_name: "The Matrix",
     languages: [
-      { code: "EN", name: "English", stream_id: 102, container_extension: "mp4" },
-      { code: "FR", name: "French", stream_id: 103, container_extension: "mp4" },
+      {
+        code: "EN",
+        name: "English",
+        stream_id: 102,
+        container_extension: "mp4",
+      },
+      {
+        code: "FR",
+        name: "French",
+        stream_id: 103,
+        container_extension: "mp4",
+      },
     ],
     language_count: 2,
     added: "1690000000",
@@ -157,13 +235,26 @@ const sampleMovies: UnifiedMovie[] = [
     category_id: "10",
     container_extension: "mkv",
     base_name: "Interstellar",
-    languages: [{ code: "EN", name: "English", stream_id: 103, container_extension: "mkv" }],
+    languages: [
+      {
+        code: "EN",
+        name: "English",
+        stream_id: 103,
+        container_extension: "mkv",
+      },
+    ],
     language_count: 1,
   },
 ];
 
 const sampleTrending = [
-  { id: 27205, title: "Inception", poster_path: "/inception.jpg", vote_average: 8.8, release_date: "2010-07-16" },
+  {
+    id: 27205,
+    title: "Inception",
+    poster_path: "/inception.jpg",
+    vote_average: 8.8,
+    release_date: "2010-07-16",
+  },
 ];
 
 // ── Helper ─────────────────────────────────────────────────
@@ -176,7 +267,12 @@ function renderMovies() {
 }
 
 function setupDefaultMocks() {
-  mockMoviesUnified.mockResolvedValue({ movies: sampleMovies, total: sampleMovies.length, offset: 0, limit: 50 });
+  mockMoviesUnified.mockResolvedValue({
+    movies: sampleMovies,
+    total: sampleMovies.length,
+    offset: 0,
+    limit: 50,
+  });
   mockTmdbTrending.mockResolvedValue({ trending: [], enabled: false });
   mockLoadServerProgress.mockResolvedValue({ series: [], movies: [] });
   localStorage.clear();
@@ -199,7 +295,7 @@ describe("Movies", () => {
     it("shows skeleton grid while movies load", async () => {
       renderMovies();
       // Should have PosterCardSkeleton elements in the grid
-      const skeletonGrid = document.querySelector('.grid');
+      const skeletonGrid = document.querySelector(".grid");
       expect(skeletonGrid).toBeInTheDocument();
       // Should not show empty state or movie cards yet
       expect(screen.queryByText("No movies available")).not.toBeInTheDocument();
@@ -215,7 +311,12 @@ describe("Movies", () => {
   // ── Empty state ─────────────────────────────────────────
   describe("empty state", () => {
     beforeEach(() => {
-      mockMoviesUnified.mockResolvedValue({ movies: [], total: 0, offset: 0, limit: 50 });
+      mockMoviesUnified.mockResolvedValue({
+        movies: [],
+        total: 0,
+        offset: 0,
+        limit: 50,
+      });
     });
 
     it('shows "No movies available" when no movies and no search', async () => {
@@ -309,8 +410,12 @@ describe("Movies", () => {
         expect(movieElements.length).toBeGreaterThanOrEqual(1);
       });
 
-      expect(screen.getAllByText("The Matrix").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText("Interstellar").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("The Matrix").length).toBeGreaterThanOrEqual(
+        1,
+      );
+      expect(screen.getAllByText("Interstellar").length).toBeGreaterThanOrEqual(
+        1,
+      );
     });
 
     it("renders poster images for movies with stream_icon", async () => {
@@ -319,8 +424,8 @@ describe("Movies", () => {
       await waitFor(() => {
         const imgs = screen.getAllByRole("img");
         // Inception and Matrix have stream_icon, Interstellar doesn't
-        const posterImgs = imgs.filter(img =>
-          img.getAttribute("alt")?.includes("poster")
+        const posterImgs = imgs.filter((img) =>
+          img.getAttribute("alt")?.includes("poster"),
         );
         expect(posterImgs.length).toBeGreaterThanOrEqual(2);
       });
@@ -408,12 +513,22 @@ describe("Movies", () => {
 
   // ── Continue Watching section ──────────────────────────
   describe("Continue Watching section", () => {
-    const cwMovie = { movieId: 101, movieName: "Inception", poster: "https://example.com/inception.jpg", progressSeconds: 300, durationSeconds: 3600, updatedAt: Date.now() };
+    const cwMovie = {
+      movieId: 101,
+      movieName: "Inception",
+      poster: "https://example.com/inception.jpg",
+      progressSeconds: 300,
+      durationSeconds: 3600,
+      updatedAt: Date.now(),
+    };
 
     beforeEach(() => {
       mockGetMovieCW.mockReturnValue([cwMovie]);
       // loadServerProgress should return matching data so it doesn't overwrite
-      mockLoadServerProgress.mockResolvedValue({ series: [], movies: [cwMovie] });
+      mockLoadServerProgress.mockResolvedValue({
+        series: [],
+        movies: [cwMovie],
+      });
     });
 
     it("shows Continue Watching heading when CW movies exist and match loaded movies", async () => {
@@ -439,7 +554,9 @@ describe("Movies", () => {
       renderMovies();
 
       await waitFor(() => {
-        expect(screen.getByLabelText("Remove from continue watching")).toBeInTheDocument();
+        expect(
+          screen.getByLabelText("Remove from continue watching"),
+        ).toBeInTheDocument();
       });
     });
 
@@ -458,11 +575,21 @@ describe("Movies", () => {
 
   // ── Recently Completed section ─────────────────────────
   describe("Recently Completed section", () => {
-    const completedMovie = { movieId: 101, movieName: "Inception", poster: "https://example.com/inception.jpg", progressSeconds: 3500, durationSeconds: 3600, updatedAt: Date.now() }; // 97% done
+    const completedMovie = {
+      movieId: 101,
+      movieName: "Inception",
+      poster: "https://example.com/inception.jpg",
+      progressSeconds: 3500,
+      durationSeconds: 3600,
+      updatedAt: Date.now(),
+    }; // 97% done
 
     beforeEach(() => {
       mockGetMovieCW.mockReturnValue([completedMovie]);
-      mockLoadServerProgress.mockResolvedValue({ series: [], movies: [completedMovie] });
+      mockLoadServerProgress.mockResolvedValue({
+        series: [],
+        movies: [completedMovie],
+      });
     });
 
     it("shows Recently Completed heading when movies are >= 90% done", async () => {
@@ -477,7 +604,7 @@ describe("Movies", () => {
       renderMovies();
 
       await waitFor(() => {
-        const checkmarks = document.querySelectorAll('.text-green-400');
+        const checkmarks = document.querySelectorAll(".text-green-400");
         expect(checkmarks.length).toBeGreaterThanOrEqual(1);
       });
     });
@@ -486,7 +613,10 @@ describe("Movies", () => {
   // ── Trending section ───────────────────────────────────
   describe("Trending section", () => {
     beforeEach(() => {
-      mockTmdbTrending.mockResolvedValue({ trending: sampleTrending, enabled: true });
+      mockTmdbTrending.mockResolvedValue({
+        trending: sampleTrending,
+        enabled: true,
+      });
     });
 
     it("shows Trending This Week section when enabled and data available", async () => {
@@ -498,7 +628,10 @@ describe("Movies", () => {
     });
 
     it("does not show trending section when disabled", async () => {
-      mockTmdbTrending.mockResolvedValue({ trending: sampleTrending, enabled: false });
+      mockTmdbTrending.mockResolvedValue({
+        trending: sampleTrending,
+        enabled: false,
+      });
       renderMovies();
 
       await waitFor(() => {
@@ -560,8 +693,8 @@ describe("Movies", () => {
 
       // X clear button should appear
       const xButtons = document.querySelectorAll("button");
-      const clearBtn = Array.from(xButtons).find(btn =>
-        btn.closest(".relative")?.querySelector("input")
+      const clearBtn = Array.from(xButtons).find((btn) =>
+        btn.closest(".relative")?.querySelector("input"),
       );
       expect(clearBtn).toBeInTheDocument();
     });
@@ -578,8 +711,8 @@ describe("Movies", () => {
 
       // Find and click the X button
       const xButtons = document.querySelectorAll("button");
-      const clearBtn = Array.from(xButtons).find(btn =>
-        btn.closest(".relative")?.querySelector("input")
+      const clearBtn = Array.from(xButtons).find((btn) =>
+        btn.closest(".relative")?.querySelector("input"),
       );
       if (clearBtn) fireEvent.click(clearBtn);
 
@@ -593,7 +726,12 @@ describe("Movies", () => {
   describe("pagination", () => {
     beforeEach(() => {
       // Total > page size to trigger pagination
-      mockMoviesUnified.mockResolvedValue({ movies: sampleMovies, total: 150, offset: 0, limit: 50 });
+      mockMoviesUnified.mockResolvedValue({
+        movies: sampleMovies,
+        total: 150,
+        offset: 0,
+        limit: 50,
+      });
     });
 
     it("shows pagination controls when totalPages > 1", async () => {
@@ -614,7 +752,12 @@ describe("Movies", () => {
 
     it("does not show pagination when totalPages <= 1", async () => {
       // Override: only 3 movies → totalPages = ceil(3/50) = 1
-      mockMoviesUnified.mockResolvedValue({ movies: sampleMovies, total: 3, offset: 0, limit: 50 });
+      mockMoviesUnified.mockResolvedValue({
+        movies: sampleMovies,
+        total: 3,
+        offset: 0,
+        limit: 50,
+      });
       renderMovies();
 
       await waitFor(() => {
@@ -629,7 +772,12 @@ describe("Movies", () => {
   describe("loading more", () => {
     it("shows spinner when loadingMore is true", async () => {
       // Make the fetch return more data (total > current count)
-      mockMoviesUnified.mockResolvedValue({ movies: sampleMovies, total: 150, offset: 0, limit: 50 });
+      mockMoviesUnified.mockResolvedValue({
+        movies: sampleMovies,
+        total: 150,
+        offset: 0,
+        limit: 50,
+      });
       renderMovies();
 
       await waitFor(() => {
@@ -641,7 +789,12 @@ describe("Movies", () => {
   // ── Edge cases ─────────────────────────────────────────
   describe("edge cases", () => {
     it("handles single movie gracefully", async () => {
-      mockMoviesUnified.mockResolvedValue({ movies: [sampleMovies[0]], total: 1, offset: 0, limit: 50 });
+      mockMoviesUnified.mockResolvedValue({
+        movies: [sampleMovies[0]],
+        total: 1,
+        offset: 0,
+        limit: 50,
+      });
 
       renderMovies();
 
@@ -659,7 +812,12 @@ describe("Movies", () => {
 
     it("handles movies without year in name gracefully", async () => {
       const noYearMovie = { ...sampleMovies[0], name: "Inception" };
-      mockMoviesUnified.mockResolvedValue({ movies: [noYearMovie], total: 1, offset: 0, limit: 50 });
+      mockMoviesUnified.mockResolvedValue({
+        movies: [noYearMovie],
+        total: 1,
+        offset: 0,
+        limit: 50,
+      });
 
       renderMovies();
 
@@ -674,7 +832,12 @@ describe("Movies", () => {
 
     it("handles movies without rating gracefully", async () => {
       const noRatingMovie = { ...sampleMovies[0], rating: "" };
-      mockMoviesUnified.mockResolvedValue({ movies: [noRatingMovie], total: 1, offset: 0, limit: 50 });
+      mockMoviesUnified.mockResolvedValue({
+        movies: [noRatingMovie],
+        total: 1,
+        offset: 0,
+        limit: 50,
+      });
 
       renderMovies();
 
@@ -690,8 +853,19 @@ describe("Movies", () => {
     });
 
     it("handles movie with no tmdb gracefully", async () => {
-      const noTmdbMovie = { ...sampleMovies[0], tmdb: undefined, stream_id: 999, languages: [], language_count: 0 };
-      mockMoviesUnified.mockResolvedValue({ movies: [noTmdbMovie], total: 1, offset: 0, limit: 50 });
+      const noTmdbMovie = {
+        ...sampleMovies[0],
+        tmdb: undefined,
+        stream_id: 999,
+        languages: [],
+        language_count: 0,
+      };
+      mockMoviesUnified.mockResolvedValue({
+        movies: [noTmdbMovie],
+        total: 1,
+        offset: 0,
+        limit: 50,
+      });
 
       renderMovies();
 
@@ -711,11 +885,16 @@ describe("Movies", () => {
       });
 
       // Click a movie card to open overlay - find a grid card (not Recently Added)
-      const allCards = screen.getAllByRole("button").filter(btn =>
-        btn.textContent?.includes("Inception") &&
-        !btn.closest('[data-testid="pagination"]')
+      const allCards = screen
+        .getAllByRole("button")
+        .filter(
+          (btn) =>
+            btn.textContent?.includes("Inception") &&
+            !btn.closest('[data-testid="pagination"]'),
+        );
+      const gridCard = allCards.find(
+        (btn) => btn.getAttribute("data-grid-idx") !== null,
       );
-      const gridCard = allCards.find(btn => btn.getAttribute("data-grid-idx") !== null);
       if (gridCard) fireEvent.click(gridCard);
 
       await waitFor(() => {
