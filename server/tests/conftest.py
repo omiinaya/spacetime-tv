@@ -33,6 +33,10 @@ _hits_file = _state_dir / "stream_hits.json"
 if _hits_file.exists():
     _hits_file.unlink()
 
+# Ensure static assets directory exists before importing main
+_static_dir = Path(__file__).resolve().parent.parent.parent / "web" / "dist" / "assets"
+_static_dir.mkdir(parents=True, exist_ok=True)
+
 # Add server dir to Python path so `from main import ...` works
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -84,13 +88,14 @@ def reset_shared_state():
     # Clear provider HTTP clients to avoid stale loop references
     from iptv_client import _provider_clients
     from iptv_client import client as _global_client
+    import asyncio
     for _k, c in list(_provider_clients.items()):
         with contextlib.suppress(Exception):
-            c.aclose()
+            asyncio.get_event_loop().run_until_complete(c.aclose())
     _provider_clients.clear()
     try:
         if _global_client and not _global_client.is_closed:
-            _global_client.aclose()
+            asyncio.get_event_loop().run_until_complete(_global_client.aclose())
     except Exception:
         pass
     # Clear stream hit counters
