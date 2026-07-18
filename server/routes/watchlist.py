@@ -132,3 +132,13 @@ async def profile_get_progress(request: Request):
     
     return {"progress": profiles[profile_id].get("progress", {})}
 
+
+# ── Watchlist CRUD ──────────────────────────────────────────────────
+@router.get("/watchlist")
+async def get_watchlist():
+    """Return watchlist data.
+    
+    Currently returns an empty watchlist structure.
+    TODO: implement actual watchlist management per profile.
+    """
+    return {"watchlist": {}}
