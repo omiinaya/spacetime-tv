@@ -191,7 +191,7 @@ def verify_profile_pin(profile_id: str, pin: str) -> bool:
 
 
 def get_profile(profile_id: str) -> dict | None:
-    """Get a profile by ID (without exposing PIN)."""
+    """Get a profile by ID (without exposing PIN or hash)."""
     profiles = _load_profiles()
     profile = profiles.get(profile_id)
     if not profile:
@@ -199,6 +199,7 @@ def get_profile(profile_id: str) -> dict | None:
     result = dict(profile)
     result["profile_id"] = profile_id
     result.pop("pin", None)
+    result.pop("pin_hash", None)
     return result
 
 

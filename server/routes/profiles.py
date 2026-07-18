@@ -298,8 +298,8 @@ async def api_refresh_profile_token(request: Request):
     return {"token": new_token, "profile": profile}
 
 
-
 # ── Profile settings ────────────────────────────────────────────────
+
 
 @router.get("/profiles/{profile_id}/settings")
 async def api_get_profile_settings(profile_id: str, request: Request):
