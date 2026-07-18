@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "test:e2e": "npx playwright test --config e2e/playwright.config.ts",
     "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix"
+    "lint:fix": "eslint src/ --fix",
+    "prepare": "cd .. && git config core.hooksPath .githooks"
   },
   "dependencies": {
     "@rolldown/binding-linux-x64-gnu": "^1.2.0",

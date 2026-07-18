@@ -390,7 +390,7 @@
 ### P3 — Architecture
 17. **No service layer** — Business logic embedded in route modules
 18. ~~3 undefined-name bugs~~ — ✅ **FIXED** (lint caught them)
-19. **Pre-commit hook auto-install** — `.githooks/pre-commit` needs manual setup
+|19. ~~**Pre-commit hook auto-install** — `.githooks/pre-commit` needs manual setup~~ ✅ **DONE** — added `prepare` script to web/package.json + `postCreateCommand` in devcontainer
 
 ### P4 — Nice to have
 20. **Set up CI lint stage** — GitHub Actions workflow for ruff + eslint
