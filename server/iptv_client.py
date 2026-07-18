@@ -108,6 +108,110 @@ def get_provider_by_index(idx: int) -> ProviderConfig | None:
     return None
 
 
+
+# ── Parallel multi-provider fetch ────────────────────────────────────────────
+async def fetch_all_providers(action: str, **params) -> list:
+    """Fetch from all enabled providers in parallel and aggregate results.
+
+    Returns a combined list, deduplicating by stream_id / series_id where applicable.
+    Each item is tagged with 'provider_name' and 'provider_idx' for provenance.
+    """
+    providers = get_enabled_providers()
+    if not providers:
+        raise HTTPException(500, "No IPTV provider configured")
+
+    async def _fetch_one(idx: int, provider: ProviderConfig) -> list:
+        try:
+            data = await _fetch_single_provider(provider, action, **params)
+            items = data if isinstance(data, list) else data.get("data", []) if isinstance(data, dict) else []
+            for item in items:
+                item["_provider_name"] = provider.name
+                item["_provider_idx"] = idx
+            return items
+        except HTTPException:
+            return []
+        except Exception:
+            return []
+
+    tasks = [_fetch_one(idx, p) for idx, p in enumerate(providers) if p.enabled]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    all_items: list[dict] = []
+    seen_stream_ids: set[int] = set()
+    seen_series_ids: set[int] = set()
+
+    for result in results:
+        if isinstance(result, Exception):
+            continue
+        for item in result:
+            sid = item.get("stream_id") or item.get("id")
+            series_id = item.get("series_id")
+            if sid and sid not in seen_stream_ids:
+                seen_stream_ids.add(sid)
+                all_items.append(item)
+            elif series_id and series_id not in seen_series_ids:
+                seen_series_ids.add(series_id)
+                all_items.append(item)
+            elif not sid and not series_id:
+                all_items.append(item)
+
+    return all_items
+
+
+# ── Parallel EPG fetch ──────────────────────────────────────────────────────
+async def fetch_epg_all_providers() -> list[dict]:
+    """Fetch XMLTV from all enabled providers in parallel, merge results.
+
+    Returns merged dict with channels and programmes from all providers.
+    Deduplicates channels by ID, appends programmes from all.
+    """
+    providers = get_enabled_providers()
+    if not providers:
+        raise HTTPException(500, "No IPTV provider configured")
+
+    from .routes.guide_core import parse_xmltv
+
+    async def _fetch_epg(provider: ProviderConfig) -> dict | None:
+        try:
+            url = iptv_xmltv_url(provider=provider)
+            pclient = _get_provider_client(provider)
+            resp = await pclient.get(url, timeout=120.0)
+            resp.raise_for_status()
+            return parse_xmltv(resp.text)
+        except (httpx.HTTPError, httpx.TimeoutException, json.JSONDecodeError) as e:
+            log.warning(f"EPG fetch failed for provider '{provider.name}': {e}")
+            return None
+
+    tasks = [_fetch_epg(p) for p in providers]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    merged: dict[str, list] = {"channels": [], "programmes": []}
+    seen_channels: set[str] = set()
+
+    for result in results:
+        if isinstance(result, Exception) or result is None:
+            continue
+        for ch in result.get("channels", []):
+            ch_id = ch.get("id", "")
+            if ch_id and ch_id not in seen_channels:
+                seen_channels.add(ch_id)
+                ch["_provider"] = "multi"  # mark as merged
+                merged["channels"].append(ch)
+        for prog in result.get("programmes", []):
+            prog["_provider"] = "multi"
+            merged["programmes"].append(prog)
+
+    log.info(f"Multi-provider EPG merged: {len(merged['channels'])} channels, {len(merged['programmes'])} programmes")
+    return merged
+
+
+async def fetch_search_all_providers(action: str, **params) -> list:
+    """Fetch from all providers and aggregate with dedup for search results.
+
+    Used by search_service to aggregate VOD / series across providers.
+    """
+    return await fetch_all_providers(action, **params)
+
 def iptv_url(action: str, provider: ProviderConfig | None = None, **params) -> str:
     """Build IPTV API URL (player_api.php) with credentials for a provider.
     
