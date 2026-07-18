@@ -288,7 +288,7 @@ async def admin_get_active_provider():
 async def admin_add_provider(body: dict):
     """Add a new provider."""
     from config import PROVIDERS, _save_providers_to_file
-    
+
     base_url = body.get("base_url", "").rstrip("/")
     if not base_url:
         raise HTTPException(400, "base_url is required")
@@ -298,7 +298,7 @@ async def admin_add_provider(body: dict):
     password = body.get("password", "")
     name = body.get("name", f"Provider {len(PROVIDERS) + 1}")
     enabled = body.get("enabled", True)
-    
+
     new_provider = {
         "name": name,
         "base_url": base_url,
@@ -307,8 +307,9 @@ async def admin_add_provider(body: dict):
         "enabled": enabled,
         "order": len(PROVIDERS),
     }
-    
+
     from config import _maybe_encrypt
+
     PROVIDERS.append(
         ProviderConfig(
             name=name,
@@ -323,7 +324,7 @@ async def admin_add_provider(body: dict):
     # Re-index
     for i, p in enumerate(PROVIDERS):
         p.order = i
-    
+
     _save_providers_to_file(PROVIDERS)
     return {"message": f"Provider '{name}' added", "index": len(PROVIDERS) - 1}
 
@@ -332,16 +333,16 @@ async def admin_add_provider(body: dict):
 async def admin_delete_provider(idx: int):
     """Delete a provider by index."""
     from config import PROVIDERS, _save_providers_to_file
-    
+
     if idx < 0 or idx >= len(PROVIDERS):
         raise HTTPException(404, f"Provider index {idx} not found")
-    
+
     name = PROVIDERS[idx].name
     del PROVIDERS[idx]
     # Re-index
     for i, p in enumerate(PROVIDERS):
         p.order = i
-    
+
     _save_providers_to_file(PROVIDERS)
     return {"message": f"Provider '{name}' deleted"}
 
@@ -350,12 +351,12 @@ async def admin_delete_provider(idx: int):
 async def admin_update_provider(idx: int, body: dict):
     """Update a provider's configuration."""
     from config import PROVIDERS, _maybe_encrypt, _save_providers_to_file
-    
+
     if idx < 0 or idx >= len(PROVIDERS):
         raise HTTPException(404, f"Provider index {idx} not found")
-    
+
     p = PROVIDERS[idx]
-    
+
     if "name" in body and body["name"]:
         p.name = body["name"]
     if "base_url" in body and body["base_url"]:
@@ -371,7 +372,6 @@ async def admin_update_provider(idx: int, body: dict):
         PROVIDERS.sort(key=lambda x: x.order)
         for i, pp in enumerate(PROVIDERS):
             pp.order = i
-    
+
     _save_providers_to_file(PROVIDERS)
     return {"message": f"Provider '{p.name}' updated"}
-

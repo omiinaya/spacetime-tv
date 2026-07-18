@@ -156,6 +156,82 @@ else:
         else []
     )
 
+# ── Provider persistence ───────────────────────────────────────────────────
+# Providers can be persisted to a JSON file for runtime add/remove/modify.
+# The providers.json file takes precedence over env config when present.
+
+try:
+    PROVIDERS_FILE = DATA_DIR / "providers.json"
+except NameError:
+    PROVIDERS_FILE = None  # DATA_DIR not yet defined
+
+
+def _load_providers_from_file() -> list | None:
+    """Load providers from persistent file if it exists and is valid."""
+    try:
+        path = PROVIDERS_FILE
+    except NameError:
+        return None
+    if not path or not path.exists():
+        return None
+    try:
+        with open(path) as f:
+            raw = json.load(f)
+        providers = []
+        for i, p in enumerate(raw):
+            providers.append(
+                ProviderConfig(
+                    name=p.get("name", f"Provider {i + 1}"),
+                    base_url=p["base_url"],
+                    username=p["username"],
+                    password=p.get("password", ""),
+                    enabled=p.get("enabled", True),
+                    order=p.get("order", i),
+                )
+            )
+        providers.sort(key=lambda x: x.order)
+        return providers
+    except (json.JSONDecodeError, TypeError, KeyError, OSError) as e:
+        import logging
+        logging.getLogger("spacetime-tv").warning(f"Failed to load PROVIDERS_FILE: {e}")
+        return None
+
+
+def _save_providers_to_file(providers: list) -> None:
+    """Save current providers to persistent file."""
+    try:
+        path = PROVIDERS_FILE
+    except NameError:
+        return
+    if not path:
+        return
+    try:
+        data = []
+        for i, p in enumerate(providers):
+            data.append({
+                "name": p.name,
+                "base_url": p.base_url,
+                "username": p.username,
+                "password": p.password if not p.password.startswith("enc:") else f"enc:{p.password[4:]}",
+                "enabled": p.enabled,
+                "order": p.order if hasattr(p, "order") else i,
+            })
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w") as f:
+            json.dump(data, f, indent=2)
+    except (OSError, TypeError) as e:
+        import logging
+        logging.getLogger("spacetime-tv").warning(f"Failed to save PROVIDERS_FILE: {e}")
+
+
+# Override PROVIDERS from file if available
+try:
+    _file_providers = _load_providers_from_file()
+    if _file_providers is not None:
+        PROVIDERS = _file_providers
+except NameError:
+    pass
+
 # EPG
 EPG_CACHE_FILE = Path(os.getenv("EPG_CACHE_FILE", str(Path(__file__).parent / "epg_cache.json")))
 EPG_CACHE_TTL = int(os.getenv("EPG_CACHE_TTL", "3600"))  # 1 hour default
