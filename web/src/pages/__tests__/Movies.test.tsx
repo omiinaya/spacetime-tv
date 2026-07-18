@@ -21,9 +21,7 @@ vi.mock("@/lib/api", () => ({
     movies: {
       unified: (...args: unknown[]) =>
         (
-          mockMoviesUnified as unknown as (
-            ...a: unknown[]
-          ) => Promise<{
+          mockMoviesUnified as unknown as (...a: unknown[]) => Promise<{
             movies: UnifiedMovie[];
             total: number;
             offset: number;

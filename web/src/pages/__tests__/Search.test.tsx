@@ -37,9 +37,7 @@ vi.mock("@/lib/api", () => ({
       )(...args),
     searchEnrich: (...args: unknown[]) =>
       (
-        mockSearchEnrich as unknown as (
-          ...a: unknown[]
-        ) => Promise<{
+        mockSearchEnrich as unknown as (...a: unknown[]) => Promise<{
           movies: Record<string, unknown>;
           series: Record<string, unknown>;
         }>
@@ -48,9 +46,7 @@ vi.mock("@/lib/api", () => ({
       now: vi.fn(),
       search: (...args: unknown[]) =>
         (
-          mockGuideSearch as unknown as (
-            ...a: unknown[]
-          ) => Promise<{
+          mockGuideSearch as unknown as (...a: unknown[]) => Promise<{
             results: unknown[];
             total: number;
             query: string;
