@@ -32,6 +32,7 @@ def _require_profile_access(profile_id: str, request: Request):
     """Check that X-Profile-Token matches the requested profile_id, or admin key."""
     admin_key = request.headers.get("X-Admin-Key", "")
     from config import ADMIN_API_KEY
+
     if admin_key and admin_key == ADMIN_API_KEY:
         return {"profile_id": profile_id, "admin": True}
     token = request.headers.get("X-Profile-Token", "")
