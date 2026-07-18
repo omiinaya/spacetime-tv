@@ -1,74 +1,73 @@
-"""DASH streaming routes — MPD manifest generation and serving.
+"""DASH MPD manifest generation and serving.
 
-Extracted from stream.py during decomposition of the 1105-line monolithic file.
+All stream BaseURLs use server-proxied paths to avoid exposing
+IPTV credentials (username/password) to the client browser.
 """
-import logging
-from datetime import UTC, datetime
 
-from fastapi import APIRouter
-from fastapi.responses import Response
+from fastapi import APIRouter, Response
 
-from .stream_core import _mime_from_url, build_stream_url
-
-log = logging.getLogger("spacetime-tv")
-router = APIRouter(tags=["stream"])
+router = APIRouter(tags=["dash"])
 
 
-def generate_live_mpd(stream_id: int, stream_url: str) -> str:
-    """Generate a dynamic MPD manifest for a live MPEG-TS stream."""
-    mime = _mime_from_url(stream_url)
-    safe_url = stream_url.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
-    now_iso = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    return f'''<?xml version="1.0" encoding="utf-8"?>
-<MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-     xmlns="urn:mpeg:dash:schema:mpd:2011"
-     profiles="urn:mpeg:dash:profile:isoff-live:2011"
-     type="dynamic"
-     availabilityStartTime="{now_iso}"
-     publishTime="{now_iso}"
-     minimumUpdatePeriod="PT10S"
-     minBufferTime="PT15S"
-     timeShiftBufferDepth="PT120S">
- <Period id="1">
-    <AdaptationSet mimeType="{mime}" contentType="video" startWithSAP="1">
-      <Representation bandwidth="5000000">
-        <BaseURL>{safe_url}</BaseURL>
-        <SegmentBase indexRangeExact="true">
-          <Initialization range="0-0" />
-        </SegmentBase>
-      </Representation>
-    </AdaptationSet>
- </Period>
-</MPD>'''
-
-
-def generate_vod_mpd(stream_id: int, stream_type: str, stream_url: str) -> str:
-    """Generate a static onDemand MPD manifest for a VOD MKV/fMP4 stream."""
-    mime = _mime_from_url(stream_url)
-    safe_url = stream_url.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
-    return f'''<?xml version="1.0" encoding="utf-8"?>
+def generate_live_mpd(stream_id: int, base_url: str) -> str:
+    """Generate a DASH MPD manifest for live TV playback."""
+    mime = "video/mp2t"
+    safe_url = base_url.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    return """<?xml version="1.0" encoding="utf-8"?>
 <MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
      xmlns="urn:mpeg:dash:schema:mpd:2011"
      profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"
      type="static">
  <Period>
-    <AdaptationSet mimeType="{mime}" contentType="video" startWithSAP="1">
+    <AdaptationSet mimeType="""" + mime + """" contentType="video" startWithSAP="1">
       <Representation bandwidth="5000000">
-        <BaseURL>{safe_url}</BaseURL>
+        <BaseURL>""" + safe_url + """</BaseURL>
         <SegmentBase indexRangeExact="true">
           <Initialization range="0-0" />
         </SegmentBase>
       </Representation>
     </AdaptationSet>
  </Period>
-</MPD>'''
+</MPD>"""
+
+
+def generate_vod_mpd(stream_id: int, media_type: str, base_url: str) -> str:
+    """Generate a DASH MPD manifest for VOD playback."""
+    ext = base_url.rsplit(".", 1)[-1].lower() if "." in base_url else ""
+    mime_map = {
+        "ts": "video/mp2t",
+        "mkv": "video/x-matroska",
+        "mp4": "video/mp4",
+        "m4v": "video/mp4",
+        "webm": "video/webm",
+        "avi": "video/x-msvideo",
+        "mov": "video/quicktime",
+    }
+    mime = mime_map.get(ext, "video/mp2t")
+    safe_url = base_url.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    return """<?xml version="1.0" encoding="utf-8"?>
+<MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xmlns="urn:mpeg:dash:schema:mpd:2011"
+     profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"
+     type="static">
+ <Period>
+    <AdaptationSet mimeType="""" + mime + """" contentType="video" startWithSAP="1">
+      <Representation bandwidth="5000000">
+        <BaseURL>""" + safe_url + """</BaseURL>
+        <SegmentBase indexRangeExact="true">
+          <Initialization range="0-0" />
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+ </Period>
+</MPD>"""
 
 
 @router.get("/stream/live/{stream_id}/manifest.mpd")
 async def live_dash_manifest(stream_id: int):
-    """DASH MPD manifest for live TV stream playback via shaka-player."""
-    url = await build_stream_url(stream_id, "live")
-    xml = generate_live_mpd(stream_id, url)
+    """DASH MPD for live TV using server-proxied URL (no credential leak)."""
+    proxy_url = "/api/stream/live/{0}".format(stream_id)
+    xml = generate_live_mpd(stream_id, proxy_url)
     return Response(
         content=xml,
         media_type="application/dash+xml",
@@ -78,9 +77,9 @@ async def live_dash_manifest(stream_id: int):
 
 @router.get("/stream/movie/{stream_id}/manifest.mpd")
 async def movie_dash_manifest(stream_id: int):
-    """DASH MPD manifest for movie playback via shaka-player."""
-    url = await build_stream_url(stream_id, "movie")
-    xml = generate_vod_mpd(stream_id, "movie", url)
+    """DASH MPD for movie using server-proxied URL (no credential leak)."""
+    proxy_url = "/api/stream/movie/{0}".format(stream_id)
+    xml = generate_vod_mpd(stream_id, "movie", proxy_url)
     return Response(
         content=xml,
         media_type="application/dash+xml",
@@ -90,9 +89,9 @@ async def movie_dash_manifest(stream_id: int):
 
 @router.get("/stream/series/{series_id}/{episode_id}/manifest.mpd")
 async def series_dash_manifest(series_id: int, episode_id: int):
-    """DASH MPD manifest for series episode playback via shaka-player."""
-    url = await build_stream_url(episode_id, "series")
-    xml = generate_vod_mpd(episode_id, "series", url)
+    """DASH MPD for series episode using server-proxied URL (no credential leak)."""
+    proxy_url = "/api/stream/series/{0}/{1}".format(series_id, episode_id)
+    xml = generate_vod_mpd(episode_id, "series", proxy_url)
     return Response(
         content=xml,
         media_type="application/dash+xml",

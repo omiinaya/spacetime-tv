@@ -70,36 +70,36 @@ def test_live_mpd_has_representation():
 
 def test_vod_mpd_is_valid_xml():
     """VOD MPD should be well-formed XML."""
-    xml = generate_vod_mpd(999, "movie", "http://test-iptv.live/movie/test_user/test_pass/999.mkv")
+    xml = generate_vod_mpd(999, "movie", "/api/stream/movie/999")
     root = _parse_mpd(xml)
     assert root.tag.endswith("MPD")
 
 
 def test_vod_mpd_is_static():
     """VOD MPD should have type='static'."""
-    xml = generate_vod_mpd(999, "movie", "http://test-iptv.live/movie/test_user/test_pass/999.mkv")
+    xml = generate_vod_mpd(999, "movie", "/api/stream/movie/999")
     root = _parse_mpd(xml)
     assert root.get("type") == "static"
 
 
 def test_vod_mpd_contains_base_url():
     """VOD MPD should contain a BaseURL pointing to the stream endpoint."""
-    xml = generate_vod_mpd(999, "movie", "http://test-iptv.live/movie/test_user/test_pass/999.mkv")
-    assert "http://test-iptv.live/movie/test_user/test_pass/999.mkv" in xml
+    xml = generate_vod_mpd(999, "movie", "/api/stream/movie/999")
+    assert "/api/stream/movie/999" in xml
 
 
 def test_vod_mpd_series():
     """VOD MPD for series should work identically to movie."""
-    xml = generate_vod_mpd(555, "series", "http://test-iptv.live/series/test_user/test_pass/555.mkv")
+    xml = generate_vod_mpd(555, "series", "/api/stream/series/0/555")
     root = _parse_mpd(xml)
     assert root.get("type") == "static"
-    assert "http://test-iptv.live/series/test_user/test_pass/555.mkv" in xml
+    assert "/api/stream/series/0/555" in xml
 
 
 def test_vod_mpd_mime_matches_series_extension():
     """VOD MPD should reflect the content mimeType from the URL extension."""
     # MKV → video/x-matroska
-    xml_mkv = generate_vod_mpd(1, "movie", "http://test-iptv.live/movie/u/p/1.mkv")
+    xml_mkv = generate_vod_mpd(1, "movie", "/api/stream/movie/1")
     root_mkv = _parse_mpd(xml_mkv)
     ats_mkv = root_mkv.findall(".//{urn:mpeg:dash:schema:mpd:2011}AdaptationSet")
     if not ats_mkv:
