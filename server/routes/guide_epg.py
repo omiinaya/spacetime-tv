@@ -38,25 +38,44 @@ async def load_epg() -> dict:
         except (json.JSONDecodeError, OSError, KeyError) as e:
             log.warning(f"EPG cache file corrupted: {e} — will refetch")
 
-    log.info("Fetching EPG XMLTV ...")
-    url = iptv_xmltv_url()
-    try:
-        resp = await client.get(url, timeout=120.0)
-        resp.raise_for_status()
-        data = parse_xmltv(resp.text)
-        epg_cache["data"] = data
-        epg_cache["fetched"] = now
-        # Invalidate guide cache so _build_guide_cache recomputes channel groups
-        _guide_cache["channel_groups"] = None
-        # Save to disk
-        EPG_CACHE_FILE.write_text(json.dumps({"data": data, "fetched": now}))
-        log.info(f"EPG parsed: {len(data.get('programmes', []))} programmes")
-        return data
-    except (TimeoutError, httpx.HTTPError, httpx.TimeoutException, json.JSONDecodeError) as e:
-        log.error(f"EPG fetch failed: {e}")
-        if epg_cache["data"]:
-            return epg_cache["data"]
-        return {"channels": [], "programmes": []}
+    from iptv_client import fetch_epg_all_providers, get_enabled_providers, iptv_xmltv_url
+    providers = get_enabled_providers()
+    
+    if len(providers) <= 1:
+        # Single provider — use direct fetch (backward compatible)
+        log.info("Fetching EPG XMLTV from single provider ...")
+        url = iptv_xmltv_url()
+        try:
+            resp = await client.get(url, timeout=120.0)
+            resp.raise_for_status()
+            data = parse_xmltv(resp.text)
+            epg_cache["data"] = data
+            epg_cache["fetched"] = now
+            _guide_cache["channel_groups"] = None
+            EPG_CACHE_FILE.write_text(json.dumps({"data": data, "fetched": now}))
+            log.info(f"EPG parsed: {len(data.get('programmes', []))} programmes")
+            return data
+        except (TimeoutError, httpx.HTTPError, httpx.TimeoutException, json.JSONDecodeError) as e:
+            log.error(f"EPG fetch failed: {e}")
+            if epg_cache["data"]:
+                return epg_cache["data"]
+            return {"channels": [], "programmes": []}
+    else:
+        # Multi-provider — fetch from all in parallel and merge
+        log.info(f"Fetching EPG XMLTV from {len(providers)} providers in parallel ...")
+        try:
+            data = await fetch_epg_all_providers()
+            epg_cache["data"] = data
+            epg_cache["fetched"] = now
+            _guide_cache["channel_groups"] = None
+            EPG_CACHE_FILE.write_text(json.dumps({"data": data, "fetched": now}))
+            log.info(f"Multi-provider EPG merged: {len(data.get('programmes', []))} programmes")
+            return data
+        except Exception as e:
+            log.error(f"Multi-provider EPG fetch failed: {e}")
+            if epg_cache["data"]:
+                return epg_cache["data"]
+            return {"channels": [], "programmes": []}
 
 
 async def load_epg_background() -> dict:
