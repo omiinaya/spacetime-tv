@@ -282,3 +282,96 @@ async def admin_get_active_provider():
     if not p:
         return {"active": None}
     return {"active": {"name": p.name, "base_url": p.base_url}}
+
+
+@router.post("/admin/providers")
+async def admin_add_provider(body: dict):
+    """Add a new provider."""
+    from config import PROVIDERS, _save_providers_to_file
+    
+    base_url = body.get("base_url", "").rstrip("/")
+    if not base_url:
+        raise HTTPException(400, "base_url is required")
+    username = body.get("username", "")
+    if not username:
+        raise HTTPException(400, "username is required")
+    password = body.get("password", "")
+    name = body.get("name", f"Provider {len(PROVIDERS) + 1}")
+    enabled = body.get("enabled", True)
+    
+    new_provider = {
+        "name": name,
+        "base_url": base_url,
+        "username": username,
+        "password": password,
+        "enabled": enabled,
+        "order": len(PROVIDERS),
+    }
+    
+    from config import _maybe_encrypt
+    PROVIDERS.append(
+        ProviderConfig(
+            name=name,
+            base_url=base_url,
+            username=username,
+            password=_maybe_encrypt(password),
+            enabled=enabled,
+            order=len(PROVIDERS),
+        )
+    )
+    PROVIDERS.sort(key=lambda x: x.order)
+    # Re-index
+    for i, p in enumerate(PROVIDERS):
+        p.order = i
+    
+    _save_providers_to_file(PROVIDERS)
+    return {"message": f"Provider '{name}' added", "index": len(PROVIDERS) - 1}
+
+
+@router.delete("/admin/providers/{idx}")
+async def admin_delete_provider(idx: int):
+    """Delete a provider by index."""
+    from config import PROVIDERS, _save_providers_to_file
+    
+    if idx < 0 or idx >= len(PROVIDERS):
+        raise HTTPException(404, f"Provider index {idx} not found")
+    
+    name = PROVIDERS[idx].name
+    del PROVIDERS[idx]
+    # Re-index
+    for i, p in enumerate(PROVIDERS):
+        p.order = i
+    
+    _save_providers_to_file(PROVIDERS)
+    return {"message": f"Provider '{name}' deleted"}
+
+
+@router.put("/admin/providers/{idx}")
+async def admin_update_provider(idx: int, body: dict):
+    """Update a provider's configuration."""
+    from config import PROVIDERS, _maybe_encrypt, _save_providers_to_file
+    
+    if idx < 0 or idx >= len(PROVIDERS):
+        raise HTTPException(404, f"Provider index {idx} not found")
+    
+    p = PROVIDERS[idx]
+    
+    if "name" in body and body["name"]:
+        p.name = body["name"]
+    if "base_url" in body and body["base_url"]:
+        p.base_url = body["base_url"].rstrip("/")
+    if "username" in body and body["username"]:
+        p.username = body["username"]
+    if "password" in body and body["password"]:
+        p.password = _maybe_encrypt(body["password"])
+    if "enabled" in body:
+        p.enabled = bool(body["enabled"])
+    if "order" in body:
+        p.order = int(body["order"])
+        PROVIDERS.sort(key=lambda x: x.order)
+        for i, pp in enumerate(PROVIDERS):
+            pp.order = i
+    
+    _save_providers_to_file(PROVIDERS)
+    return {"message": f"Provider '{p.name}' updated"}
+
