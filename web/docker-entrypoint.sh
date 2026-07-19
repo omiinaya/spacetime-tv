@@ -9,13 +9,32 @@ STAGING="${ACME_STAGING:-false}"
 
 mkdir -p "$CERT_DIR" /var/www/acme
 
-# Step 1: Generate initial self-signed certificate so nginx can start
-INITIAL_CN="${DOMAIN:-localhost}"
-echo "Generating initial self-signed certificate for $INITIAL_CN..."
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout "$CERT_DIR/server.key" \
-    -out "$CERT_DIR/server.crt" \
-    -subj "/CN=$INITIAL_CN"
+# Step 1: Generate production-grade wildcard certificate with SANs
+# Creates a local CA and signs a server cert with IP SAN for 192.0.2.10
+# and wildcard DNS entries for internal use
+CA_KEY="$CERT_DIR/ca.key"
+CA_CERT="$CERT_DIR/ca.crt"
+SERVER_KEY="$CERT_DIR/server.key"
+SERVER_CERT="$CERT_DIR/server.crt"
+SERVER_CSR="$CERT_DIR/server.csr"
+SANS="IP:192.0.2.10,IP:127.0.0.1,DNS:localhost,DNS:*.local,DNS:*.lan,DNS:*.home"
+
+if [ ! -f "$CA_KEY" ]; then
+    echo "Generating local Certificate Authority..."
+    openssl genrsa -out "$CA_KEY" 4096
+    openssl req -x509 -new -nodes -key "$CA_KEY" -sha256 -days 3650 \
+        -out "$CA_CERT" \
+        -subj "/CN=SpacetimeTV Local CA/O=SpacetimeTV/C=US"
+fi
+
+echo "Generating server key with SANs for 192.0.2.10 + wildcards..."
+openssl genrsa -out "$SERVER_KEY" 2048
+openssl req -new -key "$SERVER_KEY" -out "$SERVER_CSR" \
+    -subj "/CN=192.0.2.10" \
+    -addext "subjectAltName=$SANS"
+openssl x509 -req -in "$SERVER_CSR" -CA "$CA_CERT" -CAkey "$CA_KEY" \
+    -CAcreateserial -out "$SERVER_CERT" -days 365 -sha256 \
+    -extfile <(printf "subjectAltName=$SANS")
 
 # Step 2: Start nginx in background (needed for ACME webroot)
 echo "Starting nginx temporarily for ACME challenge..."
