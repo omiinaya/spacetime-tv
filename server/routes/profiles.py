@@ -96,6 +96,21 @@ async def api_verify_profile_pin(profile_id: str, payload: dict):
     return {"valid": valid}
 
 
+@router.get("/profiles/me")
+async def api_get_current_profile(request: Request):
+    """Get current profile from X-Profile-Token header."""
+    token = request.headers.get("X-Profile-Token", "")
+    if not token:
+        raise HTTPException(401, "Missing X-Profile-Token header")
+    result = verify_profile_token(token)
+    if not result:
+        raise HTTPException(401, "Invalid or expired profile token")
+    profile = get_profile(result["profile_id"])
+    if not profile:
+        raise HTTPException(404, "Profile not found")
+    return {"profile": profile}
+
+
 @router.get("/profiles/{profile_id}")
 async def api_get_profile(profile_id: str):
     """Get a profile by ID (without PIN)."""
@@ -245,21 +260,6 @@ async def api_profile_auth(profile_id: str, payload: dict, request: Request):
     profile = get_profile(profile_id)
 
     return {"token": token, "profile": profile}
-
-
-@router.get("/profiles/me")
-async def api_get_current_profile(request: Request):
-    """Get current profile from X-Profile-Token header."""
-    token = request.headers.get("X-Profile-Token", "")
-    if not token:
-        raise HTTPException(401, "Missing X-Profile-Token header")
-    result = verify_profile_token(token)
-    if not result:
-        raise HTTPException(401, "Invalid or expired profile token")
-    profile = get_profile(result["profile_id"])
-    if not profile:
-        raise HTTPException(404, "Profile not found")
-    return {"profile": profile}
 
 
 @router.post("/profiles/session")
