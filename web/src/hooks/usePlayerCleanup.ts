@@ -25,7 +25,9 @@ export interface PlayerRefs {
  */
 function safeCleanup(fn: (() => void) | null | undefined) {
   if (fn) {
-    fn();
+    try {
+      fn();
+    } catch {} // swallow errors from cleanup callbacks
   }
 }
 
