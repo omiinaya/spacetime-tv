@@ -1,11 +1,11 @@
 # SpacetimeTV Roadmap v5 — Honest Full Audit
 
-> **Audit date:** 2026-07-17 (Post-cleanup audit — all backend tests passing, nginx live, Google Fonts self-hosted)
-> **Last refreshed:** 2026-07-17 (630 backend tests ALL PASSING, 0 failures. Nginx + TLS on port 8743. Ruff linter configured. Google Fonts self-hosted. Profiles API unblocked.)
-> **Architecture:** FastAPI monolith + React/Vite SPA | 81 API routes | 13 pages | 43 components | 24 hooks | 9 lib modules
-> **Test counts:** 630 backend pass (0 failures) + 1209 frontend unit + 74 E2E | TypeScript 0 errors
-> **Codebase:** 4,579 backend Python + 16,510 frontend TypeScript source + 17,479 test/__tests__ files = ~33,989 total TS lines
-> **Tests:** 32 backend test files + 66 frontend test files + 13 E2E spec files = 111 test files
+> **Audit date:** 2026-07-30 (Post-refactor audit — all tests passing, code quality clean)
+> **Last refreshed:** 2026-07-30 (1,313 backend tests ALL PASSING + 1,233 frontend unit tests ALL PASSING. 0 TypeScript errors. 0 `any` types in production code.)
+> **Architecture:** FastAPI monolith + React/Vite SPA | 81 API routes | 13 pages | 40+ components | 30+ hooks | 9 lib modules
+> **Test counts:** 1,313 backend pass (0 failures) + 1,233 frontend unit pass + 74 E2E | TypeScript 0 errors
+> **Codebase:** ~4,500 backend Python + ~18,000 frontend TypeScript source + ~15,000 test files
+> **Tests:** 32 backend test files + 69 frontend test files + 13 E2E spec files = 114 test files
 
 ---
 
@@ -71,11 +71,14 @@
 ### 🟡 Issues Found by Audit
 
 | Issue | Severity | Location |
-|-------|----------|----------|
-| **useVideoPlayer.ts: 612 lines** | 🟡 Maintainability | `web/src/hooks/useVideoPlayer.ts` — main useEffect is ~95 lines with nested async |
-|| **Series.tsx: 635 lines** (was 957) | 🟡 Maintainability | `web/src/pages/Series.tsx` — still sizable despite CW, recently-completed, grid nav extraction |
-|| **Movies.tsx: 576 lines** | 🟡 Maintainability | `web/src/pages/Movies.tsx` |
-|| **No per-section ErrorBoundary** | 🟡 Resilience | One boundary at App level — one error in a lazy page kills the entire routing area |
+||-------|----------|----------|
+|| **useVideoPlayer.ts: 901 lines (was 1033)** | 🟡 Maintainability | `web/src/hooks/useVideoPlayer.ts` — complex player orchestration hook |
+|| **SettingsPage.tsx: 712 lines** | 🟡 Maintainability | `web/src/pages/SettingsPage.tsx` — inline sections remain |
+|| **LiveTV.tsx: 576 lines** | 🟡 Maintainability | `web/src/pages/LiveTV.tsx` |
+|| **AdminDashboard.tsx: 573 lines** | 🟡 Maintainability | `web/src/pages/AdminDashboard.tsx` |
+|| **Movies.tsx: 546 lines** | 🟡 Maintainability | `web/src/pages/Movies.tsx` |
+|| **Series.tsx: 527 lines** | 🟡 Maintainability | `web/src/pages/Series.tsx` |
+|| **Search.tsx: 521 lines** | 🟡 Maintainability | `web/src/pages/Search.tsx` |
 - **Frontend source 16,107 lines** (non-test) | 🟢 Growth | Source-only 
 
 ### Recommendations
