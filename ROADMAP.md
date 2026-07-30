@@ -2,8 +2,9 @@
 
 > **Audit date:** 2026-07-30 (7th session — cleanup unification + backend disconnect handling)
 > **Stack:** FastAPI + React 19 + Vite 8 + Tailwind v4 | 14 pages | 70+ components | 30+ hooks | 12 back-end route modules
-> **Test counts:** 1,313 backend pass + 1,488 frontend pass | 0 TypeScript errors | 0 production `any` types
+> **Test counts:** 1,313 backend pass + 1,530 frontend pass | 0 TypeScript errors | 0 production `any` types
 > **CI:** GitHub Actions (lint → test → tsc → build)
+> **Hook test coverage:** 27/27 (100%) — all custom hooks have unit tests
 
 ## Current File Sizes (source only, no tests)
 
@@ -57,16 +58,19 @@ All other files < 350 lines.
 | `hooks/__tests__/useLiveStreamCache.test.ts` | 12 |
 | `hooks/__tests__/useRecording.test.ts` | 11 |
 | `hooks/__tests__/useProfile.test.ts` | 19 |
-| **Total new tests** | **76** |
+| `hooks/__tests__/usePlayerControls.test.ts` | 18 |
+| `hooks/__tests__/useSearchPage.test.ts` | 14 |
+| `hooks/__tests__/useDocumentPiP.test.ts` | 10 |
+| **Total new tests (sessions 7-9)** | **118** |
 
 ## Remaining Work
 
 ### Frontend
-- `useVideoPlayer.ts` (816 lines) — main effect still dense; further sub-hook extraction possible
-- 3 hooks still untested (useDocumentPiP, usePlayerControls, useSearchPage)
+- `useVideoPlayer.ts` (816 lines) — main effect is dense orchestration; further sub-hook extraction possible but diminishing returns
 - E2E test count could grow for edge cases
 
 ### Backend
+- Modules at full route coverage (25/25)
 - record.py at 24% coverage (runtime-only ffmpeg subprocess — hard to unit test)
 - state.py at 72% coverage (cache cleanup loop — runtime-only)
 - Consider extracting service layer from route modules if routes grow
