@@ -425,3 +425,21 @@ export interface ServerProgressEntry {
   seriesData?: ServerSeriesProgressData;
   movieData?: ServerMovieProgressData;
 }
+
+// ── Search types ─────────────────────────────────────────────────
+
+export interface SearchResults {
+  live: LiveStream[];
+  movies: Movie[];
+  series: Series[];
+  totals?: SearchTotals;
+}
+
+export interface SearchTotals {
+  live: number;
+  movies: number;
+  series: number;
+}
+
+export type FilterTab = "all" | "live" | "movies" | "series" | "epg";
+export type SortBy = "relevance" | "name" | "rating";

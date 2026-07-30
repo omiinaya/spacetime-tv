@@ -1,19 +1,22 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router";
-import { Film, Loader2, Star, Search, X, Globe, Heart } from "lucide-react";
-import { api, imageUrl, tmdbImgProps } from "@/lib/api";
+import { Film, Loader2 } from "lucide-react";
+import { api } from "@/lib/api";
 import { UnifiedMovie, TmdbMovieResult } from "@/lib/types";
 import MovieOverlay from "@/components/MovieOverlay";
-import ContentRow from "@/components/ContentRow";
 import { PosterCardSkeleton } from "@/components/Skeleton";
+import MovieSearchBar from "@/components/MovieSearchBar";
+import RecentlyAddedRow from "@/components/RecentlyAddedRow";
+import TrendingMoviesRow from "@/components/TrendingMoviesRow";
+import MovieGrid from "@/components/MovieGrid";
 import {
   getMovieContinueWatching,
   loadServerProgress,
   type MovieProgress,
 } from "@/lib/continueWatching";
-import { isInWatchlist, toggleWatchlist as toggleWl } from "@/lib/watchlist";
+import { toggleWatchlist as toggleWl } from "@/lib/watchlist";
 import { useGridKeyboardNav } from "@/hooks/useGridKeyboardNav";
-import { SearchHistory, addSearchHistory } from "@/components/SearchHistory";
+import { addSearchHistory } from "@/components/SearchHistory";
 import { Pagination } from "@/components/Pagination";
 import { MovieContinueWatchingRow } from "@/components/MovieContinueWatchingRow";
 import { MovieRecentlyCompletedRow } from "@/components/MovieRecentlyCompletedRow";
@@ -28,35 +31,29 @@ function useWatchlistToggle() {
   }, []);
 }
 
+function yearFromName(name: string) {
+  const m = /\((\d{4})\)/.exec(name);
+  return m ? m[1] : null;
+}
+
 export default function Movies() {
-  // ── Search (URL-persisted, debounced) ──────────────────────────
+  // ── Search (URL-persisted, debounced via MovieSearchBar) ──
   const [searchParams, setSearchParams] = useSearchParams();
   const urlQuery = searchParams.get("q") || "";
-  const [inputValue, setInputValue] = useState(urlQuery);
   const [searchQuery, setSearchQueryState] = useState(urlQuery);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [searchInput, setSearchInput] = useState(urlQuery);
 
-  const handleInputChange = useCallback(
+  const handleSearch = useCallback(
     (value: string) => {
-      setInputValue(value);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        setSearchQueryState(value);
-        if (value) setSearchParams({ q: value }, { replace: true });
-        else setSearchParams({}, { replace: true });
-      }, 300);
+      setSearchQueryState(value);
+      setSearchInput(value);
+      if (value) setSearchParams({ q: value }, { replace: true });
+      else setSearchParams({}, { replace: true });
     },
     [setSearchParams],
   );
 
-  // Cleanup debounce on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
-
-  // ── State ───────────────────────────────────────────────────────
+  // ── State ──
   const toggleWatchlist = useWatchlistToggle();
   const [movies, setMovies] = useState<UnifiedMovie[]>([]);
   const [total, setTotal] = useState(0);
@@ -70,7 +67,6 @@ export default function Movies() {
 
   // Overlay
   const [overlayMovie, setOverlayMovie] = useState<UnifiedMovie | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
 
   // Keyboard navigation
   const [focusedIdx, handleGridKeyDown] = useGridKeyboardNav(
@@ -81,7 +77,9 @@ export default function Movies() {
   );
 
   // Continue watching
-  const [continueWatching, setContinueWatching] = useState<MovieProgress[]>([]);
+  const [continueWatching, setContinueWatching] = useState<MovieProgress[]>(
+    [],
+  );
   useEffect(() => {
     setContinueWatching(getMovieContinueWatching());
     loadServerProgress().then((merged) => {
@@ -89,7 +87,7 @@ export default function Movies() {
     });
   }, []);
 
-  // ── Trending (TMDB) ───────────────────────────────────────────
+  // ── Trending (TMDB) ──
   const [trending, setTrending] = useState<TmdbMovieResult[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(true);
   const [trendingEnabled, setTrendingEnabled] = useState(false);
@@ -113,7 +111,7 @@ export default function Movies() {
     };
   }, []);
 
-  // ── Fetch ───────────────────────────────────────────────────────
+  // ── Fetch ──
   const fetchPage = useCallback(
     async (offset: number, replace: boolean, query: string) => {
       if (fetchingRef.current) return;
@@ -138,7 +136,7 @@ export default function Movies() {
         setTotal(d.total);
         if (replace) setCurrentPage(Math.floor(offset / PAGE_SIZE) + 1);
       } catch {
-        // SyntaxError or network error — silently degrade; errors handled by empty state
+        // SyntaxError or network error — silently degrade
       } finally {
         if (sid === searchIdRef.current) {
           setLoading(false);
@@ -155,7 +153,7 @@ export default function Movies() {
     fetchPage(0, true, searchQuery);
   }, [searchQuery, fetchPage]);
 
-  // ── Infinite scroll ─────────────────────────────────────────────
+  // ── Infinite scroll ──
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel || movies.length >= total || loading || loadingMore) return;
@@ -171,7 +169,7 @@ export default function Movies() {
     return () => obs.disconnect();
   }, [movies.length, total, loading, loadingMore, searchQuery, fetchPage]);
 
-  // ── Helpers ─────────────────────────────────────────────────────
+  // ── Helpers ──
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const goToPage = useCallback(
@@ -184,12 +182,7 @@ export default function Movies() {
     [searchQuery, fetchPage],
   );
 
-  const yearFromName = (name: string) => {
-    const m = /\((\d{4})\)/.exec(name);
-    return m ? m[1] : null;
-  };
-
-  // ── Render ──────────────────────────────────────────────────────
+  // ── Render ──
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -210,41 +203,12 @@ export default function Movies() {
       </div>
 
       {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => handleInputChange(e.target.value)}
-          onFocus={() => {
-            if (!inputValue) setShowHistory(true);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && inputValue.trim().length >= 2) {
-              addSearchHistory(inputValue);
-              setShowHistory(false);
-            }
-          }}
-          placeholder="Search movies..."
-          className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
-        <SearchHistory
-          show={showHistory}
-          onClose={() => setShowHistory(false)}
-          onSelect={(q) => {
-            handleInputChange(q);
-            addSearchHistory(q);
-          }}
-        />
-        {inputValue && (
-          <button
-            onClick={() => handleInputChange("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
+      <MovieSearchBar
+        value={searchInput}
+        onChange={setSearchInput}
+        onSearch={handleSearch}
+        onAddHistory={addSearchHistory}
+      />
 
       {/* Continue Watching — in-progress only */}
       {!loading && continueWatching.length > 0 && (
@@ -265,124 +229,15 @@ export default function Movies() {
       )}
 
       {/* Recently Added */}
-      {!loading && movies.length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold text-muted-foreground mb-3">
-            Recently Added
-          </h2>
-          <div
-            className="flex gap-3 overflow-x-auto pb-2 pr-4 md:pr-0"
-            style={{ touchAction: "manipulation" }}
-          >
-            {[...movies]
-              .filter((m): m is typeof m & { added: string } => !!m.added)
-              .sort((a, b) => parseInt(b.added) - parseInt(a.added))
-              .slice(0, 12)
-              .map((m) => (
-                <button
-                  key={`recent-${m.stream_id}`}
-                  onClick={() => setOverlayMovie(m)}
-                  className="shrink-0 w-[120px] group"
-                >
-                  <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5">
-                    {m.stream_icon ? (
-                      <img
-                        src={imageUrl(m.stream_icon)}
-                        alt={m.name ? `${m.name} poster` : ""}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-[#141420]">
-                        <Film className="h-6 w-6 text-white/10" />
-                      </div>
-                    )}
-                    <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/70 to-transparent" />
-                    <span className="absolute bottom-1.5 left-1.5 text-[10px] font-medium text-white/80">
-                      {m.rating && `★${parseFloat(m.rating).toFixed(1)}`}
-                    </span>
-                  </div>
-                  <p className="text-[11px] leading-tight line-clamp-2 group-hover:text-primary transition-colors">
-                    {m.base_name || m.name}
-                  </p>
-                </button>
-              ))}
-          </div>
-        </div>
-      )}
+      {!loading && <RecentlyAddedRow movies={movies} onSelect={setOverlayMovie} />}
 
       {/* Trending (TMDB proxy) */}
-      {!trendingLoading && trendingEnabled && trending.length > 0 && (
-        <div>
-          <ContentRow title="Trending This Week" itemCount={trending.length}>
-            {trending.map((t, idx) => {
-              const posterProps = t.poster_path
-                ? tmdbImgProps(t.poster_path)
-                : null;
-              const year = t.release_date ? t.release_date.slice(0, 4) : "";
-              return (
-                <button
-                  key={`trending-${t.id}`}
-                  data-row-idx={idx}
-                  className="shrink-0 w-[140px] group text-left focus:outline-none"
-                  onClick={() => {
-                    // Open the first matching unified movie, or just log
-                    const match = movies.find((m) => {
-                      // Match by TMDB ID stored in the movie's `tmdb` field
-                      return (
-                        m.tmdb === String(t.id) ||
-                        m.name
-                          .toLowerCase()
-                          .includes(t.title.toLowerCase().slice(0, 20))
-                      );
-                    });
-                    if (match) setOverlayMovie(match);
-                  }}
-                >
-                  <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-0 group-focus:ring-2 group-focus:ring-primary/60 group-focus:ring-offset-2 group-focus:ring-offset-background transition-all">
-                    {posterProps ? (
-                      <img
-                        {...posterProps}
-                        alt={`${t.title} poster`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-[#141420]">
-                        <Film className="h-8 w-8 text-white/10" />
-                      </div>
-                    )}
-                    {/* Bottom gradient */}
-                    <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
-                    {/* Rating badge */}
-                    {t.vote_average > 0 && (
-                      <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[11px] font-semibold text-yellow-400 flex items-center gap-0.5">
-                        <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
-                        {t.vote_average.toFixed(1)}
-                      </div>
-                    )}
-                    {/* Year badge */}
-                    {year && (
-                      <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[10px] font-medium text-white/70">
-                        {year}
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-                    {t.title}
-                  </p>
-                  {year && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      {year}
-                    </p>
-                  )}
-                </button>
-              );
-            })}
-          </ContentRow>
-        </div>
+      {!trendingLoading && trendingEnabled && (
+        <TrendingMoviesRow
+          trending={trending}
+          movies={movies}
+          onSelect={setOverlayMovie}
+        />
       )}
 
       {/* Loading skeleton */}
@@ -405,7 +260,7 @@ export default function Movies() {
           </p>
           {searchQuery && (
             <button
-              onClick={() => handleInputChange("")}
+              onClick={() => handleSearch("")}
               className="mt-2 text-xs text-primary hover:underline"
             >
               Clear search
@@ -416,103 +271,15 @@ export default function Movies() {
 
       {/* Movie grid */}
       {!loading && movies.length > 0 && (
-        <div
-          ref={gridRef}
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
-        >
-          {movies.map((m, idx) => {
-            const year = yearFromName(m.name);
-            return (
-              <div
-                key={m.tmdb || m.stream_id}
-                data-grid-idx={idx}
-                onClick={() => setOverlayMovie(m)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setOverlayMovie(m);
-                  }
-                  handleGridKeyDown(e, idx);
-                }}
-                role="button"
-                tabIndex={0}
-                className={`group flex flex-col rounded-xl overflow-hidden bg-card border transition-all duration-200 text-left focus:outline-none cursor-pointer ${
-                  focusedIdx === idx
-                    ? "border-primary ring-2 ring-primary/40 shadow-lg shadow-primary/10"
-                    : "border-border hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
-                }`}
-              >
-                {/* Poster */}
-                <div className="relative w-full aspect-[2/3] bg-muted overflow-hidden">
-                  {m.stream_icon ? (
-                    <img
-                      src={imageUrl(m.stream_icon)}
-                      alt={
-                        m.base_name || m.name
-                          ? `${m.base_name || m.name} poster`
-                          : ""
-                      }
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-400"
-                      loading="lazy"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-[#141420]">
-                      <Film className="h-8 w-8 text-white/10" />
-                    </div>
-                  )}
-                  {/* Bottom gradient */}
-                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
-                  {/* Rating badge */}
-                  {m.rating && (
-                    <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[11px] font-semibold text-yellow-400 flex items-center gap-0.5">
-                      <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
-                      {parseFloat(m.rating).toFixed(1)}
-                    </div>
-                  )}
-                  {/* Year badge */}
-                  {year && (
-                    <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[10px] font-medium text-white/70">
-                      {year}
-                    </div>
-                  )}
-                  {/* Watchlist heart — always visible on mobile, brighter on hover */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleWatchlist(m.stream_id);
-                    }}
-                    className="absolute bottom-2 right-2 p-1 rounded-full bg-black/60 backdrop-blur-sm opacity-70 hover:opacity-100 transition-opacity hover:scale-110"
-                    aria-label={
-                      isInWatchlist(m.stream_id)
-                        ? "Remove from watchlist"
-                        : "Add to watchlist"
-                    }
-                  >
-                    <Heart
-                      className={`h-4 w-4 ${isInWatchlist(m.stream_id) ? "fill-red-500 text-red-500" : "text-white/70"}`}
-                    />
-                  </button>
-                  {/* Language count badge */}
-                  {m.language_count > 1 && (
-                    <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[10px] font-medium text-white/60 flex items-center gap-1">
-                      <Globe className="h-2.5 w-2.5" />
-                      {m.language_count}
-                    </div>
-                  )}
-                </div>
-                {/* Title */}
-                <div className="p-2.5 flex-1">
-                  <p className="text-xs font-medium leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-                    {m.base_name || m.name}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <MovieGrid
+          movies={movies}
+          focusedIdx={focusedIdx}
+          onSelect={setOverlayMovie}
+          onKeyDown={handleGridKeyDown}
+          onToggleWatchlist={toggleWatchlist}
+          yearFromName={yearFromName}
+          gridRef={gridRef}
+        />
       )}
 
       {/* Loading more */}
