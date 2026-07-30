@@ -28,9 +28,7 @@ export default function LiveChannelCard({
           onToggleFavorite(stream.stream_id);
         }}
         className="absolute top-2 right-2 z-10 opacity-0 group-hover/card:opacity-100 transition-opacity"
-        aria-label={
-          isFavorite ? "Remove from favorites" : "Add to favorites"
-        }
+        aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
       >
         <Star
           className={`h-3.5 w-3.5 ${isFavorite ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground/40"}`}

@@ -129,8 +129,13 @@ export function useVideoPlayer({
 
   // ── Connection quality ───────────────────────────────────────
   const [downloadSpeed, setDownloadSpeed] = useState(0);
-  const { connectionQuality, stallCount, suggestLowerQuality, onStats, onStall } =
-    usePlayerConnectionQuality({ downloadSpeed, qualityIdx });
+  const {
+    connectionQuality,
+    stallCount,
+    suggestLowerQuality,
+    onStats,
+    onStall,
+  } = usePlayerConnectionQuality({ downloadSpeed, qualityIdx });
 
   // ── Live TV DVR state ──────────────────────────────────────────
   const [isBehindLive, setIsBehindLive] = useState(false);
@@ -403,7 +408,6 @@ export function useVideoPlayer({
     destroyRemux,
     destroyShaka,
   ];
-
 
   // ── Playback: MPEG-TS via mpegts.js (live TV only) ──────────
   const playMPEGTS = useCallback(

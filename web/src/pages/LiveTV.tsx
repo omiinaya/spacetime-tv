@@ -556,9 +556,7 @@ export default function LiveTV() {
       {isAllMode && allStreams.length === 0 && !allLoading && !loading && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Tv className="h-10 w-10 text-muted-foreground/20 mb-3" />
-          <p className="text-sm text-muted-foreground">
-            No channels available
-          </p>
+          <p className="text-sm text-muted-foreground">No channels available</p>
         </div>
       )}
 
