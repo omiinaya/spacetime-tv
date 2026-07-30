@@ -9,12 +9,12 @@ import {
   type SeriesProgress,
   type MovieProgress,
 } from "./continueWatching";
-import {
-  api,
-  type ServerProgressEntry,
-  type ServerSeriesProgressData,
-  type ServerMovieProgressData,
-} from "@/lib/api";
+import { api } from "@/lib/api";
+import type {
+  ServerProgressEntry,
+  ServerSeriesProgressData,
+  ServerMovieProgressData,
+} from "@/lib/types";
 
 // These functions read/write localStorage — vitest/jsdom mocks it
 

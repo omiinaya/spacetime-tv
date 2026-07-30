@@ -1,5 +1,5 @@
 import { Tv2, ArrowLeft } from "lucide-react";
-import type { Series } from "@/lib/api";
+import type { Series } from "@/lib/types";
 import { Pagination } from "@/components/Pagination";
 import { PosterCardSkeleton } from "@/components/Skeleton";
 import SeriesCard from "@/components/SeriesCard";

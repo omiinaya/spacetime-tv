@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { api, Series, imageUrl } from "@/lib/api";
+import { api, imageUrl } from "@/lib/api";
+import { Series } from "@/lib/types";
 import { Tv2, Star } from "lucide-react";
 
 interface SimilarSeriesProps {

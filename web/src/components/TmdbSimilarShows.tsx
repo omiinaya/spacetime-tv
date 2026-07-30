@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { api, TmdbTvResult } from "@/lib/api";
+import { api } from "@/lib/api";
+import { TmdbTvResult } from "@/lib/types";
 import { Tv2, Star } from "lucide-react";
 
 interface TmdbSimilarShowsProps {

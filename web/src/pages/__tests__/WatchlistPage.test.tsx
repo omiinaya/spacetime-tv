@@ -20,7 +20,7 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import WatchlistPage from "@/pages/WatchlistPage";
-import type { UnifiedMovie, Series } from "@/lib/api";
+import type { UnifiedMovie, Series } from "@/lib/types";
 
 // ── Mock api ─────────────────────────────────────────────
 const mockMoviesUnified = vi.fn();

@@ -9,7 +9,8 @@ import {
   X,
   Star,
 } from "lucide-react";
-import { api, Category, LiveStream } from "@/lib/api";
+import { api } from "@/lib/api";
+import { Category, LiveStream } from "@/lib/types";
 import {
   Skeleton,
   ChannelCardSkeleton,

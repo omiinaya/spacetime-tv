@@ -10,7 +10,8 @@ import {
   Loader2,
   ArrowLeft,
 } from "lucide-react";
-import { api, type TmdbPersonInfo, type TmdbPersonCredit } from "@/lib/api";
+import { api } from "@/lib/api";
+import type { TmdbPersonInfo, TmdbPersonCredit } from "@/lib/types";
 
 export default function PersonPage() {
   const { encodedName } = useParams<{ encodedName: string }>();

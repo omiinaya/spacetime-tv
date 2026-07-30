@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import SeriesOverlay from "@/components/SeriesOverlay";
-import type { Series, SeriesDetails, Episode } from "@/lib/api";
+import type { Series, SeriesDetails, Episode } from "@/lib/types";
 
 // ── Router mock ──────────────────────────────────────────
 const mockNavigate = vi.fn();

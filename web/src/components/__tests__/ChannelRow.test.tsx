@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ChannelRow } from "@/components/ChannelRow";
-import type { ChannelGroup, Programme } from "@/lib/api";
+import type { ChannelGroup, Programme } from "@/lib/types";
 
 // ── Mock api.guide.enrich used by ProgrammeCard ────────────────
 

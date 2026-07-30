@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { Heart, Star, Play, Trash2, Tv2, Bookmark } from "lucide-react";
-import { api, UnifiedMovie, Series, imageUrl } from "@/lib/api";
+import { api, imageUrl } from "@/lib/api";
+import { UnifiedMovie, Series } from "@/lib/types";
 import MovieOverlay from "@/components/MovieOverlay";
 import SeriesOverlay from "@/components/SeriesOverlay";
 import { PosterCardSkeleton } from "@/components/Skeleton";

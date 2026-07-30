@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { api, Movie, imageUrl } from "@/lib/api";
+import { api, imageUrl } from "@/lib/api";
+import { Movie } from "@/lib/types";
 import { Film, Star } from "lucide-react";
 
 interface SimilarMoviesProps {

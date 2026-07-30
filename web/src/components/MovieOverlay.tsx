@@ -9,13 +9,12 @@ import {
   ChevronDown,
   Heart,
 } from "lucide-react";
+import { api, tmdbSrcset } from "@/lib/api";
 import {
-  api,
   MovieInfo,
   UnifiedMovie,
   MovieLanguage,
-  tmdbSrcset,
-} from "@/lib/api";
+} from "@/lib/types";
 import MediaOverlay from "@/components/MediaOverlay";
 import SimilarMovies from "@/components/SimilarMovies";
 import TmdbSimilarMovies from "@/components/TmdbSimilarMovies";

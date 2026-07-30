@@ -7,7 +7,8 @@
  */
 import { useEffect, useRef, useState, useCallback } from "react";
 import { RadioTower, Clock, History } from "lucide-react";
-import { api, type CatchupProgramme } from "@/lib/api";
+import { api } from "@/lib/api";
+import type { CatchupProgramme } from "@/lib/types";
 
 interface CatchupTimelineProps {
   streamId: number;

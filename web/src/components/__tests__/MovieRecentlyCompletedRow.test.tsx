@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MovieRecentlyCompletedRow } from "@/components/MovieRecentlyCompletedRow";
-import type { UnifiedMovie } from "@/lib/api";
+import type { UnifiedMovie } from "@/lib/types";
 import type { MovieProgress } from "@/lib/continueWatching";
 
 vi.mock("@/lib/api", () => ({

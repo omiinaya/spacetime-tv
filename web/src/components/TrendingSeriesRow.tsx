@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Star, Tv2 } from "lucide-react";
-import { api, TmdbTvResult, tmdbImgProps } from "@/lib/api";
+import { api, tmdbImgProps } from "@/lib/api";
+import { TmdbTvResult } from "@/lib/types";
 import ContentRow from "@/components/ContentRow";
 
 export default function TrendingSeriesRow() {

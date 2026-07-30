@@ -3,7 +3,8 @@ import { useNavigate } from "react-router";
 import { Tv, Film, Tv2, Heart, Star } from "lucide-react";
 import ContentRow from "@/components/ContentRow";
 import { Skeleton } from "@/components/Skeleton";
-import { api, TmdbMovieResult, TmdbTvResult, tmdbImgProps } from "@/lib/api";
+import { api, tmdbImgProps } from "@/lib/api";
+import { TmdbMovieResult, TmdbTvResult } from "@/lib/types";
 
 export default function HomePage() {
   const navigate = useNavigate();

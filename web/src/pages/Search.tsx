@@ -1,14 +1,14 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { Search, AlertCircle } from "lucide-react";
-import {
-  api,
-  type LiveStream,
-  type Movie,
-  type Series,
-  type TmdbEnrichData,
-  type GuideSearchResult,
-} from "@/lib/api";
+import { api } from "@/lib/api";
+import type {
+  LiveStream,
+  Movie,
+  Series,
+  TmdbEnrichData,
+  GuideSearchResult,
+} from "@/lib/types";
 import { addSearchHistory } from "@/components/SearchHistory";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 import SearchHeader from "@/components/SearchHeader";

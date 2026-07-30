@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import Movies from "@/pages/Movies";
-import type { UnifiedMovie } from "@/lib/api";
+import type { UnifiedMovie } from "@/lib/types";
 
 // ── Mock api ─────────────────────────────────────────────
 const mockMoviesUnified = vi.fn();

@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import { Tv2, Loader2, ChevronDown, Star } from "lucide-react";
-import type { Series, TmdbEnrichData } from "@/lib/api";
+import type { Series, TmdbEnrichData } from "@/lib/types";
 import { tmdbImageUrl, tmdbSrcset } from "@/lib/api";
 
 interface SeriesSearchResultsProps {

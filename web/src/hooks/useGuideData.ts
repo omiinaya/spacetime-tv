@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import { api, ChannelGroup } from "@/lib/api";
+import { api } from "@/lib/api";
+import { ChannelGroup } from "@/lib/types";
 import { useSettings } from "@/context/SettingsContext";
 import { formatTime, parseXmltvTime } from "@/lib/guideUtils";
 

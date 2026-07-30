@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import { Film, Loader2, ChevronDown, Star } from "lucide-react";
-import type { Movie, TmdbEnrichData } from "@/lib/api";
+import type { Movie, TmdbEnrichData } from "@/lib/types";
 import { tmdbImageUrl, tmdbSrcset, imageUrl } from "@/lib/api";
 
 interface MovieSearchResultsProps {

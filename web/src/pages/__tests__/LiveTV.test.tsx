@@ -16,7 +16,7 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import LiveTV from "@/pages/LiveTV";
-import type { Category, LiveStream } from "@/lib/api";
+import type { Category, LiveStream } from "@/lib/types";
 
 // ── Mock api ──────────────────────────────────────────────────
 const mockCategories = vi.fn();

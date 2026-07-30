@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { api, GuideNowResult } from "@/lib/api";
+import { api } from "@/lib/api";
+import { GuideNowResult } from "@/lib/types";
 
 const BATCH_INTERVAL = 30000; // refresh every 30 seconds
 

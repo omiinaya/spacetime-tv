@@ -1,7 +1,10 @@
 import { Film } from "lucide-react";
 import { imageUrl } from "@/lib/api";
-import { removeMovieProgress, type MovieProgress } from "@/lib/continueWatching";
-import type { UnifiedMovie } from "@/lib/api";
+import {
+  removeMovieProgress,
+  type MovieProgress,
+} from "@/lib/continueWatching";
+import type { UnifiedMovie } from "@/lib/types";
 
 interface MovieRecentlyCompletedRowProps {
   movies: UnifiedMovie[];
@@ -19,8 +22,7 @@ export function MovieRecentlyCompletedRow({
   );
   const completed = cwMovies.filter(
     (cw) =>
-      cw.durationSeconds > 0 &&
-      cw.progressSeconds / cw.durationSeconds >= 0.9,
+      cw.durationSeconds > 0 && cw.progressSeconds / cw.durationSeconds >= 0.9,
   );
 
   if (completed.length === 0) return null;
@@ -39,10 +41,7 @@ export function MovieRecentlyCompletedRow({
           const movie = movies.find((m) => m.stream_id === cw.movieId);
           if (!movie) return null;
           return (
-            <div
-              key={cw.movieId}
-              className="shrink-0 w-[120px] group relative"
-            >
+            <div key={cw.movieId} className="shrink-0 w-[120px] group relative">
               <button
                 onClick={() => onSelectMovie(movie)}
                 className="w-full text-left"

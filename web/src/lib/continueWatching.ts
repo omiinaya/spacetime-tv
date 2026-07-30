@@ -139,7 +139,8 @@ export function getSeriesProgress(
 
 // ── Server-side progress merge ────────────────────────────────────────────
 
-import { api, type ServerProgressEntry } from "@/lib/api";
+import { api } from "@/lib/api";
+import type { ServerProgressEntry } from "@/lib/types";
 
 /**
  * Convert server progress entries into local SeriesProgress[] format.

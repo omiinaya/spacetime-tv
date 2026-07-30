@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import { Tv, Loader2, ChevronDown } from "lucide-react";
-import type { LiveStream } from "@/lib/api";
+import type { LiveStream } from "@/lib/types";
 
 interface LiveSearchResultsProps {
   streams: LiveStream[];

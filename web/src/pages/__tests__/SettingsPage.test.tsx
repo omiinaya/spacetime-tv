@@ -18,7 +18,7 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import SettingsPage from "@/pages/SettingsPage";
-import type { Category } from "@/lib/api";
+import type { Category } from "@/lib/types";
 
 // ── Mock api ─────────────────────────────────────────────
 const mockLiveCats = vi.fn();

@@ -18,7 +18,8 @@ import {
   Download,
   Merge,
 } from "lucide-react";
-import { api, Category } from "@/lib/api";
+import { api } from "@/lib/api";
+import { Category } from "@/lib/types";
 import { useSettings } from "@/context/SettingsContext";
 import {
   collectAllPrefixes,

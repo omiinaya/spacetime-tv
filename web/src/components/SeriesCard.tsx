@@ -1,6 +1,6 @@
 import { Star, Heart, Tv2 } from "lucide-react";
 import { isSeriesInWatchlist } from "@/lib/watchlist";
-import type { Series } from "@/lib/api";
+import type { Series } from "@/lib/types";
 
 interface SeriesCardProps {
   series: Series;

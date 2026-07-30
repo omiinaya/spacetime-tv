@@ -1,5 +1,5 @@
 import { Radio, Loader2 } from "lucide-react";
-import type { GuideSearchResult } from "@/lib/api";
+import type { GuideSearchResult } from "@/lib/types";
 
 interface EpgSearchResultsProps {
   results: GuideSearchResult[] | null;

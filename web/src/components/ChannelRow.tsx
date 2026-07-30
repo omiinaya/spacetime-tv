@@ -9,7 +9,7 @@ import {
   Film,
   Loader2,
 } from "lucide-react";
-import type { ChannelGroup, Programme, GuideEnrichResult } from "@/lib/api";
+import type { ChannelGroup, Programme, GuideEnrichResult } from "@/lib/types";
 import { api } from "@/lib/api";
 import { programmeProgress, programmeTimeRange } from "@/lib/guideUtils";
 

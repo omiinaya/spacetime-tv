@@ -1,7 +1,7 @@
 /**
  * Tests for the Series page component — migrated to use MSW for API mocking.
  *
- * Instead of vi.mock("@/lib/api"), this test file uses MSW (Mock Service Worker)
+ * Instead of vi.mock("@/lib/types"), this test file uses MSW (Mock Service Worker)
  * to intercept fetch() calls at the network layer. The real api module is used,
  * which validates URL construction, parameter handling, and JSON parsing.
  *
@@ -18,7 +18,7 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import SeriesPage from "@/pages/Series";
-import type { Series, Category } from "@/lib/api";
+import type { Series, Category } from "@/lib/types";
 import type { SeriesProgress } from "@/lib/continueWatching";
 
 // ── MSW for API interception ──────────────────────────────
