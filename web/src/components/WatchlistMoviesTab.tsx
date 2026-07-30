@@ -5,10 +5,7 @@ import { api, imageUrl } from "@/lib/api";
 import { UnifiedMovie } from "@/lib/types";
 import MovieOverlay from "@/components/MovieOverlay";
 import { PosterCardSkeleton } from "@/components/Skeleton";
-import {
-  getWatchlist,
-  toggleWatchlist,
-} from "@/lib/watchlist";
+import { getWatchlist, toggleWatchlist } from "@/lib/watchlist";
 
 export default function WatchlistMoviesTab() {
   const navigate = useNavigate();

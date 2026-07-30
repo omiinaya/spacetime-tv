@@ -260,8 +260,7 @@ export default function LiveTV() {
         const parsed = JSON.parse(cached);
         if (parsed.a?.length && Date.now() - parsed.ts < 900000) {
           restored = true;
-          if (allStreams.length === 0)
-            setAllStreams(allStreams); // trigger re-render from cache
+          if (allStreams.length === 0) setAllStreams(allStreams); // trigger re-render from cache
           setAllLoading(false);
         }
       } catch {} // DOMException: storage quota or disabled

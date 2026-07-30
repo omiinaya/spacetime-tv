@@ -52,8 +52,8 @@ describe("SeasonSelector", () => {
       />,
     );
     const buttons = container.querySelectorAll("button");
-    const season2Btn = Array.from(buttons).find(
-      (b) => b.textContent?.includes("Season 2"),
+    const season2Btn = Array.from(buttons).find((b) =>
+      b.textContent?.includes("Season 2"),
     );
     expect(season2Btn?.className).toContain("bg-white text-black");
   });

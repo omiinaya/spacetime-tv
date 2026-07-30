@@ -1,11 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import {
-  Settings,
-  Film,
-  Tv2,
-  Tv,
-  RotateCcw,
-} from "lucide-react";
+import { Settings, Film, Tv2, Tv, RotateCcw } from "lucide-react";
 import { api } from "@/lib/api";
 import { Category } from "@/lib/types";
 import { useSettings } from "@/context/SettingsContext";

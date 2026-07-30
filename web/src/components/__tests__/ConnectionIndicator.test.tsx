@@ -5,7 +5,11 @@ import ConnectionIndicator from "@/components/ConnectionIndicator";
 describe("ConnectionIndicator", () => {
   it("renders 4 bars", () => {
     const { container } = render(
-      <ConnectionIndicator connectionQuality="excellent" downloadSpeed={5000} stallCount={0} />,
+      <ConnectionIndicator
+        connectionQuality="excellent"
+        downloadSpeed={5000}
+        stallCount={0}
+      />,
     );
     const bars = container.querySelectorAll("span.block");
     expect(bars).toHaveLength(4);
@@ -13,7 +17,11 @@ describe("ConnectionIndicator", () => {
 
   it("shows all bars active for excellent quality", () => {
     const { container } = render(
-      <ConnectionIndicator connectionQuality="excellent" downloadSpeed={5000} stallCount={0} />,
+      <ConnectionIndicator
+        connectionQuality="excellent"
+        downloadSpeed={5000}
+        stallCount={0}
+      />,
     );
     const bars = container.querySelectorAll("span.block");
     bars.forEach((bar) => {
@@ -23,7 +31,11 @@ describe("ConnectionIndicator", () => {
 
   it("shows 3 bars active for good quality", () => {
     const { container } = render(
-      <ConnectionIndicator connectionQuality="good" downloadSpeed={1000} stallCount={0} />,
+      <ConnectionIndicator
+        connectionQuality="good"
+        downloadSpeed={1000}
+        stallCount={0}
+      />,
     );
     const bars = container.querySelectorAll("span.block");
     expect(bars[0].className).toContain("bg-green-500");
@@ -34,7 +46,11 @@ describe("ConnectionIndicator", () => {
 
   it("shows 2 bars active for fair quality", () => {
     const { container } = render(
-      <ConnectionIndicator connectionQuality="fair" downloadSpeed={500} stallCount={2} />,
+      <ConnectionIndicator
+        connectionQuality="fair"
+        downloadSpeed={500}
+        stallCount={2}
+      />,
     );
     const bars = container.querySelectorAll("span.block");
     expect(bars[0].className).toContain("bg-yellow-400");
@@ -45,7 +61,11 @@ describe("ConnectionIndicator", () => {
 
   it("shows 1 bar active for poor quality", () => {
     const { container } = render(
-      <ConnectionIndicator connectionQuality="poor" downloadSpeed={100} stallCount={5} />,
+      <ConnectionIndicator
+        connectionQuality="poor"
+        downloadSpeed={100}
+        stallCount={5}
+      />,
     );
     const bars = container.querySelectorAll("span.block");
     expect(bars[0].className).toContain("bg-red-500");
@@ -56,7 +76,11 @@ describe("ConnectionIndicator", () => {
 
   it("sets aria-label with quality info", () => {
     const { getByLabelText } = render(
-      <ConnectionIndicator connectionQuality="fair" downloadSpeed={500} stallCount={2} />,
+      <ConnectionIndicator
+        connectionQuality="fair"
+        downloadSpeed={500}
+        stallCount={2}
+      />,
     );
     expect(getByLabelText("Connection quality: fair")).toBeTruthy();
   });

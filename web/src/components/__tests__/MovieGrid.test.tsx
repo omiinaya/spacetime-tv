@@ -23,9 +23,7 @@ vi.mock("@/lib/watchlist", () => ({
 // Import the mocked module so we can control isInWatchlist per test
 import { isInWatchlist } from "@/lib/watchlist";
 
-const makeMovie = (
-  overrides: Partial<UnifiedMovie> = {},
-): UnifiedMovie =>
+const makeMovie = (overrides: Partial<UnifiedMovie> = {}): UnifiedMovie =>
   ({
     stream_id: 1,
     name: "Inception (2010)",
@@ -70,9 +68,7 @@ describe("MovieGrid", () => {
 
   it("passes gridRef to the container div", () => {
     const ref = { current: null as HTMLDivElement | null };
-    const { container } = render(
-      <MovieGrid {...defaultProps} gridRef={ref} />,
-    );
+    const { container } = render(<MovieGrid {...defaultProps} gridRef={ref} />);
     expect(ref.current).toBe(container.firstChild);
   });
 
@@ -163,10 +159,7 @@ describe("MovieGrid", () => {
   });
 
   it("calls isInWatchlist for each movie stream_id", () => {
-    const movies = [
-      makeMovie({ stream_id: 42 }),
-      makeMovie({ stream_id: 99 }),
-    ];
+    const movies = [makeMovie({ stream_id: 42 }), makeMovie({ stream_id: 99 })];
     render(<MovieGrid {...defaultProps} movies={movies} />);
 
     expect(isInWatchlist).toHaveBeenCalledWith(42);
@@ -178,9 +171,7 @@ describe("MovieGrid", () => {
     const movies = [makeMovie({ stream_id: 1 })];
     render(<MovieGrid {...defaultProps} movies={movies} />);
 
-    expect(
-      screen.getByLabelText("Remove from watchlist"),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Remove from watchlist")).toBeInTheDocument();
   });
 
   it('shows "Add to watchlist" label when movie is not in watchlist', () => {
@@ -188,9 +179,7 @@ describe("MovieGrid", () => {
     const movies = [makeMovie({ stream_id: 1 })];
     render(<MovieGrid {...defaultProps} movies={movies} />);
 
-    expect(
-      screen.getByLabelText("Add to watchlist"),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Add to watchlist")).toBeInTheDocument();
   });
 
   // ── Focused state ─────────────────────────────────────────────
@@ -222,11 +211,7 @@ describe("MovieGrid", () => {
   it("does not apply focus styles when focusedIdx is null", () => {
     const movies = [makeMovie({ stream_id: 1 })];
     const { container } = render(
-      <MovieGrid
-        {...defaultProps}
-        movies={movies}
-        focusedIdx={null}
-      />,
+      <MovieGrid {...defaultProps} movies={movies} focusedIdx={null} />,
     );
 
     const card = container.querySelector("[data-grid-idx]")!;
@@ -239,13 +224,7 @@ describe("MovieGrid", () => {
   it("calls onSelect with the movie when a card is clicked", () => {
     const onSelect = vi.fn();
     const movies = [makeMovie({ stream_id: 42 })];
-    render(
-      <MovieGrid
-        {...defaultProps}
-        movies={movies}
-        onSelect={onSelect}
-      />,
-    );
+    render(<MovieGrid {...defaultProps} movies={movies} onSelect={onSelect} />);
 
     const card = screen.getByText("Inception").closest("[data-grid-idx]")!;
     fireEvent.click(card);
@@ -262,11 +241,7 @@ describe("MovieGrid", () => {
       makeMovie({ stream_id: 1, name: "Test Movie", base_name: "Test Movie" }),
     ];
     render(
-      <MovieGrid
-        {...defaultProps}
-        movies={movies}
-        onKeyDown={onKeyDown}
-      />,
+      <MovieGrid {...defaultProps} movies={movies} onKeyDown={onKeyDown} />,
     );
 
     const card = screen.getByText("Test Movie").closest("[data-grid-idx]")!;
@@ -280,13 +255,7 @@ describe("MovieGrid", () => {
   it("calls onSelect on Enter key", () => {
     const onSelect = vi.fn();
     const movies = [makeMovie({ stream_id: 1 })];
-    render(
-      <MovieGrid
-        {...defaultProps}
-        movies={movies}
-        onSelect={onSelect}
-      />,
-    );
+    render(<MovieGrid {...defaultProps} movies={movies} onSelect={onSelect} />);
 
     const card = screen.getByText("Inception").closest("[data-grid-idx]")!;
     fireEvent.keyDown(card, { key: "Enter" });
@@ -298,13 +267,7 @@ describe("MovieGrid", () => {
   it("calls onSelect on Space key", () => {
     const onSelect = vi.fn();
     const movies = [makeMovie({ stream_id: 1 })];
-    render(
-      <MovieGrid
-        {...defaultProps}
-        movies={movies}
-        onSelect={onSelect}
-      />,
-    );
+    render(<MovieGrid {...defaultProps} movies={movies} onSelect={onSelect} />);
 
     const card = screen.getByText("Inception").closest("[data-grid-idx]")!;
     fireEvent.keyDown(card, { key: " " });
@@ -403,15 +366,14 @@ describe("MovieGrid", () => {
   // ── Poster / fallback ─────────────────────────────────────────
 
   it("renders poster image when stream_icon is present", () => {
-    const movies = [makeMovie({ stream_icon: "https://example.com/poster.jpg" })];
+    const movies = [
+      makeMovie({ stream_icon: "https://example.com/poster.jpg" }),
+    ];
     render(<MovieGrid {...defaultProps} movies={movies} />);
 
     const img = screen.getByAltText("");
     expect(img).toBeInTheDocument();
-    expect(img).toHaveAttribute(
-      "src",
-      "https://example.com/poster.jpg",
-    );
+    expect(img).toHaveAttribute("src", "https://example.com/poster.jpg");
     expect(img).toHaveAttribute("loading", "lazy");
   });
 
@@ -452,9 +414,7 @@ describe("MovieGrid", () => {
   });
 
   it("falls back to name when base_name is not set", () => {
-    const movies = [
-      makeMovie({ name: "The Matrix", base_name: "" }),
-    ];
+    const movies = [makeMovie({ name: "The Matrix", base_name: "" })];
     render(<MovieGrid {...defaultProps} movies={movies} />);
 
     expect(screen.getByText("The Matrix")).toBeInTheDocument();
@@ -463,10 +423,7 @@ describe("MovieGrid", () => {
   // ── data-grid-idx attribute ───────────────────────────────────
 
   it("assigns data-grid-idx for keyboard navigation", () => {
-    const movies = [
-      makeMovie({ stream_id: 1 }),
-      makeMovie({ stream_id: 2 }),
-    ];
+    const movies = [makeMovie({ stream_id: 1 }), makeMovie({ stream_id: 2 })];
     const { container } = render(
       <MovieGrid {...defaultProps} movies={movies} />,
     );
@@ -479,7 +436,7 @@ describe("MovieGrid", () => {
 
   // ── Role and tabIndex ─────────────────────────────────────────
 
-  it("each card has role=\"button\" and tabIndex={0}", () => {
+  it('each card has role="button" and tabIndex={0}', () => {
     const movies = [makeMovie({ stream_id: 1 })];
     render(<MovieGrid {...defaultProps} movies={movies} />);
 

@@ -6,7 +6,10 @@ interface CacheControlsProps {
   onRefresh: () => void;
 }
 
-export default function CacheControls({ headers, onRefresh }: CacheControlsProps) {
+export default function CacheControls({
+  headers,
+  onRefresh,
+}: CacheControlsProps) {
   const [cacheMsg, setCacheMsg] = useState<string | null>(null);
 
   const post = async (url: string, doneMsg: string) => {
@@ -54,7 +57,9 @@ export default function CacheControls({ headers, onRefresh }: CacheControlsProps
           Warm Cache
         </button>
         <button
-          onClick={() => post("/api/admin/cache/warm-full", "Full re-warm started")}
+          onClick={() =>
+            post("/api/admin/cache/warm-full", "Full re-warm started")
+          }
           disabled={!!cacheMsg}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-xs hover:bg-amber-500/20 hover:text-amber-400 transition-colors disabled:opacity-50"
         >

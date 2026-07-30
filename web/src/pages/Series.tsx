@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router";
-import { Tv2, Loader2, AlertCircle, RotateCcw, Search, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toggleSeriesWatchlist as toggleSeriesWl } from "@/lib/watchlist";
 import { api } from "@/lib/api";
 import { Category, Series } from "@/lib/types";
@@ -8,10 +8,14 @@ import ContentRow from "@/components/ContentRow";
 import SeriesOverlay from "@/components/SeriesOverlay";
 import SeriesWatchingSection from "@/components/SeriesWatchingSection";
 import SeriesGridNav from "@/components/SeriesGridNav";
-import { Skeleton } from "@/components/Skeleton";
-import { PosterCardSkeleton } from "@/components/Skeleton";
 import SeriesCard from "@/components/SeriesCard";
 import TrendingSeriesRow from "@/components/TrendingSeriesRow";
+import SeriesSearchInput from "@/components/SeriesSearchInput";
+import SeriesHeader from "@/components/SeriesHeader";
+import SeriesPageSkeleton from "@/components/SeriesPageSkeleton";
+import SeriesRowSkeleton from "@/components/SeriesRowSkeleton";
+import ErrorBanner from "@/components/ErrorBanner";
+import { SeriesEmptySearchState, SeriesFilterEmptyState } from "@/components/SeriesEmptyStates";
 import { useSettings } from "@/context/SettingsContext";
 import { filterCategories } from "@/lib/settings";
 
@@ -39,7 +43,7 @@ export default function SeriesPage() {
   const navigate = useNavigate();
   const toggleSeriesWatchlist = useSeriesWatchlistToggle();
 
-  // ── Cache helper ───────────────────────────────────────────────
+  // Cache helper
   const loadCache = <T,>(
     key: string,
     field: string,
@@ -50,7 +54,7 @@ export default function SeriesPage() {
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (parsed[field] && Date.now() - parsed.ts < ttl) return parsed[field];
-    } catch {} // DOMException: storage quota or disabled
+    } catch {}
     return null;
   };
 
@@ -66,7 +70,7 @@ export default function SeriesPage() {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const fetchingRef = useRef<Set<string>>(new Set());
 
-  // Section search (persisted in URL so Back button restores it)
+  // Search (URL-persisted)
   const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get("q") || "";
   const setSearchQuery = useCallback(
@@ -77,7 +81,7 @@ export default function SeriesPage() {
     [setSearchParams],
   );
 
-  // ── "Show All" mode ────────────────────────────────────────────
+  // Show All mode
   const [showAllCatId, setShowAllCatId] = useState<string | null>(null);
   const [showAllCatName, setShowAllCatName] = useState("");
   const [showAllSeries, setShowAllSeries] = useState<Series[]>([]);
@@ -85,7 +89,7 @@ export default function SeriesPage() {
   const [showAllPage, setShowAllPage] = useState(1);
   const [showAllLoading, setShowAllLoading] = useState(false);
 
-  // Overlay state
+  // Overlay
   const [overlaySeries, setOverlaySeries] = useState<Series | null>(null);
   const location = useLocation();
 
@@ -94,16 +98,13 @@ export default function SeriesPage() {
     const state = location.state as { openSeries?: Series } | null;
     if (state?.openSeries) {
       setOverlaySeries(state.openSeries);
-      // Clear state so Back from overlay doesn't re-open it
       window.history.replaceState({}, document.title);
       return;
     }
-    // Bookmarkable ?open=SERIES_ID — find in loaded rows or fetch details
     const openId = searchParams.get("open");
     if (openId) {
       const id = Number(openId);
       if (isNaN(id)) return;
-      // Search loaded rows for the series
       for (const [, row] of rows) {
         const found = row.series.find((s) => s.series_id === id);
         if (found) {
@@ -111,21 +112,18 @@ export default function SeriesPage() {
           return;
         }
       }
-      // Not yet loaded — search endpoint can find it (use api.search)
-      // Navigate without ?open= to prevent re-triggering
       setSearchParams({}, { replace: true });
     }
   }, [location.state, searchParams, rows, setSearchParams]);
 
   const { settings, adultUnlocked } = useSettings();
 
-  // Filter categories by settings
   const filteredCatsBySettings = useMemo(
     () => filterCategories(categories, settings, false, adultUnlocked),
     [categories, settings, adultUnlocked],
   );
 
-  // Load categories (with 15-min sessionStorage cache)
+  // Load categories (15-min cache)
   useEffect(() => {
     const cached = sessionStorage.getItem("stv_series_cats");
     if (cached) {
@@ -135,7 +133,7 @@ export default function SeriesPage() {
           setCategories(parsed.categories);
           setLoading(false);
         }
-      } catch {} // DOMException: storage quota or disabled
+      } catch {}
     }
     api.series
       .categories()
@@ -187,17 +185,10 @@ export default function SeriesPage() {
       const d = await api.series.list(key, SERIES_PER_ROW, 0);
       setRows((prev) => {
         const next = new Map(prev);
-        next.set(key, {
-          cat,
-          series: d.series,
-          total: d.total,
-          loading: false,
-          loaded: true,
-        });
+        next.set(key, { cat, series: d.series, total: d.total, loading: false, loaded: true });
         return next;
       });
     } catch {
-      // SyntaxError or network error — silently degrade; empty state handles it
       setRows((prev) => {
         const next = new Map(prev);
         const cur = prev.get(key);
@@ -223,19 +214,11 @@ export default function SeriesPage() {
       if (current.series.length >= current.total) return;
       fetchingRef.current.add(key);
       try {
-        const d = await api.series.list(
-          key,
-          SERIES_PER_ROW,
-          current.series.length,
-        );
+        const d = await api.series.list(key, SERIES_PER_ROW, current.series.length);
         setRows((prev) => {
           const next = new Map(prev);
           const existing = next.get(key)!;
-          next.set(key, {
-            ...existing,
-            series: [...existing.series, ...d.series],
-            total: d.total,
-          });
+          next.set(key, { ...existing, series: [...existing.series, ...d.series], total: d.total });
           return next;
         });
       } finally {
@@ -245,7 +228,7 @@ export default function SeriesPage() {
     [rows],
   );
 
-  // ── "Show All" fetch + pagination ─────────────────────────────
+  // Show All fetch + pagination
   const fetchShowAll = useCallback(async (catId: string, page: number) => {
     setShowAllLoading(true);
     const offset = (page - 1) * SHOW_ALL_PAGE_SIZE;
@@ -255,7 +238,6 @@ export default function SeriesPage() {
       setShowAllTotal(d.total);
       setShowAllPage(page);
     } catch {
-      // SyntaxError or network error — silent; empty state handles it
     } finally {
       setShowAllLoading(false);
     }
@@ -289,7 +271,7 @@ export default function SeriesPage() {
     [showAllCatId, fetchShowAll],
   );
 
-  // Lazy-fetch visible rows (after settings filter)
+  // Lazy-fetch visible rows
   const visibleCats = filteredCatsBySettings.slice(0, visibleRows);
   useEffect(() => {
     for (const cat of visibleCats) {
@@ -300,7 +282,7 @@ export default function SeriesPage() {
     }
   }, [visibleCats, rows, fetchRow]);
 
-  // Filter by search query
+  // Row filtering by search query
   const q = searchQuery.toLowerCase().trim();
   const filteredCats = useMemo(() => {
     if (!q) return visibleCats;
@@ -320,92 +302,26 @@ export default function SeriesPage() {
     [q],
   );
 
-  if (loading) {
-    return (
-      <div className="space-y-8">
-        <div className="flex items-center gap-4">
-          <Skeleton className="w-10 h-10 rounded-lg" />
-          <div className="space-y-1.5">
-            <Skeleton className="w-24 h-5" />
-            <Skeleton className="w-40 h-3.5" />
-          </div>
-        </div>
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="space-y-2">
-            <Skeleton className="w-48 h-4" />
-            <div className="flex gap-2">
-              {Array.from({ length: 7 }).map((_, j) => (
-                <div key={j} className="shrink-0 w-[170px] sm:w-[185px]">
-                  <PosterCardSkeleton />
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  if (loading) return <SeriesPageSkeleton />;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-          <Tv2 className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-xl font-semibold">Series</h1>
-          <p className="text-sm text-muted-foreground">
-            {filteredCatsBySettings.length > 0
-              ? `${filteredCatsBySettings.length.toLocaleString()} categories`
-              : ""}
-          </p>
-        </div>
-      </div>
-
-      {/* Continue Watching / Recently Completed */}
+      <SeriesHeader categoryCount={filteredCatsBySettings.length} />
       <SeriesWatchingSection navigate={navigate} />
-
-      {/* Trending (TMDB TV proxy) — extracted to TrendingSeriesRow */}
       <TrendingSeriesRow />
-      {/* Section search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Filter series..."
-          className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
+      <SeriesSearchInput value={searchQuery} onChange={setSearchQuery} />
 
       {error && (
-        <div className="flex items-center gap-3 p-3 rounded-lg border border-destructive/30 bg-destructive/5 text-sm text-destructive">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          <span className="truncate">{error}</span>
-          <button
-            onClick={() => {
-              setError(null);
-              window.location.reload();
-            }}
-            className="ml-auto shrink-0 flex items-center gap-1 px-2 py-1 rounded text-xs border border-border hover:bg-muted"
-          >
-            <RotateCcw className="h-3 w-3" />
-            Retry
-          </button>
-        </div>
+        <ErrorBanner
+          message={error}
+          onRetry={() => {
+            setError(null);
+            window.location.reload();
+          }}
+        />
       )}
 
-      {/* Filtered rows — or "Show All" grid view */}
+      {/* Rows or Show All grid */}
       {showAllCatId ? (
         <SeriesGridNav
           catId={showAllCatId}
@@ -421,18 +337,10 @@ export default function SeriesPage() {
           onToggleWatchlist={toggleSeriesWatchlist}
         />
       ) : q && filteredCats.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Search className="h-10 w-10 text-muted-foreground/20 mb-3" />
-          <p className="text-sm text-muted-foreground">
-            No series matching "{searchQuery}"
-          </p>
-          <button
-            onClick={() => setSearchQuery("")}
-            className="mt-2 text-xs text-primary hover:underline"
-          >
-            Clear search
-          </button>
-        </div>
+        <SeriesEmptySearchState
+          query={searchQuery}
+          onClear={() => setSearchQuery("")}
+        />
       ) : (
         <div className="space-y-6">
           {filteredCats.map((cat) => {
@@ -442,28 +350,9 @@ export default function SeriesPage() {
             const hasMore = row ? row.series.length < row.total : true;
             const filtered = filterSeries(seriesList);
 
-            if (!row || loadingRow) {
-              return (
-                <div key={cat.category_id} className="space-y-2">
-                  <div className="flex items-baseline gap-2 px-1">
-                    <Skeleton className="w-40 h-4" />
-                  </div>
-                  <div className="flex gap-2 overflow-hidden">
-                    {Array.from({ length: 7 }).map((_, j) => (
-                      <div key={j} className="shrink-0 w-[170px] sm:w-[185px]">
-                        <PosterCardSkeleton />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            }
+            if (!row || loadingRow) return <SeriesRowSkeleton key={cat.category_id} />;
 
-            if (
-              q &&
-              filtered.length === 0 &&
-              !cat.category_name.toLowerCase().includes(q)
-            ) {
+            if (q && filtered.length === 0 && !cat.category_name.toLowerCase().includes(q)) {
               return null;
             }
 
@@ -504,18 +393,9 @@ export default function SeriesPage() {
       )}
 
       {!showAllCatId && filteredCatsBySettings.length === 0 && !loading && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Tv2 className="h-10 w-10 text-muted-foreground/20 mb-3" />
-          <p className="text-sm text-muted-foreground">
-            No categories match your filters
-          </p>
-          <p className="text-xs text-muted-foreground/50 mt-1">
-            Adjust your language or service settings to see more content
-          </p>
-        </div>
+        <SeriesFilterEmptyState />
       )}
 
-      {/* Series overlay */}
       {overlaySeries && (
         <SeriesOverlay
           series={overlaySeries}

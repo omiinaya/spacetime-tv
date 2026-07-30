@@ -6,7 +6,10 @@ interface ErrorLogSectionProps {
   total: number;
 }
 
-export default function ErrorLogSection({ errors, total }: ErrorLogSectionProps) {
+export default function ErrorLogSection({
+  errors,
+  total,
+}: ErrorLogSectionProps) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">

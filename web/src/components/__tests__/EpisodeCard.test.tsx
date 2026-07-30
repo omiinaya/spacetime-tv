@@ -15,7 +15,10 @@ const baseEpisode: Episode = {
   },
 };
 
-function renderCard(ep: Episode = baseEpisode, opts: Record<string, unknown> = {}) {
+function renderCard(
+  ep: Episode = baseEpisode,
+  opts: Record<string, unknown> = {},
+) {
   return render(
     <MemoryRouter>
       <EpisodeCard
@@ -46,7 +49,11 @@ describe("EpisodeCard", () => {
   });
 
   it("shows fallback title when no title", () => {
-    renderCard({ ...baseEpisode, title: undefined, info: undefined } as Episode);
+    renderCard({
+      ...baseEpisode,
+      title: undefined,
+      info: undefined,
+    } as Episode);
     expect(screen.getByText("Episode 5")).toBeTruthy();
   });
 
@@ -71,16 +78,24 @@ describe("EpisodeCard", () => {
   });
 
   it("shows progress bar when episode has progress < 90%", () => {
-    const progress = new Map<string, { progressSeconds: number; durationSeconds: number }>();
+    const progress = new Map<
+      string,
+      { progressSeconds: number; durationSeconds: number }
+    >();
     progress.set("1:5", { progressSeconds: 500, durationSeconds: 2700 });
-    const { container } = renderCard(baseEpisode, { episodeProgress: progress });
+    const { container } = renderCard(baseEpisode, {
+      episodeProgress: progress,
+    });
     // Progress bar is rendered inside a sub-element with style width
     const progressFills = container.querySelectorAll('[style*="width"]');
     expect(progressFills.length).toBeGreaterThan(0);
   });
 
   it("shows checkmark when episode progress >= 90%", () => {
-    const progress = new Map<string, { progressSeconds: number; durationSeconds: number }>();
+    const progress = new Map<
+      string,
+      { progressSeconds: number; durationSeconds: number }
+    >();
     progress.set("1:5", { progressSeconds: 2600, durationSeconds: 2700 });
     renderCard(baseEpisode, { episodeProgress: progress });
     expect(screen.getByText("✓")).toBeTruthy();

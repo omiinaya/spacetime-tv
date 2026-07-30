@@ -8,7 +8,12 @@ describe("LanguageFilter", () => {
 
   it("renders all language buttons plus All", () => {
     render(
-      <LanguageFilter prefixes={prefixes} languages={[]} onToggle={vi.fn()} onClear={vi.fn()} />,
+      <LanguageFilter
+        prefixes={prefixes}
+        languages={[]}
+        onToggle={vi.fn()}
+        onClear={vi.fn()}
+      />,
     );
     expect(screen.getByText("All")).toBeTruthy();
     expect(screen.getByText("EN")).toBeTruthy();
@@ -19,7 +24,12 @@ describe("LanguageFilter", () => {
 
   it("highlights All when no languages selected", () => {
     const { container } = render(
-      <LanguageFilter prefixes={prefixes} languages={[]} onToggle={vi.fn()} onClear={vi.fn()} />,
+      <LanguageFilter
+        prefixes={prefixes}
+        languages={[]}
+        onToggle={vi.fn()}
+        onClear={vi.fn()}
+      />,
     );
     const allBtn = container.querySelector("button");
     expect(allBtn?.className).toContain("bg-primary/15");
@@ -27,7 +37,12 @@ describe("LanguageFilter", () => {
 
   it("highlights selected languages", () => {
     const { container } = render(
-      <LanguageFilter prefixes={prefixes} languages={["EN", "FR"]} onToggle={vi.fn()} onClear={vi.fn()} />,
+      <LanguageFilter
+        prefixes={prefixes}
+        languages={["EN", "FR"]}
+        onToggle={vi.fn()}
+        onClear={vi.fn()}
+      />,
     );
     const buttons = container.querySelectorAll("button");
     buttons.forEach((btn) => {
@@ -39,7 +54,12 @@ describe("LanguageFilter", () => {
 
   it("shows selected count", () => {
     render(
-      <LanguageFilter prefixes={prefixes} languages={["EN", "ES"]} onToggle={vi.fn()} onClear={vi.fn()} />,
+      <LanguageFilter
+        prefixes={prefixes}
+        languages={["EN", "ES"]}
+        onToggle={vi.fn()}
+        onClear={vi.fn()}
+      />,
     );
     expect(screen.getByText("2 selected")).toBeTruthy();
   });
@@ -47,7 +67,12 @@ describe("LanguageFilter", () => {
   it("calls onToggle when language clicked", () => {
     const onToggle = vi.fn();
     render(
-      <LanguageFilter prefixes={prefixes} languages={[]} onToggle={onToggle} onClear={vi.fn()} />,
+      <LanguageFilter
+        prefixes={prefixes}
+        languages={[]}
+        onToggle={onToggle}
+        onClear={vi.fn()}
+      />,
     );
     fireEvent.click(screen.getByText("EN"));
     expect(onToggle).toHaveBeenCalledWith("EN");
@@ -56,7 +81,12 @@ describe("LanguageFilter", () => {
   it("calls onClear when All clicked", () => {
     const onClear = vi.fn();
     render(
-      <LanguageFilter prefixes={prefixes} languages={["EN"]} onToggle={vi.fn()} onClear={onClear} />,
+      <LanguageFilter
+        prefixes={prefixes}
+        languages={["EN"]}
+        onToggle={vi.fn()}
+        onClear={onClear}
+      />,
     );
     fireEvent.click(screen.getByText("All"));
     expect(onClear).toHaveBeenCalled();
@@ -68,7 +98,12 @@ describe("ServiceFilter", () => {
 
   it("renders all service buttons plus All", () => {
     render(
-      <ServiceFilter services={services} enabledServices={[]} onToggle={vi.fn()} onClear={vi.fn()} />,
+      <ServiceFilter
+        services={services}
+        enabledServices={[]}
+        onToggle={vi.fn()}
+        onClear={vi.fn()}
+      />,
     );
     expect(screen.getByText("All")).toBeTruthy();
     expect(screen.getByText("Netflix")).toBeTruthy();
@@ -77,7 +112,12 @@ describe("ServiceFilter", () => {
 
   it("highlights enabled services", () => {
     const { container } = render(
-      <ServiceFilter services={services} enabledServices={["HBO"]} onToggle={vi.fn()} onClear={vi.fn()} />,
+      <ServiceFilter
+        services={services}
+        enabledServices={["HBO"]}
+        onToggle={vi.fn()}
+        onClear={vi.fn()}
+      />,
     );
     const buttons = container.querySelectorAll("button");
     buttons.forEach((btn) => {
@@ -90,7 +130,12 @@ describe("ServiceFilter", () => {
   it("calls onToggle when service clicked", () => {
     const onToggle = vi.fn();
     render(
-      <ServiceFilter services={services} enabledServices={[]} onToggle={onToggle} onClear={vi.fn()} />,
+      <ServiceFilter
+        services={services}
+        enabledServices={[]}
+        onToggle={onToggle}
+        onClear={vi.fn()}
+      />,
     );
     fireEvent.click(screen.getByText("Netflix"));
     expect(onToggle).toHaveBeenCalledWith("Netflix");
@@ -99,7 +144,12 @@ describe("ServiceFilter", () => {
   it("calls onClear when All clicked", () => {
     const onClear = vi.fn();
     render(
-      <ServiceFilter services={services} enabledServices={["Netflix"]} onToggle={vi.fn()} onClear={onClear} />,
+      <ServiceFilter
+        services={services}
+        enabledServices={["Netflix"]}
+        onToggle={vi.fn()}
+        onClear={onClear}
+      />,
     );
     fireEvent.click(screen.getByText("All"));
     expect(onClear).toHaveBeenCalled();

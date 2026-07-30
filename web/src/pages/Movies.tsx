@@ -77,9 +77,7 @@ export default function Movies() {
   );
 
   // Continue watching
-  const [continueWatching, setContinueWatching] = useState<MovieProgress[]>(
-    [],
-  );
+  const [continueWatching, setContinueWatching] = useState<MovieProgress[]>([]);
   useEffect(() => {
     setContinueWatching(getMovieContinueWatching());
     loadServerProgress().then((merged) => {
@@ -229,7 +227,9 @@ export default function Movies() {
       )}
 
       {/* Recently Added */}
-      {!loading && <RecentlyAddedRow movies={movies} onSelect={setOverlayMovie} />}
+      {!loading && (
+        <RecentlyAddedRow movies={movies} onSelect={setOverlayMovie} />
+      )}
 
       {/* Trending (TMDB proxy) */}
       {!trendingLoading && trendingEnabled && (

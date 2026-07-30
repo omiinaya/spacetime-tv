@@ -11,7 +11,11 @@ describe("HiddenCategoriesSection", () => {
 
   it("renders all categories", () => {
     render(
-      <HiddenCategoriesSection categories={allCats} hiddenIds={[]} onToggle={vi.fn()} />,
+      <HiddenCategoriesSection
+        categories={allCats}
+        hiddenIds={[]}
+        onToggle={vi.fn()}
+      />,
     );
     expect(screen.getByText("News")).toBeTruthy();
     expect(screen.getByText("Sports")).toBeTruthy();
@@ -20,14 +24,22 @@ describe("HiddenCategoriesSection", () => {
 
   it("shows hidden count", () => {
     render(
-      <HiddenCategoriesSection categories={allCats} hiddenIds={["1"]} onToggle={vi.fn()} />,
+      <HiddenCategoriesSection
+        categories={allCats}
+        hiddenIds={["1"]}
+        onToggle={vi.fn()}
+      />,
     );
     expect(screen.getByText("1 hidden")).toBeTruthy();
   });
 
   it("marks hidden items with line-through", () => {
     const { container } = render(
-      <HiddenCategoriesSection categories={allCats} hiddenIds={["1"]} onToggle={vi.fn()} />,
+      <HiddenCategoriesSection
+        categories={allCats}
+        hiddenIds={["1"]}
+        onToggle={vi.fn()}
+      />,
     );
     const spans = container.querySelectorAll("span.truncate");
     const newsSpan = Array.from(spans).find((s) => s.textContent === "News");
@@ -36,7 +48,11 @@ describe("HiddenCategoriesSection", () => {
 
   it("filters categories by search", () => {
     render(
-      <HiddenCategoriesSection categories={allCats} hiddenIds={[]} onToggle={vi.fn()} />,
+      <HiddenCategoriesSection
+        categories={allCats}
+        hiddenIds={[]}
+        onToggle={vi.fn()}
+      />,
     );
     const input = screen.getByPlaceholderText("Search categories...");
     fireEvent.change(input, { target: { value: "News" } });
@@ -47,7 +63,11 @@ describe("HiddenCategoriesSection", () => {
   it("calls onToggle when category clicked", () => {
     const onToggle = vi.fn();
     render(
-      <HiddenCategoriesSection categories={allCats} hiddenIds={[]} onToggle={onToggle} />,
+      <HiddenCategoriesSection
+        categories={allCats}
+        hiddenIds={[]}
+        onToggle={onToggle}
+      />,
     );
     // Find the checkbox button for News
     const labels = screen.getAllByText("News");
@@ -59,7 +79,11 @@ describe("HiddenCategoriesSection", () => {
 
   it("shows empty state when no categories match filter", () => {
     render(
-      <HiddenCategoriesSection categories={allCats} hiddenIds={[]} onToggle={vi.fn()} />,
+      <HiddenCategoriesSection
+        categories={allCats}
+        hiddenIds={[]}
+        onToggle={vi.fn()}
+      />,
     );
     const input = screen.getByPlaceholderText("Search categories...");
     fireEvent.change(input, { target: { value: "ZZZZZZ" } });

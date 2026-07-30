@@ -67,10 +67,7 @@ describe("PlayerCenterControls", () => {
   it("calls onTogglePlay when play/pause button clicked", async () => {
     const onTogglePlay = vi.fn();
     render(
-      <PlayerCenterControls
-        {...defaultProps}
-        onTogglePlay={onTogglePlay}
-      />,
+      <PlayerCenterControls {...defaultProps} onTogglePlay={onTogglePlay} />,
     );
     await userEvent.click(screen.getByLabelText("Play"));
     expect(onTogglePlay).toHaveBeenCalledTimes(1);
@@ -78,18 +75,14 @@ describe("PlayerCenterControls", () => {
 
   it("calls onSeek(-10) when rewind button clicked", async () => {
     const onSeek = vi.fn();
-    render(
-      <PlayerCenterControls {...defaultProps} onSeek={onSeek} />,
-    );
+    render(<PlayerCenterControls {...defaultProps} onSeek={onSeek} />);
     await userEvent.click(screen.getByLabelText("Rewind 10 seconds"));
     expect(onSeek).toHaveBeenCalledWith(-10);
   });
 
   it("calls onSeek(10) when forward button clicked", async () => {
     const onSeek = vi.fn();
-    render(
-      <PlayerCenterControls {...defaultProps} onSeek={onSeek} />,
-    );
+    render(<PlayerCenterControls {...defaultProps} onSeek={onSeek} />);
     await userEvent.click(screen.getByLabelText("Forward 10 seconds"));
     expect(onSeek).toHaveBeenCalledWith(10);
   });

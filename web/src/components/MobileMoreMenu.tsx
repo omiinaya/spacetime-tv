@@ -90,9 +90,7 @@ export default function MobileMoreMenu({
           <button
             onClick={() => {
               setOpen(false);
-              window.dispatchEvent(
-                new CustomEvent("stv:toggle-shortcuts"),
-              );
+              window.dispatchEvent(new CustomEvent("stv:toggle-shortcuts"));
             }}
             className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-sm text-white/70 hover:bg-white/10 transition-colors"
           >

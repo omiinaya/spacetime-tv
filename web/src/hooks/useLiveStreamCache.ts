@@ -59,9 +59,9 @@ function restoreAllStreams(): LiveStream[] {
 }
 
 export function useLiveStreamCache() {
-  const [categories, setCategories] = useState<import("@/lib/types").Category[]>(
-    () => loadCache(CATS_KEY, "categories") ?? [],
-  );
+  const [categories, setCategories] = useState<
+    import("@/lib/types").Category[]
+  >(() => loadCache(CATS_KEY, "categories") ?? []);
   const [allStreams, setAllStreams] = useState<LiveStream[]>(() =>
     restoreAllStreams(),
   );

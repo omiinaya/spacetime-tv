@@ -5,7 +5,9 @@ interface RecentSearchesSectionProps {
   searches: { total: number; recent: { ts: number; query: string }[] };
 }
 
-export default function RecentSearchesSection({ searches }: RecentSearchesSectionProps) {
+export default function RecentSearchesSection({
+  searches,
+}: RecentSearchesSectionProps) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">

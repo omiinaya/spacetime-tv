@@ -14,9 +14,7 @@ vi.mock("@/lib/api", () => ({
   imageUrl: (url: string) => url,
 }));
 
-const makeMovie = (
-  overrides: Partial<UnifiedMovie> = {},
-): UnifiedMovie =>
+const makeMovie = (overrides: Partial<UnifiedMovie> = {}): UnifiedMovie =>
   ({
     stream_id: Date.now() + Math.random(),
     name: "Test Movie",
@@ -87,9 +85,24 @@ describe("RecentlyAddedRow", () => {
 
   it("sorts by `added` descending", () => {
     const movies = [
-      makeMovie({ stream_id: 1, name: "Oldest", added: "1000000000", base_name: "Oldest" }),
-      makeMovie({ stream_id: 2, name: "Newest", added: "2000000000", base_name: "Newest" }),
-      makeMovie({ stream_id: 3, name: "Middle", added: "1500000000", base_name: "Middle" }),
+      makeMovie({
+        stream_id: 1,
+        name: "Oldest",
+        added: "1000000000",
+        base_name: "Oldest",
+      }),
+      makeMovie({
+        stream_id: 2,
+        name: "Newest",
+        added: "2000000000",
+        base_name: "Newest",
+      }),
+      makeMovie({
+        stream_id: 3,
+        name: "Middle",
+        added: "1500000000",
+        base_name: "Middle",
+      }),
     ];
     render(<RecentlyAddedRow movies={movies} onSelect={onSelect} />);
 
@@ -173,27 +186,21 @@ describe("RecentlyAddedRow", () => {
   // ── Rating badge ──────────────────────────────────────────────
 
   it("shows rating badge when rating is present", () => {
-    const movies = [
-      makeMovie({ stream_id: 1, rating: "8.5" }),
-    ];
+    const movies = [makeMovie({ stream_id: 1, rating: "8.5" })];
     render(<RecentlyAddedRow movies={movies} onSelect={onSelect} />);
 
     expect(screen.getByText("★8.5")).toBeInTheDocument();
   });
 
   it("formats rating with one decimal place", () => {
-    const movies = [
-      makeMovie({ stream_id: 1, rating: "9" }),
-    ];
+    const movies = [makeMovie({ stream_id: 1, rating: "9" })];
     render(<RecentlyAddedRow movies={movies} onSelect={onSelect} />);
 
     expect(screen.getByText("★9.0")).toBeInTheDocument();
   });
 
   it("does not show rating badge when rating is empty", () => {
-    const movies = [
-      makeMovie({ stream_id: 1, rating: "" }),
-    ];
+    const movies = [makeMovie({ stream_id: 1, rating: "" })];
     render(<RecentlyAddedRow movies={movies} onSelect={onSelect} />);
 
     expect(screen.queryByText(/★/)).not.toBeInTheDocument();
@@ -234,7 +241,11 @@ describe("RecentlyAddedRow", () => {
   // ── onSelect interaction ──────────────────────────────────────
 
   it("calls onSelect with the movie when a card is clicked", () => {
-    const movie = makeMovie({ stream_id: 42, name: "Click Me", base_name: "Click Me" });
+    const movie = makeMovie({
+      stream_id: 42,
+      name: "Click Me",
+      base_name: "Click Me",
+    });
     render(<RecentlyAddedRow movies={[movie]} onSelect={onSelect} />);
 
     fireEvent.click(screen.getByText("Click Me"));

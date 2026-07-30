@@ -7,7 +7,12 @@ interface StatCardProps {
   sub?: string;
 }
 
-export default function StatCard({ icon: Icon, label, value, sub }: StatCardProps) {
+export default function StatCard({
+  icon: Icon,
+  label,
+  value,
+  sub,
+}: StatCardProps) {
   return (
     <div className="bg-card border border-border rounded-lg p-4">
       <div className="flex items-center gap-2 mb-2">

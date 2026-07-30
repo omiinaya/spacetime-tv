@@ -65,11 +65,7 @@ describe("TrendingMoviesRow", () => {
 
   it("returns null when trending array is empty", () => {
     const { container } = render(
-      <TrendingMoviesRow
-        trending={[]}
-        movies={[]}
-        onSelect={onSelect}
-      />,
+      <TrendingMoviesRow trending={[]} movies={[]} onSelect={onSelect} />,
     );
     expect(container.firstChild).toBeNull();
   });
@@ -79,11 +75,7 @@ describe("TrendingMoviesRow", () => {
   it('renders ContentRow with title "Trending This Week"', () => {
     const trending = [makeTmdbMovie()];
     render(
-      <TrendingMoviesRow
-        trending={trending}
-        movies={[]}
-        onSelect={onSelect}
-      />,
+      <TrendingMoviesRow trending={trending} movies={[]} onSelect={onSelect} />,
     );
     expect(screen.getByText("Trending This Week")).toBeInTheDocument();
   });
@@ -91,11 +83,7 @@ describe("TrendingMoviesRow", () => {
   it("renders item count in the ContentRow", () => {
     const trending = [makeTmdbMovie({ id: 1 }), makeTmdbMovie({ id: 2 })];
     render(
-      <TrendingMoviesRow
-        trending={trending}
-        movies={[]}
-        onSelect={onSelect}
-      />,
+      <TrendingMoviesRow trending={trending} movies={[]} onSelect={onSelect} />,
     );
     // ContentRenders item count via toLocaleString()
     expect(screen.getByText("2")).toBeInTheDocument();
@@ -106,11 +94,7 @@ describe("TrendingMoviesRow", () => {
   it("shows rating badge when vote_average > 0", () => {
     const trending = [makeTmdbMovie({ vote_average: 8.2 })];
     render(
-      <TrendingMoviesRow
-        trending={trending}
-        movies={[]}
-        onSelect={onSelect}
-      />,
+      <TrendingMoviesRow trending={trending} movies={[]} onSelect={onSelect} />,
     );
     expect(screen.getByText("8.2")).toBeInTheDocument();
   });
@@ -118,11 +102,7 @@ describe("TrendingMoviesRow", () => {
   it("does not show rating badge when vote_average is 0", () => {
     const trending = [makeTmdbMovie({ vote_average: 0 })];
     render(
-      <TrendingMoviesRow
-        trending={trending}
-        movies={[]}
-        onSelect={onSelect}
-      />,
+      <TrendingMoviesRow trending={trending} movies={[]} onSelect={onSelect} />,
     );
     expect(screen.queryByText("0.0")).not.toBeInTheDocument();
   });
@@ -130,11 +110,7 @@ describe("TrendingMoviesRow", () => {
   it("does not show rating badge when vote_average is negative", () => {
     const trending = [makeTmdbMovie({ vote_average: -1 })];
     const { container } = render(
-      <TrendingMoviesRow
-        trending={trending}
-        movies={[]}
-        onSelect={onSelect}
-      />,
+      <TrendingMoviesRow trending={trending} movies={[]} onSelect={onSelect} />,
     );
     // No star badge should be rendered
     expect(container.querySelectorAll("svg.lucide-star").length).toBe(0);
@@ -145,11 +121,7 @@ describe("TrendingMoviesRow", () => {
   it("shows year badge when release_date is present", () => {
     const trending = [makeTmdbMovie({ release_date: "2023-12-01" })];
     render(
-      <TrendingMoviesRow
-        trending={trending}
-        movies={[]}
-        onSelect={onSelect}
-      />,
+      <TrendingMoviesRow trending={trending} movies={[]} onSelect={onSelect} />,
     );
     // Year appears in both the badge and subtitle text
     const yearElements = screen.getAllByText("2023");
@@ -159,11 +131,7 @@ describe("TrendingMoviesRow", () => {
   it("does not show year badge when release_date is empty", () => {
     const trending = [makeTmdbMovie({ release_date: "" })];
     const { container } = render(
-      <TrendingMoviesRow
-        trending={trending}
-        movies={[]}
-        onSelect={onSelect}
-      />,
+      <TrendingMoviesRow trending={trending} movies={[]} onSelect={onSelect} />,
     );
     // The year badge renders inside a div with bg-black/70
     const yearBadges = container.querySelectorAll(".bg-black\\/70");
@@ -177,11 +145,7 @@ describe("TrendingMoviesRow", () => {
   it("renders poster image when poster_path is present", () => {
     const trending = [makeTmdbMovie({ poster_path: "/poster.jpg" })];
     render(
-      <TrendingMoviesRow
-        trending={trending}
-        movies={[]}
-        onSelect={onSelect}
-      />,
+      <TrendingMoviesRow trending={trending} movies={[]} onSelect={onSelect} />,
     );
     const img = screen.getByAltText("Test Trending Movie poster");
     expect(img).toBeInTheDocument();
@@ -194,11 +158,7 @@ describe("TrendingMoviesRow", () => {
   it("shows fallback Film icon when poster_path is null", () => {
     const trending = [makeTmdbMovie({ poster_path: null })];
     const { container } = render(
-      <TrendingMoviesRow
-        trending={trending}
-        movies={[]}
-        onSelect={onSelect}
-      />,
+      <TrendingMoviesRow trending={trending} movies={[]} onSelect={onSelect} />,
     );
     const svgs = container.querySelectorAll("svg.lucide-film");
     expect(svgs.length).toBeGreaterThanOrEqual(1);
@@ -208,11 +168,7 @@ describe("TrendingMoviesRow", () => {
   it("shows fallback Film icon when poster_path is empty string", () => {
     const trending = [makeTmdbMovie({ poster_path: "" as string | null })];
     const { container } = render(
-      <TrendingMoviesRow
-        trending={trending}
-        movies={[]}
-        onSelect={onSelect}
-      />,
+      <TrendingMoviesRow trending={trending} movies={[]} onSelect={onSelect} />,
     );
     // Empty string is falsy in the component check
     const svgs = container.querySelectorAll("svg.lucide-film");
@@ -224,11 +180,7 @@ describe("TrendingMoviesRow", () => {
   it("renders the TMDB title text", () => {
     const trending = [makeTmdbMovie({ title: "Inception" })];
     render(
-      <TrendingMoviesRow
-        trending={trending}
-        movies={[]}
-        onSelect={onSelect}
-      />,
+      <TrendingMoviesRow trending={trending} movies={[]} onSelect={onSelect} />,
     );
     expect(screen.getByText("Inception")).toBeInTheDocument();
   });
@@ -284,9 +236,7 @@ describe("TrendingMoviesRow", () => {
   });
 
   it("does not call onSelect when no matching movie is found", () => {
-    const trending = [
-      makeTmdbMovie({ id: 1, title: "No Match Here" }),
-    ];
+    const trending = [makeTmdbMovie({ id: 1, title: "No Match Here" })];
     const movies = [
       makeUnifiedMovie({ stream_id: 1, name: "Different Movie", tmdb: "2" }),
     ];
@@ -305,11 +255,7 @@ describe("TrendingMoviesRow", () => {
   it("renders year text below the title when release_date present", () => {
     const trending = [makeTmdbMovie({ release_date: "2022-01-01" })];
     render(
-      <TrendingMoviesRow
-        trending={trending}
-        movies={[]}
-        onSelect={onSelect}
-      />,
+      <TrendingMoviesRow trending={trending} movies={[]} onSelect={onSelect} />,
     );
     // Year appears both in the badge and as a subtitle text
     const yearElements = screen.getAllByText("2022");
@@ -319,11 +265,7 @@ describe("TrendingMoviesRow", () => {
   it("assigns data-row-idx attributes for keyboard navigation", () => {
     const trending = [makeTmdbMovie({ id: 1 }), makeTmdbMovie({ id: 2 })];
     const { container } = render(
-      <TrendingMoviesRow
-        trending={trending}
-        movies={[]}
-        onSelect={onSelect}
-      />,
+      <TrendingMoviesRow trending={trending} movies={[]} onSelect={onSelect} />,
     );
     const cards = container.querySelectorAll("[data-row-idx]");
     expect(cards.length).toBe(2);

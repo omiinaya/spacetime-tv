@@ -4,7 +4,9 @@ interface PopularContentTableProps {
   popular: { stream: string; hits: number }[];
 }
 
-export default function PopularContentTable({ popular }: PopularContentTableProps) {
+export default function PopularContentTable({
+  popular,
+}: PopularContentTableProps) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">

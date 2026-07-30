@@ -5,28 +5,48 @@ import VolumeControl from "@/components/VolumeControl";
 describe("VolumeControl", () => {
   it("renders volume button", () => {
     render(
-      <VolumeControl muted={false} volume={0.5} onToggleMute={vi.fn()} onSetVolume={vi.fn()} />,
+      <VolumeControl
+        muted={false}
+        volume={0.5}
+        onToggleMute={vi.fn()}
+        onSetVolume={vi.fn()}
+      />,
     );
     expect(screen.getByLabelText("Mute")).toBeTruthy();
   });
 
   it("shows unmute label when muted", () => {
     render(
-      <VolumeControl muted={true} volume={0} onToggleMute={vi.fn()} onSetVolume={vi.fn()} />,
+      <VolumeControl
+        muted={true}
+        volume={0}
+        onToggleMute={vi.fn()}
+        onSetVolume={vi.fn()}
+      />,
     );
     expect(screen.getByLabelText("Unmute")).toBeTruthy();
   });
 
   it("shows unmute label when volume is 0", () => {
     render(
-      <VolumeControl muted={false} volume={0} onToggleMute={vi.fn()} onSetVolume={vi.fn()} />,
+      <VolumeControl
+        muted={false}
+        volume={0}
+        onToggleMute={vi.fn()}
+        onSetVolume={vi.fn()}
+      />,
     );
     expect(screen.getByLabelText("Unmute")).toBeTruthy();
   });
 
   it("shows volume slider popup on click", () => {
     render(
-      <VolumeControl muted={false} volume={0.5} onToggleMute={vi.fn()} onSetVolume={vi.fn()} />,
+      <VolumeControl
+        muted={false}
+        volume={0.5}
+        onToggleMute={vi.fn()}
+        onSetVolume={vi.fn()}
+      />,
     );
     fireEvent.click(screen.getByLabelText("Mute"));
     expect(screen.getByLabelText("Volume")).toBeTruthy();
@@ -36,7 +56,12 @@ describe("VolumeControl", () => {
   it("calls onToggleMute when mute button clicked in popup", () => {
     const onToggleMute = vi.fn();
     render(
-      <VolumeControl muted={false} volume={0.5} onToggleMute={onToggleMute} onSetVolume={vi.fn()} />,
+      <VolumeControl
+        muted={false}
+        volume={0.5}
+        onToggleMute={onToggleMute}
+        onSetVolume={vi.fn()}
+      />,
     );
     fireEvent.click(screen.getByLabelText("Mute"));
     const muteBtns = screen.getAllByRole("button");
@@ -48,7 +73,12 @@ describe("VolumeControl", () => {
   it("calls onSetVolume when slider is changed", () => {
     const onSetVolume = vi.fn();
     render(
-      <VolumeControl muted={false} volume={0.5} onToggleMute={vi.fn()} onSetVolume={onSetVolume} />,
+      <VolumeControl
+        muted={false}
+        volume={0.5}
+        onToggleMute={vi.fn()}
+        onSetVolume={onSetVolume}
+      />,
     );
     fireEvent.click(screen.getByLabelText("Mute"));
     const slider = screen.getByLabelText("Volume");
@@ -58,7 +88,12 @@ describe("VolumeControl", () => {
 
   it("shows 0% when muted", () => {
     render(
-      <VolumeControl muted={true} volume={0.5} onToggleMute={vi.fn()} onSetVolume={vi.fn()} />,
+      <VolumeControl
+        muted={true}
+        volume={0.5}
+        onToggleMute={vi.fn()}
+        onSetVolume={vi.fn()}
+      />,
     );
     fireEvent.click(screen.getByLabelText("Unmute"));
     expect(screen.getByText("0%")).toBeTruthy();

@@ -24,7 +24,8 @@ export default function EpgRefreshSection({
       <div className="bg-card border border-border rounded-lg p-4 space-y-2">
         <div className="flex items-center justify-between">
           <div className="text-xs text-muted-foreground">
-            Last refresh: {epgAge != null ? `${Math.round(epgAge)}s ago` : "Never"}
+            Last refresh:{" "}
+            {epgAge != null ? `${Math.round(epgAge)}s ago` : "Never"}
           </div>
           <button
             onClick={async () => {

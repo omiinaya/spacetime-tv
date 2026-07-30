@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { Heart, Tv2, Bookmark } from "lucide-react";
-import {
-  getWatchlist,
-  getSeriesWatchlist,
-} from "@/lib/watchlist";
+import { getWatchlist, getSeriesWatchlist } from "@/lib/watchlist";
 import WatchlistMoviesTab from "@/components/WatchlistMoviesTab";
 import WatchlistSeriesTab from "@/components/WatchlistSeriesTab";
 

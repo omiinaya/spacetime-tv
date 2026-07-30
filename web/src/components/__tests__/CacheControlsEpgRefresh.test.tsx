@@ -78,7 +78,9 @@ describe("EpgRefreshSection", () => {
   });
 
   it('shows "Never" when epgAge is null', () => {
-    render(<EpgRefreshSection headers={{}} epgAge={null} onRefresh={vi.fn()} />);
+    render(
+      <EpgRefreshSection headers={{}} epgAge={null} onRefresh={vi.fn()} />,
+    );
     expect(screen.getByText((t) => t.includes("Never"))).toBeTruthy();
   });
 
@@ -89,7 +91,9 @@ describe("EpgRefreshSection", () => {
     } as Response);
     const onRefresh = vi.fn();
 
-    render(<EpgRefreshSection headers={{}} epgAge={300} onRefresh={onRefresh} />);
+    render(
+      <EpgRefreshSection headers={{}} epgAge={300} onRefresh={onRefresh} />,
+    );
     fireEvent.click(screen.getByText("Refresh EPG Now"));
 
     await waitFor(() => {

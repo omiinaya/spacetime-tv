@@ -55,7 +55,7 @@ export default function VolumeControl({
                 WebkitAppearance: "slider-vertical",
                 writingMode: "vertical-lr",
                 direction: "rtl",
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
               } as any
             }
           />

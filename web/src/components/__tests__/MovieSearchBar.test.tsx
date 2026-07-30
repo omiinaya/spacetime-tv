@@ -15,18 +15,11 @@ describe("MovieSearchBar", () => {
 
   it("renders search input with placeholder", () => {
     render(<MovieSearchBar {...defaultProps} />);
-    expect(
-      screen.getByPlaceholderText("Search movies..."),
-    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search movies...")).toBeInTheDocument();
   });
 
   it("shows custom placeholder text", () => {
-    render(
-      <MovieSearchBar
-        {...defaultProps}
-        placeholder="Find movies..."
-      />,
-    );
+    render(<MovieSearchBar {...defaultProps} placeholder="Find movies..." />);
     expect(screen.getByPlaceholderText("Find movies...")).toBeInTheDocument();
   });
 
@@ -100,12 +93,7 @@ describe("MovieSearchBar", () => {
   it("does not call onSearch immediately on change", () => {
     vi.useFakeTimers();
     const onSearch = vi.fn();
-    render(
-      <MovieSearchBar
-        {...defaultProps}
-        onSearch={onSearch}
-      />,
-    );
+    render(<MovieSearchBar {...defaultProps} onSearch={onSearch} />);
 
     const input = screen.getByPlaceholderText("Search movies...");
     fireEvent.change(input, { target: { value: "test" } });
@@ -168,5 +156,4 @@ describe("MovieSearchBar", () => {
     // No clear button when empty
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
-
 });

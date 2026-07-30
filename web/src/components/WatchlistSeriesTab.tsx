@@ -5,10 +5,7 @@ import { api } from "@/lib/api";
 import { Series } from "@/lib/types";
 import SeriesOverlay from "@/components/SeriesOverlay";
 import { PosterCardSkeleton } from "@/components/Skeleton";
-import {
-  getSeriesWatchlist,
-  toggleSeriesWatchlist,
-} from "@/lib/watchlist";
+import { getSeriesWatchlist, toggleSeriesWatchlist } from "@/lib/watchlist";
 
 interface SeriesWithInfo extends Series {
   _year?: string;
