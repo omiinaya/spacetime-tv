@@ -2,11 +2,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { Play, Clock, Calendar, ExternalLink, Heart } from "lucide-react";
 import { api, imageUrl, tmdbSrcset } from "@/lib/api";
-import {
-  Series,
-  SeriesDetails,
-  Episode,
-} from "@/lib/types";
+import { Series, SeriesDetails, Episode } from "@/lib/types";
 import MediaOverlay from "@/components/MediaOverlay";
 import SimilarSeries from "@/components/SimilarSeries";
 import TmdbSimilarShows from "@/components/TmdbSimilarShows";

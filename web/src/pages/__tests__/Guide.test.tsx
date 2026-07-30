@@ -19,10 +19,7 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import Guide from "@/pages/Guide";
-import type {
-  ChannelGroup,
-  Programme,
-} from "@/lib/types";
+import type { ChannelGroup, Programme } from "@/lib/types";
 
 // ── Mock useGuideData ──────────────────────────────────────────
 const mockLoadPage = vi.fn();

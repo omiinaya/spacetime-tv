@@ -1,15 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router";
 import { Film, Loader2, Star, Search, X, Globe, Heart } from "lucide-react";
-import {
-  api,
-  imageUrl,
-  tmdbImgProps,
-} from "@/lib/api";
-import {
-  UnifiedMovie,
-  TmdbMovieResult,
-} from "@/lib/types";
+import { api, imageUrl, tmdbImgProps } from "@/lib/api";
+import { UnifiedMovie, TmdbMovieResult } from "@/lib/types";
 import MovieOverlay from "@/components/MovieOverlay";
 import ContentRow from "@/components/ContentRow";
 import { PosterCardSkeleton } from "@/components/Skeleton";

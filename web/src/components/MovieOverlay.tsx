@@ -10,11 +10,7 @@ import {
   Heart,
 } from "lucide-react";
 import { api, tmdbSrcset } from "@/lib/api";
-import {
-  MovieInfo,
-  UnifiedMovie,
-  MovieLanguage,
-} from "@/lib/types";
+import { MovieInfo, UnifiedMovie, MovieLanguage } from "@/lib/types";
 import MediaOverlay from "@/components/MediaOverlay";
 import SimilarMovies from "@/components/SimilarMovies";
 import TmdbSimilarMovies from "@/components/TmdbSimilarMovies";
