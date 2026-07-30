@@ -120,19 +120,31 @@ export default function Player({ type }: PlayerProps) {
     const video = videoRef.current;
     if (!video) return;
     const doc = document as DocumentWithWebkit;
-    const isFS = !!(document.fullscreenElement || doc.webkitFullscreenElement);
+    const el = video as VideoElementWithWebkit;
+    const isFS = !!(
+      document.fullscreenElement ||
+      doc.webkitFullscreenElement
+    );
+
     if (isFS) {
       document.exitFullscreen?.().catch(() => {});
       doc.webkitExitFullscreen?.();
       setIsFullscreen(false);
     } else {
-      const el = video as VideoElementWithWebkit;
-      el.requestFullscreen?.()
-        .then(() => setIsFullscreen(true))
-        .catch(() => {});
-      el.webkitRequestFullscreen?.();
-      el.webkitEnterFullscreen?.();
-      setIsFullscreen(true);
+      // iOS Safari: use native video fullscreen (webkitEnterFullscreen)
+      if (el.webkitEnterFullscreen) {
+        el.webkitEnterFullscreen();
+        setIsFullscreen(true);
+      } else if (el.webkitRequestFullscreen) {
+        // Other WebKit browsers (older Safari, Chrome on iPad)
+        el.webkitRequestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        // Standard Fullscreen API
+        el.requestFullscreen?.()
+          .then(() => setIsFullscreen(true))
+          .catch(() => {});
+      }
     }
   }, []);
 

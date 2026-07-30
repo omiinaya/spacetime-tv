@@ -6,8 +6,19 @@ import {
   lazy,
   Suspense,
 } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router";
-import { Menu, Tv } from "lucide-react";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router";
+import {
+  Menu,
+  Tv,
+  Settings,
+  CalendarClock,
+  Film,
+  Tv2,
+  Heart,
+  History,
+  Radio,
+  Search,
+} from "lucide-react";
 import { Toaster } from "sonner";
 import { SettingsProvider, useSettings } from "@/context/SettingsContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -17,6 +28,7 @@ import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 import OfflineBanner from "@/components/OfflineBanner";
 import Sidebar from "@/components/Sidebar";
 import { BackToTop } from "@/components/BackToTop";
+import { cn } from "@/lib/utils";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useProfile, Profile } from "@/hooks/useProfile";
 import ProfilePicker from "@/components/ProfilePicker";
@@ -77,10 +89,16 @@ if (typeof document !== "undefined") {
 }
 
 function AppLayout() {
+  const navigate = useNavigate();
   const { profile, profiles, loading, setProfile, refreshProfiles } =
     useProfile();
   const location = useLocation();
   const { resolvedTheme } = useSettings();
+
+  const isActive = (path: string) =>
+    path === "/"
+      ? location.pathname === "/"
+      : location.pathname.startsWith(path);
 
   // Show profile picker if no profile is selected
   const [profileGate, setProfileGate] = useState(!profile);
@@ -190,14 +208,57 @@ function AppLayout() {
             onClick={() => setMobileOpen(false)}
           />
           <div className="relative w-64 h-full">
-            <Sidebar
-              sidebarWidth={sidebarWidth}
-              onResizeStart={handleResizeStart}
-              showWatchlistPopover={false}
-              onWatchlistToggle={() => {}}
-              onProfileSwitch={() => setProfileGate(true)}
-              profile={profile}
-            />
+            <div className="flex flex-col h-full bg-sidebar border-r border-border shrink-0">
+              {/* Mobile nav */}
+              <nav
+                className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5"
+                role="navigation"
+                aria-label="Main navigation"
+              >
+                {[
+                  { id: "/", label: "Home", Icon: Tv },
+                  { id: "/live", label: "Live TV", Icon: Tv },
+                  { id: "/guide", label: "TV Guide", Icon: CalendarClock },
+                  { id: "/movies", label: "Movies", Icon: Film },
+                  { id: "/series", label: "Series", Icon: Tv2 },
+                  { id: "/watchlist", label: "Watchlist", Icon: Heart },
+                  { id: "/history", label: "History", Icon: History },
+                  { id: "/recordings", label: "Recordings", Icon: Radio },
+                  { id: "/search", label: "Search", Icon: Search },
+                ].map(({ id, label, Icon }) => (
+                  <button
+                    key={id}
+                    onClick={() => {
+                      navigate(id);
+                      setMobileOpen(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-left",
+                      isActive(id)
+                        ? "bg-primary/10 text-foreground font-medium border-l-2 border-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent",
+                    )}
+                    aria-label={label}
+                    aria-current={isActive(id) ? "page" : undefined}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    {label}
+                  </button>
+                ))}
+              </nav>
+              <div className="border-t border-border p-3">
+                <button
+                  onClick={() => {
+                    setMobileOpen(false);
+                    navigate("/settings");
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-left"
+                >
+                  <Settings className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  Settings
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -219,7 +280,7 @@ function AppLayout() {
             >
               <Menu className="h-5 w-5" aria-hidden="true" />
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" onClick={() => navigate("/")}>
               <div className="w-6 h-6 rounded-md bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
                 <Tv className="h-3 w-3 text-white" />
               </div>

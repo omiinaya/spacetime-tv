@@ -5,15 +5,11 @@ import ErrorBanner from "@/components/ErrorBanner";
 describe("ErrorBanner", () => {
   it("renders the error message text", () => {
     render(<ErrorBanner message="Something went wrong" />);
-    expect(
-      screen.getByText("Something went wrong"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
   });
 
   it("shows a retry button when onRetry is provided", () => {
-    render(
-      <ErrorBanner message="Error" onRetry={() => {}} />,
-    );
+    render(<ErrorBanner message="Error" onRetry={() => {}} />);
     expect(screen.getByText("Retry")).toBeInTheDocument();
   });
 
@@ -30,9 +26,7 @@ describe("ErrorBanner", () => {
   });
 
   it("has destructive styling class on the container", () => {
-    const { container } = render(
-      <ErrorBanner message="Error" />,
-    );
+    const { container } = render(<ErrorBanner message="Error" />);
     const outerDiv = container.firstChild as HTMLElement;
     expect(outerDiv.className).toContain("text-destructive");
     expect(outerDiv.className).toContain("bg-destructive");

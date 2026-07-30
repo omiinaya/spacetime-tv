@@ -15,7 +15,10 @@ import SeriesHeader from "@/components/SeriesHeader";
 import SeriesPageSkeleton from "@/components/SeriesPageSkeleton";
 import SeriesRowSkeleton from "@/components/SeriesRowSkeleton";
 import ErrorBanner from "@/components/ErrorBanner";
-import { SeriesEmptySearchState, SeriesFilterEmptyState } from "@/components/SeriesEmptyStates";
+import {
+  SeriesEmptySearchState,
+  SeriesFilterEmptyState,
+} from "@/components/SeriesEmptyStates";
 import { useSettings } from "@/context/SettingsContext";
 import { filterCategories } from "@/lib/settings";
 
@@ -185,7 +188,13 @@ export default function SeriesPage() {
       const d = await api.series.list(key, SERIES_PER_ROW, 0);
       setRows((prev) => {
         const next = new Map(prev);
-        next.set(key, { cat, series: d.series, total: d.total, loading: false, loaded: true });
+        next.set(key, {
+          cat,
+          series: d.series,
+          total: d.total,
+          loading: false,
+          loaded: true,
+        });
         return next;
       });
     } catch {
@@ -214,11 +223,19 @@ export default function SeriesPage() {
       if (current.series.length >= current.total) return;
       fetchingRef.current.add(key);
       try {
-        const d = await api.series.list(key, SERIES_PER_ROW, current.series.length);
+        const d = await api.series.list(
+          key,
+          SERIES_PER_ROW,
+          current.series.length,
+        );
         setRows((prev) => {
           const next = new Map(prev);
           const existing = next.get(key)!;
-          next.set(key, { ...existing, series: [...existing.series, ...d.series], total: d.total });
+          next.set(key, {
+            ...existing,
+            series: [...existing.series, ...d.series],
+            total: d.total,
+          });
           return next;
         });
       } finally {
@@ -350,9 +367,14 @@ export default function SeriesPage() {
             const hasMore = row ? row.series.length < row.total : true;
             const filtered = filterSeries(seriesList);
 
-            if (!row || loadingRow) return <SeriesRowSkeleton key={cat.category_id} />;
+            if (!row || loadingRow)
+              return <SeriesRowSkeleton key={cat.category_id} />;
 
-            if (q && filtered.length === 0 && !cat.category_name.toLowerCase().includes(q)) {
+            if (
+              q &&
+              filtered.length === 0 &&
+              !cat.category_name.toLowerCase().includes(q)
+            ) {
               return null;
             }
 
