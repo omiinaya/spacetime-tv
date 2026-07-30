@@ -315,10 +315,7 @@ function PopularContentTable({
             </thead>
             <tbody>
               {popular.map((s, i) => (
-                <tr
-                  key={s.stream}
-                  className={i % 2 === 0 ? "bg-muted/20" : ""}
-                >
+                <tr key={s.stream} className={i % 2 === 0 ? "bg-muted/20" : ""}>
                   <td className="px-4 py-2 font-mono text-xs">{s.stream}</td>
                   <td className="px-4 py-2 text-right tabular-nums">
                     {s.hits.toLocaleString()}
@@ -344,9 +341,7 @@ function ErrorLogSection({
     <div>
       <div className="flex items-center gap-2 mb-3">
         <AlertTriangle className="h-4 w-4 text-red-400" />
-        <h2 className="text-sm font-semibold">
-          Recent Errors ({total} total)
-        </h2>
+        <h2 className="text-sm font-semibold">Recent Errors ({total} total)</h2>
       </div>
       {errors.length === 0 ? (
         <p className="text-sm text-muted-foreground">No errors recorded.</p>
@@ -361,9 +356,7 @@ function ErrorLogSection({
               {" — "}
               <span className="text-red-400">{e.message}</span>
               {e.path && (
-                <span className="text-muted-foreground/50 ml-2">
-                  {e.path}
-                </span>
+                <span className="text-muted-foreground/50 ml-2">{e.path}</span>
               )}
             </div>
           ))}
@@ -387,9 +380,7 @@ function RecentSearchesSection({
         </h2>
       </div>
       {searches.recent.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No search queries yet.
-        </p>
+        <p className="text-sm text-muted-foreground">No search queries yet.</p>
       ) : (
         <div className="bg-card border border-border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
           {searches.recent.map((s, i) => (
@@ -564,7 +555,10 @@ export default function AdminDashboard() {
       <PopularContentTable popular={stats.streams.popular} />
 
       {/* Error log */}
-      <ErrorLogSection errors={stats.errors.recent} total={stats.errors.total} />
+      <ErrorLogSection
+        errors={stats.errors.recent}
+        total={stats.errors.total}
+      />
 
       {/* Search queries */}
       <RecentSearchesSection searches={stats.searches} />

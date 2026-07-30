@@ -1,12 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import {
-  RefreshCw,
-  Plus,
-  Check,
-  Edit3,
-  XCircle,
-  Server,
-} from "lucide-react";
+import { RefreshCw, Plus, Check, Edit3, XCircle, Server } from "lucide-react";
 
 interface Provider {
   index: number;
