@@ -63,13 +63,14 @@ async def handle_vod_request(req: Request, stream_id: int, stream_type: str, con
     )
 
 
-async def stream_vod_mpegts(url: str, start_time: float | None = None):
+async def stream_vod_mpegts(url: str, start_time: float | None = None, request: Request | None = None):
     """Remux VOD (any container) → MPEG-TS with -c copy (no re-encode).
 
     Uses curl_cffi to download from the CDN (bypasses Cloudflare's bot
     detection) and pipes the data to ffmpeg's stdin for remuxing to
     MPEG-TS, which is playable by mpegts.js.
     Supports time-based seeking via start_time.
+    Detects client disconnect to stop ffmpeg early.
     """
     cmd = [
         "/usr/bin/ffmpeg",
@@ -95,12 +96,16 @@ async def stream_vod_mpegts(url: str, start_time: float | None = None):
     ]
     feed = partial(_http_feed_stdin, url=url, range_header=range_header, buf_size=262144, log_prefix="vod-remux")
     async for chunk in _ffmpeg_pipe(cmd, feed):
+        if request and await request.is_disconnected():
+            log.info("vod-remux disconnect — stopping upstream")
+            break
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
 
 
-async def stream_vod_transcode(url: str):
+async def stream_vod_transcode(url: str, request: Request | None = None):
     """Transcode VOD (MKV with HEVC) → H.264+AAC in MPEG-TS container.
     Used when the browser can't decode H.265 natively.
+    Detects client disconnect to stop ffmpeg early.
     """
     cmd = [
         "/usr/bin/ffmpeg",
@@ -130,6 +135,9 @@ async def stream_vod_transcode(url: str):
     ]
     feed = partial(_http_feed_stdin, url=url, log_prefix="vod-transcode")
     async for chunk in _ffmpeg_pipe(cmd, feed):
+        if request and await request.is_disconnected():
+            log.info("vod-transcode disconnect — stopping upstream")
+            break
         yield chunk  # pragma: no cover — async generator yield, covered at runtime
 
 
@@ -137,7 +145,7 @@ async def stream_vod_transcode(url: str):
 
 
 @router.get("/stream/movie/{stream_id}/remux")
-async def stream_movie_remux(stream_id: int, start: float | None = None):
+async def stream_movie_remux(request: Request, stream_id: int, start: float | None = None):
     """Remux movie MKV→MPEG-TS for browser playback (mpegts.js)."""
     try:
         url = await build_stream_url(stream_id, "movie")
@@ -146,7 +154,7 @@ async def stream_movie_remux(stream_id: int, start: float | None = None):
         return JSONResponse(status_code=502, content={"detail": "Remux failed"})
     try:
         return StreamingResponse(
-            stream_vod_mpegts(url, start),
+            stream_vod_mpegts(url, start, request),
             media_type="video/mp2t",
             headers={"Cache-Control": "no-cache"},
         )
@@ -156,7 +164,7 @@ async def stream_movie_remux(stream_id: int, start: float | None = None):
 
 
 @router.get("/stream/series/{series_id}/{episode_id}/remux")
-async def stream_series_remux(series_id: int, episode_id: int, start: float | None = None):
+async def stream_series_remux(request: Request, series_id: int, episode_id: int, start: float | None = None):
     """Remux series episode MKV→MPEG-TS for browser playback (mpegts.js)."""
     try:
         url = await build_stream_url(episode_id, "series")
@@ -165,7 +173,7 @@ async def stream_series_remux(series_id: int, episode_id: int, start: float | No
         return JSONResponse(status_code=502, content={"detail": "Remux failed"})
     try:
         return StreamingResponse(
-            stream_vod_mpegts(url, start),
+            stream_vod_mpegts(url, start, request),
             media_type="video/mp2t",
             headers={"Cache-Control": "no-cache"},
         )
@@ -175,7 +183,7 @@ async def stream_series_remux(series_id: int, episode_id: int, start: float | No
 
 
 @router.get("/stream/movie/{stream_id}/transcode")
-async def stream_movie_transcode(stream_id: int):
+async def stream_movie_transcode(request: Request, stream_id: int):
     """Transcode a HEVC movie to H.264 on-the-fly."""
     try:
         url = await build_stream_url(stream_id, "movie")
@@ -184,7 +192,7 @@ async def stream_movie_transcode(stream_id: int):
         return JSONResponse(status_code=502, content={"detail": "Remux failed"})
     try:
         return StreamingResponse(
-            stream_vod_transcode(url),
+            stream_vod_transcode(url, request),
             media_type="video/mp2t",
             headers={"Cache-Control": "no-cache"},
         )
@@ -194,7 +202,7 @@ async def stream_movie_transcode(stream_id: int):
 
 
 @router.get("/stream/series/{series_id}/{episode_id}/transcode")
-async def stream_series_transcode(series_id: int, episode_id: int):
+async def stream_series_transcode(request: Request, series_id: int, episode_id: int):
     """Transcode a HEVC series episode to H.264 on-the-fly."""
     try:
         url = await build_stream_url(episode_id, "series")
@@ -203,7 +211,7 @@ async def stream_series_transcode(series_id: int, episode_id: int):
         return JSONResponse(status_code=502, content={"detail": "Remux failed"})
     try:
         return StreamingResponse(
-            stream_vod_transcode(url),
+            stream_vod_transcode(url, request),
             media_type="video/mp2t",
             headers={"Cache-Control": "no-cache"},
         )

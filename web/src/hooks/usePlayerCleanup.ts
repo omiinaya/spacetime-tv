@@ -30,9 +30,7 @@ function safeCleanup(fn: (() => void) | null | undefined) {
 }
 
 /** Safely destroy a player instance, swallowing errors */
-function safeDestroy(
-  player: { destroy: () => void } | null | undefined,
-) {
+function safeDestroy(player: { destroy: () => void } | null | undefined) {
   if (player) {
     try {
       player.destroy();

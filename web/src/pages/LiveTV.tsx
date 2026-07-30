@@ -10,10 +10,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { LiveStream } from "@/lib/types";
-import {
-  Skeleton,
-  ChannelCardSkeleton,
-} from "@/components/Skeleton";
+import { Skeleton, ChannelCardSkeleton } from "@/components/Skeleton";
 import { LiveSearchBar } from "@/components/live/LiveSearchBar";
 import { CategoryTabs } from "@/components/live/CategoryTabs";
 import LiveChannelCard from "@/components/LiveChannelCard";

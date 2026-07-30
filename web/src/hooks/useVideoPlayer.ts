@@ -44,7 +44,11 @@ import { useMpegtsPlayer, type MpegtsPlayerCallbacks } from "./useMpegtsPlayer";
 import { useHlsPlayer, type HlsPlayerCallbacks } from "./useHlsPlayer";
 import { useRemuxPlayer, type RemuxPlayerCallbacks } from "./useRemuxPlayer";
 import { useShakaPlayer, type ShakaPlayerCallbacks } from "./useShakaPlayer";
-import { destroyAll, destroyAllExcept, type PlayerRefs } from "./usePlayerCleanup";
+import {
+  destroyAll,
+  destroyAllExcept,
+  type PlayerRefs,
+} from "./usePlayerCleanup";
 
 // ── Constants for LIVE quality levels ─────────────────────────
 
@@ -430,12 +434,7 @@ export function useVideoPlayer({
       if (isTranscode) setTranscoding(true);
       subHookPlayMPEGTS(url, liveFlag, isTranscode);
     },
-    [
-      setPhase,
-      setErrorMsg,
-      setTranscoding,
-      subHookPlayMPEGTS,
-    ],
+    [setPhase, setErrorMsg, setTranscoding, subHookPlayMPEGTS],
   );
 
   // ── Playback: VOD via mpegts remux ──────────────────────────
@@ -458,15 +457,7 @@ export function useVideoPlayer({
         onAutoAdvance,
       );
     },
-    [
-      subPlayVodRemux,
-      type,
-      seriesId,
-      epId,
-      id,
-      watchKey,
-      onAutoAdvance,
-    ],
+    [subPlayVodRemux, type, seriesId, epId, id, watchKey, onAutoAdvance],
   );
 
   // ── VOD startup ────────────────────────────────────────────
