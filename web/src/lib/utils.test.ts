@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { timeAgo } from "@/lib/utils";
+import { timeAgo, formatDuration } from "@/lib/utils";
 
 describe("timeAgo", () => {
   it("returns empty string for null", () => {
@@ -78,5 +78,41 @@ describe("timeAgo", () => {
     const now = Date.now();
     expect(timeAgo(now + 5000)).toBe("Just now");
     expect(timeAgo(now + 3600_000)).toBe("Just now");
+  });
+});
+
+describe("formatDuration", () => {
+  it("returns empty string for null", () => {
+    expect(formatDuration(null)).toBe("");
+  });
+
+  it("returns empty string for undefined", () => {
+    expect(formatDuration(undefined)).toBe("");
+  });
+
+  it("returns empty string for 0", () => {
+    expect(formatDuration(0)).toBe("");
+  });
+
+  it("returns empty string for negative values", () => {
+    expect(formatDuration(-100)).toBe("");
+  });
+
+  it("returns empty string for non-finite values", () => {
+    expect(formatDuration(Infinity)).toBe("");
+    expect(formatDuration(NaN)).toBe("");
+  });
+
+  it('formats seconds as "Xm" for < 1 hour', () => {
+    expect(formatDuration(300)).toBe("5m");
+    expect(formatDuration(1800)).toBe("30m");
+    expect(formatDuration(3540)).toBe("59m");
+  });
+
+  it('formats seconds as "Xh Ym" for >= 1 hour', () => {
+    expect(formatDuration(3600)).toBe("1h 0m");
+    expect(formatDuration(3661)).toBe("1h 1m");
+    expect(formatDuration(7260)).toBe("2h 1m");
+    expect(formatDuration(36000)).toBe("10h 0m");
   });
 });
