@@ -10,7 +10,6 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import type {
-  ConnectionQuality,
   DocumentWithWebkit,
   PlayPhase,
   ErrorType,
@@ -38,8 +37,8 @@ import {
   transcodeCache,
   tryAutoplay,
 } from "./usePlayerUtils";
-import { QUALITIES } from "./usePlayerTypes";
 import { useStreamUrls } from "./useStreamUrls";
+import { usePlayerConnectionQuality } from "./usePlayerConnectionQuality";
 import { useMpegtsPlayer, type MpegtsPlayerCallbacks } from "./useMpegtsPlayer";
 import { useHlsPlayer, type HlsPlayerCallbacks } from "./useHlsPlayer";
 import { useRemuxPlayer, type RemuxPlayerCallbacks } from "./useRemuxPlayer";
@@ -129,14 +128,9 @@ export function useVideoPlayer({
   const [buffered, setBuffered] = useState(0);
 
   // ── Connection quality ───────────────────────────────────────
-  const [connectionQuality, setConnectionQuality] =
-    useState<ConnectionQuality>("excellent");
-  const [stallCount, setStallCount] = useState(0);
-  const [suggestLowerQuality, setSuggestLowerQuality] = useState(false);
   const [downloadSpeed, setDownloadSpeed] = useState(0);
-  const droppedFramesRef = useRef(0);
-  const decodedFramesRef = useRef(0);
-  const stallTimestampsRef = useRef<number[]>([]);
+  const { connectionQuality, stallCount, suggestLowerQuality, onStats, onStall } =
+    usePlayerConnectionQuality({ downloadSpeed, qualityIdx });
 
   // ── Live TV DVR state ──────────────────────────────────────────
   const [isBehindLive, setIsBehindLive] = useState(false);
@@ -174,11 +168,10 @@ export function useVideoPlayer({
       },
       onStats: (speed, dropped, decoded) => {
         setDownloadSpeed(speed);
-        droppedFramesRef.current = dropped;
-        decodedFramesRef.current = decoded;
+        onStats(speed, dropped, decoded);
       },
       onStall: () => {
-        stallTimestampsRef.current.push(Date.now());
+        onStall();
       },
       onPlaying: () => {
         clearLoadingTimeout();
@@ -207,6 +200,8 @@ export function useVideoPlayer({
       setLiveSeekableEnd,
       setSecondsBehindLive,
       setIsBehindLive,
+      onStats,
+      onStall,
     ],
   );
 
@@ -229,7 +224,7 @@ export function useVideoPlayer({
         setErrorMsg(msg);
       },
       onStall: () => {
-        stallTimestampsRef.current.push(Date.now());
+        onStall();
       },
       onTimeUpdate: (ct, buf) => {
         setCurrentTime(ct);
@@ -250,6 +245,7 @@ export function useVideoPlayer({
       setBuffered,
       setDuration,
       clearLoadingTimeout,
+      onStall,
     ],
   );
 
@@ -269,7 +265,7 @@ export function useVideoPlayer({
         setErrorMsg(msg);
       },
       onStall: () => {
-        stallTimestampsRef.current.push(Date.now());
+        onStall();
       },
       onTimeUpdate: (ct, buf) => {
         setCurrentTime(ct);
@@ -330,6 +326,7 @@ export function useVideoPlayer({
       setBuffered,
       setDuration,
       clearLoadingTimeout,
+      onStall,
       subPlayShaka,
       type,
       seriesId,
@@ -356,11 +353,10 @@ export function useVideoPlayer({
       },
       onStats: (speed, dropped, decoded) => {
         setDownloadSpeed(speed);
-        droppedFramesRef.current = dropped;
-        decodedFramesRef.current = decoded;
+        onStats(speed, dropped, decoded);
       },
       onStall: () => {
-        stallTimestampsRef.current.push(Date.now());
+        onStall();
       },
       onTimeUpdate: (ct, buf) => {
         setCurrentTime(ct);
@@ -386,6 +382,8 @@ export function useVideoPlayer({
       clearLoadingTimeout,
       startLoadingTimeout,
       setTranscoding,
+      onStats,
+      onStall,
     ],
   );
 
@@ -406,38 +404,6 @@ export function useVideoPlayer({
     destroyShaka,
   ];
 
-  const computeConnectionQuality = useCallback(() => {
-    const now = Date.now();
-    const recentStalls = stallTimestampsRef.current.filter(
-      (t) => now - t < 30000,
-    );
-    stallTimestampsRef.current = recentStalls;
-    const recentStallCount = recentStalls.length;
-    const speed = downloadSpeed;
-    const dropped = droppedFramesRef.current;
-    const decoded = decodedFramesRef.current || 1;
-    const dropRatio = dropped / decoded;
-    let quality: ConnectionQuality;
-    // Don't report quality until we have actual download speed data
-    if (speed <= 0) {
-      quality = "excellent";
-    } else if (speed > 2000 && recentStallCount < 2 && dropRatio < 0.02)
-      quality = "excellent";
-    else if (speed > 500 && recentStallCount < 4 && dropRatio < 0.05)
-      quality = "good";
-    else if (speed > 100 && recentStallCount < 8) quality = "fair";
-    else quality = "poor";
-    setConnectionQuality(quality);
-    setStallCount(recentStallCount);
-    setSuggestLowerQuality(
-      quality === "poor" && qualityIdx < QUALITIES.length - 1,
-    );
-  }, [downloadSpeed, qualityIdx]);
-
-  useEffect(() => {
-    const interval = setInterval(computeConnectionQuality, 3000);
-    return () => clearInterval(interval);
-  }, [computeConnectionQuality]);
 
   // ── Playback: MPEG-TS via mpegts.js (live TV only) ──────────
   const playMPEGTS = useCallback(
@@ -612,7 +578,7 @@ export function useVideoPlayer({
           const d = v.duration;
           if (d && isFinite(d)) setDuration(d);
         };
-        const onWaiting = () => stallTimestampsRef.current.push(Date.now());
+        const onWaiting = () => onStall();
         v.addEventListener("timeupdate", onTimeUpdate);
         v.addEventListener("durationchange", onDuration);
         v.addEventListener("waiting", onWaiting);
