@@ -9,11 +9,11 @@
 
 | File | Lines | Status |
 |------|:-----:|--------|
-| `web/src/hooks/useVideoPlayer.ts` | 825 | Down from 901 (-8.4%) — cleanup boilerplate unified |
+| `web/src/hooks/useVideoPlayer.ts` | 816 | Down from 901 (-9.4%) — cleanup boilerplate unified |
 | `web/src/pages/Series.tsx` | 407 | Decomposed ✅ |
 | `web/src/pages/LiveTV.tsx` | 363 | Down from 493 (-26%) — inline components extracted ✅ |
-| `web/src/components/MovieOverlay.tsx` | 418 | Dense metadata overlay, could split cast/language menu |
-| `web/src/pages/SettingsPage.tsx` | 259 | Decomposed ✅ |
+| `web/src/components/MovieOverlay.tsx` | 254 | Down from 418 (-39%) — extracted 4 sub-components ✅ |
+| `web/src/components/SeriesOverlay.tsx` | 396 | Down from 520 (-24%) — extracted shared components ✅ |
 | `web/src/App.tsx` | 399 | Decomposed ✅ |
 | `server/iptv_client.py` | 497 | Provider client — well-structured service module |
 | `server/auth.py` | 371 | Auth utilities — stable |
@@ -21,7 +21,7 @@
 
 All other files < 350 lines.
 
-## Recent Improvements (session 7)
+## Recent Improvements (session 7-8)
 
 ### Bug Fixes
 | Bug | File | Fix |
@@ -34,23 +34,33 @@ All other files < 350 lines.
 | File | Before | After | Δ |
 |------|:------:|:-----:|:-:|
 | **LiveTV.tsx** | 493 | **363** | **−26%** |
-| **useVideoPlayer.ts** | 901 | **825** | **−8.4%** |
+| **useVideoPlayer.ts** | 901 | **816** | **−9.4%** |
+| **MovieOverlay.tsx** | 418 | **254** | **−39%** |
+| **SeriesOverlay.tsx** | 520 | **396** | **−24%** |
 
 **New files:**
 - `web/src/components/live/LiveSearchBar.tsx` — extracted from LiveTV.tsx
-- `web/src/components/live/CategoryTabs.tsx` — extracted from LiveTV.tsx  
-- `web/src/hooks/usePlayerCleanup.ts` — unified destroyAll() / destroyAllExcept() player cleanup
+- `web/src/components/live/CategoryTabs.tsx` — extracted from LiveTV.tsx
+- `web/src/hooks/usePlayerCleanup.ts` — unified destroyAll() / destroyAllExcept()
+- `web/src/components/movie/MovieLanguageSelector.tsx` — language dropdown
+- `web/src/components/movie/MoviePlayButton.tsx` — play/watchlist/trailer buttons
+- `web/src/components/media/MediaCastSection.tsx` — shared cast+director display
+- `web/src/components/media/MediaInfoBar.tsx` — shared metadata bar
 
 ### New Tests
-| File | Tests | 
+| File | Tests |
 |------|:----:|
 | `hooks/__tests__/usePlayerCleanup.test.ts` | 14 |
+| `hooks/__tests__/useControlsVisibility.test.ts` | 7 |
+| `hooks/__tests__/useFocusTrap.test.ts` | 5 |
+| `hooks/__tests__/useSwipeToGoBack.test.ts` | 8 |
+| **Total new tests** | **34** |
 
 ## Remaining Work
 
 ### Frontend
-- `useVideoPlayer.ts` (825 lines) — main effect still dense; further sub-hook extraction possible
-- `MovieOverlay.tsx` (418 lines) — language menu, cast info, metadata sections could be extracted
+- `useVideoPlayer.ts` (816 lines) — main effect still dense; further sub-hook extraction possible
+- 6 hooks still untested (useDocumentPiP, useLiveStreamCache, usePlayerControls, useProfile, useRecording, useSearchPage)
 - E2E test count could grow for edge cases
 
 ### Backend
