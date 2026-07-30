@@ -24,13 +24,13 @@ def test_cache_key_producer_consumer_match(client):
     from state import _cache
 
     # Populate all static keys with test data
-    for name, pattern in CACHE_KEY_PATTERNS.items():
+    for _, pattern in CACHE_KEY_PATTERNS.items():
         if "{id}" not in pattern:
             _cache[pattern] = (9999999999.0, [])
 
     # Populate one template example for each prefix
     template_prefixes = set()
-    for name, pattern in CACHE_KEY_PATTERNS.items():
+    for _, pattern in CACHE_KEY_PATTERNS.items():
         if "{id}" in pattern:
             prefix = pattern.split("{")[0]
             if prefix not in template_prefixes:

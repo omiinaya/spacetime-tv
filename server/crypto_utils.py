@@ -39,9 +39,9 @@ def _get_or_create_key():
                 return key_data
         except OSError:
             pass
-    from cryptography.fernet import Fernet as _F
+    from cryptography.fernet import Fernet
 
-    new_key = _F.generate_key()
+    new_key = Fernet.generate_key()
     try:
         _KEY_FILE.write_bytes(new_key)
         _KEY_FILE.chmod(0o600)

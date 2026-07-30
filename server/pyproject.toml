@@ -35,12 +35,28 @@ ignore = [
     "F401",   # re-exports for backward compat
     "I002",   # noqa comments prevent auto-sort
 ]
+"routes/stream_hls.py" = [
+    "E402",   # import after router creation (FastAPI pattern)
+]
+"routes/tmdb.py" = [
+    "E402",   # conditional import inside function
+]
 "tests/*" = [
+    "E402",   # sys.path manipulation then imports
     "N801",   # class names
     "T20",    # print statements
 ]
 "routes/stream_probe.py" = [
     "T20",    # print statements
+]
+"routes/vod.py" = [
+    "E402",   # conditional import for performance
+]
+"main.py" = [
+    "E402",   # lazy route imports after middleware setup (FastAPI pattern)
+]
+"config.py" = [
+    "E402",   # lazy import for auto-generating key
 ]
 
 [tool.ruf.pytest]

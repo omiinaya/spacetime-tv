@@ -6,9 +6,9 @@ import os
 os.environ["ENFORCE_HTTPS"] = "false"
 os.environ["DISABLE_CACHE"] = "1"
 
-import json
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
 # Ensure conftest doesn't override this
@@ -29,7 +29,6 @@ def temp_profiles_file(tmp_path):
 def client(temp_profiles_file):
     """Create a test client with profile support."""
     from main import app
-    from auth import ensure_default_profile
 
     # Ensure default profile doesn't exist yet
     profiles_path = temp_profiles_file
@@ -87,8 +86,7 @@ class TestProfileToken:
 
     def test_generate_and_verify_token(self, client):
         """Test token generation and verification."""
-        from auth import generate_profile_token, verify_profile_token
-        from auth import create_profile
+        from auth import create_profile, generate_profile_token, verify_profile_token
 
         profile = create_profile("Test", "1234", "")
         pid = profile["profile_id"]

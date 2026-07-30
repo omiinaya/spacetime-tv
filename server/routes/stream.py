@@ -14,6 +14,9 @@ All tests import from ``routes.stream`` and still work unchanged.
 
 from fastapi import APIRouter
 
+from routes.stream_convert import CACHE_DIR, _converting, serve_cached_mp4  # noqa: F401
+from routes.stream_convert import router as _convert_router
+
 # Re-export all public symbols for backward compatibility with tests.
 # These allow ``from routes.stream import build_stream_url`` etc. to keep working.
 from routes.stream_core import (
@@ -26,12 +29,10 @@ from routes.stream_core import (
     get_content_length,
     stream_proxy,
 )
-from routes.stream_convert import CACHE_DIR, _converting, serve_cached_mp4  # noqa: F401
-from routes.stream_convert import router as _convert_router
 from routes.stream_dash import generate_live_mpd, generate_vod_mpd  # noqa: F401
 from routes.stream_dash import router as _dash_router
-from routes.stream_hls import serve_hls_file  # noqa: F401
 from routes.stream_hls import router as _hls_router
+from routes.stream_hls import serve_hls_file  # noqa: F401
 from routes.stream_live import router as _live_router
 from routes.stream_probe import probe_stream  # noqa: F401
 from routes.stream_probe import router as _probe_router

@@ -8,8 +8,8 @@ import json
 import logging
 import time
 
-import curl_cffi.requests as CurlReq
 import httpx
+from curl_cffi import requests as CurlReq  # noqa: N812
 from fastapi import APIRouter
 
 from config import UA_STR

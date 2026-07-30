@@ -4,7 +4,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # 1. Route mounting and basic responses
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -98,32 +97,36 @@ class TestMovieRangeSupport:
 
     def test_movie_no_range_returns_200(self, client):
         """Without Range header, movie returns 200 (full file)."""
-        with patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"), patch(
-            "routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])
+        with (
+            patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"),
+            patch("routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])),
         ):
             resp = client.get("/api/v1/stream/movie/1")
         assert resp.status_code == 200
 
     def test_movie_with_range_returns_206(self, client):
         """With Range header, movie returns 206 partial content."""
-        with patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"), patch(
-            "routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])
+        with (
+            patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"),
+            patch("routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])),
         ):
             resp = client.get("/api/v1/stream/movie/1", headers={"Range": "bytes=0-1023"})
         assert resp.status_code == 206
 
     def test_movie_range_has_accept_ranges_header(self, client):
         """VOD responses should advertise Accept-Ranges: bytes."""
-        with patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"), patch(
-            "routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])
+        with (
+            patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"),
+            patch("routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])),
         ):
             resp = client.get("/api/v1/stream/movie/1", headers={"Range": "bytes=0-1023"})
         assert resp.headers.get("accept-ranges") == "bytes"
 
     def test_movie_range_has_cache_control(self, client):
         """VOD responses should have Cache-Control: no-cache."""
-        with patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"), patch(
-            "routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])
+        with (
+            patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"),
+            patch("routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])),
         ):
             resp = client.get("/api/v1/stream/movie/1", headers={"Range": "bytes=0-1023"})
         assert resp.headers.get("cache-control") == "no-cache"
@@ -150,30 +153,34 @@ class TestMovieRemux:
 
 class TestSeriesStream:
     def test_series_returns_200(self, client):
-        with patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"), patch(
-            "routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])
+        with (
+            patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"),
+            patch("routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])),
         ):
             resp = client.get("/api/v1/stream/series/1/2")
         assert resp.status_code == 200
 
     def test_series_with_range_returns_206(self, client):
-        with patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"), patch(
-            "routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])
+        with (
+            patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"),
+            patch("routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])),
         ):
             resp = client.get("/api/v1/stream/series/1/2", headers={"Range": "bytes=0-1023"})
         assert resp.status_code == 206
 
     def test_series_has_accept_ranges(self, client):
-        with patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"), patch(
-            "routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])
+        with (
+            patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"),
+            patch("routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])),
         ):
             resp = client.get("/api/v1/stream/series/1/2")
         assert resp.headers.get("accept-ranges") == "bytes"
 
     def test_series_different_ids_produce_independent_results(self, client):
         """Different series/episode IDs should both return valid responses."""
-        with patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"), patch(
-            "routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])
+        with (
+            patch("routes.stream_vod.build_stream_url", return_value="http://test/1.mkv"),
+            patch("routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])),
         ):
             resp1 = client.get("/api/v1/stream/series/1/2")
             resp2 = client.get("/api/v1/stream/series/3/4")
@@ -207,22 +214,25 @@ class TestStreamIdVariants:
     """Various stream_id values should be handled gracefully."""
 
     def test_movie_stream_id_zero(self, client):
-        with patch("routes.stream_vod.build_stream_url", return_value="http://test/0.mkv"), patch(
-            "routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])
+        with (
+            patch("routes.stream_vod.build_stream_url", return_value="http://test/0.mkv"),
+            patch("routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])),
         ):
             resp = client.get("/api/v1/stream/movie/0")
         assert resp.status_code in (200, 502)
 
     def test_movie_large_stream_id(self, client):
-        with patch("routes.stream_vod.build_stream_url", return_value="http://test/999999.mkv"), patch(
-            "routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])
+        with (
+            patch("routes.stream_vod.build_stream_url", return_value="http://test/999999.mkv"),
+            patch("routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])),
         ):
             resp = client.get("/api/v1/stream/movie/999999")
         assert resp.status_code == 200
 
     def test_series_large_ids(self, client):
-        with patch("routes.stream_vod.build_stream_url", return_value="http://test/999999.mkv"), patch(
-            "routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])
+        with (
+            patch("routes.stream_vod.build_stream_url", return_value="http://test/999999.mkv"),
+            patch("routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])),
         ):
             resp = client.get("/api/v1/stream/series/999999/888888")
         assert resp.status_code == 200
@@ -251,8 +261,9 @@ class TestHandleVodRequest:
             patch("routes.stream_vod._mime_from_url", return_value="video/x-matroska"),
             patch("routes.stream_vod.stream_vod_bytes", return_value=mock_sv_bytes.return_value),
         ):
-            from routes.stream_vod import handle_vod_request
             from fastapi.responses import StreamingResponse
+
+            from routes.stream_vod import handle_vod_request
 
             result = await handle_vod_request(req, 1, "movie")
             assert isinstance(result, StreamingResponse)

@@ -32,15 +32,11 @@ def test_sync_progress_missing_fields_returns_400(client):
     assert resp.status_code == 400
 
     # Missing position
-    resp = client.post(
-        "/api/v1/watchlist/sync-progress", json={"watchKey": "vod_123"}
-    )
+    resp = client.post("/api/v1/watchlist/sync-progress", json={"watchKey": "vod_123"})
     assert resp.status_code == 400
 
     # Missing watchKey
-    resp = client.post(
-        "/api/v1/watchlist/sync-progress", json={"position": 42.5}
-    )
+    resp = client.post("/api/v1/watchlist/sync-progress", json={"position": 42.5})
     assert resp.status_code == 400
 
 
@@ -240,7 +236,7 @@ def test_profile_sync_progress_missing_fields_returns_400(client):
 
 def test_profile_sync_progress_with_valid_token_stores_progress(client):
     """POST /api/v1/watchlist/profile/sync-progress stores progress per profile."""
-    from auth import create_profile, generate_profile_token, _load_profiles
+    from auth import _load_profiles, create_profile, generate_profile_token
 
     profile = create_profile("Alice", "9999", "alice.png")
     pid = profile["profile_id"]
@@ -269,7 +265,7 @@ def test_profile_sync_progress_with_valid_token_stores_progress(client):
 
 def test_profile_sync_progress_updates_existing_watch_key(client):
     """POST /api/v1/watchlist/profile/sync-progress updates a previously stored watch key."""
-    from auth import create_profile, generate_profile_token, _load_profiles
+    from auth import _load_profiles, create_profile, generate_profile_token
 
     profile = create_profile("Bob", "1111")
     pid = profile["profile_id"]
@@ -303,7 +299,7 @@ def test_profile_sync_progress_updates_existing_watch_key(client):
 
 def test_profile_sync_progress_strips_null_metadata(client):
     """POST /api/v1/watchlist/profile/sync-progress strips null seriesData/movieData."""
-    from auth import create_profile, generate_profile_token, _load_profiles
+    from auth import _load_profiles, create_profile, generate_profile_token
 
     profile = create_profile("Charlie", "2222")
     pid = profile["profile_id"]
@@ -435,7 +431,7 @@ def test_profile_get_progress_returns_stored_entries(client):
 
 def test_profile_progress_isolation_between_profiles(client):
     """Progress for different profiles is isolated and does not leak."""
-    from auth import create_profile, generate_profile_token, _load_profiles
+    from auth import create_profile, generate_profile_token
 
     alice = create_profile("Alice", "5555")
     bob = create_profile("Bob", "6666")
@@ -475,7 +471,7 @@ def test_profile_progress_isolation_between_profiles(client):
 
 def test_profile_get_progress_with_deleted_profile_returns_404(client):
     """GET /api/v1/watchlist/profile/progress returns 404 after profile deleted."""
-    from auth import create_profile, generate_profile_token, delete_profile
+    from auth import create_profile, delete_profile, generate_profile_token
 
     profile = create_profile("Frank", "7777")
     pid = profile["profile_id"]

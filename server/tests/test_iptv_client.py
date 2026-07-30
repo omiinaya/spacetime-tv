@@ -39,7 +39,6 @@ from iptv_client import (
     mask_url_credentials,
     vod_url,
 )
-from state import _cache
 
 # ══════════════════════════════════════════════════════════════════════════
 # mask_url_credentials
@@ -150,6 +149,7 @@ class TestGetEnabledProviders:
             ProviderConfig("P2", "http://b.com", "u2", "p2", enabled=False),
         ]
         import sys
+
         mod = sys.modules[__name__]
         with patch.object(mod, "get_enabled_providers", return_value=[providers[0]]):
             enabled = get_enabled_providers()

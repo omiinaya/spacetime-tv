@@ -103,10 +103,10 @@ async def run_hls_segmenter(cache_key: str, input_path: Path):
     else:
         mkv_path = CACHE_DIR / f"{cache_key}.mkv"
         if mkv_path.exists():
-            try:
+            import contextlib
+
+            with contextlib.suppress(OSError):
                 mkv_path.unlink()
-            except OSError:
-                pass  # pragma: no cover — unlink error, runtime only
 
 
 async def ensure_hls(stream_id: str, stream_type: str, seek_seconds: float = 0) -> bool:

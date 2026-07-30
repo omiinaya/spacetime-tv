@@ -18,7 +18,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 
@@ -35,7 +34,7 @@ def convert_client(client, tmp_path):
     import routes.stream_convert as sc
 
     # Cancel any tasks from setup or prior tests
-    for key, task in list(sc._converting.items()):
+    for _, task in list(sc._converting.items()):
         if not task.done():
             task.cancel()
     sc._converting.clear()
@@ -44,7 +43,7 @@ def convert_client(client, tmp_path):
         yield client
 
     # Teardown: cancel tasks while the event loop is still alive
-    for key, task in list(sc._converting.items()):
+    for _, task in list(sc._converting.items()):
         if not task.done():
             task.cancel()
     sc._converting.clear()
@@ -245,7 +244,7 @@ def test_convert_endpoint_does_not_raise_on_build_url_failure(client):
     # Clean up orphaned task before client teardown
     import routes.stream_convert as sc
 
-    for key, task in list(sc._converting.items()):
+    for _, task in list(sc._converting.items()):
         if not task.done():
             task.cancel()
     sc._converting.clear()
@@ -264,9 +263,7 @@ def test_convert_movie_unusual_ids(convert_client, stream_id):
     assert resp.json()["status"] == "converting"
 
 
-@pytest.mark.parametrize(
-    "series_id,episode_id", [(0, 1), (1, 0), (0, 0), (999999999, 1)]
-)
+@pytest.mark.parametrize("series_id,episode_id", [(0, 1), (1, 0), (0, 0), (999999999, 1)])
 def test_convert_series_unusual_ids(convert_client, series_id, episode_id):
     """Unusual series/episode IDs are accepted by the endpoint."""
     resp = convert_client.get(f"/api/v1/series/convert/{series_id}/{episode_id}")
@@ -539,9 +536,7 @@ async def test_convert_to_mp4_ffmpeg_fails_gracefully(tmp_path):
 
     ff_proc = AsyncMock()
     ff_proc.returncode = 1
-    ff_proc.stderr.readline = AsyncMock(
-        side_effect=[b"error: invalid data found", b""]
-    )
+    ff_proc.stderr.readline = AsyncMock(side_effect=[b"error: invalid data found", b""])
     ff_proc.stdout.readline = AsyncMock(return_value=b"")
 
     with (

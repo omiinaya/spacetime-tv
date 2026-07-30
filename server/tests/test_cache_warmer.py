@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # Fixtures
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @pytest.fixture(autouse=True)
 def _reset_warmer_globals():
@@ -30,6 +30,7 @@ def warmer():
 # ═══════════════════════════════════════════════════════════════════════════════
 # start_cache_warmer
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestStartCacheWarmer:
     """start_cache_warmer() launcher behaviour."""
@@ -91,6 +92,7 @@ class TestStartCacheWarmer:
 # is_warm_running
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestIsWarmRunning:
     """is_warm_running() status checks."""
 
@@ -105,6 +107,7 @@ class TestIsWarmRunning:
 
     async def test_false_when_task_is_done(self, warmer):
         """A completed task — returns False."""
+
         async def noop():
             pass
 
@@ -116,6 +119,7 @@ class TestIsWarmRunning:
 
     async def test_true_when_task_pending(self, warmer):
         """A non-None, not-done task — returns True."""
+
         async def never_ends():
             while True:
                 await asyncio.sleep(3600)
@@ -133,6 +137,7 @@ class TestIsWarmRunning:
 # ═══════════════════════════════════════════════════════════════════════════════
 # get_warm_task
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestGetWarmTask:
     """get_warm_task() dependency."""
@@ -180,6 +185,7 @@ class TestGetWarmTask:
 # warm_cache
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestWarmCache:
     """warm_cache() functional behaviour."""
 
@@ -211,7 +217,10 @@ class TestWarmCache:
                 if key == "live_all":
                     return [{"id": 101}]
                 if key == "vod_categories":
-                    return [{"category_id": 1, "category_name": "Movies"}, {"category_id": 2, "category_name": "Action"}]
+                    return [
+                        {"category_id": 1, "category_name": "Movies"},
+                        {"category_id": 2, "category_name": "Action"},
+                    ]
                 if key == "vod_1":
                     return [{"id": 201}]
                 if key == "vod_2":
@@ -225,8 +234,7 @@ class TestWarmCache:
             async def mock_load_epg():
                 return {"channels": [{"id": "ch1"}], "programmes": [{"id": "p1"}]}
 
-            with patch("iptv_client.cached_fetch", mock_cached_fetch), \
-                    patch("routes.guide.load_epg", mock_load_epg):
+            with patch("iptv_client.cached_fetch", mock_cached_fetch), patch("routes.guide.load_epg", mock_load_epg):
                 await warmer.warm_cache()
         finally:
             warmer.CACHE_WARM_ENABLED = old_enabled
@@ -263,8 +271,10 @@ class TestWarmCache:
                     return [{"id": 301}]
                 return []
 
-            with patch("iptv_client.cached_fetch", mock_cached_fetch), \
-                    patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
+            with (
+                patch("iptv_client.cached_fetch", mock_cached_fetch),
+                patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}),
+            ):
                 await warmer.warm_cache()
 
             # Categories 2 (Action) was filtered out; only 1 and 3 fetched
@@ -296,8 +306,10 @@ class TestWarmCache:
                     return [{"id": 301}]
                 return []
 
-            with patch("iptv_client.cached_fetch", mock_cached_fetch), \
-                    patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
+            with (
+                patch("iptv_client.cached_fetch", mock_cached_fetch),
+                patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}),
+            ):
                 # No exception should propagate out of warm_cache
                 await warmer.warm_cache()
         finally:
@@ -334,8 +346,10 @@ class TestWarmCache:
             warmer.CACHE_WARM_ENABLED = True
             warmer.CACHE_WARM_CATEGORIES = ""
 
-            with patch("iptv_client.cached_fetch", mock_cached_fetch), \
-                    patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}):
+            with (
+                patch("iptv_client.cached_fetch", mock_cached_fetch),
+                patch("routes.guide.load_epg", return_value={"channels": [], "programmes": []}),
+            ):
                 await warmer.warm_cache()
 
             # vod_1 should have been called at least twice (initial + retry)
@@ -366,8 +380,10 @@ class TestWarmCache:
                     return [{"id": 301}]
                 return []
 
-            with patch("iptv_client.cached_fetch", mock_cached_fetch), \
-                    patch("routes.guide.load_epg", side_effect=TimeoutError("EPG timeout")):
+            with (
+                patch("iptv_client.cached_fetch", mock_cached_fetch),
+                patch("routes.guide.load_epg", side_effect=TimeoutError("EPG timeout")),
+            ):
                 # Must not raise
                 await warmer.warm_cache()
         finally:
@@ -379,6 +395,7 @@ class TestWarmCache:
 # _verify_cache_coherence
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestVerifyCacheCoherence:
     """_verify_cache_coherence() key-integrity checks."""
 
@@ -387,7 +404,7 @@ class TestVerifyCacheCoherence:
         from state import CACHE_KEY_PATTERNS, _cache
 
         # Populate all static keys
-        for name, pattern in CACHE_KEY_PATTERNS.items():
+        for _, pattern in CACHE_KEY_PATTERNS.items():
             if "{id}" not in pattern:
                 _cache[pattern] = (9999999999.0, [])
         # Populate at least one matching prefix for template keys
@@ -421,7 +438,7 @@ class TestVerifyCacheCoherence:
 
         # Populate all static keys, but leave template keys with no matching entries
         _cache.clear()
-        for name, pattern in CACHE_KEY_PATTERNS.items():
+        for _, pattern in CACHE_KEY_PATTERNS.items():
             if "{id}" not in pattern:
                 _cache[pattern] = (9999999999.0, [])
 
@@ -432,10 +449,11 @@ class TestVerifyCacheCoherence:
         # NOTE: vod_categories matches prefix vod_, and series_categories matches
         # prefix series_ — so only vod_info and series_info are truly missing.
         warnings_about_template = [
-            call for call in mock_warn.call_args_list
-            if "No entries for template key" in str(call)
+            call for call in mock_warn.call_args_list if "No entries for template key" in str(call)
         ]
-        assert len(warnings_about_template) == 2, f"Got {len(warnings_about_template)} template warnings: {[str(c) for c in warnings_about_template]}"
+        assert len(warnings_about_template) == 2, (
+            f"Got {len(warnings_about_template)} template warnings: {[str(c) for c in warnings_about_template]}"
+        )
 
     async def test_mixed_populated_and_missing(self, warmer):
         """Only missing keys trigger warnings; populated ones don't."""
@@ -453,8 +471,5 @@ class TestVerifyCacheCoherence:
         assert mock_warn.call_count >= 1
 
         # Check that live_all was NOT warned (it's populated)
-        live_all_warnings = [
-            call for call in mock_warn.call_args_list
-            if "live_all" in str(call)
-        ]
+        live_all_warnings = [call for call in mock_warn.call_args_list if "live_all" in str(call)]
         assert len(live_all_warnings) == 0

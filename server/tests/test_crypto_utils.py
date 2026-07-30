@@ -1,10 +1,7 @@
 """Tests for crypto_utils.py — Fernet symmetric encryption for credentials."""
 
-import json
-from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # encrypt / decrypt
@@ -187,12 +184,12 @@ class TestCipherManagement:
 
     def test_get_or_create_key_from_env_base64(self, monkeypatch):
         """STV_ENCRYPT_KEY as base64 (44 chars, ends with =) should work directly."""
+        # Generate a real Fernet key
+        from cryptography.fernet import Fernet
+
         import crypto_utils
 
-        # Generate a real Fernet key
-        from cryptography.fernet import Fernet as F
-
-        real_key = F.generate_key().decode()
+        real_key = Fernet.generate_key().decode()
 
         monkeypatch.setattr(crypto_utils, "_cipher", None)
         monkeypatch.setattr(crypto_utils, "_KEY_FILE", None)
@@ -202,9 +199,8 @@ class TestCipherManagement:
 
     def test_get_or_create_key_from_file(self, monkeypatch, tmp_path):
         """If no env var, key should be read from/stored to .encrypt_key file."""
-        import crypto_utils
 
-        from cryptography.fernet import Fernet as F
+        import crypto_utils
 
         data_dir = tmp_path / "data"
         data_dir.mkdir()

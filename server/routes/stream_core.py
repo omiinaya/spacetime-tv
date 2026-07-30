@@ -6,6 +6,7 @@ stream_dash, and stream_probe modules.
 """
 
 import asyncio
+import contextlib
 import logging
 from functools import partial
 
@@ -246,10 +247,8 @@ async def _http_feed_stdin(
     except (aiohttp.ClientError, OSError, RuntimeError) as e:  # pragma: no cover — network error, runtime only
         log.warning(f"{log_prefix} download error: {e}")  # pragma: no cover
     finally:
-        try:
+        with contextlib.suppress(OSError):
             proc.stdin.close()
-        except OSError:  # pragma: no cover — stdin close error, runtime only
-            pass  # pragma: no cover
 
 
 async def _ffmpeg_pipe(cmd: list[str], feed_coro):
@@ -289,16 +288,12 @@ async def _ffmpeg_pipe(cmd: list[str], feed_coro):
         feed_task.cancel()
         stderr_task.cancel()
         for t in (feed_task, stderr_task):
-            try:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
                 await t
-            except (asyncio.CancelledError, Exception):
-                pass  # pragma: no cover — cleanup edge case
         if proc.returncode is None:
             proc.kill()  # pragma: no cover — cleanup only when generator exits early
-            try:
+            with contextlib.suppress(OSError):
                 await proc.wait()
-            except OSError:
-                pass  # pragma: no cover — wait error, runtime only
 
 
 async def stream_vod_bytes(url: str, range_header: str | None = None):

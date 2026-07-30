@@ -8,11 +8,10 @@ import logging
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from iptv_client import build_timeshift_url
+from iptv_client import build_timeshift_url, mask_url_credentials
 from state import track_hit
 
 from .stream_core import build_stream_url, stream_bytes, stream_bytes_transcode
-from iptv_client import mask_url_credentials
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["stream"])

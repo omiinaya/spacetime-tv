@@ -4,9 +4,7 @@ Extracted from main.py during P1.1 Phase 4 decomposition.
 """
 
 import asyncio
-import json
 import logging
-import time
 
 from fastapi import APIRouter, HTTPException, Query
 

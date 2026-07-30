@@ -1,20 +1,18 @@
 """Comprehensive tests for services/search_service.py — enrichment, VOD, series, cache scan, live channels."""
 
-import json
 import time
-from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from services.search_service import (
     _SEARCH_ENRICH_CACHE,
     enrich_tmdb_item,
-    search_all_vod,
     search_all_series,
+    search_all_vod,
     search_from_cache,
     search_live_channels,
 )
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Fixtures
@@ -172,9 +170,10 @@ class TestEnrichTmdbItem:
         mock_proc.returncode = 0
         mock_proc.communicate = AsyncMock(return_value=(b'{"genres": [{"name":"Action"}], "vote_average": 7.0}', b""))
 
-        with patch("services.search_service._TMDB_ENRICH", "/usr/bin/tmdb-enrich"), patch(
-            "asyncio.create_subprocess_exec", new_callable=AsyncMock
-        ) as mock_subprocess:
+        with (
+            patch("services.search_service._TMDB_ENRICH", "/usr/bin/tmdb-enrich"),
+            patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess,
+        ):
             mock_subprocess.return_value = mock_proc
             result = await enrich_tmdb_item("movie", "789")
         assert result is not None
@@ -189,9 +188,10 @@ class TestEnrichTmdbItem:
         mock_proc.returncode = 1
         mock_proc.communicate = AsyncMock(return_value=(b"", b"error"))
 
-        with patch("services.search_service._TMDB_ENRICH", "/usr/bin/tmdb-enrich"), patch(
-            "asyncio.create_subprocess_exec", new_callable=AsyncMock
-        ) as mock_subprocess:
+        with (
+            patch("services.search_service._TMDB_ENRICH", "/usr/bin/tmdb-enrich"),
+            patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess,
+        ):
             mock_subprocess.return_value = mock_proc
             result = await enrich_tmdb_item("movie", "789")
         assert result is None
@@ -203,9 +203,10 @@ class TestEnrichTmdbItem:
         mock_proc.returncode = 0
         mock_proc.communicate = AsyncMock(return_value=(b"not json", b""))
 
-        with patch("services.search_service._TMDB_ENRICH", "/usr/bin/tmdb-enrich"), patch(
-            "asyncio.create_subprocess_exec", new_callable=AsyncMock
-        ) as mock_subprocess:
+        with (
+            patch("services.search_service._TMDB_ENRICH", "/usr/bin/tmdb-enrich"),
+            patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess,
+        ):
             mock_subprocess.return_value = mock_proc
             result = await enrich_tmdb_item("movie", "789")
         assert result is None
@@ -213,9 +214,10 @@ class TestEnrichTmdbItem:
     @patch("services.search_service.TMDB_API_KEY", "")
     async def test_enrich_cli_timeout(self):
         """When CLI times out, enrich returns None."""
-        with patch("services.search_service._TMDB_ENRICH", "/usr/bin/tmdb-enrich"), patch(
-            "asyncio.create_subprocess_exec", new_callable=AsyncMock
-        ) as mock_subprocess:
+        with (
+            patch("services.search_service._TMDB_ENRICH", "/usr/bin/tmdb-enrich"),
+            patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess,
+        ):
             mock_subprocess.side_effect = TimeoutError("timed out")
             result = await enrich_tmdb_item("movie", "789")
         assert result is None
@@ -223,9 +225,10 @@ class TestEnrichTmdbItem:
     @patch("services.search_service.TMDB_API_KEY", "")
     async def test_enrich_cli_not_found(self):
         """When CLI binary not found, enrich returns None."""
-        with patch("services.search_service._TMDB_ENRICH", "/usr/bin/tmdb-enrich"), patch(
-            "asyncio.create_subprocess_exec", new_callable=AsyncMock
-        ) as mock_subprocess:
+        with (
+            patch("services.search_service._TMDB_ENRICH", "/usr/bin/tmdb-enrich"),
+            patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess,
+        ):
             mock_subprocess.side_effect = FileNotFoundError("not found")
             result = await enrich_tmdb_item("movie", "789")
         assert result is None
@@ -233,9 +236,10 @@ class TestEnrichTmdbItem:
     @patch("services.search_service.TMDB_API_KEY", "")
     async def test_enrich_cli_path_empty(self):
         """When _TMDB_ENRICH is falsy, return None immediately without CLI call."""
-        with patch("services.search_service._TMDB_ENRICH", ""), patch(
-            "asyncio.create_subprocess_exec", new_callable=AsyncMock
-        ) as mock_subprocess:
+        with (
+            patch("services.search_service._TMDB_ENRICH", ""),
+            patch("asyncio.create_subprocess_exec", new_callable=AsyncMock) as mock_subprocess,
+        ):
             result = await enrich_tmdb_item("movie", "789")
         assert result is None
         mock_subprocess.assert_not_called()
@@ -271,7 +275,6 @@ class TestEnrichTmdbItem:
     @patch("services.search_service.TMDB_API_KEY", "fake-key")
     async def test_enrich_cache_none_result(self):
         """When API returns None, None is cached and not re-fetched within TTL."""
-        cache_key = "tmdb_enrich_movie_999"
         with patch("routes.tmdb.tmdb_fetch", new_callable=AsyncMock) as mock_tmdb:
             mock_tmdb.return_value = None
             # First call
@@ -383,9 +386,7 @@ class TestSearchAllVod:
 
     @patch("services.search_service.cached_fetch", new_callable=AsyncMock)
     @patch("iptv_client.get_enabled_providers")
-    async def test_dedup_by_stream_id(
-        self, mock_get_providers, mock_cached_fetch, mock_vod_categories
-    ):
+    async def test_dedup_by_stream_id(self, mock_get_providers, mock_cached_fetch, mock_vod_categories):
         """Duplicate stream_ids are deduplicated, returning only unique matches."""
         mock_get_providers.return_value = [
             MagicMock(name="Solo", base_url="http://solo.test", username="u", password="p", enabled=True)
@@ -427,9 +428,7 @@ class TestSearchAllVod:
 
     @patch("services.search_service.cached_fetch", new_callable=AsyncMock)
     @patch("iptv_client.get_enabled_providers")
-    async def test_case_insensitive_search(
-        self, mock_get_providers, mock_cached_fetch, mock_vod_categories
-    ):
+    async def test_case_insensitive_search(self, mock_get_providers, mock_cached_fetch, mock_vod_categories):
         """Query matching is case-insensitive."""
         mock_get_providers.return_value = [
             MagicMock(name="Solo", base_url="http://solo.test", username="u", password="p", enabled=True)
@@ -541,9 +540,7 @@ class TestSearchAllSeries:
 
     @patch("services.search_service.cached_fetch", new_callable=AsyncMock)
     @patch("iptv_client.get_enabled_providers")
-    async def test_dedup_by_series_id(
-        self, mock_get_providers, mock_cached_fetch, mock_series_categories
-    ):
+    async def test_dedup_by_series_id(self, mock_get_providers, mock_cached_fetch, mock_series_categories):
         """Duplicate series_ids across categories are deduplicated."""
         mock_get_providers.return_value = [
             MagicMock(name="Solo", base_url="http://solo.test", username="u", password="p", enabled=True)
@@ -563,9 +560,7 @@ class TestSearchAllSeries:
 
     @patch("services.search_service.cached_fetch", new_callable=AsyncMock)
     @patch("iptv_client.get_enabled_providers")
-    async def test_exception_in_fetch_skipped(
-        self, mock_get_providers, mock_cached_fetch, mock_series_categories
-    ):
+    async def test_exception_in_fetch_skipped(self, mock_get_providers, mock_cached_fetch, mock_series_categories):
         """Exceptions in per-category fetches are skipped."""
         mock_get_providers.return_value = [
             MagicMock(name="Solo", base_url="http://solo.test", username="u", password="p", enabled=True)
@@ -586,9 +581,7 @@ class TestSearchAllSeries:
 
     @patch("services.search_service.cached_fetch", new_callable=AsyncMock)
     @patch("iptv_client.get_enabled_providers")
-    async def test_case_insensitive_name_and_plot(
-        self, mock_get_providers, mock_cached_fetch, mock_series_categories
-    ):
+    async def test_case_insensitive_name_and_plot(self, mock_get_providers, mock_cached_fetch, mock_series_categories):
         """Series search is case-insensitive for both name and plot."""
         mock_get_providers.return_value = [
             MagicMock(name="Solo", base_url="http://solo.test", username="u", password="p", enabled=True)

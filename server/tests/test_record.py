@@ -10,7 +10,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 
@@ -105,8 +104,9 @@ def test_start_recording_uses_epg_name_when_no_stream_name(monkeypatch, tmp_path
     mock_proc, record_dir, meta_file = _install_mocks(monkeypatch, tmp_path)
 
     # Pre-populate the cache with EPG data for stream 456
-    from state import _cache
     import time
+
+    from state import _cache
 
     _cache["epg_programmes"] = (
         time.time(),
@@ -175,7 +175,6 @@ def test_list_recordings_sorted_newest_first(monkeypatch, tmp_path, client):
     _install_mocks(monkeypatch, tmp_path)
 
     _start_a_recording(client, stream_id=10, stream_name="First")
-    import asyncio
 
     # Small delay to ensure different timestamps
     import time
@@ -322,7 +321,6 @@ def test_delete_cleans_up_file_on_disk(monkeypatch, tmp_path, client):
     rec_id = resp.json()["recording_id"]
 
     # Create a dummy file at the expected path so we can verify deletion
-    import time
 
     meta = json.loads(meta_file.read_text())
     rec_file_path = record_dir / f"{rec_id}.mp4"
@@ -412,7 +410,7 @@ def test_record_progress_returns_data(client):
     """
     resp = client.get("/api/v1/record/progress")
     assert resp.status_code == 200
-    data = resp.json()
+    resp.json()
     # Future assertion: assert "progress" in data or isinstance(data, dict)
 
 

@@ -107,9 +107,9 @@ async def reset_shared_state():
 
     _stream_hits.clear()
     # Also wipe stream_hits.json on disk to prevent stale loads
-    from config import DATA_DIR as _data_dir
+    from config import DATA_DIR
 
-    _hits_file = _data_dir / "stream_hits.json"
+    _hits_file = DATA_DIR / "stream_hits.json"
     if _hits_file.exists():
         _hits_file.unlink()
     # Clear probe cache to prevent test ordering leaks
@@ -117,7 +117,8 @@ async def reset_shared_state():
 
     _probe_cache.clear()
     # Clear guide/EPG caches — tests in test_state.py modify these
-    from state import epg_cache as _epg_cache_ref, _guide_cache as _guide_cache_ref
+    from state import _guide_cache as _guide_cache_ref
+    from state import epg_cache as _epg_cache_ref
 
     _epg_cache_ref["data"] = None
     _epg_cache_ref["fetched"] = 0

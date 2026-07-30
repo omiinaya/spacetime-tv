@@ -11,7 +11,6 @@ from unittest.mock import patch
 
 import pytest
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # Helpers
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -32,6 +31,7 @@ def _reload_config(monkeypatch, setenv=None, delenv=None):
     # Prevent load_dotenv from re-reading .env during reload, which would
     # overwrite our monkeypatched env vars.
     import dotenv
+
     monkeypatch.setattr(dotenv, "load_dotenv", lambda _path=None, **kw: None)
     importlib.reload(cfg)
     return cfg
@@ -82,26 +82,20 @@ class TestProviderConfig:
     def test_default_enabled_is_true(self):
         from config import ProviderConfig
 
-        pc = ProviderConfig(
-            name="X", base_url="http://x.tv", username="u", password="p"
-        )
+        pc = ProviderConfig(name="X", base_url="http://x.tv", username="u", password="p")
         assert pc.enabled is True
 
     def test_default_order_is_zero(self):
         from config import ProviderConfig
 
-        pc = ProviderConfig(
-            name="X", base_url="http://x.tv", username="u", password="p"
-        )
+        pc = ProviderConfig(name="X", base_url="http://x.tv", username="u", password="p")
         assert pc.order == 0
 
     def test_mutable_fields(self):
         """ProviderConfig is a regular dataclass – fields can be reassigned."""
         from config import ProviderConfig
 
-        pc = ProviderConfig(
-            name="X", base_url="http://x.tv", username="u", password="p"
-        )
+        pc = ProviderConfig(name="X", base_url="http://x.tv", username="u", password="p")
         pc.enabled = False
         pc.order = 99
         assert pc.enabled is False
@@ -521,22 +515,14 @@ class TestLoadProvidersFromFile:
 
     def test_default_enabled_when_absent(self, cfg, tmp_path):
         f = tmp_path / "providers.json"
-        f.write_text(
-            json.dumps(
-                [{"name": "P", "base_url": "http://p.tv", "username": "u", "password": "p"}]
-            )
-        )
+        f.write_text(json.dumps([{"name": "P", "base_url": "http://p.tv", "username": "u", "password": "p"}]))
         cfg.PROVIDERS_FILE = f
         result = cfg._load_providers_from_file()
         assert result[0].enabled is True
 
     def test_password_defaults_to_empty_string(self, cfg, tmp_path):
         f = tmp_path / "providers.json"
-        f.write_text(
-            json.dumps(
-                [{"name": "P", "base_url": "http://p.tv", "username": "u"}]
-            )
-        )
+        f.write_text(json.dumps([{"name": "P", "base_url": "http://p.tv", "username": "u"}]))
         cfg.PROVIDERS_FILE = f
         result = cfg._load_providers_from_file()
         assert result[0].password == ""
@@ -710,27 +696,19 @@ class TestAdminApiKey:
 
     def test_auto_generates_when_not_set(self, monkeypatch):
         """When ADMIN_API_KEY is empty, a 64-char hex key is generated."""
-        cfg = _reload_config(
-            monkeypatch, setenv={"ADMIN_API_KEY": ""}, delenv=["ADMIN_API_KEY"]
-        )
+        cfg = _reload_config(monkeypatch, setenv={"ADMIN_API_KEY": ""}, delenv=["ADMIN_API_KEY"])
         assert cfg.ADMIN_API_KEY
         assert len(cfg.ADMIN_API_KEY) == 64  # token_hex(32) → 64 hex chars
 
     def test_uses_env_var_when_set(self, monkeypatch):
-        cfg = _reload_config(
-            monkeypatch, setenv={"ADMIN_API_KEY": "my-static-admin-key"}
-        )
+        cfg = _reload_config(monkeypatch, setenv={"ADMIN_API_KEY": "my-static-admin-key"})
         assert cfg.ADMIN_API_KEY == "my-static-admin-key"
 
     def test_auto_key_is_random(self, monkeypatch):
         """Two reloads without ADMIN_API_KEY should produce different keys."""
-        cfg1 = _reload_config(
-            monkeypatch, setenv={"ADMIN_API_KEY": ""}, delenv=["ADMIN_API_KEY"]
-        )
+        cfg1 = _reload_config(monkeypatch, setenv={"ADMIN_API_KEY": ""}, delenv=["ADMIN_API_KEY"])
         key1 = cfg1.ADMIN_API_KEY
-        cfg2 = _reload_config(
-            monkeypatch, setenv={"ADMIN_API_KEY": ""}, delenv=["ADMIN_API_KEY"]
-        )
+        cfg2 = _reload_config(monkeypatch, setenv={"ADMIN_API_KEY": ""}, delenv=["ADMIN_API_KEY"])
         key2 = cfg2.ADMIN_API_KEY
         assert key1 != key2
 
@@ -748,9 +726,7 @@ class TestConstantsDefaults:
         assert cfg.TMDB_API_KEY == ""
 
     def test_tmdb_base_default(self, monkeypatch):
-        cfg = _reload_config(
-            monkeypatch, setenv={"TMDB_API_KEY": ""}, delenv=["TMDB_BASE"]
-        )
+        cfg = _reload_config(monkeypatch, setenv={"TMDB_API_KEY": ""}, delenv=["TMDB_BASE"])
         assert cfg.TMDB_BASE == "https://api.themoviedb.org/3"
 
     def test_user_agent_default(self, monkeypatch):
@@ -837,7 +813,7 @@ class TestExtraDefaults:
     # -- CORS_ORIGINS --------------------------------------------------------
 
     def test_cors_origins_default_list(self):
-        from config import CORS_ORIGINS, DEFAULT_CORS_ORIGINS
+        from config import CORS_ORIGINS
 
         assert isinstance(CORS_ORIGINS, list)
         assert len(CORS_ORIGINS) > 0
@@ -880,15 +856,11 @@ class TestExtraDefaults:
         assert cfg.ENCRYPT_CREDENTIALS is True
 
     def test_encrypt_credentials_false_from_env(self, monkeypatch):
-        cfg = _reload_config(
-            monkeypatch, setenv={"ENCRYPT_CREDENTIALS": "false"}
-        )
+        cfg = _reload_config(monkeypatch, setenv={"ENCRYPT_CREDENTIALS": "false"})
         assert cfg.ENCRYPT_CREDENTIALS is False
 
     def test_encrypt_credentials_case_insensitive(self, monkeypatch):
-        cfg = _reload_config(
-            monkeypatch, setenv={"ENCRYPT_CREDENTIALS": "FALSE"}
-        )
+        cfg = _reload_config(monkeypatch, setenv={"ENCRYPT_CREDENTIALS": "FALSE"})
         assert cfg.ENCRYPT_CREDENTIALS is False
 
     # -- STV_ENCRYPT_KEY -----------------------------------------------------
@@ -911,9 +883,7 @@ class TestExtraDefaults:
         assert cfg.IPTV_BASE == ""
 
     def test_iptv_base_from_env(self, monkeypatch):
-        cfg = _reload_config(
-            monkeypatch, setenv={"IPTV_BASE": "http://custom.tv"}
-        )
+        cfg = _reload_config(monkeypatch, setenv={"IPTV_BASE": "http://custom.tv"})
         assert cfg.IPTV_BASE == "http://custom.tv"
 
     def test_iptv_user_default_empty(self, monkeypatch):
@@ -934,14 +904,12 @@ class TestExtraDefaults:
     # -- STATIC_DIR ----------------------------------------------------------
 
     def test_static_dir_default(self):
-        from config import STATIC_DIR, ROOT
+        from config import ROOT, STATIC_DIR
 
         assert STATIC_DIR == ROOT / "web" / "dist"
 
     def test_static_dir_from_env(self, monkeypatch):
-        cfg = _reload_config(
-            monkeypatch, setenv={"STATIC_DIR": "/custom/static"}
-        )
+        cfg = _reload_config(monkeypatch, setenv={"STATIC_DIR": "/custom/static"})
         assert str(cfg.STATIC_DIR) == "/custom/static"
 
     # -- DATA_DIR / CACHE_DIR ------------------------------------------------
@@ -959,12 +927,10 @@ class TestExtraDefaults:
 
     def test_data_dir_from_env(self, monkeypatch, tmp_path):
         custom_data = tmp_path / "custom_data"
-        cfg = _reload_config(
-            monkeypatch, setenv={"STV_DATA_DIR": str(custom_data)}
-        )
-        assert cfg.DATA_DIR == custom_data
+        cfg = _reload_config(monkeypatch, setenv={"STV_DATA_DIR": str(custom_data)})
+        assert custom_data == cfg.DATA_DIR
         assert custom_data.exists()  # mkdir called at import time
-        assert cfg.CACHE_DIR == custom_data / "cache"
+        assert custom_data / "cache" == cfg.CACHE_DIR
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

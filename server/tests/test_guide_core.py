@@ -2,7 +2,6 @@
 
 import pytest
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # parse_xmltv
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -130,7 +129,7 @@ class TestParseXmltv:
         """Invalid XML should raise an ElementTree ParseError."""
         from routes.guide_core import parse_xmltv
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match=".*"):
             parse_xmltv("this is not xml")
 
     def test_programme_icon_missing(self):

@@ -1,12 +1,8 @@
 """Tests for auth.py — authentication, profiles, PINs, session tokens."""
 
-import json
-import os
 import time
-from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Helpers
@@ -107,8 +103,9 @@ class TestPinHash:
 
     def test_verify_pin_without_salt_legacy(self):
         """Legacy format without salt (plain hash) still works."""
-        from auth import _verify_pin
         import hashlib
+
+        from auth import _verify_pin
 
         legacy_hash = hashlib.sha256(b"1234").hexdigest()
         assert _verify_pin(legacy_hash, "1234") is True
@@ -445,7 +442,6 @@ class TestProfileTokens:
     def test_verify_token_wrong_signature(self):
         """Token with wrong signature should return None."""
         from auth import verify_profile_token
-        import time
 
         token = _make_token_payload("p1", "d1", int(time.time()) + 3600, "bad")
         assert verify_profile_token(token) is None

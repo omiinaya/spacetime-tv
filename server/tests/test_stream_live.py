@@ -263,9 +263,7 @@ class TestMethodNotAllowed:
     def test_non_get_methods_return_405(self, client, path, method):
         """{method.upper()} {path} returns 405 (method not allowed)."""
         resp = getattr(client, method)(path)
-        assert resp.status_code == 405, (
-            f"{method.upper()} {path} expected 405, got {resp.status_code}"
-        )
+        assert resp.status_code == 405, f"{method.upper()} {path} expected 405, got {resp.status_code}"
 
 
 # ═══════════════════════════════════════════════════════════════════════════

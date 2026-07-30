@@ -18,7 +18,6 @@ import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
-import pytest
 
 from routes.stream_core import PROBE_CACHE_TTL, _probe_cache
 from routes.stream_probe import probe_stream
@@ -125,7 +124,7 @@ class TestCache:
         proc = _mock_ffprobe_proc(returncode=0, stdout=ffprobe_data.encode())
 
         with patch("routes.stream_probe.asyncio.create_subprocess_exec", return_value=proc):
-            r1 = asyncio.run(probe_stream(101, "live"))
+            _ = asyncio.run(probe_stream(101, "live"))
 
         # Second call — cache hit, subprocess should NOT be called
         with patch("routes.stream_probe.asyncio.create_subprocess_exec") as mock_sub:

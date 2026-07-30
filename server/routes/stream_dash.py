@@ -15,7 +15,7 @@ def generate_live_mpd(stream_id: int, base_url: str) -> str:
 
     mime = "video/mp2t"
     safe_url = base_url.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
-    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    now = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     return (
         '<?xml version="1.0" encoding="utf-8"?>\n'
         '<MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n'
@@ -26,7 +26,7 @@ def generate_live_mpd(stream_id: int, base_url: str) -> str:
         f'     publishTime="{now}"\n'
         f'     minimumUpdatePeriod="PT5S"\n'
         f'     minBufferTime="PT15S">\n'
-        f" <Period id=\"{stream_id}\">\n"
+        f' <Period id="{stream_id}">\n'
         f'    <AdaptationSet mimeType="{mime}" contentType="video" startWithSAP="1">\n'
         '      <Representation bandwidth="5000000">\n'
         f"        <BaseURL>{safe_url}</BaseURL>\n"
@@ -60,7 +60,7 @@ def generate_vod_mpd(stream_id: int, media_type: str, base_url: str) -> str:
         '     xmlns="urn:mpeg:dash:schema:mpd:2011"\n'
         '     profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"\n'
         '     type="static">\n'
-        f" <Period id=\"{stream_id}\">\n"
+        f' <Period id="{stream_id}">\n'
         f'    <AdaptationSet mimeType="{mime}" contentType="video" startWithSAP="1">\n'
         '      <Representation bandwidth="5000000">\n'
         f"        <BaseURL>{safe_url}</BaseURL>\n"
@@ -77,7 +77,7 @@ def generate_vod_mpd(stream_id: int, media_type: str, base_url: str) -> str:
 @router.get("/stream/live/{stream_id}/manifest.mpd")
 async def live_dash_manifest(stream_id: int):
     """DASH MPD for live TV using server-proxied URL (no credential leak)."""
-    proxy_url = "/api/stream/live/{0}".format(stream_id)
+    proxy_url = f"/api/stream/live/{stream_id}"
     xml = generate_live_mpd(stream_id, proxy_url)
     return Response(
         content=xml,
@@ -89,7 +89,7 @@ async def live_dash_manifest(stream_id: int):
 @router.get("/stream/movie/{stream_id}/manifest.mpd")
 async def movie_dash_manifest(stream_id: int):
     """DASH MPD for movie using server-proxied URL (no credential leak)."""
-    proxy_url = "/api/stream/movie/{0}".format(stream_id)
+    proxy_url = f"/api/stream/movie/{stream_id}"
     xml = generate_vod_mpd(stream_id, "movie", proxy_url)
     return Response(
         content=xml,
@@ -101,7 +101,7 @@ async def movie_dash_manifest(stream_id: int):
 @router.get("/stream/series/{series_id}/{episode_id}/manifest.mpd")
 async def series_dash_manifest(series_id: int, episode_id: int):
     """DASH MPD for series episode using server-proxied URL (no credential leak)."""
-    proxy_url = "/api/stream/series/{0}/{1}".format(series_id, episode_id)
+    proxy_url = f"/api/stream/series/{series_id}/{episode_id}"
     xml = generate_vod_mpd(episode_id, "series", proxy_url)
     return Response(
         content=xml,

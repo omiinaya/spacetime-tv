@@ -6,6 +6,7 @@ on all API endpoints. Extends the pattern from cloud_sync.py.
 Also handles per-user profiles with PIN codes (Smarter-compatible).
 """
 
+import base64
 import hashlib
 import hmac
 import json
@@ -17,7 +18,6 @@ import time
 from fastapi import HTTPException, Request, status
 
 from config import ADMIN_API_KEY
-import base64
 
 log = logging.getLogger("spacetime-tv")
 

@@ -68,7 +68,7 @@ async def profile_sync_progress(entry: dict, request: Request):
     Uses X-Profile-Token header to identify the profile.
     Falls back to global progress store if no profile token.
     """
-    from auth import verify_profile_token, _load_profiles, _save_profiles
+    from auth import _load_profiles, _save_profiles, verify_profile_token
 
     token = request.headers.get("X-Profile-Token", "")
     if not token:
@@ -115,7 +115,7 @@ async def profile_get_progress(request: Request):
     Uses X-Profile-Token header to identify the profile.
     Falls back to global progress store if no profile token.
     """
-    from auth import verify_profile_token, _load_profiles
+    from auth import _load_profiles, verify_profile_token
 
     token = request.headers.get("X-Profile-Token", "")
     if not token:

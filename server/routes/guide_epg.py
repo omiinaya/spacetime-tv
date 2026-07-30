@@ -39,7 +39,7 @@ async def load_epg() -> dict:
         except (json.JSONDecodeError, OSError, KeyError) as e:
             log.warning(f"EPG cache file corrupted: {e} — will refetch")
 
-    from iptv_client import fetch_epg_all_providers, get_enabled_providers, iptv_xmltv_url
+    from iptv_client import fetch_epg_all_providers, get_enabled_providers
 
     providers = get_enabled_providers()
 

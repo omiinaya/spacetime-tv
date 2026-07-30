@@ -2,12 +2,10 @@
 
 import json
 import time
-from pathlib import Path
 
 import pytest
 
 import state
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Fixtures
@@ -80,9 +78,7 @@ class TestCacheKeyConstants:
 
     def test_cache_key_patterns_values_are_strings(self):
         for alias, pattern in state.CACHE_KEY_PATTERNS.items():
-            assert isinstance(pattern, str), (
-                f"Pattern for '{alias}' must be a string, got {type(pattern)}"
-            )
+            assert isinstance(pattern, str), f"Pattern for '{alias}' must be a string, got {type(pattern)}"
 
     def test_cache_key_patterns_match_constants(self):
         """Each CACHE_KEY_PATTERNS value should equal the corresponding constant."""
@@ -99,8 +95,7 @@ class TestCacheKeyConstants:
         for alias, expected in mapping.items():
             actual = state.CACHE_KEY_PATTERNS[alias]
             assert actual == expected, (
-                f"CACHE_KEY_PATTERNS['{alias}'] is '{actual}', "
-                f"expected '{expected}' (check constant match)"
+                f"CACHE_KEY_PATTERNS['{alias}'] is '{actual}', expected '{expected}' (check constant match)"
             )
 
     def test_tmdb_enrich_not_in_patterns(self):

@@ -1,10 +1,9 @@
 """Tests for stream_core.py — shared stream helpers, URL building, probe cache, MIME."""
 
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Fixtures
@@ -289,7 +288,7 @@ class TestGetContentLength:
         async def mock_head(url, **kw):
             return mock_resp
 
-        with patch.object(httpx_module := __import__("httpx"), "AsyncClient") as MockClient:
+        with patch.object(_ := __import__("httpx"), "AsyncClient") as MockClient:
             instance = MockClient.return_value.__aenter__.return_value
             instance.get.return_value = mock_resp
             from routes.stream_core import get_content_length
@@ -322,7 +321,7 @@ class TestGetContentLength:
         async def mock_get(url, **kw):
             return mock_resp
 
-        with patch.object(httpx_module := __import__("httpx"), "AsyncClient") as MockClient:
+        with patch.object(_ := __import__("httpx"), "AsyncClient") as MockClient:
             instance = MockClient.return_value.__aenter__.return_value
             instance.get = mock_get
             from routes.stream_core import get_content_length

@@ -6,6 +6,8 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from config import ProviderConfig
+
 log = logging.getLogger("spacetime-tv")
 
 
@@ -298,15 +300,6 @@ async def admin_add_provider(body: dict):
     password = body.get("password", "")
     name = body.get("name", f"Provider {len(PROVIDERS) + 1}")
     enabled = body.get("enabled", True)
-
-    new_provider = {
-        "name": name,
-        "base_url": base_url,
-        "username": username,
-        "password": password,
-        "enabled": enabled,
-        "order": len(PROVIDERS),
-    }
 
     from config import _maybe_encrypt
 

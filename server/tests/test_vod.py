@@ -149,7 +149,7 @@ def test_movies_unified_groups_languages(client_with_cache):
     assert data["total"] == 1
     movie = data["movies"][0]
     assert movie["language_count"] == 2
-    codes = [l["code"] for l in movie["languages"]]
+    codes = [lang["code"] for lang in movie["languages"]]
     # EN should come first (sorted by code, EN before FR)
     assert codes[0] == "EN"
 

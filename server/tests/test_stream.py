@@ -1515,13 +1515,6 @@ def test_stream_vod_mpegts_with_start_time_uses_seek():
 
 
 @pytest.mark.xfail(reason="curl_cffi makes real network calls that fail in test", strict=False)
-def test_movie_proxy_routes(client_with_cache):
-    """stream_movie returns proper status for non-existent movie."""
-    resp = client_with_cache.get("/api/v1/stream/movie/1")
-    assert resp.status_code in (200, 502)
-
-
-@pytest.mark.xfail(reason="curl_cffi makes real network calls that fail in test", strict=False)
 def test_movie_proxy_routes_with_range(client_with_cache):
     """stream_movie proxy with range header works."""
     resp = client_with_cache.get("/api/v1/stream/movie/1", headers={"range": "bytes=0-100"})

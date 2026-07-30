@@ -4,7 +4,6 @@ Tests the pure functions generate_live_mpd and generate_vod_mpd directly
 by importing from routes.stream_dash (not via re-export from routes.stream).
 """
 
-import re
 import xml.etree.ElementTree as ET
 
 from routes.stream_dash import generate_live_mpd, generate_vod_mpd
@@ -168,8 +167,8 @@ class TestVodMpd:
         xml_movie = generate_vod_mpd(1, "movie", "/u")
         xml_series = generate_vod_mpd(1, "series", "/u")
         # Both should produce the same XML structure with same stream_id
-        assert "Period id=\"1\"" in xml_movie
-        assert "Period id=\"1\"" in xml_series
+        assert 'Period id="1"' in xml_movie
+        assert 'Period id="1"' in xml_series
 
     def test_default_mime_no_extension(self):
         """VOD proxy URL without extension defaults to video/mp2t."""

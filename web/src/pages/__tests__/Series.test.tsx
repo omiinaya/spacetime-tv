@@ -9,7 +9,13 @@
  * remain as vi.mock() since they don't need network-level interception.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import SeriesPage from "@/pages/Series";
 import type { Series, Category } from "@/lib/api";

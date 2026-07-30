@@ -85,7 +85,7 @@ async def enrich_tmdb_item(item_type: str, tmdb_id: str) -> dict | None:
 async def search_all_vod(query: str, provider_idx: int = -1) -> list:
     """Fetch all VOD streams matching query across all providers."""
     try:
-        from iptv_client import get_enabled_providers, fetch_all_providers
+        from iptv_client import fetch_all_providers, get_enabled_providers
 
         providers = get_enabled_providers()
         if provider_idx >= 0 and provider_idx < len(providers):
@@ -169,7 +169,7 @@ async def search_all_series(query: str, provider_idx: int = -1) -> list:
     """Fetch all series matching query across all providers."""
     query = query.lower()
     try:
-        from iptv_client import get_enabled_providers, fetch_all_providers
+        from iptv_client import fetch_all_providers, get_enabled_providers
 
         providers = get_enabled_providers()
         if provider_idx >= 0 and provider_idx < len(providers):
