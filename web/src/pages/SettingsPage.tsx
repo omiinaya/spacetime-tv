@@ -272,7 +272,10 @@ function ParentalControls({
       {!pinConfigured ? (
         <PinSetup onSet={onSetPin} />
       ) : (
-        <PinManager onChangePin={handleChangePinClick} onRemovePin={onRemovePin} />
+        <PinManager
+          onChangePin={handleChangePinClick}
+          onRemovePin={onRemovePin}
+        />
       )}
 
       {showPinPrompt && (
@@ -509,9 +512,18 @@ export default function SettingsPage() {
 
   useEffect(() => {
     Promise.all([
-      api.live.categories().then((d) => d.categories).catch(() => []),
-      api.movies.categories().then((d) => d.categories).catch(() => []),
-      api.series.categories().then((d) => d.categories).catch(() => []),
+      api.live
+        .categories()
+        .then((d) => d.categories)
+        .catch(() => []),
+      api.movies
+        .categories()
+        .then((d) => d.categories)
+        .catch(() => []),
+      api.series
+        .categories()
+        .then((d) => d.categories)
+        .catch(() => []),
     ])
       .then(([l, m, s]) => {
         setLiveCats(l);
