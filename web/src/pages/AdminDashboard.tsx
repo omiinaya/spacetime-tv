@@ -20,7 +20,6 @@ import {
   XCircle,
   Server,
   Check,
-  X,
 } from "lucide-react";
 
 interface AdminStats {

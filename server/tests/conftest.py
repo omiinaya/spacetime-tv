@@ -67,7 +67,7 @@ def override_lifespan():
 
 
 @pytest.fixture(autouse=True)
-def reset_shared_state():
+async def reset_shared_state():
     """Clear all shared mutable state between tests so ordering doesn't matter."""
     # Clear main cache so tests don't leak cached data between each other
     # (e.g. test_live_all_with_cache sets _cache["live_all"] which would
@@ -95,11 +95,11 @@ def reset_shared_state():
 
     for _k, c in list(_provider_clients.items()):
         with contextlib.suppress(Exception):
-            c.aclose()
+            await c.aclose()
     _provider_clients.clear()
     try:
         if _global_client and not _global_client.is_closed:
-            _global_client.aclose()
+            await _global_client.aclose()
     except Exception:
         pass
     # Clear stream hit counters
@@ -116,6 +116,20 @@ def reset_shared_state():
     from routes.stream_core import _probe_cache
 
     _probe_cache.clear()
+    # Clear guide/EPG caches — tests in test_state.py modify these
+    from state import epg_cache as _epg_cache_ref, _guide_cache as _guide_cache_ref
+
+    _epg_cache_ref["data"] = None
+    _epg_cache_ref["fetched"] = 0
+    _guide_cache_ref.clear()
+    _guide_cache_ref.update({"channel_groups": None, "total_channels": 0, "built_at": 0})
+    # Reassign module-level vars that can't be modified in-place via import
+    import state as _state_mod
+
+    _state_mod._epg_clients.clear()
+    _state_mod._error_log.clear()
+    _state_mod._warm_task = None
+    _state_mod._epg_refresh_task = None
     yield
 
 

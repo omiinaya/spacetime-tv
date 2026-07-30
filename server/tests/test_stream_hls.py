@@ -69,22 +69,21 @@ def test_series_hls_start_route_exists(client_with_cache):
 @pytest.mark.asyncio
 async def test_download_mkv_returns_cached_path():
     """download_mkv returns cached MKV path when file exists with size > 0."""
-    import tempfile
 
     from routes.stream_hls import download_mkv
 
-    with tempfile.NamedTemporaryFile(suffix=".mkv", delete=False) as f:
-        f.write(b"x" * 100)
-        tmp_path = Path(f.name)
+    with patch("routes.stream_hls.CACHE_DIR") as mock_cache:
+        # Create the mkv at the path download_mkv expects
+        mkv_path = Path("/tmp/test_cached.mkv")
+        mkv_path.write_bytes(b"x" * 100)
+        mock_cache.__truediv__.return_value = mkv_path
 
-    try:
-        with patch("routes.stream_hls.CACHE_DIR", tmp_path.parent), patch("routes.stream_hls.build_stream_url"):
+        try:
             result = await download_mkv("1", "movie", "cached_test")
-            assert result is not None
-            # Should find the pre-existing MKV by different key logic
-            # download_mkv checks: mkv_path = CACHE_DIR / f"{cache_key}.mkv"
-    finally:
-        tmp_path.unlink(missing_ok=True)
+            assert result == mkv_path
+        finally:
+            if mkv_path.exists():
+                mkv_path.unlink()
 
 
 @pytest.mark.asyncio

@@ -57,7 +57,7 @@ async def load_epg() -> dict:
             EPG_CACHE_FILE.write_text(json.dumps({"data": data, "fetched": now}))
             log.info(f"EPG parsed: {len(data.get('programmes', []))} programmes")
             return data
-        except (TimeoutError, httpx.HTTPError, httpx.TimeoutException, json.JSONDecodeError) as e:
+        except (TimeoutError, httpx.HTTPError, httpx.TimeoutException, RuntimeError, json.JSONDecodeError) as e:
             log.error(f"EPG fetch failed: {e}")
             if epg_cache["data"]:
                 return epg_cache["data"]

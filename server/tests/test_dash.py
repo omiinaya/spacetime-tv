@@ -32,7 +32,7 @@ def test_live_mpd_is_static():
     """Live MPD should have type='dynamic'."""
     xml = generate_live_mpd(12345, "/api/stream/live/12345")
     root = _parse_mpd(xml)
-    assert root.get("type") == "static"
+    assert root.get("type") == "dynamic"
 
 
 def test_live_mpd_contains_base_url():

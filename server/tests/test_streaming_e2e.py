@@ -123,8 +123,7 @@ class TestLiveStream:
 
     def test_live_dash_returns_200(self, client, live_cache):
         """DASH manifest returns valid XML MPD."""
-        with patch("routes.stream_dash.build_stream_url", return_value="http://mock/stream.ts"):
-            resp = client.get("/api/v1/stream/live/999/manifest.mpd")
+        resp = client.get("/api/v1/stream/live/999/manifest.mpd")
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "application/dash+xml"
         assert "<MPD" in resp.text
@@ -168,8 +167,7 @@ class TestLiveStream:
 
     def test_live_dash_get_only_method_not_allowed(self, client, live_cache):
         """POST on live DASH endpoint returns 405."""
-        with patch("routes.stream_dash.build_stream_url", return_value="http://mock/stream.ts"):
-            resp = client.post("/api/v1/stream/live/999/manifest.mpd")
+        resp = client.post("/api/v1/stream/live/999/manifest.mpd")
         assert resp.status_code == 405, f"Expected 405, got {resp.status_code}"
 
 
@@ -219,8 +217,7 @@ class TestMovieStream:
 
     def test_movie_dash_returns_200(self, client):
         """Movie DASH manifest returns valid XML."""
-        with patch("routes.stream_dash.build_stream_url", return_value="http://mock/movie.mkv"):
-            resp = client.get("/api/v1/stream/movie/1/manifest.mpd")
+        resp = client.get("/api/v1/stream/movie/1/manifest.mpd")
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "application/dash+xml"
         assert "<MPD" in resp.text
@@ -291,8 +288,7 @@ class TestSeriesStream:
 
     def test_series_dash_returns_200(self, client):
         """Series DASH manifest returns valid XML."""
-        with patch("routes.stream_dash.build_stream_url", return_value="http://mock/series.mkv"):
-            resp = client.get("/api/v1/stream/series/1/42/manifest.mpd")
+        resp = client.get("/api/v1/stream/series/1/42/manifest.mpd")
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "application/dash+xml"
         assert "<MPD" in resp.text

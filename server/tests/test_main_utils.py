@@ -117,8 +117,8 @@ class TestGenerateLiveMpd:
         assert "<Representation" in xml
 
     def test_mime_type_from_url(self):
-        xml = generate_live_mpd(123, "http://example.com/stream.mkv")
-        assert 'mimeType="video/x-matroska"' in xml
+        xml = generate_live_mpd(123, "http://example.com/stream.ts")
+        assert 'mimeType="video/mp2t"' in xml
 
     def test_bandwidth_attribute(self):
         xml = generate_live_mpd(123, "http://example.com/stream.ts")

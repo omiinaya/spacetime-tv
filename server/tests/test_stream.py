@@ -1246,8 +1246,8 @@ def test_vod_movie_route_accessible(client_with_cache):
     try:
         resp = client_with_cache.get("/api/v1/stream/movie/1")
         assert resp.status_code != 404
-    except RuntimeError:
-        # Route exists (would return 500 in production, not 404)
+    except (RuntimeError, OSError):
+        # Route exists (OSError from aiohttp DNS fail for test-iptv.live)
         pass
 
 
@@ -1274,7 +1274,7 @@ def test_vod_movie_route_with_range(client_with_cache):
     try:
         resp = client_with_cache.get("/api/v1/stream/movie/99", headers={"Range": "bytes=0-"})
         assert resp.status_code != 404
-    except RuntimeError:
+    except (RuntimeError, OSError):
         pass
 
 
@@ -1300,7 +1300,7 @@ def test_vod_series_route_accessible(client_with_cache):
     try:
         resp = client_with_cache.get("/api/v1/stream/series/3/42")
         assert resp.status_code != 404
-    except RuntimeError:
+    except (RuntimeError, OSError):
         pass
 
 

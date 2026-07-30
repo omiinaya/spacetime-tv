@@ -152,7 +152,8 @@ def _hash_pin(pin: str) -> str:
 def _verify_pin(stored: str, pin: str) -> bool:
     """Verify a PIN against its stored hash."""
     if ":" not in stored:
-        return hmac.compare_digest(stored, pin)
+        # Legacy format: stored is a plain SHA-256 hex digest
+        return hmac.compare_digest(hashlib.sha256(pin.encode()).hexdigest(), stored)
     salt, expected = stored.split(":", 1)
     return hmac.compare_digest(hashlib.sha256((salt + pin).encode()).hexdigest(), expected)
 

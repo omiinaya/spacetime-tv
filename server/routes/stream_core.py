@@ -364,7 +364,10 @@ async def stream_bytes_transcode(url: str, target_height: int | None = None):
 
 def _mime_from_url(url: str) -> str:
     """Guess the content mime type from a stream URL extension."""
-    ext = url.rsplit(".", 1)[-1].lower() if "." in url else ""
+    from urllib.parse import urlparse
+
+    path = urlparse(url).path
+    ext = path.rsplit(".", 1)[-1].lower() if "." in path else ""
     mime_map = {
         "ts": "video/mp2t",
         "mkv": "video/x-matroska",

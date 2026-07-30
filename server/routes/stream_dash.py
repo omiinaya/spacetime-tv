@@ -10,16 +10,23 @@ router = APIRouter(tags=["dash"])
 
 
 def generate_live_mpd(stream_id: int, base_url: str) -> str:
-    """Generate a DASH MPD manifest for live TV playback."""
+    """Generate a DASH MPD manifest for live TV playback (dynamic)."""
+    import datetime
+
     mime = "video/mp2t"
     safe_url = base_url.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     return (
         '<?xml version="1.0" encoding="utf-8"?>\n'
         '<MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n'
         '     xmlns="urn:mpeg:dash:schema:mpd:2011"\n'
-        '     profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"\n'
-        '     type="static">\n'
-        " <Period>\n"
+        '     profiles="urn:mpeg:dash:profile:isoff-live:2011"\n'
+        f'     type="dynamic"\n'
+        f'     availabilityStartTime="{now}"\n'
+        f'     publishTime="{now}"\n'
+        f'     minimumUpdatePeriod="PT5S"\n'
+        f'     minBufferTime="PT15S">\n'
+        f" <Period id=\"{stream_id}\">\n"
         f'    <AdaptationSet mimeType="{mime}" contentType="video" startWithSAP="1">\n'
         '      <Representation bandwidth="5000000">\n'
         f"        <BaseURL>{safe_url}</BaseURL>\n"
@@ -53,7 +60,7 @@ def generate_vod_mpd(stream_id: int, media_type: str, base_url: str) -> str:
         '     xmlns="urn:mpeg:dash:schema:mpd:2011"\n'
         '     profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"\n'
         '     type="static">\n'
-        " <Period>\n"
+        f" <Period id=\"{stream_id}\">\n"
         f'    <AdaptationSet mimeType="{mime}" contentType="video" startWithSAP="1">\n'
         '      <Representation bandwidth="5000000">\n'
         f"        <BaseURL>{safe_url}</BaseURL>\n"

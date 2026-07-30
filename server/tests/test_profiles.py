@@ -28,7 +28,7 @@ def temp_profiles_file(tmp_path):
 @pytest.fixture
 def client(temp_profiles_file):
     """Create a test client with profile support."""
-    from server.main import app
+    from main import app
     from auth import ensure_default_profile
 
     # Ensure default profile doesn't exist yet

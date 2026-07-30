@@ -9,7 +9,7 @@
  * remain as vi.mock() since they don't need network-level interception.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import SeriesPage from "@/pages/Series";
 import type { Series, Category } from "@/lib/api";
@@ -300,7 +300,8 @@ describe("SeriesPage (MSW)", () => {
       renderSeries();
 
       await waitFor(() => {
-        expect(screen.getByText("Breaking Bad")).toBeInTheDocument();
+        const bbMatches = screen.getAllByText("Breaking Bad");
+        expect(bbMatches.length).toBeGreaterThan(0);
         expect(screen.getByText("Stranger Things")).toBeInTheDocument();
       });
     });
@@ -318,7 +319,8 @@ describe("SeriesPage (MSW)", () => {
       renderSeries();
 
       await waitFor(() => {
-        expect(screen.getByText("2008")).toBeInTheDocument();
+        const yrMatches = screen.getAllByText("2008");
+        expect(yrMatches.length).toBeGreaterThan(0);
         expect(screen.getByText("2016")).toBeInTheDocument();
       });
     });
@@ -567,7 +569,7 @@ describe("SeriesPage (MSW)", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Trending This Week")).toBeInTheDocument();
-        expect(screen.getByText("Breaking Bad")).toBeInTheDocument();
+        expect(screen.getAllByText("Breaking Bad").length).toBeGreaterThan(0);
       });
     });
 
@@ -740,20 +742,17 @@ describe("SeriesPage (MSW)", () => {
     it("opens overlay when clicking a series card", async () => {
       renderSeries();
 
+      // Wait for series cards to actually render (Stranger Things is only in series, not trending)
       await waitFor(() => {
-        expect(screen.getByText("Breaking Bad")).toBeInTheDocument();
+        expect(screen.getByText("Stranger Things")).toBeInTheDocument();
       });
 
-      // Click the Breaking Bad card to open overlay
-      const bbCard =
-        screen.getByText("Breaking Bad").closest('[role="button"]') ||
-        screen.getByText("Breaking Bad");
-      if (bbCard && bbCard.closest('[role="button"]')) {
-        fireEvent.click(bbCard.closest('[role="button"]')!);
-      } else {
-        // Try the parent div with onClick handler
-        fireEvent.click(bbCard);
-      }
+      // Find the series card button and click it
+      // Use within the content-row to avoid the trending row
+      const contentRows = screen.getAllByTestId("content-row");
+      const firstRow = contentRows[0];
+      const cardButton = within(firstRow).getAllByRole("button")[0];
+      fireEvent.click(cardButton);
 
       await waitFor(() => {
         expect(screen.getByTestId("series-overlay")).toBeInTheDocument();
@@ -763,13 +762,16 @@ describe("SeriesPage (MSW)", () => {
     it("closes overlay when close button is clicked", async () => {
       renderSeries();
 
+      // Wait for series cards to render
       await waitFor(() => {
-        expect(screen.getByText("Breaking Bad")).toBeInTheDocument();
+        expect(screen.getByText("Stranger Things")).toBeInTheDocument();
       });
 
-      // Click a series card to open overlay
-      const bbCard = screen.getByText("Breaking Bad");
-      fireEvent.click(bbCard);
+      // Click a series card button to open overlay
+      const contentRows = screen.getAllByTestId("content-row");
+      const firstRow = contentRows[0];
+      const cardButton = within(firstRow).getAllByRole("button")[0];
+      fireEvent.click(cardButton);
 
       await waitFor(() => {
         expect(screen.getByTestId("series-overlay")).toBeInTheDocument();

@@ -33,7 +33,11 @@ async def handle_vod_request(req: Request, stream_id: int, stream_type: str, con
     accepts curl_cffi's Chrome-emulated TLS fingerprint).
     """
     track_hit(stream_type, stream_id)
-    url = await build_stream_url(stream_id, stream_type)
+    try:
+        url = await build_stream_url(stream_id, stream_type)
+    except RuntimeError as e:
+        log.error(f"VOD URL build error ({stream_type} {stream_id}): {e}")
+        return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
     out_content_type = content_type or _mime_from_url(url)
     range_header = req.headers.get("range")
 

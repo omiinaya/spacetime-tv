@@ -116,9 +116,13 @@ def _load_progress_store():
     global _progress_store
     try:
         if PROGRESS_FILE.exists():
-            _progress_store = json.loads(PROGRESS_FILE.read_text())
+            loaded = json.loads(PROGRESS_FILE.read_text())
+            _progress_store.clear()
+            _progress_store.update(loaded)
+        else:
+            _progress_store.clear()
     except (json.JSONDecodeError, OSError):
-        _progress_store = {}
+        _progress_store.clear()
 
 
 def _save_progress_store():

@@ -167,6 +167,7 @@ async def search_all_vod(query: str, provider_idx: int = -1) -> list:
 
 async def search_all_series(query: str, provider_idx: int = -1) -> list:
     """Fetch all series matching query across all providers."""
+    query = query.lower()
     try:
         from iptv_client import get_enabled_providers, fetch_all_providers
 
@@ -244,10 +245,10 @@ async def search_all_series(query: str, provider_idx: int = -1) -> list:
                     sid = s.get("series_id")
                     if sid and sid not in seen:
                         seen.add(sid)
-                    name = (s.get("name") or "").lower()
-                    plot = (s.get("plot") or "").lower()
-                    if query in name or query in plot:
-                        out.append(s)
+                        name = (s.get("name") or "").lower()
+                        plot = (s.get("plot") or "").lower()
+                        if query in name or query in plot:
+                            out.append(s)
             return out
     except (TimeoutError, HTTPException) as e:
         log.error(f"Series search error: {e}")
@@ -287,10 +288,17 @@ async def search_from_cache(
 async def search_live_channels(query: str, provider_idx: int = -1) -> list:
     """Search live channels by name from cache."""
     from state import CACHE_LIVE_ALL
-    from iptv_client import cached_fetch
 
+    query_lower = query.lower()
     try:
         all_live = await cached_fetch(CACHE_LIVE_ALL, "get_live_streams")
-        return [ch for ch in all_live if query in (ch.get("name") or "").lower()]
+        out = []
+        for ch in all_live:
+            name = ch.get("name")
+            if not isinstance(name, str):
+                continue
+            if query_lower in name.lower():
+                out.append(ch)
+        return out
     except Exception:
         return []

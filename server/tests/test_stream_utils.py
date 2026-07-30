@@ -46,7 +46,7 @@ def test_generate_live_mpd_structure():
     assert "<MPD" in xml
     assert 'profiles="urn:mpeg:dash:profile:isoff-live:2011"' in xml
     assert 'type="dynamic"' in xml
-    assert '<Period id="1">' in xml
+    assert '<Period id="12345">' in xml
     assert "<AdaptationSet" in xml
     assert "<BaseURL>http://cdn.example.com/live/12345.ts</BaseURL>" in xml
     assert "<SegmentBase" in xml
