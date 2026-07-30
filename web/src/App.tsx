@@ -18,7 +18,7 @@ import OfflineBanner from "@/components/OfflineBanner";
 import Sidebar from "@/components/Sidebar";
 import { BackToTop } from "@/components/BackToTop";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { useProfile } from "@/hooks/useProfile";
+import { useProfile, Profile } from "@/hooks/useProfile";
 import ProfilePicker from "@/components/ProfilePicker";
 
 // Lazy-loaded pages for code splitting
@@ -155,7 +155,7 @@ function AppLayout() {
       <ProfilePicker
         profiles={profiles}
         loading={loading}
-        onSelect={(p: any) => {
+        onSelect={(p: Profile) => {
           setProfile(p, p.token);
         }}
         onRefresh={refreshProfiles}

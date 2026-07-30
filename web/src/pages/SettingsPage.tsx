@@ -26,6 +26,7 @@ import {
   collectAllServices,
   filterCategories,
   isPinConfigured,
+  AppSettings,
 } from "@/lib/settings";
 import { Skeleton } from "@/components/Skeleton";
 import { PinPrompt } from "@/components/PinPrompt";
@@ -40,7 +41,7 @@ function ThemeSelector({
   onUpdate,
 }: {
   theme: string;
-  onUpdate: (partial: any) => void;
+  onUpdate: (partial: Partial<AppSettings>) => void;
 }) {
   const Icon = theme === "light" ? Sun : theme === "system" ? Monitor : Moon;
   return (

@@ -82,8 +82,8 @@ export default function ProfilePicker({
       setNewPin("");
       setNewConfirm("");
       await onRefresh();
-    } catch (e: any) {
-      setCreateError(e.message || "Failed to create profile");
+    } catch {
+      setCreateError("Failed to create profile");
     }
   };
 

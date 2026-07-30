@@ -7,6 +7,7 @@ export interface Profile {
   name: string;
   avatar: string;
   created: number;
+  token?: string;
 }
 
 export interface ProfileWithPin extends Profile {
