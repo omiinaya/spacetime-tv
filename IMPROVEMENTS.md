@@ -17,6 +17,9 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Recently Completed
 
+### ✅ P4 — Movies.tsx decomposition (689→552 lines) + 14 new tests (Maintainability)
+Extracted `MovieContinueWatchingRow` and `MovieRecentlyCompletedRow` into dedicated components with full test suites (14 tests). Movies.tsx reduced by 20%. Fixed flaky AudioSelector test (async state timing). README table formatting fixed.
+
 ### ✅ P4 — Ruff lint 137→0, fix 3 production bugs (Linting + Bugs)
 Fixed all 137 ruff errors across 39 files. Fixed 3 production bugs: missing `asyncio` import in iptv_client.py (NameError on asyncio.gather at runtime), missing `ProviderConfig` import in admin.py (NameError on provider creation), duplicate test function in test_stream.py. Replaced bare try/except with `contextlib.suppress` in 4 locations. state.py coverage verified at 100%.
 
