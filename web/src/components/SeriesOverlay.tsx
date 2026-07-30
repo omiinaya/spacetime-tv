@@ -1,11 +1,13 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router";
-import { Play, Clock, Calendar, ExternalLink, Heart } from "lucide-react";
-import { api, imageUrl, tmdbSrcset } from "@/lib/api";
+import { Play, Heart } from "lucide-react";
+import { api, tmdbSrcset } from "@/lib/api";
 import { Series, SeriesDetails, Episode } from "@/lib/types";
 import MediaOverlay from "@/components/MediaOverlay";
 import SimilarSeries from "@/components/SimilarSeries";
 import TmdbSimilarShows from "@/components/TmdbSimilarShows";
+import SeasonSelector from "@/components/SeasonSelector";
+import EpisodeCard from "@/components/EpisodeCard";
 import { isSeriesInWatchlist, toggleSeriesWatchlist } from "@/lib/watchlist";
 import { getSeriesProgress } from "@/lib/continueWatching";
 
@@ -232,7 +234,6 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
   );
 
   // ── Season poster fallback ──────────────────────────────
-  // Prefer TMDB season poster over provider cover for the episode grid fallback
   const activeTmdbSeason = tmdb?.seasons?.find(
     (s) => s.season_number === activeSeason,
   );
@@ -242,14 +243,6 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
       ? `https://image.tmdb.org/t/p/w342${activeTmdbSeason.poster_path}`
       : "") ||
     "";
-
-  const formatDuration = (secs?: number) => {
-    if (!secs) return "";
-    const h = Math.floor(secs / 3600);
-    const m = Math.floor((secs % 3600) / 60);
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
-  };
 
   const playEpisode = (epId: string | number) => {
     // Find the episode to get its metadata
@@ -386,13 +379,13 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-white/40">
               {tmdb?.first_air_date && (
                 <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
+                  <CalendarIcon />
                   {tmdb.first_air_date}
                 </span>
               )}
               {tmdb?.episode_run_time?.[0] && (
                 <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
+                  <ClockIcon />
                   {tmdb.episode_run_time[0]}m
                 </span>
               )}
@@ -402,7 +395,7 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 hover:text-white/70 transition-colors"
               >
-                <ExternalLink className="h-3 w-3" />
+                <ExternalLinkIcon />
                 TMDB
               </a>
               {tmdb?.homepage && (
@@ -412,99 +405,25 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 hover:text-white/70 transition-colors"
                 >
-                  <ExternalLink className="h-3 w-3" />
+                  <ExternalLinkIcon />
                   Homepage
                 </a>
               )}
             </div>
           )}
 
-          {/* ── Season Selector ─────────────────────────── */}
-          {seasonTabs.length > 1 && (
-            <div>
-              <div
-                className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none"
-                style={{ touchAction: "manipulation" }}
-              >
-                {seasonTabs.map((s) => {
-                  const isActive = activeSeason === s;
-                  const se = seasons.find((sn) => sn.season_number === s);
-                  return (
-                    <button
-                      key={s}
-                      onClick={() => {
-                        setActiveSeason(s);
-                        bodyRef.current?.scrollTo({
-                          top: 0,
-                          behavior: "smooth",
-                        });
-                      }}
-                      className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                        isActive
-                          ? "bg-white text-black"
-                          : "bg-white/5 text-white/50 hover:text-white/80 hover:bg-white/10"
-                      }`}
-                    >
-                      {(se?.cover_big ||
-                        (tmdb?.seasons?.find((ts) => ts.season_number === s)
-                          ?.poster_path
-                          ? `https://image.tmdb.org/t/p/w92${tmdb?.seasons?.find((ts) => ts.season_number === s)?.poster_path}`
-                          : "")) && (
-                        <img
-                          src={
-                            se?.cover_big ||
-                            `https://image.tmdb.org/t/p/w92${tmdb?.seasons?.find((ts) => ts.season_number === s)?.poster_path}`
-                          }
-                          alt=""
-                          className="w-8 h-8 rounded object-cover shrink-0"
-                          loading="lazy"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display =
-                              "none";
-                          }}
-                        />
-                      )}
-                      {se?.name || `Season ${s}`}
-                      {se?.episode_count ? (
-                        <span
-                          className={`text-[10px] font-medium ${isActive ? "text-black/40" : "text-white/30"}`}
-                        >
-                          {se.episode_count}ep
-                          {(seasonWatched.get(s) || 0) > 0 && (
-                            <span className="ml-1 text-green-500/70">
-                              ✓{seasonWatched.get(s)}
-                            </span>
-                          )}
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-              {activeSeasonData && (
-                <div className="text-xs text-white/40 space-y-2 mt-2">
-                  <div className="flex items-center gap-4">
-                    {activeSeasonData.air_date && (
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {activeSeasonData.air_date}
-                      </span>
-                    )}
-                    {activeSeasonData.episode_count && (
-                      <span>{activeSeasonData.episode_count} episodes</span>
-                    )}
-                  </div>
-                  {activeTmdbSeason?.overview && (
-                    <p className="text-xs text-white/40 leading-relaxed max-w-2xl line-clamp-3">
-                      {activeTmdbSeason.overview}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+          {/* Season Selector */}
+          <SeasonSelector
+            seasonTabs={seasonTabs}
+            activeSeason={activeSeason}
+            onSeasonChange={setActiveSeason}
+            seasons={seasons}
+            tmdb={tmdb}
+            seasonWatched={seasonWatched}
+            bodyRef={bodyRef}
+          />
 
-          {/* ── Episode Grid ────────────────────────────── */}
+          {/* Episode Grid */}
           {episodeList.length > 0 ? (
             <div>
               <h3 className="text-sm font-semibold text-white/80 mb-3">
@@ -512,104 +431,14 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {episodeList.map((ep) => (
-                  <button
+                  <EpisodeCard
                     key={ep.id}
-                    onClick={() => playEpisode(ep.id)}
-                    className="group flex gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors text-left w-full"
-                    aria-label={`${ep.title || `Episode ${ep.episode_num}`}${ep.info?.duration_secs ? `, ${formatDuration(ep.info.duration_secs)}` : ""}`}
-                  >
-                    <div className="w-[140px] sm:w-[160px] shrink-0 aspect-video bg-[#141420] rounded-lg overflow-hidden relative">
-                      {ep.info?.movie_image ? (
-                        <img
-                          src={imageUrl(ep.info.movie_image)}
-                          alt={ep.title || `Episode ${ep.episode_num}`}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display =
-                              "none";
-                          }}
-                        />
-                      ) : seasonPosterUrl ? (
-                        <div
-                          className="w-full h-full bg-cover bg-center"
-                          style={{ backgroundImage: `url(${seasonPosterUrl})` }}
-                        >
-                          <div className="w-full h-full bg-black/40 flex items-center justify-center">
-                            <Play className="h-6 w-6 text-white/20" />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Play className="h-6 w-6 text-white/10" />
-                        </div>
-                      )}
-                      {/* Episode number badge */}
-                      <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-black/70 text-[10px] font-bold text-white/90 rounded">
-                        E{String(ep.episode_num).padStart(2, "0")}
-                      </span>
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                        <Play className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
-                      </div>
-                      {ep.info?.duration_secs && (
-                        <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 bg-black/80 text-[10px] font-medium text-white/90 rounded">
-                          {formatDuration(ep.info.duration_secs)}
-                        </span>
-                      )}
-                      {/* Progress / watched indicator */}
-                      {(() => {
-                        const key = `${ep.info?.season ?? activeSeason}:${ep.episode_num}`;
-                        const prog = episodeProgress.get(key);
-                        if (!prog) return null;
-                        const pct =
-                          prog.durationSeconds > 0
-                            ? Math.min(
-                                100,
-                                (prog.progressSeconds / prog.durationSeconds) *
-                                  100,
-                              )
-                            : 0;
-                        if (pct >= 90) {
-                          return (
-                            <div className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-green-500/80 flex items-center justify-center">
-                              <span className="text-white text-[10px] font-bold">
-                                ✓
-                              </span>
-                            </div>
-                          );
-                        }
-                        return (
-                          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-white/10">
-                            <div
-                              className="h-full bg-primary/70"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                        );
-                      })()}
-                    </div>
-                    <div className="flex-1 min-w-0 py-0.5">
-                      <div className="flex items-baseline gap-2 mb-0.5">
-                        <span className="text-xs font-semibold text-white/50 tabular-nums">
-                          {ep.episode_num}
-                        </span>
-                        <span className="text-sm font-medium text-white group-hover:text-white/80 line-clamp-1">
-                          {ep.title || `Episode ${ep.episode_num}`}
-                        </span>
-                      </div>
-                      {ep.info?.duration_secs && (
-                        <span className="flex items-center gap-1 text-[11px] text-white/30">
-                          <Clock className="h-2.5 w-2.5" />
-                          {formatDuration(ep.info.duration_secs)}
-                        </span>
-                      )}
-                      {ep.info?.plot && (
-                        <p className="text-xs text-white/40 line-clamp-2 mt-1.5 leading-relaxed">
-                          {ep.info.plot}
-                        </p>
-                      )}
-                    </div>
-                  </button>
+                    ep={ep}
+                    onPlay={playEpisode}
+                    activeSeason={activeSeason}
+                    seasonPosterUrl={seasonPosterUrl}
+                    episodeProgress={episodeProgress}
+                  />
                 ))}
               </div>
             </div>
@@ -632,5 +461,36 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
         </>
       )}
     </MediaOverlay>
+  );
+}
+
+// Inline icon components to avoid importing Calendar, Clock, ExternalLink
+function CalendarIcon() {
+  return (
+    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
+function ExternalLinkIcon() {
+  return (
+    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
   );
 }

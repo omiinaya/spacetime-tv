@@ -617,7 +617,6 @@ export function useVideoPlayer({
     [remuxUrl, vodTranscodeUrl, streamPath, playVodRemux, nativePlaybackRef],
   );
 
-
   // ── Main effect ────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -790,7 +789,6 @@ export function useVideoPlayer({
     },
     [isVod, type, id, epId, playVodRemux, clearLoadingTimeout],
   );
-
 
   const resumePlayback = useCallback(() => {
     setShowResumePrompt(false);
