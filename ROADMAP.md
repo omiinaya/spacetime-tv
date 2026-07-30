@@ -2,7 +2,7 @@
 
 > **Audit date:** 2026-07-30 (7th session — cleanup unification + backend disconnect handling)
 > **Stack:** FastAPI + React 19 + Vite 8 + Tailwind v4 | 14 pages | 70+ components | 30+ hooks | 12 back-end route modules
-> **Test counts:** 1,313 backend pass + 1,412 frontend pass | 0 TypeScript errors | 0 production `any` types
+> **Test counts:** 1,313 backend pass + 1,488 frontend pass | 0 TypeScript errors | 0 production `any` types
 > **CI:** GitHub Actions (lint → test → tsc → build)
 
 ## Current File Sizes (source only, no tests)
@@ -54,13 +54,16 @@ All other files < 350 lines.
 | `hooks/__tests__/useControlsVisibility.test.ts` | 7 |
 | `hooks/__tests__/useFocusTrap.test.ts` | 5 |
 | `hooks/__tests__/useSwipeToGoBack.test.ts` | 8 |
-| **Total new tests** | **34** |
+| `hooks/__tests__/useLiveStreamCache.test.ts` | 12 |
+| `hooks/__tests__/useRecording.test.ts` | 11 |
+| `hooks/__tests__/useProfile.test.ts` | 19 |
+| **Total new tests** | **76** |
 
 ## Remaining Work
 
 ### Frontend
 - `useVideoPlayer.ts` (816 lines) — main effect still dense; further sub-hook extraction possible
-- 6 hooks still untested (useDocumentPiP, useLiveStreamCache, usePlayerControls, useProfile, useRecording, useSearchPage)
+- 3 hooks still untested (useDocumentPiP, usePlayerControls, useSearchPage)
 - E2E test count could grow for edge cases
 
 ### Backend

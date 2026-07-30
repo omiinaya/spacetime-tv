@@ -83,10 +83,12 @@ export function useLiveStreamCache() {
   const saveCategories = (cats: import("@/lib/types").Category[]) => {
     setCategories(cats);
     if (cats?.length) {
-      sessionStorage.setItem(
-        CATS_KEY,
-        JSON.stringify({ categories: cats, ts: Date.now() }),
-      );
+      try {
+        sessionStorage.setItem(
+          CATS_KEY,
+          JSON.stringify({ categories: cats, ts: Date.now() }),
+        );
+      } catch {} // DOMException: storage quota or disabled
     }
   };
 
