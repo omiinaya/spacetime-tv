@@ -1,7 +1,5 @@
 import { useState, useCallback } from "react";
 import {
-  Volume2,
-  VolumeX,
   Maximize,
   Minimize,
   Download,
@@ -14,6 +12,9 @@ import { SleepTimer } from "@/components/SleepTimer";
 import { SubtitleSelector } from "@/components/SubtitleSelector";
 import { AudioSelector } from "@/components/AudioSelector";
 import PlayerProgressBar from "@/components/PlayerProgressBar";
+import ConnectionIndicator from "@/components/ConnectionIndicator";
+import VolumeControl from "@/components/VolumeControl";
+import MobileMoreMenu from "@/components/MobileMoreMenu";
 
 interface PlayerBottomControlsProps {
   controlsVisible: boolean;
@@ -57,52 +58,6 @@ interface PlayerBottomControlsProps {
   onToggleFullscreen: () => void;
   fmtTime: (t: number) => string;
   switchAudioTrack: (trackId: number) => void;
-}
-
-function ConnectionIndicator({
-  connectionQuality,
-  downloadSpeed,
-  stallCount,
-}: {
-  connectionQuality: string;
-  downloadSpeed: number;
-  stallCount: number;
-}) {
-  const level =
-    connectionQuality === "excellent"
-      ? 4
-      : connectionQuality === "good"
-        ? 3
-        : connectionQuality === "fair"
-          ? 2
-          : 1;
-
-  return (
-    <span
-      className="inline-flex items-center gap-[2px] ml-1.5 align-middle"
-      title={`Connection: ${connectionQuality}${downloadSpeed > 0 ? ` (${Math.round(downloadSpeed)} KB/s)` : ""}${stallCount > 0 ? `, ${stallCount} stall(s)` : ""}`}
-      aria-label={`Connection quality: ${connectionQuality}`}
-    >
-      {[0, 1, 2, 3].map((i) => {
-        const active = i < level;
-        const color =
-          connectionQuality === "poor"
-            ? "bg-red-500"
-            : connectionQuality === "fair"
-              ? "bg-yellow-400"
-              : "bg-green-500";
-        return (
-          <span
-            key={i}
-            className={`block w-[3px] rounded-sm transition-all duration-300 ${
-              active ? color : "bg-white/15"
-            }`}
-            style={{ height: `${4 + i * 3}px` }}
-          />
-        );
-      })}
-    </span>
-  );
 }
 
 function FrameRateIndicator({
@@ -165,10 +120,8 @@ export default function PlayerBottomControls({
   fmtTime,
   switchAudioTrack,
 }: PlayerBottomControlsProps) {
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showQualityMenu, setShowQualityMenu] = useState(false);
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const handleRecordToggle = useCallback(() => {
     onRecordToggle();
@@ -178,9 +131,6 @@ export default function PlayerBottomControls({
     const btn = fullscreenBtnRef.current;
     if (btn) btn.click();
   }, [fullscreenBtnRef]);
-
-  const toggleMute = onToggleMute;
-  const setVolume = onSetVolume;
 
   return (
     <div
@@ -300,53 +250,12 @@ export default function PlayerBottomControls({
         {/* Row 2: Secondary controls */}
         <div className="flex items-center gap-0.5 sm:gap-1.5">
           {/* Volume — mobile: tap for popup */}
-          <div className="relative">
-            <button
-              onClick={() => setShowVolumeSlider(!showVolumeSlider)}
-              className="text-white/60 hover:text-white/80 transition-colors p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center"
-              aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
-            >
-              {muted || volume === 0 ? (
-                <VolumeX className="w-4 h-4" aria-hidden="true" />
-              ) : (
-                <Volume2 className="w-4 h-4" aria-hidden="true" />
-              )}
-            </button>
-            {showVolumeSlider && (
-              <div className="absolute bottom-full mb-2 left-0 flex flex-col items-center gap-2 bg-zinc-900/95 border border-white/10 rounded-lg px-1.5 py-3 shadow-xl z-30">
-                <button
-                  onClick={() => {
-                    toggleMute();
-                  }}
-                  className="text-white/60 hover:text-white/80"
-                >
-                  {muted || volume === 0 ? (
-                    <VolumeX className="w-4 h-4" />
-                  ) : (
-                    <Volume2 className="w-4 h-4" />
-                  )}
-                </button>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={muted ? 0 : volume}
-                  onChange={(e) => setVolume(parseFloat(e.target.value))}
-                  aria-label="Volume"
-                  className="h-24 w-1 accent-blue-500 cursor-pointer"
-                  style={{
-                    WebkitAppearance: "slider-vertical",
-                    writingMode: "vertical-lr",
-                    direction: "rtl",
-                  }}
-                />
-                <span className="text-[10px] text-white/40 tabular-nums">
-                  {Math.round((muted ? 0 : volume) * 100)}%
-                </span>
-              </div>
-            )}
-          </div>
+          <VolumeControl
+            muted={muted}
+            volume={volume}
+            onToggleMute={onToggleMute}
+            onSetVolume={onSetVolume}
+          />
 
           {/* Speed */}
           <div className="relative">
@@ -382,7 +291,7 @@ export default function PlayerBottomControls({
             max="1"
             step="0.05"
             value={muted ? 0 : volume}
-            onChange={(e) => setVolume(parseFloat(e.target.value))}
+            onChange={(e) => onSetVolume(parseFloat(e.target.value))}
             aria-label="Volume"
             className="w-14 sm:w-20 h-1 accent-blue-500 cursor-pointer hidden sm:block"
           />
@@ -391,108 +300,19 @@ export default function PlayerBottomControls({
           <div className="hidden sm:block flex-1" />
 
           {/* More menu — mobile overflow */}
-          <div className="relative sm:hidden">
-            <button
-              onClick={() => setShowMoreMenu(!showMoreMenu)}
-              className="text-white/60 hover:text-white/80 transition-colors p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center rounded"
-              aria-label="More options"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-                <circle cx="3" cy="8" r="1.5" />
-                <circle cx="8" cy="8" r="1.5" />
-                <circle cx="13" cy="8" r="1.5" />
-              </svg>
-            </button>
-            {showMoreMenu && (
-              <div className="absolute bottom-full mb-2 right-0 bg-zinc-900/95 border border-white/10 rounded-lg py-1 min-w-[10rem] shadow-xl z-30">
-                {isVod && (
-                  <a
-                    href={`/api/download/${type === "series" ? "series" : "movie"}/${epId || id}`}
-                    download
-                    className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-sm text-white/70 hover:bg-white/10 transition-colors"
-                    onClick={() => setShowMoreMenu(false)}
-                  >
-                    <Download className="w-4 h-4" /> Download
-                  </a>
-                )}
-                {type === "live" && (
-                  <button
-                    onClick={() => {
-                      handleRecordToggle();
-                      setShowMoreMenu(false);
-                    }}
-                    className={`flex items-center gap-2 w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                      isRecording
-                        ? "text-red-400 hover:bg-red-500/10"
-                        : "text-white/70 hover:bg-white/10"
-                    }`}
-                  >
-                    <Circle
-                      className={`w-4 h-4 ${isRecording ? "animate-pulse fill-current" : ""}`}
-                    />
-                    {isRecording ? "Stop Recording" : "Record"}
-                  </button>
-                )}
-                <div className="px-2">
-                  <SleepTimer
-                    onPause={() => {
-                      const v = videoRef.current;
-                      if (v && !v.paused) {
-                        v.pause();
-                      }
-                    }}
-                  />
-                </div>
-                <button
-                  onClick={() => {
-                    setShowMoreMenu(false);
-                    window.dispatchEvent(
-                      new CustomEvent("stv:toggle-shortcuts"),
-                    );
-                  }}
-                  className="flex items-center gap-2 w-full text-left px-4 py-2.5 text-sm text-white/70 hover:bg-white/10 transition-colors"
-                >
-                  <span className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-mono text-white/60">
-                    {"?"}
-                  </span>
-                  Shortcuts
-                </button>
-                <div className="px-2">
-                  <AudioSelector
-                    mediaType={type === "series" ? "series" : "movie"}
-                    streamId={epId || id || ""}
-                    onSwitchTrack={switchAudioTrack}
-                  />
-                </div>
-                <div className="px-2">
-                  <SubtitleSelector
-                    mediaType={type === "series" ? "series" : "movie"}
-                    streamId={epId || id || ""}
-                    videoRef={videoRef as React.RefObject<HTMLVideoElement>}
-                  />
-                </div>
-                {isLive && (
-                  <div className="border-t border-white/10 mt-1 pt-1 px-2">
-                    <p className="px-2 py-1 text-[10px] text-white/40 uppercase tracking-wider">
-                      Quality
-                    </p>
-                    {QUALITIES.map((q, i) => (
-                      <button
-                        key={q.label}
-                        onClick={() => {
-                          onSetQuality(i);
-                          setShowMoreMenu(false);
-                        }}
-                        className={`block w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors rounded ${qualityIdx === i ? "text-blue-400" : "text-white/70"}`}
-                      >
-                        {q.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <MobileMoreMenu
+            isVod={isVod}
+            isLive={isLive}
+            isRecording={isRecording}
+            qualityIdx={qualityIdx}
+            type={type}
+            id={id}
+            epId={epId}
+            videoRef={videoRef}
+            onRecordToggle={handleRecordToggle}
+            onSetQuality={onSetQuality}
+            switchAudioTrack={switchAudioTrack}
+          />
 
           {/* Desktop: show remaining controls inline */}
           <div className="hidden sm:flex sm:items-center sm:gap-1">
