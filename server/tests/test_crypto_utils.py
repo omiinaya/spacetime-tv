@@ -1,6 +1,5 @@
 """Tests for crypto_utils.py — Fernet symmetric encryption for credentials."""
 
-
 import pytest
 
 # ═══════════════════════════════════════════════════════════════════════════════

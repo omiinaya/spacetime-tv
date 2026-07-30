@@ -137,8 +137,9 @@ describe("AudioSelector", () => {
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(probeUrl);
     });
-    // Component hides when tracks.length <= 1
-    expect(screen.queryByLabelText("Audio track")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Audio track")).not.toBeInTheDocument();
+    });
   });
 
   it("closes dropdown when button is clicked again", async () => {

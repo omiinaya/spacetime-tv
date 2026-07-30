@@ -17,6 +17,12 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Recently Completed
 
+### ✅ P4 — Ruff lint 137→0, fix 3 production bugs (Linting + Bugs)
+Fixed all 137 ruff errors across 39 files. Fixed 3 production bugs: missing `asyncio` import in iptv_client.py (NameError on asyncio.gather at runtime), missing `ProviderConfig` import in admin.py (NameError on provider creation), duplicate test function in test_stream.py. Replaced bare try/except with `contextlib.suppress` in 4 locations. state.py coverage verified at 100%.
+
+### ✅ P4 — Fix 3 high-severity npm audit vulnerabilities (Security)
+Fixed brace-expansion, postcss, and react-router vulnerabilities via `npm audit fix`. 4 packages updated, 0 remaining vulnerabilities.
+
 ### ✅ P4 — Add explicit HEAD handler to SPA catch-all (Routing)
 Added `@router.head("/{full_path:path}")` to misc.py so HEAD requests to
 GET-only streaming endpoints (SSE) resolve correctly instead of being

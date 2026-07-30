@@ -116,11 +116,20 @@ class TestCache:
 
     def test_second_call_hits_cache_after_first_probe(self):
         """After a successful ffprobe probe, a second call uses cache."""
-        ffprobe_data = json.dumps({
-            "streams": [{"codec_name": "h264", "codec_long_name": "H.264 / AVC",
-                         "width": 1280, "height": 720, "profile": "Main"}],
-            "format": {"format_name": "ts"},
-        })
+        ffprobe_data = json.dumps(
+            {
+                "streams": [
+                    {
+                        "codec_name": "h264",
+                        "codec_long_name": "H.264 / AVC",
+                        "width": 1280,
+                        "height": 720,
+                        "profile": "Main",
+                    }
+                ],
+                "format": {"format_name": "ts"},
+            }
+        )
         proc = _mock_ffprobe_proc(returncode=0, stdout=ffprobe_data.encode())
 
         with patch("routes.stream_probe.asyncio.create_subprocess_exec", return_value=proc):
@@ -205,16 +214,20 @@ class TestFfprobeSuccess:
 
     def test_ffprobe_success_returns_h264_codec(self):
         """ffprobe returns codec_name h264 with dimensions."""
-        ffprobe_output = json.dumps({
-            "streams": [{
-                "codec_name": "h264",
-                "codec_long_name": "H.264 / AVC",
-                "width": 1920,
-                "height": 1080,
-                "profile": "High",
-            }],
-            "format": {"format_name": "matroska"},
-        })
+        ffprobe_output = json.dumps(
+            {
+                "streams": [
+                    {
+                        "codec_name": "h264",
+                        "codec_long_name": "H.264 / AVC",
+                        "width": 1920,
+                        "height": 1080,
+                        "profile": "High",
+                    }
+                ],
+                "format": {"format_name": "matroska"},
+            }
+        )
         proc = _mock_ffprobe_proc(returncode=0, stdout=ffprobe_output.encode())
 
         with patch("routes.stream_probe.asyncio.create_subprocess_exec", return_value=proc):
@@ -229,16 +242,20 @@ class TestFfprobeSuccess:
 
     def test_ffprobe_success_hevc_codec(self):
         """HEVC codec is correctly parsed from ffprobe output."""
-        ffprobe_output = json.dumps({
-            "streams": [{
-                "codec_name": "hevc",
-                "codec_long_name": "H.265 / HEVC",
-                "width": 3840,
-                "height": 2160,
-                "profile": "Main",
-            }],
-            "format": {"format_name": "mp4"},
-        })
+        ffprobe_output = json.dumps(
+            {
+                "streams": [
+                    {
+                        "codec_name": "hevc",
+                        "codec_long_name": "H.265 / HEVC",
+                        "width": 3840,
+                        "height": 2160,
+                        "profile": "Main",
+                    }
+                ],
+                "format": {"format_name": "mp4"},
+            }
+        )
         proc = _mock_ffprobe_proc(returncode=0, stdout=ffprobe_output.encode())
 
         with patch("routes.stream_probe.asyncio.create_subprocess_exec", return_value=proc):
@@ -252,16 +269,20 @@ class TestFfprobeSuccess:
 
     def test_ffprobe_success_av1_codec(self):
         """AV1 codec is correctly parsed."""
-        ffprobe_output = json.dumps({
-            "streams": [{
-                "codec_name": "av1",
-                "codec_long_name": "AV1",
-                "width": 1920,
-                "height": 1080,
-                "profile": "Main",
-            }],
-            "format": {"format_name": "mp4"},
-        })
+        ffprobe_output = json.dumps(
+            {
+                "streams": [
+                    {
+                        "codec_name": "av1",
+                        "codec_long_name": "AV1",
+                        "width": 1920,
+                        "height": 1080,
+                        "profile": "Main",
+                    }
+                ],
+                "format": {"format_name": "mp4"},
+            }
+        )
         proc = _mock_ffprobe_proc(returncode=0, stdout=ffprobe_output.encode())
 
         with patch("routes.stream_probe.asyncio.create_subprocess_exec", return_value=proc):
@@ -293,10 +314,12 @@ class TestFfprobeSuccess:
 
     def test_ffprobe_missing_fields_default(self):
         """ffprobe output missing optional fields defaults to sensible values."""
-        ffprobe_output = json.dumps({
-            "streams": [{"codec_name": "h264"}],
-            "format": {},
-        })
+        ffprobe_output = json.dumps(
+            {
+                "streams": [{"codec_name": "h264"}],
+                "format": {},
+            }
+        )
         proc = _mock_ffprobe_proc(returncode=0, stdout=ffprobe_output.encode())
 
         with patch("routes.stream_probe.asyncio.create_subprocess_exec", return_value=proc):
@@ -310,11 +333,14 @@ class TestFfprobeSuccess:
 
     def test_ffprobe_success_caches_result(self):
         """Successful ffprobe result is stored in _probe_cache."""
-        ffprobe_output = json.dumps({
-            "streams": [{"codec_name": "vp9", "codec_long_name": "VP9",
-                         "width": 640, "height": 480, "profile": "0"}],
-            "format": {"format_name": "webm"},
-        })
+        ffprobe_output = json.dumps(
+            {
+                "streams": [
+                    {"codec_name": "vp9", "codec_long_name": "VP9", "width": 640, "height": 480, "profile": "0"}
+                ],
+                "format": {"format_name": "webm"},
+            }
+        )
         proc = _mock_ffprobe_proc(returncode=0, stdout=ffprobe_output.encode())
 
         with patch("routes.stream_probe.asyncio.create_subprocess_exec", return_value=proc):
@@ -327,11 +353,20 @@ class TestFfprobeSuccess:
 
     def test_ffprobe_success_series_type(self):
         """probe_stream works with series type."""
-        ffprobe_output = json.dumps({
-            "streams": [{"codec_name": "h264", "codec_long_name": "H.264 / AVC",
-                         "width": 1280, "height": 720, "profile": "Main"}],
-            "format": {"format_name": "mkv"},
-        })
+        ffprobe_output = json.dumps(
+            {
+                "streams": [
+                    {
+                        "codec_name": "h264",
+                        "codec_long_name": "H.264 / AVC",
+                        "width": 1280,
+                        "height": 720,
+                        "profile": "Main",
+                    }
+                ],
+                "format": {"format_name": "mkv"},
+            }
+        )
         proc = _mock_ffprobe_proc(returncode=0, stdout=ffprobe_output.encode())
 
         with patch("routes.stream_probe.asyncio.create_subprocess_exec", return_value=proc):
@@ -504,13 +539,12 @@ class TestCurlCffiFallback:
     def _patch_run_in_executor(mock_loop):
         async def _run_in_executor(_none, fn, *_a):
             return fn()
+
         mock_loop.return_value.run_in_executor = _run_in_executor
 
     def test_ffprobe_405_curl_cffi_success(self):
         """ffprobe returns 405, curl_cffi fallback succeeds -> h264 with curl_cffi note."""
-        proc = _mock_ffprobe_proc(
-            returncode=1, stdout=b"", stderr=b"405 Method Not Allowed"
-        )
+        proc = _mock_ffprobe_proc(returncode=1, stdout=b"", stderr=b"405 Method Not Allowed")
         mock_get = MagicMock(return_value=_mock_curl_success())
 
         with (
@@ -527,9 +561,7 @@ class TestCurlCffiFallback:
 
     def test_ffprobe_405_curl_cffi_403_response(self):
         """curl_cffi returns 403 -> unavailable."""
-        proc = _mock_ffprobe_proc(
-            returncode=1, stdout=b"", stderr=b"405 Method Not Allowed"
-        )
+        proc = _mock_ffprobe_proc(returncode=1, stdout=b"", stderr=b"405 Method Not Allowed")
         mock_get = MagicMock(return_value=_mock_curl_failure(status_code=403))
 
         with (
@@ -544,9 +576,7 @@ class TestCurlCffiFallback:
 
     def test_ffprobe_405_curl_cffi_200_zero_content_length(self):
         """curl_cffi returns 200 but content-length=0 -> unavailable."""
-        proc = _mock_ffprobe_proc(
-            returncode=1, stdout=b"", stderr=b"405 Method Not Allowed"
-        )
+        proc = _mock_ffprobe_proc(returncode=1, stdout=b"", stderr=b"405 Method Not Allowed")
         mock_get = MagicMock(return_value=_mock_curl_failure(status_code=200, cl="0"))
 
         with (
@@ -561,9 +591,7 @@ class TestCurlCffiFallback:
 
     def test_ffprobe_405_curl_cffi_200_non_digit_cl(self):
         """content-length header is non-numeric string -> unavailable."""
-        proc = _mock_ffprobe_proc(
-            returncode=1, stdout=b"", stderr=b"405 Method Not Allowed"
-        )
+        proc = _mock_ffprobe_proc(returncode=1, stdout=b"", stderr=b"405 Method Not Allowed")
         resp = MagicMock()
         resp.status_code = 200
         resp.headers = {"content-length": "abc"}
@@ -581,9 +609,7 @@ class TestCurlCffiFallback:
 
     def test_ffprobe_405_curl_cffi_missing_cl_header(self):
         """No content-length header -> unavailable."""
-        proc = _mock_ffprobe_proc(
-            returncode=1, stdout=b"", stderr=b"405"
-        )
+        proc = _mock_ffprobe_proc(returncode=1, stdout=b"", stderr=b"405")
         resp = MagicMock()
         resp.status_code = 200
         resp.headers = {}
@@ -601,9 +627,7 @@ class TestCurlCffiFallback:
 
     def test_ffprobe_405_curl_cffi_404_response(self):
         """curl_cffi returns 404 -> unavailable."""
-        proc = _mock_ffprobe_proc(
-            returncode=1, stdout=b"", stderr=b"405 Method Not Allowed"
-        )
+        proc = _mock_ffprobe_proc(returncode=1, stdout=b"", stderr=b"405 Method Not Allowed")
         mock_get = MagicMock(return_value=_mock_curl_failure(status_code=404))
 
         with (
@@ -618,9 +642,7 @@ class TestCurlCffiFallback:
 
     def test_ffprobe_405_curl_cffi_caches_result(self):
         """Successful curl_cffi result is stored in cache."""
-        proc = _mock_ffprobe_proc(
-            returncode=1, stdout=b"", stderr=b"405"
-        )
+        proc = _mock_ffprobe_proc(returncode=1, stdout=b"", stderr=b"405")
         mock_get = MagicMock(return_value=_mock_curl_success())
 
         with (
@@ -637,9 +659,7 @@ class TestCurlCffiFallback:
 
     def test_ffprobe_405_curl_cffi_caches_unavailable(self):
         """Failed curl_cffi also stores 'unavailable' in cache."""
-        proc = _mock_ffprobe_proc(
-            returncode=1, stdout=b"", stderr=b"405"
-        )
+        proc = _mock_ffprobe_proc(returncode=1, stdout=b"", stderr=b"405")
         mock_get = MagicMock(return_value=_mock_curl_failure(status_code=403))
 
         with (
@@ -675,9 +695,7 @@ class TestFfprobeOutputEdgeCases:
         """stderr_bytes.decode() raises UnicodeDecodeError caught as ValueError."""
         proc = AsyncMock()
         proc.returncode = 0
-        proc.communicate = AsyncMock(
-            return_value=(b'{"streams":[]}', b"\xff\xfe invalid utf-8")
-        )
+        proc.communicate = AsyncMock(return_value=(b'{"streams":[]}', b"\xff\xfe invalid utf-8"))
 
         with patch("routes.stream_probe.asyncio.create_subprocess_exec", return_value=proc):
             result = asyncio.run(probe_stream(901, "live"))
