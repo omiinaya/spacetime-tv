@@ -17,6 +17,7 @@ import {
   TabSkeleton,
 } from "@/components/Skeleton";
 import LiveChannelCard from "@/components/LiveChannelCard";
+import { useLiveStreamCache } from "@/hooks/useLiveStreamCache";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useSettings } from "@/context/SettingsContext";
 import { filterCategories } from "@/lib/settings";
@@ -26,17 +27,6 @@ import { useNowPlaying } from "@/hooks/useNowPlaying";
 
 const BATCH = 50;
 const ALL_CAT = "__all__";
-
-interface SlimStream {
-  id: number;
-  n: string;
-  c: string;
-  ic?: string;
-}
-interface SlimAllCache {
-  a: SlimStream[];
-  ts: number;
-}
 
 // ── Inline Components ─────────────────────────────────────────
 
@@ -172,74 +162,20 @@ function CategoryTabs({
 
 export default function LiveTV() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const {
+    categories,
+    allStreams,
+    loading,
+    allLoading,
+    setLoading,
+    setAllLoading,
+    setCategories,
+    setAllStreams,
+  } = useLiveStreamCache();
 
-  const loadCache = <T,>(
-    key: string,
-    field: string,
-    ttl = 900000,
-  ): T | null => {
-    try {
-      const raw = sessionStorage.getItem(key);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (parsed[field] && Date.now() - parsed.ts < ttl) return parsed[field];
-    } catch {} // DOMException: storage quota or disabled
-    return null;
-  };
-
-  const SLIM_ALL_KEY = "stv_live_all_slim";
-  const restoreAllStreams = (): LiveStream[] => {
-    try {
-      const raw = sessionStorage.getItem(SLIM_ALL_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw) as SlimAllCache;
-      if (parsed.a?.length && Date.now() - parsed.ts < 900000) {
-        return parsed.a.map(
-          (s) =>
-            ({
-              stream_id: s.id,
-              name: s.n,
-              stream_icon: "",
-              category_id: s.c,
-              num: 0,
-              stream_type: "live",
-              epg_channel_id: "",
-              added: "",
-              is_adult: 0,
-              category_ids: [s.c],
-              custom_sid: null,
-              tv_archive: 0,
-              direct_source: "",
-              tv_archive_duration: 0,
-            }) as LiveStream,
-        );
-      }
-    } catch {} // DOMException: storage quota or disabled
-    return [];
-  };
-
-  const [categories, setCategories] = useState<Category[]>(
-    () => loadCache("stv_live_cats", "categories") ?? [],
-  );
   const [activeCat, setActiveCat] = useState<string>(ALL_CAT);
   const [streams, setStreams] = useState<LiveStream[]>([]);
-  const [allStreams, setAllStreams] = useState<LiveStream[]>(() =>
-    restoreAllStreams(),
-  );
-  const [loading, setLoading] = useState(
-    () => !loadCache("stv_live_cats", "categories"),
-  );
   const [streamsLoading, setStreamsLoading] = useState(false);
-  const [allLoading, setAllLoading] = useState(() => {
-    try {
-      const raw = sessionStorage.getItem(SLIM_ALL_KEY);
-      if (!raw) return true;
-      const parsed = JSON.parse(raw);
-      return !(parsed.a?.length && Date.now() - parsed.ts < 900000);
-    } catch {
-      return true;
-    }
-  });
   const [error, setError] = useState<string | null>(null);
 
   const searchQuery = searchParams.get("q") || "";
@@ -313,24 +249,19 @@ export default function LiveTV() {
       .categories()
       .then((d) => {
         setCategories(d.categories);
-        if (d.categories?.length) {
-          sessionStorage.setItem(
-            "stv_live_cats",
-            JSON.stringify({ categories: d.categories, ts: Date.now() }),
-          );
-        }
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
 
     let restored = false;
-    const cached = sessionStorage.getItem(SLIM_ALL_KEY);
+    const cached = sessionStorage.getItem("stv_live_all_slim");
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
         if (parsed.a?.length && Date.now() - parsed.ts < 900000) {
           restored = true;
-          if (allStreams.length === 0) setAllStreams(restoreAllStreams());
+          if (allStreams.length === 0)
+            setAllStreams(allStreams); // trigger re-render from cache
           setAllLoading(false);
         }
       } catch {} // DOMException: storage quota or disabled
@@ -340,19 +271,6 @@ export default function LiveTV() {
         .allSlim()
         .then((d) => {
           setAllStreams(d.streams);
-          if (d.streams?.length) {
-            try {
-              const slim = d.streams.map((s) => ({
-                id: s.stream_id,
-                n: s.name,
-                c: s.category_id,
-              }));
-              sessionStorage.setItem(
-                SLIM_ALL_KEY,
-                JSON.stringify({ a: slim, ts: Date.now() }),
-              );
-            } catch {} // DOMException: storage quota or disabled
-          }
         })
         .catch(() => toast.error("Failed to load all streams"))
         .finally(() => setAllLoading(false));
