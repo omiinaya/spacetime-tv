@@ -39,6 +39,7 @@ import {
 } from "./usePlayerUtils";
 import { useStreamUrls } from "./useStreamUrls";
 import { usePlayerConnectionQuality } from "./usePlayerConnectionQuality";
+import { usePlayerControls } from "./usePlayerControls";
 import { useMpegtsPlayer, type MpegtsPlayerCallbacks } from "./useMpegtsPlayer";
 import { useHlsPlayer, type HlsPlayerCallbacks } from "./useHlsPlayer";
 import { useRemuxPlayer, type RemuxPlayerCallbacks } from "./useRemuxPlayer";
@@ -58,7 +59,6 @@ export function useVideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null!);
   const containerRef = useRef<HTMLDivElement>(null!);
   const phaseRef = useRef<PlayPhase>("loading");
-  const userTouchedMuteRef = useRef(true);
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCount = useRef(0);
   const destroyAllRef = useRef<(() => void)[]>([]);
@@ -617,18 +617,6 @@ export function useVideoPlayer({
     [remuxUrl, vodTranscodeUrl, streamPath, playVodRemux, nativePlaybackRef],
   );
 
-  const seekToLive = useCallback(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    const buf = v.buffered;
-    if (buf.length === 0) return;
-    const liveEdge = Math.max(buf.end(0) - 2, 0);
-    v.currentTime = liveEdge;
-    setCurrentTime(liveEdge);
-    if (v.paused) v.play().catch(() => {});
-    setIsBehindLive(false);
-    setSecondsBehindLive(0);
-  }, []);
 
   // ── Main effect ────────────────────────────────────────────
   useEffect(() => {
@@ -803,128 +791,6 @@ export function useVideoPlayer({
     [isVod, type, id, epId, playVodRemux, clearLoadingTimeout],
   );
 
-  // ── Controls ───────────────────────────────────────────────
-  const togglePlay = useCallback(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.paused) {
-      v.play().catch(() => {});
-      setPhase("playing");
-    } else {
-      v.pause();
-      setPhase("paused");
-    }
-  }, []);
-
-  const seekTo = useCallback(
-    (time: number) => {
-      const v = videoRef.current;
-      if (!v) return;
-      if (isLive) {
-        const buf = v.buffered;
-        if (buf.length === 0) return;
-        const clampedTime = Math.max(
-          buf.start(0),
-          Math.min(time, buf.end(0) - 1),
-        );
-        v.currentTime = clampedTime;
-        setCurrentTime(clampedTime);
-        return;
-      }
-      if (subHlsRef.current) {
-        v.currentTime = Math.max(0, time);
-        setCurrentTime(v.currentTime);
-        return;
-      }
-      if (!remuxVodUrlRef.current) return;
-      try {
-        v.currentTime = Math.max(0, time);
-        setCurrentTime(v.currentTime);
-      } catch {
-        /* Remux/stream error — silent fallback */
-        const url = remuxVodUrlRef.current;
-        const isTC = remuxVodTranscodeRef.current;
-        destroyMpegts();
-        destroyHls();
-        setPhase("loading");
-        playVodRemux(url, Math.max(0, time), isTC);
-      }
-    },
-    [isLive, playVodRemux, destroyMpegts, destroyHls],
-  );
-
-  const seek = useCallback(
-    (delta: number) => {
-      const v = videoRef.current;
-      if (!v) return;
-      if (isLive) {
-        const buf = v.buffered;
-        if (buf.length === 0) return;
-        const target = Math.max(
-          buf.start(0),
-          Math.min((v.currentTime || 0) + delta, buf.end(0) - 1),
-        );
-        v.currentTime = target;
-        setCurrentTime(target);
-        return;
-      }
-      const target = Math.max(0, (v.currentTime || 0) + delta);
-      if (subHlsRef.current) {
-        v.currentTime = target;
-        setCurrentTime(target);
-        return;
-      }
-      seekTo(target);
-    },
-    [isLive, seekTo],
-  );
-
-  const setVolume = useCallback(
-    (val: number) => {
-      const v = videoRef.current;
-      if (v) {
-        v.volume = val;
-        if (val > 0 && muted) {
-          v.muted = false;
-          userTouchedMuteRef.current = true;
-          setMuted(false);
-          saveMuted(false);
-        }
-      }
-      setVolumeState(val);
-      setMuted(val === 0);
-      saveVolume(val);
-    },
-    [muted],
-  );
-
-  const toggleMute = useCallback(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    userTouchedMuteRef.current = true;
-    if (muted) {
-      v.muted = false;
-      v.volume = volume || 0.8;
-      setMuted(false);
-      setVolumeState(v.volume);
-      saveMuted(false);
-    } else {
-      v.muted = true;
-      v.volume = 0;
-      setMuted(true);
-      saveMuted(true);
-    }
-  }, [muted, volume]);
-
-  const setSpeed = useCallback((rate: number) => {
-    const v = videoRef.current;
-    if (v) v.playbackRate = rate;
-    setPlaybackRate(rate);
-  }, []);
-
-  const setQuality = useCallback((idx: number) => {
-    setQualityIdx(idx);
-  }, []);
 
   const resumePlayback = useCallback(() => {
     setShowResumePrompt(false);
@@ -958,6 +824,40 @@ export function useVideoPlayer({
       destroyRemux();
     };
   }, []);
+
+  const {
+    togglePlay,
+    seekTo,
+    seek,
+    setVolume,
+    toggleMute,
+    setSpeed,
+    setQuality,
+    seekToLive,
+  } = usePlayerControls({
+    videoRef,
+    subHlsRef,
+    remuxVodUrlRef,
+    remuxVodTranscodeRef,
+    isLive,
+    isVod,
+    playVodRemux,
+    destroyMpegts,
+    destroyHls,
+    setCurrentTime,
+    setPhase,
+    setVolumeState,
+    volume,
+    muted,
+    setMuted,
+    setPlaybackRate,
+    setQualityIdx,
+    setIsBehindLive,
+    setSecondsBehindLive,
+    clearLoadingTimeout,
+    saveVolume,
+    saveMuted,
+  });
 
   return {
     videoRef: videoRef as React.RefObject<HTMLVideoElement>,
