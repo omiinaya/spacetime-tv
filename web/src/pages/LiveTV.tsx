@@ -6,16 +6,16 @@ import {
   AlertCircle,
   RotateCcw,
   Search,
-  X,
   Star,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { Category, LiveStream } from "@/lib/types";
+import { LiveStream } from "@/lib/types";
 import {
   Skeleton,
   ChannelCardSkeleton,
-  TabSkeleton,
 } from "@/components/Skeleton";
+import { LiveSearchBar } from "@/components/live/LiveSearchBar";
+import { CategoryTabs } from "@/components/live/CategoryTabs";
 import LiveChannelCard from "@/components/LiveChannelCard";
 import { useLiveStreamCache } from "@/hooks/useLiveStreamCache";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
@@ -27,136 +27,6 @@ import { useNowPlaying } from "@/hooks/useNowPlaying";
 
 const BATCH = 50;
 const ALL_CAT = "__all__";
-
-// ── Inline Components ─────────────────────────────────────────
-
-function LiveSearchBar({
-  searchQuery,
-  allLoading,
-  allStreamsLength,
-  favoritesSize,
-  favoritesOnly,
-  onSearchChange,
-  onToggleFavoritesOnly,
-  onClearSearch,
-}: {
-  searchQuery: string;
-  allLoading: boolean;
-  allStreamsLength: number;
-  favoritesSize: number;
-  favoritesOnly: boolean;
-  onSearchChange: (q: string) => void;
-  onToggleFavoritesOnly: () => void;
-  onClearSearch: () => void;
-}) {
-  return (
-    <div className="flex items-center gap-2 max-w-md">
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={
-            allLoading
-              ? "Loading channels..."
-              : `Search ${allStreamsLength.toLocaleString()} channels...`
-          }
-          disabled={allLoading}
-          className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
-        />
-        {searchQuery && (
-          <button
-            onClick={onClearSearch}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
-      {favoritesSize > 0 && (
-        <button
-          onClick={onToggleFavoritesOnly}
-          className={`shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-lg border text-xs font-medium transition-colors ${
-            favoritesOnly
-              ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
-              : "border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-          }`}
-          title={favoritesOnly ? "Show all channels" : "Show favorites only"}
-          aria-label={
-            favoritesOnly ? "Show all channels" : "Show favorites only"
-          }
-          aria-pressed={favoritesOnly}
-        >
-          <Star
-            className={`h-3.5 w-3.5 ${favoritesOnly ? "fill-yellow-400" : ""}`}
-          />
-          <span className="hidden sm:inline">Favorites</span>
-          <span className="text-[10px] opacity-60">{favoritesSize}</span>
-        </button>
-      )}
-    </div>
-  );
-}
-
-function CategoryTabs({
-  categories,
-  activeCat,
-  loading,
-  onSelect,
-}: {
-  categories: Category[];
-  activeCat: string;
-  loading: boolean;
-  onSelect: (catId: string) => void;
-}) {
-  if (loading) {
-    return (
-      <div className="flex gap-1.5 pb-2">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <TabSkeleton key={i} />
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin relative"
-      style={{
-        touchAction: "manipulation",
-        WebkitMaskImage:
-          "linear-gradient(to right, black calc(100% - 48px), transparent 100%)",
-        maskImage:
-          "linear-gradient(to right, black calc(100% - 48px), transparent 100%)",
-      }}
-    >
-      <button
-        onClick={() => onSelect(ALL_CAT)}
-        className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-          activeCat === ALL_CAT
-            ? "bg-primary/15 text-primary border border-primary/20"
-            : "bg-muted text-muted-foreground hover:text-foreground border border-transparent"
-        }`}
-      >
-        All
-      </button>
-      {categories.map((cat) => (
-        <button
-          key={cat.category_id}
-          onClick={() => onSelect(cat.category_id)}
-          className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-            activeCat === cat.category_id
-              ? "bg-primary/15 text-primary border border-primary/20"
-              : "bg-muted text-muted-foreground hover:text-foreground border border-transparent"
-          }`}
-        >
-          {cat.category_name}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 // ── Main Page ─────────────────────────────────────────────────
 
@@ -260,7 +130,7 @@ export default function LiveTV() {
         const parsed = JSON.parse(cached);
         if (parsed.a?.length && Date.now() - parsed.ts < 900000) {
           restored = true;
-          if (allStreams.length === 0) setAllStreams(allStreams); // trigger re-render from cache
+          if (allStreams.length === 0) setAllStreams(parsed.a); // restore from cache
           setAllLoading(false);
         }
       } catch {} // DOMException: storage quota or disabled

@@ -121,10 +121,7 @@ export default function Player({ type }: PlayerProps) {
     if (!video) return;
     const doc = document as DocumentWithWebkit;
     const el = video as VideoElementWithWebkit;
-    const isFS = !!(
-      document.fullscreenElement ||
-      doc.webkitFullscreenElement
-    );
+    const isFS = !!(document.fullscreenElement || doc.webkitFullscreenElement);
 
     if (isFS) {
       document.exitFullscreen?.().catch(() => {});

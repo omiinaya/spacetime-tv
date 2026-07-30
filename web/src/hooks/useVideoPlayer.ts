@@ -44,6 +44,7 @@ import { useMpegtsPlayer, type MpegtsPlayerCallbacks } from "./useMpegtsPlayer";
 import { useHlsPlayer, type HlsPlayerCallbacks } from "./useHlsPlayer";
 import { useRemuxPlayer, type RemuxPlayerCallbacks } from "./useRemuxPlayer";
 import { useShakaPlayer, type ShakaPlayerCallbacks } from "./useShakaPlayer";
+import { destroyAll, destroyAllExcept, type PlayerRefs } from "./usePlayerCleanup";
 
 // ── Constants for LIVE quality levels ─────────────────────────
 
@@ -409,34 +410,21 @@ export function useVideoPlayer({
     destroyShaka,
   ];
 
+  const playerRefs: PlayerRefs = {
+    mpegtsCleanupRef,
+    mpegtsPlayerRef,
+    hlsCleanupRef,
+    subHlsRef,
+    remuxCleanupRef,
+    remuxPlayerRef,
+    shakaCleanupRef,
+    shakaPlayerRef,
+  };
+
   // ── Playback: MPEG-TS via mpegts.js (live TV only) ──────────
   const playMPEGTS = useCallback(
     (url: string, liveFlag: boolean, isTranscode: boolean) => {
-      // Clean up HLS, remux, and shaka before delegating to sub-hook
-      if (hlsCleanupRef.current) {
-        hlsCleanupRef.current();
-        hlsCleanupRef.current = null;
-      }
-      try {
-        subHlsRef.current?.destroy();
-      } catch {} // cleanup — errors expected if already destroyed
-      subHlsRef.current = null;
-      if (remuxCleanupRef.current) {
-        remuxCleanupRef.current();
-        remuxCleanupRef.current = null;
-      }
-      try {
-        remuxPlayerRef.current?.destroy();
-      } catch {} // cleanup — errors expected if already destroyed
-      remuxPlayerRef.current = null;
-      if (shakaCleanupRef.current) {
-        shakaCleanupRef.current();
-        shakaCleanupRef.current = null;
-      }
-      try {
-        shakaPlayerRef.current?.destroy();
-      } catch {} // cleanup — errors expected if already destroyed
-      shakaPlayerRef.current = null;
+      destroyAllExcept(playerRefs, "mpegts");
       setPhase("loading");
       setErrorMsg(null);
       if (isTranscode) setTranscoding(true);
@@ -447,12 +435,6 @@ export function useVideoPlayer({
       setErrorMsg,
       setTranscoding,
       subHookPlayMPEGTS,
-      hlsCleanupRef,
-      subHlsRef,
-      remuxCleanupRef,
-      remuxPlayerRef,
-      shakaCleanupRef,
-      shakaPlayerRef,
     ],
   );
 
@@ -463,31 +445,7 @@ export function useVideoPlayer({
       startPos: number | null = null,
       isTranscode: boolean = false,
     ) => {
-      // Clean up HLS and shaka if present before delegating to sub-hook
-      if (hlsCleanupRef.current) {
-        hlsCleanupRef.current();
-        hlsCleanupRef.current = null;
-      }
-      try {
-        subHlsRef.current?.destroy();
-      } catch {} // cleanup — errors expected if already destroyed
-      subHlsRef.current = null;
-      if (shakaCleanupRef.current) {
-        shakaCleanupRef.current();
-        shakaCleanupRef.current = null;
-      }
-      try {
-        shakaPlayerRef.current?.destroy();
-      } catch {} // cleanup — errors expected if already destroyed
-      shakaPlayerRef.current = null;
-      if (mpegtsCleanupRef.current) {
-        mpegtsCleanupRef.current();
-        mpegtsCleanupRef.current = null;
-      }
-      try {
-        mpegtsPlayerRef.current?.destroy();
-      } catch {} // cleanup — errors expected if already destroyed
-      mpegtsPlayerRef.current = null;
+      destroyAllExcept(playerRefs, "remux");
       subPlayVodRemux(
         streamUrl,
         startPos,
@@ -508,12 +466,6 @@ export function useVideoPlayer({
       id,
       watchKey,
       onAutoAdvance,
-      hlsCleanupRef,
-      subHlsRef,
-      shakaCleanupRef,
-      shakaPlayerRef,
-      mpegtsCleanupRef,
-      mpegtsPlayerRef,
     ],
   );
 
@@ -528,39 +480,7 @@ export function useVideoPlayer({
       if (nativePlaybackRef.current && !needsTranscode) {
         const v = videoRef.current;
         if (!v) return;
-        // Clean up any existing sub-hook players
-        if (hlsCleanupRef.current) {
-          hlsCleanupRef.current();
-          hlsCleanupRef.current = null;
-        }
-        try {
-          subHlsRef.current?.destroy();
-        } catch {} // cleanup — errors expected if already destroyed
-        subHlsRef.current = null;
-        if (shakaCleanupRef.current) {
-          shakaCleanupRef.current();
-          shakaCleanupRef.current = null;
-        }
-        try {
-          shakaPlayerRef.current?.destroy();
-        } catch {} // cleanup — errors expected if already destroyed
-        shakaPlayerRef.current = null;
-        if (mpegtsCleanupRef.current) {
-          mpegtsCleanupRef.current();
-          mpegtsCleanupRef.current = null;
-        }
-        try {
-          mpegtsPlayerRef.current?.destroy();
-        } catch {} // cleanup — errors expected if already destroyed
-        mpegtsPlayerRef.current = null;
-        if (remuxCleanupRef.current) {
-          remuxCleanupRef.current();
-          remuxCleanupRef.current = null;
-        }
-        try {
-          remuxPlayerRef.current?.destroy();
-        } catch {} // cleanup — errors expected if already destroyed
-        remuxPlayerRef.current = null;
+        destroyAll(playerRefs);
         setPhase("loading");
         setErrorMsg(null);
         startLoadingTimeout();
@@ -583,19 +503,26 @@ export function useVideoPlayer({
           if (d && isFinite(d)) setDuration(d);
         };
         const onWaiting = () => onStall();
+        const onLoadedMeta = () => {
+          if (seekPos && seekPos > 5) {
+            v.currentTime = seekPos;
+          }
+        };
         v.addEventListener("timeupdate", onTimeUpdate);
         v.addEventListener("durationchange", onDuration);
         v.addEventListener("waiting", onWaiting);
-        // Handle resume seeking after metadata loads
-        if (seekPos && seekPos > 5) {
-          v.addEventListener(
-            "loadedmetadata",
-            () => {
-              v.currentTime = seekPos;
-            },
-            { once: true },
-          );
-        }
+        v.addEventListener("loadedmetadata", onLoadedMeta, { once: true });
+        // Store cleanup on the video element itself so destroyAll can find it
+        const elt = v as unknown as Record<string, unknown>;
+        const flag = "__stv_native_listeners__";
+        const old = elt[flag];
+        if (typeof old === "function") old();
+        elt[flag] = () => {
+          v.removeEventListener("timeupdate", onTimeUpdate);
+          v.removeEventListener("durationchange", onDuration);
+          v.removeEventListener("waiting", onWaiting);
+          v.removeEventListener("loadedmetadata", onLoadedMeta);
+        };
         // Browser plays MP4 directly with Range-request proxy
         v.src = streamPath;
         v.load();
@@ -781,10 +708,7 @@ export function useVideoPlayer({
       const audioUrl = `/api/audio/stream/${mediaType}/${sid}/${audioIndex}`;
       clearLoadingTimeout();
       v.pause();
-      destroyMpegts();
-      destroyHls();
-      destroyRemux();
-      destroyShaka();
+      destroyAll(playerRefs);
       playVodRemux(audioUrl, savePos > 3 ? savePos : null, false);
     },
     [isVod, type, id, epId, playVodRemux, clearLoadingTimeout],

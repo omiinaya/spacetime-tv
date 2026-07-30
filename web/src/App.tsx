@@ -6,7 +6,13 @@ import {
   lazy,
   Suspense,
 } from "react";
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  useNavigate,
+} from "react-router";
 import {
   Menu,
   Tv,
@@ -280,7 +286,10 @@ function AppLayout() {
             >
               <Menu className="h-5 w-5" aria-hidden="true" />
             </button>
-            <div className="flex items-center gap-2" onClick={() => navigate("/")}>
+            <div
+              className="flex items-center gap-2"
+              onClick={() => navigate("/")}
+            >
               <div className="w-6 h-6 rounded-md bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
                 <Tv className="h-3 w-3 text-white" />
               </div>
