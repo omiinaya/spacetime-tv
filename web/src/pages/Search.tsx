@@ -39,7 +39,7 @@ export default function SearchPage() {
   } = useSearchPage();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       <SearchHeader
         query={query}
         loading={loading}
@@ -58,7 +58,7 @@ export default function SearchPage() {
       />
 
       {error && (
-        <div className="flex items-center gap-3 p-3 rounded-lg border border-destructive/30 bg-destructive/5 text-sm text-destructive">
+        <div className="flex items-center gap-3 p-4 rounded-xl border border-destructive/30 bg-destructive/5 text-sm text-destructive">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span className="truncate">{error}</span>
         </div>

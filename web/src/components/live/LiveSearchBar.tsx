@@ -35,7 +35,7 @@ export function LiveSearchBar({
               : `Search ${allStreamsLength.toLocaleString()} channels...`
           }
           disabled={allLoading}
-          className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
+          className="search-input"
         />
         {searchQuery && (
           <button

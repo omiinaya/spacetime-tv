@@ -38,17 +38,19 @@ export default function HistoryPage() {
     channels.length > 0 || seriesCW.length > 0 || movieCW.length > 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 sm:space-y-10">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <History className="h-5 w-5 text-muted-foreground" />
-          <h1 className="text-lg font-semibold">History</h1>
+      <div className="page-header">
+        <div className="page-header-icon">
+          <History className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-lg sm:text-xl font-semibold">History</h1>
         </div>
         {hasAny && (
           <button
             onClick={handleClear}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors"
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors"
           >
             <Trash2 className="h-3.5 w-3.5" />
             Clear all
@@ -83,17 +85,17 @@ export default function HistoryPage() {
       {/* ── Recent Channels ────────────────────────────── */}
       {channels.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+          <h2 className="text-sm font-semibold mb-4 flex items-center gap-1.5">
             <Tv className="h-3.5 w-3.5 text-muted-foreground" />
             Live Channels
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          <div className="channel-grid">
             {channels.map((ch) => (
               <button
                 key={`history-ch-${ch.stream_id}`}
                 onClick={() => navigate(`/watch/live/${ch.stream_id}`)}
                 data-watch-link
-                className="bg-card rounded-lg border border-border p-3 text-left hover:border-primary/30 transition-all hover:translate-y-[-1px]"
+                className="channel-card bg-card rounded-xl border border-border p-4 text-left hover:border-primary/30 card-hover"
               >
                 {ch.icon ? (
                   <img

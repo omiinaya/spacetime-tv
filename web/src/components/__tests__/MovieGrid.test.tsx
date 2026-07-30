@@ -58,12 +58,9 @@ describe("MovieGrid", () => {
     const { container } = render(<MovieGrid {...defaultProps} />);
     const grid = container.firstChild as HTMLElement;
     expect(grid).toBeInTheDocument();
-    expect(grid.className).toContain("grid");
-    expect(grid.className).toContain("grid-cols-2");
-    expect(grid.className).toContain("sm:grid-cols-3");
-    expect(grid.className).toContain("md:grid-cols-4");
-    expect(grid.className).toContain("lg:grid-cols-5");
-    expect(grid.className).toContain("xl:grid-cols-6");
+    expect(grid.className).toContain("poster-grid");
+    // poster-grid uses auto-fill with responsive min sizes internally
+    expect(grid).toBeInTheDocument();
   });
 
   it("passes gridRef to the container div", () => {

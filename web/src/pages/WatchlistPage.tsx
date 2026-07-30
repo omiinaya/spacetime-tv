@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Heart, Tv2, Bookmark } from "lucide-react";
+import { Heart, Tv2 } from "lucide-react";
 import { getWatchlist, getSeriesWatchlist } from "@/lib/watchlist";
 import WatchlistMoviesTab from "@/components/WatchlistMoviesTab";
 import WatchlistSeriesTab from "@/components/WatchlistSeriesTab";
@@ -12,20 +12,20 @@ export default function WatchlistPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="page-header mb-6 sm:mb-8">
+        <div className="page-header-icon">
+          <Heart className="h-5 w-5 text-primary" />
+        </div>
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Bookmark className="h-5 w-5 text-primary" aria-hidden="true" />
-            My Watchlist
-          </h1>
+          <h1 className="text-lg sm:text-xl font-semibold">My Watchlist</h1>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-border">
+      <div className="flex gap-1 mb-6 sm:mb-8 border-b border-border">
         <button
           onClick={() => setTab("movies")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all ${
             tab === "movies"
               ? "border-primary text-foreground"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -39,7 +39,7 @@ export default function WatchlistPage() {
         </button>
         <button
           onClick={() => setTab("series")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all ${
             tab === "series"
               ? "border-primary text-foreground"
               : "border-transparent text-muted-foreground hover:text-foreground"

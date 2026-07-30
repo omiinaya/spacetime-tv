@@ -168,24 +168,24 @@ export default function LiveTV() {
   const isSearching = !!q;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header */}
       {loading ? (
-        <div className="flex items-center gap-4">
-          <Skeleton className="w-10 h-10 rounded-lg" />
+        <div className="page-header">
+          <Skeleton className="w-10 h-10 rounded-xl" />
           <div className="space-y-1.5">
-            <Skeleton className="w-24 h-5" />
-            <Skeleton className="w-40 h-3.5" />
+            <Skeleton className="w-28 h-5" />
+            <Skeleton className="w-44 h-3.5" />
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+        <div className="page-header">
+          <div className="page-header-icon">
             <Tv className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold">Live TV</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-lg sm:text-xl font-semibold">Live TV</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               {isSearching
                 ? `${searchMatches.length.toLocaleString()} results · ${allStreams.length.toLocaleString()} channels`
                 : favoritesOnly
@@ -199,7 +199,7 @@ export default function LiveTV() {
       )}
 
       {error && (
-        <div className="flex items-center gap-3 p-3 rounded-lg border border-destructive/30 bg-destructive/5 text-sm text-destructive">
+        <div className="flex items-center gap-3 p-4 rounded-xl border border-destructive/30 bg-destructive/5 text-sm text-destructive">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span className="truncate">{error}</span>
           <button
@@ -260,11 +260,11 @@ export default function LiveTV() {
         <>
           {/* Favorites section */}
           {!isSearching && !favoritesOnly && favorites.size > 0 && (
-            <div className="mb-8">
-              <h2 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
+            <div className="space-y-4">
+              <h2 className="text-sm font-semibold flex items-center gap-1.5 text-foreground">
                 <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
                 Favorites
-                <span className="text-[10px] text-muted-foreground/50 font-normal">
+                <span className="text-[10px] text-muted-foreground/50 font-normal bg-muted px-1.5 py-0.5 rounded-md">
                   {favorites.size}
                 </span>
               </h2>

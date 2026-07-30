@@ -5,13 +5,13 @@ interface SeriesHeaderProps {
 }
 export default function SeriesHeader({ categoryCount }: SeriesHeaderProps) {
   return (
-    <div className="flex items-center gap-4">
-      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+    <div className="page-header">
+      <div className="page-header-icon">
         <Tv2 className="h-5 w-5 text-primary" />
       </div>
       <div>
-        <h1 className="text-xl font-semibold">Series</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-lg sm:text-xl font-semibold">Series</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           {categoryCount > 0
             ? `${categoryCount.toLocaleString()} categories`
             : ""}

@@ -144,15 +144,15 @@ export default function Guide() {
   return (
     <div
       ref={guideRef}
-      className="space-y-5"
+      className="space-y-6 sm:space-y-8"
       tabIndex={0}
       role="grid"
       aria-label="TV Guide"
     >
       {/* Header */}
       {loading ? (
-        <div className="flex items-center gap-4">
-          <Skeleton className="w-10 h-10 rounded-lg" />
+        <div className="page-header">
+          <Skeleton className="w-10 h-10 rounded-xl" />
           <div className="space-y-1.5">
             <Skeleton className="w-28 h-5" />
             <Skeleton className="w-44 h-3.5" />
@@ -160,22 +160,22 @@ export default function Guide() {
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+          <div className="page-header">
+            <div className="page-header-icon">
               <Tv className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold">TV Guide</h1>
-              <p className="text-sm text-muted-foreground">
+              <h1 className="text-lg sm:text-xl font-semibold">TV Guide</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 {totalChannels.toLocaleString()} channels · showing{" "}
                 {searchedChannels.length.toLocaleString()}
                 {settings.languages.length > 0 && (
-                  <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                  <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary font-medium">
                     {settings.languages.join(", ")}
                   </span>
                 )}
                 {q && matchCount > 0 && (
-                  <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                  <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
                     {matchCount} programme{matchCount !== 1 ? "s" : ""}
                   </span>
                 )}
@@ -191,7 +191,7 @@ export default function Guide() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search programmes..."
-              className="w-full h-9 pl-9 pr-8 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="search-input"
             />
             {searchQuery && (
               <button
@@ -206,7 +206,7 @@ export default function Guide() {
       )}
 
       {error && (
-        <div className="flex items-center gap-3 p-3 rounded-lg border border-destructive/30 bg-destructive/5 text-sm text-destructive">
+        <div className="flex items-center gap-3 p-4 rounded-xl border border-destructive/30 bg-destructive/5 text-sm text-destructive">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span className="truncate">{error}</span>
           <button

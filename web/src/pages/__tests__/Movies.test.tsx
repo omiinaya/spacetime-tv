@@ -293,7 +293,7 @@ describe("Movies", () => {
     it("shows skeleton grid while movies load", async () => {
       renderMovies();
       // Should have PosterCardSkeleton elements in the grid
-      const skeletonGrid = document.querySelector(".grid");
+      const skeletonGrid = document.querySelector(".poster-grid");
       expect(skeletonGrid).toBeInTheDocument();
       // Should not show empty state or movie cards yet
       expect(screen.queryByText("No movies available")).not.toBeInTheDocument();

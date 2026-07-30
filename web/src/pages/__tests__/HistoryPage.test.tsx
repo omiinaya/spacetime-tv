@@ -200,7 +200,7 @@ describe("HistoryPage", () => {
 
     it("renders channels in a grid layout", () => {
       renderHistoryPage();
-      const grid = document.querySelector(".grid");
+      const grid = document.querySelector(".channel-grid");
       expect(grid).toBeInTheDocument();
       expect(grid?.children).toHaveLength(3);
     });
@@ -230,7 +230,7 @@ describe("HistoryPage", () => {
       // Should render all 12
       expect(screen.getByText("Channel 1")).toBeInTheDocument();
       expect(screen.getByText("Channel 12")).toBeInTheDocument();
-      const grid = document.querySelector(".grid");
+      const grid = document.querySelector(".channel-grid");
       expect(grid?.children).toHaveLength(12);
     });
 

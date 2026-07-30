@@ -18,7 +18,7 @@ export function CategoryTabs({
 }: CategoryTabsProps) {
   if (loading) {
     return (
-      <div className="flex gap-1.5 pb-2">
+      <div className="flex gap-2 pb-2">
         {Array.from({ length: 8 }).map((_, i) => (
           <TabSkeleton key={i} />
         ))}
@@ -28,7 +28,7 @@ export function CategoryTabs({
 
   return (
     <div
-      className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin relative"
+      className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin relative"
       style={{
         touchAction: "manipulation",
         WebkitMaskImage:
@@ -39,11 +39,7 @@ export function CategoryTabs({
     >
       <button
         onClick={() => onSelect(ALL_CAT)}
-        className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-          activeCat === ALL_CAT
-            ? "bg-primary/15 text-primary border border-primary/20"
-            : "bg-muted text-muted-foreground hover:text-foreground border border-transparent"
-        }`}
+        className={activeCat === ALL_CAT ? "tab-chip-active" : "tab-chip-inactive"}
       >
         All
       </button>
@@ -51,11 +47,7 @@ export function CategoryTabs({
         <button
           key={cat.category_id}
           onClick={() => onSelect(cat.category_id)}
-          className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-            activeCat === cat.category_id
-              ? "bg-primary/15 text-primary border border-primary/20"
-              : "bg-muted text-muted-foreground hover:text-foreground border border-transparent"
-          }`}
+          className={activeCat === cat.category_id ? "tab-chip-active" : "tab-chip-inactive"}
         >
           {cat.category_name}
         </button>

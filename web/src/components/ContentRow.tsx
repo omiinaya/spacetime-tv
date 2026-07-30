@@ -117,69 +117,76 @@ export default function ContentRow({
   return (
     <div className="group/row relative">
       {/* Row header */}
-      <div className="flex items-baseline gap-2 mb-2 px-1">
+      <div className="flex items-center gap-2 mb-3 sm:mb-4">
         <h2 className="text-sm font-semibold text-foreground truncate">
           {title}
         </h2>
         {itemCount !== undefined && (
-          <span className="text-[11px] text-muted-foreground shrink-0">
+          <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md shrink-0 font-medium">
             {itemCount.toLocaleString()}
           </span>
         )}
         {action && (
           <button
             onClick={action.onClick}
-            className="ml-auto text-[11px] font-medium text-muted-foreground/60 hover:text-primary transition-colors shrink-0"
+            className="ml-auto text-xs font-medium text-muted-foreground/60 hover:text-primary transition-colors shrink-0"
           >
             {action.label}
           </button>
         )}
       </div>
 
-      {/* Left arrow */}
-      {canScrollLeft && (
-        <button
-          onClick={() => scroll("left")}
-          className="absolute left-0 top-0 bottom-0 z-10 w-10 flex items-center justify-center
-                     opacity-0 group-hover/row:opacity-100 pointer-events-none group-hover/row:pointer-events-auto transition-opacity
-                     bg-gradient-to-r from-background/90 to-transparent"
+      {/* Scrollable row container */}
+      <div className="relative">
+        {/* Left arrow */}
+        {canScrollLeft && (
+          <button
+            onClick={() => scroll("left")}
+            className="absolute left-0 top-0 bottom-0 z-10 w-10 flex items-center justify-center
+                       opacity-0 group-hover/row:opacity-100 pointer-events-none group-hover/row:pointer-events-auto transition-opacity duration-200
+                       bg-gradient-to-r from-background/90 via-background/50 to-transparent"
+          >
+            <div className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/10">
+              <ChevronLeft className="h-5 w-5 text-white drop-shadow" />
+            </div>
+          </button>
+        )}
+
+        {/* Scrollable row */}
+        <div
+          ref={rowRef}
+          className="flex gap-3 overflow-x-auto scrollbar-none scroll-smooth pb-1"
+          style={{ touchAction: "manipulation" }}
         >
-          <ChevronLeft className="h-5 w-5 text-white drop-shadow" />
-        </button>
-      )}
+          {children}
 
-      {/* Scrollable row */}
-      <div
-        ref={rowRef}
-        className="flex gap-2 overflow-x-auto scrollbar-none scroll-smooth pb-1 pr-4 md:pr-0"
-        style={{ touchAction: "manipulation" }}
-      >
-        {children}
+          {/* Loading indicator at end */}
+          {loading && (
+            <div className="flex items-center gap-3 shrink-0 px-2 min-w-[140px]">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="w-[150px] aspect-[2/3] rounded-xl bg-muted animate-pulse shrink-0"
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
-        {/* Loading indicator at end */}
-        {loading && (
-          <div className="flex items-center gap-2 shrink-0 px-2 min-w-[120px]">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div
-                key={i}
-                className="w-[160px] aspect-[2/3] rounded bg-muted animate-pulse shrink-0"
-              />
-            ))}
-          </div>
+        {/* Right arrow */}
+        {canScrollRight && (
+          <button
+            onClick={() => scroll("right")}
+            className="absolute right-0 top-0 bottom-0 z-10 w-10 flex items-center justify-center
+                       opacity-0 group-hover/row:opacity-100 pointer-events-none group-hover/row:pointer-events-auto transition-opacity duration-200
+                       bg-gradient-to-l from-background/90 via-background/50 to-transparent"
+          >
+            <div className="w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/10">
+              <ChevronRight className="h-5 w-5 text-white drop-shadow" />
+            </div>
+          </button>
         )}
       </div>
-
-      {/* Right arrow */}
-      {canScrollRight && (
-        <button
-          onClick={() => scroll("right")}
-          className="absolute right-0 top-0 bottom-0 z-10 w-10 flex items-center justify-center
-                     opacity-0 group-hover/row:opacity-100 pointer-events-none group-hover/row:pointer-events-auto transition-opacity
-                     bg-gradient-to-l from-background/90 to-transparent"
-        >
-          <ChevronRight className="h-5 w-5 text-white drop-shadow" />
-        </button>
-      )}
     </div>
   );
 }

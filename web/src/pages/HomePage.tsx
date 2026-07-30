@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Tv, Film, Tv2, Heart, Star } from "lucide-react";
+import { Tv, Film, Tv2, Heart, Star, TrendingUp } from "lucide-react";
 import ContentRow from "@/components/ContentRow";
 import { Skeleton } from "@/components/Skeleton";
 import { api, tmdbImgProps } from "@/lib/api";
@@ -32,17 +32,28 @@ export default function HomePage() {
   const hasTrending = trendingMovies.length > 0 || trendingSeries.length > 0;
 
   return (
-    <div className="space-y-6 md:space-y-10">
-      {/* ── Hero section ─────────────────────────────────────── */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold">Welcome</h1>
-        <p className="text-sm text-muted-foreground">
-          Browse live TV, movies, series, and more
-        </p>
+    <div className="space-y-8 sm:space-y-12">
+      {/* ── Hero Welcome Section ────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border border-primary/10 p-6 sm:p-8 lg:p-10">
+        {/* Decorative gradient blob */}
+        <div className="absolute -top-20 -right-20 w-60 h-60 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-primary/20">
+              <Tv className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold">Welcome</h1>
+              <p className="text-sm text-muted-foreground">
+                Browse live TV, movies, series, and more
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── Quick Links ──────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {[
           {
             label: "Live TV",
@@ -72,29 +83,29 @@ export default function HomePage() {
           <button
             key={item.path}
             onClick={() => navigate(item.path)}
-            className="flex items-center gap-3 p-4 md:p-3 rounded-xl bg-card border border-border hover:border-primary/30 transition-all hover:translate-y-[-1px] min-h-[56px] md:min-h-0"
+            className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 rounded-xl bg-card border border-border hover:border-primary/30 transition-all hover:translate-y-[-2px] hover:shadow-lg hover:shadow-primary/5 group"
           >
             <div
-              className={`w-10 h-10 md:w-9 md:h-9 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center shrink-0`}
+              className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shrink-0 shadow-lg shadow-${item.color}/20 group-hover:scale-110 transition-transform duration-300`}
             >
-              <item.icon className="h-5 w-5 md:h-4 md:w-4 text-white" />
+              <item.icon className="h-5 w-5 sm:h-5 sm:w-5 text-white" />
             </div>
-            <span className="text-sm font-medium">{item.label}</span>
+            <span className="text-sm font-semibold">{item.label}</span>
           </button>
         ))}
       </div>
 
-      {/* ── Loading state (always show for trending rows) ──────── */}
-      {trendingLoading && (
+      {/* ── Loading state (always show for trending rows) ────── */}
+      {trendingLoading && hasTrending === false && (
         <div className="space-y-10">
           {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="space-y-3">
-              <Skeleton className="w-40 h-5" />
+            <div key={i} className="space-y-4">
+              <Skeleton className="w-44 h-5" />
               <div className="flex gap-3">
                 {Array.from({ length: 6 }).map((_, j) => (
                   <Skeleton
                     key={j}
-                    className="shrink-0 w-[140px] aspect-[2/3] rounded-lg"
+                    className="shrink-0 w-[150px] aspect-[2/3] rounded-xl"
                   />
                 ))}
               </div>
@@ -106,6 +117,11 @@ export default function HomePage() {
       {/* ── Trending Movies ──────────────────────────────────── */}
       {!trendingLoading && trendingMovies.length > 0 && (
         <section>
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            <h2 className="text-base sm:text-lg font-bold">Trending This Week</h2>
+            <span className="text-xs text-muted-foreground/50">Movies</span>
+          </div>
           <ContentRow
             title="Trending Movies This Week"
             itemCount={trendingMovies.length}
@@ -120,12 +136,12 @@ export default function HomePage() {
                 <button
                   key={`trending-m-${t.id}`}
                   data-row-idx={idx}
-                  className="shrink-0 w-[140px] group text-left focus:outline-none"
+                  className="shrink-0 w-[150px] group text-left focus:outline-none"
                   onClick={() =>
                     navigate(`/movies?q=${encodeURIComponent(t.title)}`)
                   }
                 >
-                  <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-0 group-focus:ring-2 group-focus:ring-primary/60 transition-all">
+                  <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-muted mb-2 ring-0 group-focus:ring-2 group-focus:ring-primary/60 transition-all shadow-md shadow-black/20">
                     {posterProps ? (
                       <img
                         {...posterProps}
@@ -142,13 +158,13 @@ export default function HomePage() {
                     )}
                     {/* Rating badge */}
                     {t.vote_average > 0 && (
-                      <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 px-1 py-0.5 rounded bg-black/60 text-[10px] font-medium">
+                      <div className="absolute top-2 right-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-sm text-[10px] font-medium shadow-sm">
                         <Star className="h-2.5 w-2.5 text-yellow-400 fill-yellow-400" />
                         {t.vote_average.toFixed(1)}
                       </div>
                     )}
                   </div>
-                  <p className="text-xs font-medium leading-tight line-clamp-2">
+                  <p className="text-xs font-medium leading-tight line-clamp-2 group-hover:text-primary transition-colors">
                     {t.title}
                   </p>
                   {year && (
@@ -166,6 +182,11 @@ export default function HomePage() {
       {/* ── Trending Series ──────────────────────────────────── */}
       {!trendingLoading && trendingSeries.length > 0 && (
         <section>
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            <h2 className="text-base sm:text-lg font-bold">Trending This Week</h2>
+            <span className="text-xs text-muted-foreground/50">Series</span>
+          </div>
           <ContentRow
             title="Trending Series This Week"
             itemCount={trendingSeries.length}
@@ -180,12 +201,12 @@ export default function HomePage() {
                 <button
                   key={`trending-tv-${t.id}`}
                   data-row-idx={idx}
-                  className="shrink-0 w-[140px] group text-left focus:outline-none"
+                  className="shrink-0 w-[150px] group text-left focus:outline-none"
                   onClick={() =>
                     navigate(`/series?q=${encodeURIComponent(t.name)}`)
                   }
                 >
-                  <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted mb-1.5 ring-0 group-focus:ring-2 group-focus:ring-primary/60 transition-all">
+                  <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-muted mb-2 ring-0 group-focus:ring-2 group-focus:ring-primary/60 transition-all shadow-md shadow-black/20">
                     {posterProps ? (
                       <img
                         {...posterProps}
@@ -201,13 +222,13 @@ export default function HomePage() {
                       </div>
                     )}
                     {t.vote_average > 0 && (
-                      <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 px-1 py-0.5 rounded bg-black/60 text-[10px] font-medium">
+                      <div className="absolute top-2 right-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-sm text-[10px] font-medium shadow-sm">
                         <Star className="h-2.5 w-2.5 text-yellow-400 fill-yellow-400" />
                         {t.vote_average.toFixed(1)}
                       </div>
                     )}
                   </div>
-                  <p className="text-xs font-medium leading-tight line-clamp-2">
+                  <p className="text-xs font-medium leading-tight line-clamp-2 group-hover:text-primary transition-colors">
                     {t.name}
                   </p>
                   {year && (
@@ -224,24 +245,26 @@ export default function HomePage() {
 
       {/* ── Empty state (no data at all) ─────────────────────── */}
       {!trendingLoading && !hasTrending && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Tv className="h-12 w-12 text-muted-foreground/15 mb-4" />
-          <p className="text-sm text-muted-foreground">
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+            <Tv className="h-8 w-8 text-muted-foreground/30" />
+          </div>
+          <p className="text-base font-medium text-muted-foreground">
             Welcome to Spacetime-TV
           </p>
-          <p className="text-xs text-muted-foreground/50 mt-1">
+          <p className="text-sm text-muted-foreground/50 mt-1.5 max-w-md">
             Start watching from Live TV, Movies, or Series
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 mt-6 w-full sm:w-auto px-4 sm:px-0">
+          <div className="flex flex-col sm:flex-row gap-3 mt-8 w-full sm:w-auto">
             <button
               onClick={() => navigate("/live")}
-              className="w-full sm:w-auto px-5 py-3 sm:px-4 sm:py-2 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors text-center"
+              className="w-full sm:w-auto px-6 py-3 sm:px-5 sm:py-2.5 rounded-xl bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
             >
               Browse Live TV
             </button>
             <button
               onClick={() => navigate("/movies")}
-              className="w-full sm:w-auto px-5 py-3 sm:px-4 sm:py-2 rounded-lg bg-card border border-border text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
+              className="w-full sm:w-auto px-6 py-3 sm:px-5 sm:py-2.5 rounded-xl bg-card border border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all text-center"
             >
               Browse Movies
             </button>
@@ -250,7 +273,7 @@ export default function HomePage() {
       )}
 
       {/* ── Bottom padding for scroll comfort ────────────────── */}
-      <div className="h-8" />
+      <div className="h-4" />
     </div>
   );
 }

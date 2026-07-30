@@ -182,15 +182,15 @@ export default function Movies() {
 
   // ── Render ──
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+      <div className="page-header">
+        <div className="page-header-icon">
           <Film className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold">Movies</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-lg sm:text-xl font-semibold">Movies</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             {total > 0
               ? `${total.toLocaleString()} movies across all languages`
               : loading
@@ -242,7 +242,7 @@ export default function Movies() {
 
       {/* Loading skeleton */}
       {loading && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <div className="poster-grid">
           {Array.from({ length: 18 }).map((_, i) => (
             <PosterCardSkeleton key={i} />
           ))}

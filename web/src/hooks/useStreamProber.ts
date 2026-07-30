@@ -5,7 +5,7 @@
  * main effect. Runs ffprobe (via API call) to detect HEVC vs native
  * H.264, with an 18-second safety timer fallback.
  */
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useCallback } from "react";
 import { probeStream, transcodeCache } from "./usePlayerUtils";
 import type { ProbeResult, PlayPhase, ErrorType } from "./usePlayerTypes";
 

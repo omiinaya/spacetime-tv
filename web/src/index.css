@@ -8,6 +8,7 @@
   --color-background: oklch(0.09 0.004 285.823);
   --color-foreground: oklch(0.97 0 0);
   --color-card: oklch(0.13 0.005 285.885);
+  --color-card-hover: oklch(0.16 0.006 286);
   --color-primary: oklch(0.62 0.19 262.881);
   --color-secondary: oklch(0.18 0.006 286.033);
   --color-muted: oklch(0.15 0.005 286.033);
@@ -18,7 +19,7 @@
 
   --font-family-sans:
     "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --radius: 0.5rem;
+  --radius: 0.625rem;
 }
 
 /* ── Light theme override ───────────────────────────────────── */
@@ -26,6 +27,7 @@
   --color-background: oklch(0.97 0 0);
   --color-foreground: oklch(0.09 0.004 285.823);
   --color-card: oklch(0.93 0.005 285.885);
+  --color-card-hover: oklch(0.9 0.006 286);
   --color-primary: oklch(0.55 0.19 262.881);
   --color-secondary: oklch(0.88 0.006 286.033);
   --color-muted: oklch(0.9 0.005 286.033);
@@ -51,7 +53,7 @@ body {
   touch-action: manipulation;
 }
 
-/* Scrollbar */
+/* ── Scrollbar ───────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -71,29 +73,47 @@ body {
   );
 }
 
-/* Channel grid */
+/* ── Channel grid (Live TV) ──────────────────────────────────── */
 .channel-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
 }
+@media (min-width: 640px) {
+  .channel-grid {
+    gap: 1rem;
+  }
+}
+
 .channel-card {
   transition: all 0.15s ease;
   padding: 1rem;
 }
 .channel-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
-/* Poster grid */
+/* ── Poster grid (Movies) ────────────────────────────────────── */
 .poster-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+@media (min-width: 640px) {
+  .poster-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+  }
+}
+@media (min-width: 1024px) {
+  .poster-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.25rem;
+  }
 }
 
-/* Scrollbar hide for horizontal rows */
+/* ── Scrollbar hide for horizontal rows ──────────────────────── */
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -102,7 +122,7 @@ body {
   display: none;
 }
 
-/* Video player */
+/* ── Video player ────────────────────────────────────────────── */
 .video-container {
   position: relative;
   width: 100%;
@@ -118,25 +138,24 @@ body {
   object-fit: contain;
 }
 
-/* ── Overlay animations ──────────────────────────────────────────────────── */
+/* ── Overlay / Modal animations ──────────────────────────────── */
 @keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 @keyframes zoom-in-95 {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+  from { transform: scale(0.93); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
+@keyframes slide-up {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes slide-in-right {
+  from { transform: translateX(16px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
 .animate-in {
   animation-duration: 200ms;
   animation-fill-mode: both;
@@ -147,13 +166,66 @@ body {
 .zoom-in-95 {
   animation-name: zoom-in-95;
 }
+.slide-up {
+  animation-name: slide-up;
+}
+.slide-in-right {
+  animation-name: slide-in-right;
+}
 
-/* Skeleton shimmer */
+/* ── Skeleton shimmer ────────────────────────────────────────── */
 @keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Page section spacing ────────────────────────────────────── */
+.page-section {
+  @apply space-y-6 sm:space-y-8;
+}
+
+/* ── Card hover elevation ────────────────────────────────────── */
+.card-hover {
+  @apply bg-card border border-border rounded-xl transition-all duration-200;
+}
+.card-hover:hover {
+  @apply border-primary/30 shadow-lg shadow-primary/5;
+  transform: translateY(-1px);
+}
+
+/* ── Page header consistent pattern ──────────────────────────── */
+.page-header {
+  @apply flex items-center gap-3 sm:gap-4;
+}
+.page-header-icon {
+  @apply w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0;
+}
+.page-header-icon svg {
+  @apply h-4 w-4 sm:h-5 sm:w-5 text-primary;
+}
+.page-header h1 {
+  @apply text-lg sm:text-xl font-semibold;
+}
+.page-header p {
+  @apply text-xs sm:text-sm text-muted-foreground;
+}
+
+/* ── Search input base ───────────────────────────────────────── */
+.search-input {
+  @apply w-full h-9 sm:h-10 pl-9 pr-8 rounded-xl border border-border bg-card text-sm
+         text-foreground placeholder:text-muted-foreground/40
+         focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40
+         transition-all duration-200;
+}
+
+/* ── Tab / Chip base ─────────────────────────────────────────── */
+.tab-chip {
+  @apply shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
+         border cursor-pointer select-none;
+}
+.tab-chip-active {
+  @apply tab-chip bg-primary/15 text-primary border-primary/20;
+}
+.tab-chip-inactive {
+  @apply tab-chip bg-muted text-muted-foreground hover:text-foreground border-transparent;
 }

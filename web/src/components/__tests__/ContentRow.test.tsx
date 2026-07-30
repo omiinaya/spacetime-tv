@@ -97,8 +97,8 @@ describe("ContentRow", () => {
         {defaultChildren}
       </ContentRow>,
     );
-    // Should have skeleton placeholders with min-w-[120px]
-    const loadingArea = container.querySelector(".min-w-\\[120px\\]");
+    // Should have skeleton placeholders with min-w-[140px]
+    const loadingArea = container.querySelector(".min-w-\\[140px\\]");
     expect(loadingArea).toBeTruthy();
   });
 
@@ -106,7 +106,7 @@ describe("ContentRow", () => {
     const { container } = render(
       <ContentRow title="Movies">{defaultChildren}</ContentRow>,
     );
-    const loadingArea = container.querySelector(".min-w-\\[120px\\]");
+    const loadingArea = container.querySelector(".min-w-\\[140px\\]");
     expect(loadingArea).toBeFalsy();
   });
 
