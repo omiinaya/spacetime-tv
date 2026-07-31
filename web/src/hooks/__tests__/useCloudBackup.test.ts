@@ -110,10 +110,11 @@ describe("useCloudBackup", () => {
   });
 
   it("uploadBackup sets loading state during request", async () => {
-    // Slow handler to observe loading state
+    // Slow handler to observe loading state — delay must comfortably exceed
+    // waitFor's ~50ms poll cadence or the loading window is missed under load
     server.use(
       http.post("/api/cloud/backup", async () => {
-        await new Promise((r) => setTimeout(r, 50));
+        await new Promise((r) => setTimeout(r, 150));
         return HttpResponse.json({ status: "ok" });
       }),
     );

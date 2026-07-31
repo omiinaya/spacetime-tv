@@ -127,7 +127,9 @@ describe("AudioSelector", () => {
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(probeUrl);
     });
-    expect(screen.queryByLabelText("Audio track")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Audio track")).not.toBeInTheDocument();
+    });
   });
 
   it("is hidden when no tracks returned", async () => {
@@ -175,6 +177,8 @@ describe("AudioSelector", () => {
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(probeUrl);
     });
-    expect(screen.queryByLabelText("Audio track")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Audio track")).not.toBeInTheDocument();
+    });
   });
 });
