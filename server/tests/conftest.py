@@ -142,6 +142,10 @@ async def reset_shared_state():
     from routes.stream_core import _probe_cache
 
     _probe_cache.clear()
+    # Clear preflight cache too — same URL is reused across tests
+    from routes.stream_core import _preflight_cache
+
+    _preflight_cache.clear()
     # Clear guide/EPG caches — tests in test_state.py modify these
     from state import _guide_cache as _guide_cache_ref
     from state import epg_cache as _epg_cache_ref

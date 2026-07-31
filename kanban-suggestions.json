@@ -1,28 +1,23 @@
 [
   {
-    "title": "Commit pending ALLOW_LAN_BYPASS + stream preflight cache work (uncommitted in working tree)",
-    "priority": 0,
-    "description": "VERIFIED: The working tree on dev carries completed but UNCOMMITTED work from a prior session: (1) ALLOW_LAN_BYPASS env gate in server/config.py:160 + auth bypass gating in server/main.py:116-122, with a passing 7-test suite in server/tests/test_auth_middleware_lan.py (untracked); (2) STREAM_PREFLIGHT_TIMEOUT/SUCCESS_TTL/FAILURE_TTL config vars + short-TTL preflight result cache in server/routes/stream_core.py (_preflight_cache, keyed by URL+Range); (3) UI polish in web/src/App.tsx, ProfilePicker.tsx, Sidebar.tsx, index.css. All backend tests pass (1354) with these changes. BLOCKER: server/tests/test_auth_middleware_lan.py imports pytest but never uses it — ruff check . fails with F401, which would break CI lint if committed as-is. Action: remove the unused import, commit the whole batch as one structured commit, push to dev. This closes kanban-suggestions items that previously asked for these features."
-  },
-  {
     "title": "Fix pre-commit hook: it silently swallows lint/fmt failures (no exit propagation)",
     "priority": 1,
     "description": "VERIFIED: .githooks/pre-commit runs `make fmt-check` and `make lint` but has NO exit-code propagation — no `set -e`, no `exit $?`, no `|| exit`. A failing lint or format check still falls through to '✅ Pre-commit checks complete' and the commit succeeds. This is a silent no-op gate (the exact anti-pattern from holistic-improvement-audit 'pre-commit hook gates that silently pass'). Compounding it: Makefile fmt-check-frontend runs `npx prettier --check src/` but prettier is NOT in web/package.json (only resolvable via a stale npx cache dir) — on a clean machine this step fails, and the hook swallows that too. Fix: add `set -e` (or capture exit codes and exit non-zero), make the hook fail the commit when lint/fmt fail, and either add prettier as a devDependency with a .prettierrc or drop the prettier step from the hook until it's a real dependency."
   },
   {
-    "title": "Wire Playwright E2E tests (14 specs in web/e2e/) into CI — currently never run",
+    "title": "Wire Playwright E2E tests (13 specs in web/e2e/) into CI — currently never run",
     "priority": 1,
-    "description": "VERIFIED: web/e2e/ contains 14 Playwright spec files (homepage, live-tv, movies, series, search, guide, watchlist, settings, navigation, mobile, history, recordings, error-states) and `npm run test:e2e` is defined, but NO GitHub Actions job executes them. .github/workflows/e2e.yml is misnamed — it is actually the 'Release Build' workflow (docker build+push to ghcr.io on master/release branches) and never invokes playwright. .github/workflows/ci.yml runs pytest, vitest, tsc, and build only. Result: 14 E2E specs are dead weight — they can rot or break without any signal. Fix: add an e2e job to ci.yml (or rename e2e.yml properly) that runs `npm run test:e2e` against a built frontend + backend, or document explicitly why E2E is excluded."
+    "description": "VERIFIED: web/e2e/ contains 13 Playwright spec files (homepage, live-tv, movies, series, search, guide, watchlist, settings, navigation, mobile, history, recordings, error-states) and `npm run test:e2e` is defined, but NO GitHub Actions job executes them. .github/workflows/e2e.yml is misnamed — it is actually the 'Release Build' workflow (docker build+push to ghcr.io on master/release branches) and never invokes playwright. .github/workflows/ci.yml runs pytest, vitest, tsc, and build only. Result: 13 E2E specs are dead weight — they can rot or break without any signal. Fix: add an e2e job to ci.yml (or rename e2e.yml properly) that runs `npm run test:e2e` against a built frontend + backend, or document explicitly why E2E is excluded."
   },
   {
     "title": "Refresh SECURITY_AUDIT.md — HTTPS row and Auth Coverage row contradict current reality",
     "priority": 1,
-    "description": "VERIFIED: SECURITY_AUDIT.md (dated 2026-07-06) still scores 'HTTPS/TLS 20/100 — No HTTPS anywhere. Plain HTTP on port 8720' and 'Auth Coverage 60/100 — watchlist/stream/search/iptv still open', but: (a) server/main.py has an ENFORCE_HTTPS redirect middleware (a plain HTTP request to /api/health returns a 301 redirect — verified live), (b) docker-compose.yml maps 443 and mounts stv-certificates letsencrypt volumes, (c) the audit's own checklist at line 158 marks 'Add HTTPS — DONE', and (d) the ALLOW_LAN_BYPASS gate now covers the auth-coverage gap (LAN bypass can be disabled). The score table and detailed findings were never updated after those fixes. Action: re-run the audit against the live server (https://192.0.2.10:8722), update the HTTPS and Auth Coverage rows and any stale findings, and bump the audit date."
+    "description": "VERIFIED: SECURITY_AUDIT.md (dated 2026-07-06) still scores 'HTTPS/TLS 20/100 — No HTTPS anywhere. Plain HTTP on port 8720' and 'Auth Coverage 60/100 — watchlist/stream/search/iptv still open', but: (a) server/main.py has an ENFORCE_HTTPS redirect middleware, (b) docker-compose.yml maps 443 and mounts letsencrypt certificate volumes, (c) the audit's own checklist marks 'Add HTTPS — DONE', and (d) the ALLOW_LAN_BYPASS gate (implemented session 2026-07-31) now covers the auth-coverage gap — LAN bypass can be disabled for hardened deployments. The score table and detailed findings were never updated after those fixes. Action: re-run the audit against the live server (https://192.0.2.10:8722), update the HTTPS and Auth Coverage rows and any stale findings, and bump the audit date."
   },
   {
     "title": "Decompose App.tsx (476 lines — grew back from 399) and useSearchPage.ts (460 lines)",
     "priority": 1,
-    "description": "VERIFIED: ROADMAP.md v8 claims App.tsx is 'Decomposed ✅' at 399 lines and 'All other files < 350 lines' — both now false. App.tsx is 476 lines (router + layout + settings wiring grew back), useSearchPage.ts is 460. Largest frontend files after useVideoPlayer.ts (816, documented as diminishing returns). Extract the settings/sidebar/layout composition from App.tsx and the filter/search-state orchestration from useSearchPage.ts using the established module-extraction recipe. Update ROADMAP.md file-size table afterward."
+    "description": "VERIFIED: ROADMAP.md v8 claims App.tsx is 'Decomposed ✅' at 399 lines and 'All other files < 350 lines' — both now false. App.tsx is 476 lines (router + layout + settings wiring grew back), useSearchPage.ts is 460. Largest frontend files after useVideoPlayer.ts (816, documented as diminishing returns). Extract the settings/sidebar/layout composition from App.tsx and the filter/search-state orchestration from useSearchPage.ts using the established module-extraction recipe. NOTE: web/src/App.tsx carries uncommitted in-progress UI polish (sidebar visual pass) — coordinate or base the extraction on top of it. Update ROADMAP.md file-size table afterward."
   },
   {
     "title": "Add Prettier config (ESLint flat config already exists)",
@@ -35,18 +30,18 @@
     "description": "VERIFIED: server/main.py SecurityHeadersMiddleware sets script-src 'self' 'unsafe-inline' 'unsafe-eval'. unsafe-eval is required by hls.js/shaka (WebAssembly/worker eval patterns) and unsafe-inline by React hydration, but this combination defeats most XSS mitigations. Audit whether hls.js/shaka truly need unsafe-eval at runtime (modern versions don't always); if they do, document the accepted risk in SECURITY_AUDIT.md with a rationale instead of leaving it silent."
   },
   {
-    "title": "Refresh stale docs: ROADMAP.md file sizes/test counts and AGENTS.md route count",
-    "priority": 2,
-    "description": "VERIFIED: ROADMAP.md says 'All other files < 350 lines' but App.tsx=476, useSearchPage.ts=460, types.ts=445, Series.tsx=429, main.py=419, iptv_client.py=502, stream_core.py=444. ROADMAP header claims '12 back-end route modules' and '14 pages' while AGENTS.md says 25 route modules/13 pages; test counts (1314 backend / 1560 frontend in ROADMAP) are stale — current suite is 1354 backend pass / 1560 frontend pass. Docs should be regenerated from reality after each session."
-  },
-  {
-    "title": "Sync .env.example files — new config vars missing, server and root examples diverge",
-    "priority": 2,
-    "description": "VERIFIED: server/config.py now reads ALLOW_LAN_BYPASS, STREAM_PREFLIGHT_TIMEOUT, STREAM_PREFLIGHT_SUCCESS_TTL, STREAM_PREFLIGHT_FAILURE_TTL, PROVIDERS_JSON, RATE_WINDOW, RATE_SEARCH_LIMIT, RATE_DEFAULT_LIMIT — but NONE of these appear in server/.env.example (they exist only in the root .env.example for the rate/providers vars, commented out). Root .env.example has ACME_DOMAIN/ACME_EMAIL/ACME_STAGING/EPG_CACHE_TTL/VITE_CDN_URL that server/.env.example lacks; server/.env.example has ENFORCE_HTTPS that root lacks. Action: add the new preflight + LAN-bypass vars to server/.env.example with sane defaults, and cross-sync the two files so a fresh deployment documents every knob."
-  },
-  {
     "title": "Verify stream preflight latency and CDN behavior at runtime",
     "priority": 2,
-    "description": "VERIFIED CODE (session 2026-07-31): preflight_stream() in server/routes/stream_core.py opens a short aiohttp connection (status check + 1-byte read) before every live/VOD/remux/transcode/proxy StreamingResponse so dead channels return 502 instead of 200-with-empty-body; results are now cached short-TTL (30s success / 5s failure) keyed by URL+Range. Unit + route tests added (test_stream.py, test_stream_live.py TestPreflightFailure, test_stream_vod.py TestPreflightFailure) and passing. Remaining risk: verify against the real provider (iptv-provider.example.com) that (a) channel zapping latency is acceptable with the cache, (b) the 1-byte read does not desync mpegts.js, (c) dead channel IDs (e.g. 250, 1) now return 502 quickly."
+    "description": "VERIFIED CODE (session 2026-07-31): preflight_stream() in server/routes/stream_core.py opens a short aiohttp connection (status check + 1-byte read) before every live/VOD/remux/transcode/proxy StreamingResponse so dead channels return 502 instead of 200-with-empty-body; results are cached short-TTL (30s success / 5s failure) keyed by URL+Range, with env-configurable STREAM_PREFLIGHT_TIMEOUT. Unit + route tests added (test_stream.py, test_stream_live.py TestPreflightFailure, test_stream_vod.py TestPreflightFailure) and passing — full backend suite 1379 pass / 17 skip / 3 xfail. Remaining risk: verify against the real provider (iptv-provider.example.com) that (a) channel zapping latency is acceptable with the cache, (b) the 1-byte read does not desync mpegts.js, (c) dead channel IDs (e.g. 250, 1) now return 502 quickly."
+  },
+  {
+    "title": "Consolidate duplicate preflight session-builder helpers in test_stream.py",
+    "priority": 3,
+    "description": "VERIFIED (session 2026-07-31): tests/test_stream.py has two session-builder helpers building the same mock shape — _mock_preflight_session (28 lines, used by the 4 original preflight tests) and _counting_preflight_session (used by the 5 new cache tests). Consolidate into one helper (keep the exc/side_effect and counting variants) to avoid drift."
+  },
+  {
+    "title": "Follow-up docs verification: frontend test count and 'New tests' table in ROADMAP.md",
+    "priority": 3,
+    "description": "Session 2026-07-31 corrected ROADMAP.md file sizes, header stats (13 pages / 133 components / 31 hooks / 25 route modules), hook coverage (31/31), backend test count (1379 pass), AGENTS.md counts (34 source files / 7,036 lines / 55 test files / 13 pages) and synced .env.example files (ALLOW_LAN_BYPASS + STREAM_PREFLIGHT_* + cross-file vars). Remaining: verify the ROADMAP '1,500+ frontend' claim against a fresh `npm test` run and fold session 9/10 additions into the 'New tests (sessions 7-9)' table."
   }
 ]

@@ -1155,6 +1155,148 @@ def test_preflight_stream_false_on_transport_error():
         assert asyncio.run(preflight_stream("http://test/stream")) is False
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+#  preflight cache — short-TTL result cache skips redundant CDN connections
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _mock_preflight_session(status: int = 200, body: bytes = b"\x47", exc: Exception | None = None):
+    """Build a mocked aiohttp.ClientSession for preflight tests."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    mock_resp = MagicMock()
+    mock_resp.status = status
+    mock_content = AsyncMock()
+    mock_content.read = AsyncMock(return_value=body)
+    mock_resp.content = mock_content
+
+    mock_session = MagicMock()
+    if exc is not None:
+        mock_session.get.side_effect = exc
+    else:
+        mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_resp)
+        mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
+    return mock_session
+
+
+def _counting_preflight_session(status: int = 200):
+    """Build a mocked session whose get() counts calls and returns a fresh 200/206 CM.
+
+    Returns (mock_session, call_count). Each get() call returns the SAME
+    context manager (avoids recursion from reading .return_value of a mock
+    that also has a side_effect set on it).
+    """
+    from unittest.mock import AsyncMock, MagicMock
+
+    mock_resp = MagicMock()
+    mock_resp.status = status
+    mock_content = AsyncMock()
+    mock_content.read = AsyncMock(return_value=b"\x47")
+    mock_resp.content = mock_content
+
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=mock_resp)
+    cm.__aexit__ = AsyncMock(return_value=None)
+
+    call_count = {"n": 0}
+    mock_session = MagicMock()
+
+    def counting_get(*a, **kw):
+        call_count["n"] += 1
+        return cm
+
+    mock_session.get.side_effect = counting_get
+    return mock_session, call_count
+
+
+def test_preflight_success_is_cached_second_call_skips_network():
+    """A second preflight for the same URL within TTL hits the cache."""
+    import asyncio
+
+    from routes.stream_core import _preflight_cache, preflight_stream
+
+    _preflight_cache.clear()
+    mock_session, call_count = _counting_preflight_session()
+
+    with patch("routes.stream_core.aiohttp.ClientSession") as MockSession:
+        MockSession.return_value.__aenter__.return_value = mock_session
+        MockSession.return_value.__aexit__.return_value = None
+        assert asyncio.run(preflight_stream("http://test/cached-stream")) is True
+        assert asyncio.run(preflight_stream("http://test/cached-stream")) is True
+    assert call_count["n"] == 1, f"expected 1 network call, got {call_count['n']}"
+
+
+def test_preflight_failure_is_cached_short_ttl():
+    """A failed preflight result is cached (so a dead channel stays 502 briefly)."""
+    import asyncio
+
+    from routes.stream_core import _preflight_cache, preflight_stream
+
+    _preflight_cache.clear()
+    mock_session, call_count = _counting_preflight_session(status=405)
+
+    with patch("routes.stream_core.aiohttp.ClientSession") as MockSession:
+        MockSession.return_value.__aenter__.return_value = mock_session
+        MockSession.return_value.__aexit__.return_value = None
+        assert asyncio.run(preflight_stream("http://test/dead-stream")) is False
+        assert asyncio.run(preflight_stream("http://test/dead-stream")) is False
+    assert call_count["n"] == 1, f"expected 1 network call, got {call_count['n']}"
+
+
+def test_preflight_cache_uses_distinct_keys_for_range_variants():
+    """URLs with different Range headers are cached under different keys."""
+    import asyncio
+
+    from routes.stream_core import _preflight_cache, preflight_stream
+
+    _preflight_cache.clear()
+    mock_session, call_count = _counting_preflight_session(status=206)
+
+    with patch("routes.stream_core.aiohttp.ClientSession") as MockSession:
+        MockSession.return_value.__aenter__.return_value = mock_session
+        MockSession.return_value.__aexit__.return_value = None
+        assert asyncio.run(preflight_stream("http://test/vod.mkv", range_header="bytes=0-")) is True
+        assert asyncio.run(preflight_stream("http://test/vod.mkv", range_header="bytes=1024-")) is True
+    assert call_count["n"] == 2, f"expected 2 network calls (distinct keys), got {call_count['n']}"
+
+
+def test_preflight_cache_expires_after_ttl():
+    """An expired cache entry triggers a fresh network call."""
+    import asyncio
+
+    from routes.stream_core import _preflight_cache, preflight_stream
+
+    _preflight_cache.clear()
+    mock_session, call_count = _counting_preflight_session()
+
+    with patch("routes.stream_core.aiohttp.ClientSession") as MockSession:
+        MockSession.return_value.__aenter__.return_value = mock_session
+        MockSession.return_value.__aexit__.return_value = None
+        assert asyncio.run(preflight_stream("http://test/expiring-stream")) is True
+        # Simulate TTL expiry by backdating the cache entry beyond the success TTL
+        _preflight_cache["http://test/expiring-stream|"] = (0.0, True)
+        assert asyncio.run(preflight_stream("http://test/expiring-stream")) is True
+    assert call_count["n"] == 2, f"expected 2 network calls after expiry, got {call_count['n']}"
+
+
+def test_preflight_uses_config_timeout_default():
+    """preflight_stream defaults its timeout to STREAM_PREFLIGHT_TIMEOUT."""
+    import asyncio
+
+    from routes.stream_core import STREAM_PREFLIGHT_TIMEOUT, _preflight_cache, preflight_stream
+
+    _preflight_cache.clear()
+    mock_session, _ = _counting_preflight_session()
+
+    with patch("routes.stream_core.aiohttp.ClientSession") as MockSession:
+        MockSession.return_value.__aenter__.return_value = mock_session
+        MockSession.return_value.__aexit__.return_value = None
+        assert asyncio.run(preflight_stream("http://test/timeout-stream")) is True
+    # Timeout is passed to the ClientSession constructor (not session.get)
+    assert MockSession.call_args.kwargs.get("timeout") is not None
+    assert MockSession.call_args.kwargs["timeout"].total == STREAM_PREFLIGHT_TIMEOUT
+
+
 def test_ffmpeg_pipe_yields_stdout():
     """_ffmpeg_pipe yields data from proc.stdout and cleans up."""
     import asyncio

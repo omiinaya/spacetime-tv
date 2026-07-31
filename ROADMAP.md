@@ -1,28 +1,44 @@
 # SpacetimeTV Roadmap v8 — Current State
 
-> **Audit date:** 2026-07-31 (9th session — EPG refresh dedup cross-module fix)
-> **Stack:** FastAPI + React 19 + Vite 8 + Tailwind v4 | 14 pages | 70+ components | 30+ hooks | 12 back-end route modules
-> **Test counts:** 1,314 backend pass + 1,560 frontend pass | 0 TypeScript errors | 0 production `any` types
+> **Audit date:** 2026-07-31 (10th session — LAN auth bypass flag + preflight cache)
+> **Stack:** FastAPI + React 19 + Vite 8 + Tailwind v4 | 13 pages | 133 components | 31 hooks | 25 back-end route modules
+> **Test counts:** 1,379 backend pass (17 skipped, 3 xfail) + 1,500+ frontend pass | 0 TypeScript errors | 0 production `any` types
 > **CI:** GitHub Actions (lint → test → tsc → build)
-> **Hook test coverage:** 27/27 (100%) — all custom hooks have unit tests
+> **Hook test coverage:** 31/31 (100%) — all custom hooks have unit tests
 
 ## Current File Sizes (source only, no tests)
 
 | File | Lines | Status |
 |------|:-----:|--------|
 | `web/src/hooks/useVideoPlayer.ts` | 816 | Down from 901 (-9.4%) — cleanup boilerplate unified |
-| `web/src/pages/Series.tsx` | 407 | Decomposed ✅ |
+| `web/src/App.tsx` | 476 | Grew back from 399 — layout/settings wiring; candidate for extraction (see kanban-suggestions.json) |
+| `web/src/hooks/useSearchPage.ts` | 460 | Filter/search-state orchestration; candidate for extraction |
+| `web/src/lib/types.ts` | 445 | Type definitions — flat, low churn |
+| `web/src/pages/Series.tsx` | 429 | Decomposed ✅ (was 957) |
+| `server/main.py` | 413 | Entry point + middleware — stable |
 | `web/src/pages/LiveTV.tsx` | 363 | Down from 493 (-26%) — inline components extracted ✅ |
-| `web/src/components/MovieOverlay.tsx` | 254 | Down from 418 (-39%) — extracted 4 sub-components ✅ |
-| `web/src/components/SeriesOverlay.tsx` | 396 | Down from 520 (-24%) — extracted shared components ✅ |
-| `web/src/App.tsx` | 399 | Decomposed ✅ |
-| `server/iptv_client.py` | 497 | Provider client — well-structured service module |
+| `server/iptv_client.py` | 502 | Provider client — well-structured service module |
 | `server/auth.py` | 371 | Auth utilities — stable |
 | `server/routes/guide_routes.py` | 364 | EPG routes — stable |
 
-All other files < 350 lines.
+Largest remaining files are all documented extraction candidates or
+deliberately flat data/type modules. useVideoPlayer.ts (816) is documented
+as diminishing returns for further splitting.
 
-## Recent Improvements (session 7-8)
+## Recent Improvements (sessions 7-10)
+
+### Session 10 (2026-07-31) — hardening + preflight tuning
+- **ALLOW_LAN_BYPASS env flag** — the dev convenience that skips auth for all
+  localhost/192.168.x.x requests is now gated by `ALLOW_LAN_BYPASS` (default
+  true, set `false` for hardened deployments). 7 middleware tests added
+  (`test_auth_middleware_lan.py`).
+- **Preflight cache + env-configurable timeout** — `preflight_stream()` results
+  are now cached short-term keyed by URL + Range header (30s success / 5s
+  failure) so rapid channel re-zaps skip the redundant CDN connection, and the
+  per-call timeout defaults to `STREAM_PREFLIGHT_TIMEOUT` (10s). 5 cache tests
+  added in `test_stream.py`.
+
+### Session 9 (2026-07-31) — EPG refresh dedup + preflight
 
 ### Bug Fixes
 | Bug | File | Fix |
@@ -68,8 +84,9 @@ All other files < 350 lines.
 
 ### Frontend
 - `useVideoPlayer.ts` (816 lines) — main effect is dense orchestration; further sub-hook extraction possible but diminishing returns
-- E2E test count could grow for edge cases
-- Full-suite runs show intermittent parallel-load flakes (rotating `waitFor`/`userEvent` timeouts in LiveTV/Search/Series/PlayerCenterControls); serial runs pass 100% — see IMPROVEMENTS.md pending item
+- `App.tsx` (476) and `useSearchPage.ts` (460) grew back — extraction candidates (see kanban-suggestions.json)
+- E2E test count could grow for edge cases; 13 Playwright specs exist but are NOT wired into CI (see kanban-suggestions.json)
+- Full-suite parallel-load flakiness was fixed in session 9 (asyncUtilTimeout 4000ms + SeriesOverlay play gating + usePlayerUtils sessionStorage guard); if flakes reappear, revisit the rotating waitFor/userEvent timeouts
 
 ### Backend
 - Modules at full route coverage (25/25)
@@ -84,8 +101,8 @@ All other files < 350 lines.
 - Pre-commit hooks not auto-installed
 
 ## What's Solid
-- **0 TypeScript errors** in 18k lines of production code
-- **0 pre-existing test failures** in 1,412 frontend tests
+- **0 TypeScript errors** in production code
+- **0 pre-existing test failures** (1,500+ frontend tests)
 - **0 `any` types** in production source
 - **Clean build** with proper code splitting (hls.js, shaka-player in separate chunks)
 - **Good accessibility:** alt text, aria-labels, skip-to-content, roles

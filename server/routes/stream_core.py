@@ -8,6 +8,7 @@ stream_dash, and stream_probe modules.
 import asyncio
 import contextlib
 import logging
+import time
 from functools import partial
 
 import aiohttp
@@ -15,7 +16,7 @@ import httpx
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from config import UA_STR
+from config import STREAM_PREFLIGHT_FAILURE_TTL, STREAM_PREFLIGHT_SUCCESS_TTL, STREAM_PREFLIGHT_TIMEOUT, UA_STR
 from iptv_client import get_active_provider, iptv_stream_url, iptv_timeshift_url, iptv_vod_url, mask_url_credentials
 
 log = logging.getLogger("spacetime-tv")
@@ -23,6 +24,12 @@ log = logging.getLogger("spacetime-tv")
 # ── Probe cache ────────────────────────────────────────────────────────────
 _probe_cache: dict[str, tuple[float, dict]] = {}
 PROBE_CACHE_TTL = 3600
+
+# ── Preflight cache ────────────────────────────────────────────────────────
+# Short-TTL cache of preflight_stream() results keyed by URL + Range header.
+# Rapid re-zaps to the same stream skip the redundant CDN connection; failures
+# expire faster so a dead channel recovers as soon as it comes back.
+_preflight_cache: dict[str, tuple[float, bool]] = {}
 
 
 def stream_core_get_provider(provider_idx: int = -1):
@@ -210,7 +217,7 @@ async def _http_iter_chunks(
                 yield chunk  # pragma: no cover — async generator yield (covered at runtime, not tracked by coverage)
 
 
-async def preflight_stream(url: str, range_header: str | None = None, timeout: int = 10) -> bool:
+async def preflight_stream(url: str, range_header: str | None = None, timeout: float | None = None) -> bool:
     """Verify the CDN accepts a stream URL BEFORE committing a 200 response.
 
     StreamingResponse sends its status line before the body generator runs,
@@ -222,7 +229,24 @@ async def preflight_stream(url: str, range_header: str | None = None, timeout: i
 
     Cost: one extra connection setup (~100-300ms) per stream start. Success
     returns as soon as the first byte arrives; dead channels fail fast.
+
+    Results are cached short-term keyed by URL + Range header: successes for
+    STREAM_PREFLIGHT_SUCCESS_TTL (30s default) so rapid re-zaps skip the
+    redundant connection, failures for STREAM_PREFLIGHT_FAILURE_TTL (5s) so a
+    dead channel recovers quickly. The per-call timeout defaults to
+    STREAM_PREFLIGHT_TIMEOUT (10s) and can be overridden per call.
     """
+    if timeout is None:
+        timeout = STREAM_PREFLIGHT_TIMEOUT
+    cache_key = f"{url}|{range_header or ''}"
+    now = time.monotonic()
+    cached = _preflight_cache.get(cache_key)
+    if cached is not None:
+        ts, result = cached
+        ttl = STREAM_PREFLIGHT_SUCCESS_TTL if result else STREAM_PREFLIGHT_FAILURE_TTL
+        if now - ts < ttl:
+            return result
+
     headers = {"User-Agent": UA_STR}
     if range_header:
         headers["Range"] = range_header
@@ -233,14 +257,17 @@ async def preflight_stream(url: str, range_header: str | None = None, timeout: i
             async with session.get(url, headers=headers) as resp:
                 if resp.status not in status_ok:
                     log.warning(f"preflight: CDN returned HTTP {resp.status} for {mask_url_credentials(url[:80])}...")
+                    _preflight_cache[cache_key] = (time.monotonic(), False)
                     return False
                 # Read one byte — a 2xx status alone can still lie (CDN that
                 # accepts the connection but never delivers). Forces the body
                 # to actually start flowing.
                 await resp.content.read(1)
+                _preflight_cache[cache_key] = (time.monotonic(), True)
                 return True
     except (TimeoutError, aiohttp.ClientError, OSError) as e:
         log.warning(f"preflight failed for {mask_url_credentials(url[:80])}: {e}")
+        _preflight_cache[cache_key] = (time.monotonic(), False)
         return False
 
 

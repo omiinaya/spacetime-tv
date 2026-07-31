@@ -152,10 +152,27 @@ CORS_ORIGINS = os.getenv("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",")
 # Set to "true" to redirect all HTTP to HTTPS
 ENFORCE_HTTPS = os.getenv("ENFORCE_HTTPS", "true").lower() == "true"
 
+# LAN auth bypass
+# When true (default, dev convenience), requests from localhost/private
+# 192.168.x.x networks skip the X-Admin-Key/X-Device-Token check for all
+# /api/ endpoints. Set to "false" for hardened deployments so every request
+# (including LAN) must authenticate.
+ALLOW_LAN_BYPASS = os.getenv("ALLOW_LAN_BYPASS", "true").lower() == "true"
+
 # Rate limiting (env-configurable)
 RATE_WINDOW = int(os.getenv("RATE_WINDOW", "60"))  # seconds
 RATE_SEARCH_LIMIT = int(os.getenv("RATE_SEARCH_LIMIT", "100"))  # requests per window for search/proxy
 RATE_DEFAULT_LIMIT = int(os.getenv("RATE_DEFAULT_LIMIT", "1000"))  # requests per window for everything else
+
+# Stream preflight (env-configurable)
+# preflight_stream() opens a short CDN connection before committing a 200 so
+# dead channels return 502 instead of an empty body. Tune the per-call timeout
+# and the short-TTL result cache: success results are cached STREAM_PREFLIGHT_SUCCESS_TTL
+# seconds so rapid re-zaps to the same stream skip the redundant connection;
+# failures are cached much shorter so a dead channel recovers quickly.
+STREAM_PREFLIGHT_TIMEOUT = float(os.getenv("STREAM_PREFLIGHT_TIMEOUT", "10"))
+STREAM_PREFLIGHT_SUCCESS_TTL = float(os.getenv("STREAM_PREFLIGHT_SUCCESS_TTL", "30"))
+STREAM_PREFLIGHT_FAILURE_TTL = float(os.getenv("STREAM_PREFLIGHT_FAILURE_TTL", "5"))
 
 
 # Data directory — persistent store for all runtime data.

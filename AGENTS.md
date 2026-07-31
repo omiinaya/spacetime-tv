@@ -43,9 +43,9 @@ Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :
 8|
 **SpacetimeTV** is an IPTV cable TV dashboard — Live TV streaming, EPG guide with schedule, Movies & Series catalog with search and watchlist, and VOD streaming with remux.
 
-- 31 Python source files (server/, 6,575 lines)
+- 34 Python source files (server/, 7,036 lines)
 - 100 TypeScript/React frontend test files (25,407 lines)
-- 54 Python backend test files (server/tests/)
+- 55 Python backend test files (server/tests/)
 - 25 API route modules
 - 13 frontend page components (was 11)
 - Stack: FastAPI + React 19 + Vite 8 + Tailwind + nginx + ffmpeg
@@ -83,7 +83,7 @@ Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :
 48|│   │   ├── lib/          # API client, utils, hooks data layer
 49|│   │   ├── hooks/        # Custom hooks (player, keyboard, favorites)
 50|│   │   ├── components/   # UI components (Player, ChannelRow, overlays)
-51|│   │   ├── pages/        # Route pages (11 total)
+51|│   │   ├── pages/        # Route pages (13 total)
 52|│   │   ├── context/      # React context (SettingsContext)
 53|│   │   └── mocks/        # MSW test mocks
 54|│   ├── vite.config.ts    # Vite config (port 5183, /api proxy :8720)
@@ -173,10 +173,14 @@ Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :
 138|
 139|| Env Var | Purpose | Default |
 140||---|---|---|
-141|| `IPTV_BASE` | IPTV provider base URL | http://iptv-provider.example.com |
-142|| `IPTV_USER` | IPTV username | — |
-143|| `IPTV_PASS` | IPTV password | — |
-144|| `TMDB_API_KEY` | TMDB metadata enrichment | (optional) |
+|| `IPTV_BASE` | IPTV provider base URL | http://iptv-provider.example.com |
+|| `IPTV_USER` | IPTV username | — |
+|| `IPTV_PASS` | IPTV password | — |
+|| `TMDB_API_KEY` | TMDB metadata enrichment | (optional) |
+|| `ALLOW_LAN_BYPASS` | Skip auth for localhost/192.168.x.x requests (false = hardened) | true |
+|| `STREAM_PREFLIGHT_TIMEOUT` | Per-call CDN preflight timeout (seconds) | 10 |
+|| `STREAM_PREFLIGHT_SUCCESS_TTL` | Preflight success cache TTL (seconds) | 30 |
+|| `STREAM_PREFLIGHT_FAILURE_TTL` | Preflight failure cache TTL (seconds) | 5 |
 145|
 146|### Frontend (React)
 147|
