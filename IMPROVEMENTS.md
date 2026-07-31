@@ -17,6 +17,34 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Recently Completed
 
+### ✅ P2 — Fix cloud backup "Download & Restore" / "Merge Favorites" silent no-op (Bug)
+Regression from the SettingsPage extraction refactor (`8a6654c`): both buttons
+fetched data from the server but the result was discarded — nothing was written
+to localStorage and the page never reloaded, so "restore" and "merge" appeared
+to work while doing nothing. Restored the apply-to-localStorage + reload logic
+in `CloudBackupSection.tsx` (favorites, movie watchlist, series watchlist).
+Added 9 component tests locking in the apply behavior.
+
+### ✅ P2 — Include series watchlist in cloud backup (Feature gap)
+`useCloudBackup` only uploaded the movie watchlist (`stv_watchlist`); the series
+watchlist (`stv_watchlist_series`) was silently excluded from cross-device sync.
+Upload now sends `series_watchlist`; download restores it; backend empty-default
+GET response includes it. Watchlist values are normalized to `number[]` on read,
+so legacy record-shape backups (`{"550": true}`) restore without corrupting the
+localStorage array format.
+
+### ✅ P4 — Remove dead GET /api/v1/watchlist stub (Maintainability)
+The endpoint returned a hardcoded `{"watchlist": {}}` with a "TODO: implement"
+comment, but nothing consumes it — the watchlist is client-side (localStorage)
+and synced via cloud backup. Removed the stub and its test; documented the
+decision in `routes/watchlist.py`.
+
+### ✅ P4 — Fix "Event loop is closed" pytest warning (Test hygiene)
+`test_iptv_client.py` teardown called `client.aclose()` without awaiting it,
+leaving an unawaited coroutine that exploded as a `PytestUnraisableException`
+("Event loop is closed") at GC time. Teardown now uses `asyncio.run(...)`.
+Full backend suite runs warning-free.
+
 ### ✅ P4 — Movies.tsx decomposition (689→552 lines) + 14 new tests (Maintainability)
 Extracted `MovieContinueWatchingRow` and `MovieRecentlyCompletedRow` into dedicated components with full test suites (14 tests). Movies.tsx reduced by 20%. Fixed flaky AudioSelector test (async state timing). README table formatting fixed.
 

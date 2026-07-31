@@ -53,17 +53,34 @@ class TestUploadBackup:
         assert resp.json()["status"] == "ok"
 
     def test_upload_with_watchlist(self, client):
-        """Upload a backup with watchlist."""
+        """Upload a backup with movie + series watchlists."""
         resp = client.post(
             "/api/v1/cloud/backup",
             json={
                 "device_id": "device-abc-xyz",
                 "favorites": [42],
-                "watchlist": {"movie_550": True, "series_1399": True},
+                "watchlist": [550, 551],
+                "series_watchlist": [1399],
             },
             headers=_headers(),
         )
         assert resp.json()["status"] == "ok"
+
+    def test_upload_watchlists_roundtrip(self, client):
+        """Watchlists uploaded for a device come back on GET."""
+        client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "watchlist-roundtrip",
+                "watchlist": [1, 2, 3],
+                "series_watchlist": [4, 5],
+            },
+            headers=_headers(),
+        )
+        resp = client.get("/api/v1/cloud/backup?device_id=watchlist-roundtrip", headers=_headers())
+        data = resp.json()["data"]
+        assert data["watchlist"] == [1, 2, 3]
+        assert data["series_watchlist"] == [4, 5]
 
     def test_upload_with_settings(self, client):
         """Upload a backup with settings."""
@@ -191,7 +208,8 @@ class TestGetBackup:
         data = resp.json()
         assert data["status"] == "ok"
         assert data["data"]["favorites"] == []
-        assert data["data"]["watchlist"] == {}
+        assert data["data"]["watchlist"] == []
+        assert data["data"]["series_watchlist"] == []
         assert data["data"]["settings"] == {}
 
     def test_get_backup_invalid_device_id(self, client):

@@ -133,15 +133,9 @@ async def profile_get_progress(request: Request):
     return {"progress": profiles[profile_id].get("progress", {})}
 
 
-# ── Watchlist CRUD ──────────────────────────────────────────────────
-@router.get("/watchlist")
-async def get_watchlist():
-    """Return watchlist data.
-
-    Currently returns an empty watchlist structure.
-    TODO: implement actual watchlist management per profile.
-    """
-    return {"watchlist": {}}
-
-
-...
+# ── Watchlist ──────────────────────────────────────────────────────────────
+#
+# Server-side watchlist CRUD intentionally does not exist: the watchlist is
+# client-side (localStorage, `stv_watchlist` / `stv_watchlist_series`) and is
+# synced across devices via the cloud backup endpoints (routes/cloud_sync.py).
+# Only watch *progress* is persisted server-side (see below).

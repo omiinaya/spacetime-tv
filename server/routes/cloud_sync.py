@@ -117,10 +117,11 @@ async def upload_backup(payload: dict, request: Request):
     Payload format:
     {
       "device_id": "uuid-here",
-      "favorites": [123, 456, ...],       // optional
-      "watchlist": {"movie_550": true},    // optional
-      "settings": {...}                    // optional
-      "timestamp": 1719000000              // optional (auto-filled)
+      "favorites": [123, 456, ...],           // optional — channel favorites
+      "watchlist": [550, 551, ...],           // optional — movie watchlist IDs
+      "series_watchlist": [900, 901, ...],    // optional — series watchlist IDs
+      "settings": {...}                       // optional
+      "timestamp": 1719000000                 // optional (auto-filled)
     }
     """
     device_id = payload.get("device_id")
@@ -185,7 +186,8 @@ async def get_backup(device_id: str, request: Request):
             "status": "ok",
             "data": {
                 "favorites": [],
-                "watchlist": {},
+                "watchlist": [],
+                "series_watchlist": [],
                 "settings": {},
             },
         }

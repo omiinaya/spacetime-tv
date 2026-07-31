@@ -1,26 +1,16 @@
 """Comprehensive tests for watchlist routes.
 
 Covers all endpoints in routes/watchlist.py:
-- GET  /api/v1/watchlist
 - POST /api/v1/watchlist/sync-progress
 - GET  /api/v1/watchlist/progress
 - POST /api/v1/watchlist/profile/sync-progress
 - GET  /api/v1/watchlist/profile/progress
+
+Note: there is intentionally no GET /api/v1/watchlist CRUD endpoint — the
+watchlist is client-side (localStorage) and synced via cloud backup.
 """
 
 import time
-
-# ── GET /api/v1/watchlist ────────────────────────────────────────────────
-
-
-def test_get_watchlist_returns_empty_structure(client):
-    """GET /api/v1/watchlist returns an empty watchlist structure."""
-    resp = client.get("/api/v1/watchlist")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert "watchlist" in data
-    assert data["watchlist"] == {}
-
 
 # ── POST /api/v1/watchlist/sync-progress ─────────────────────────────────
 

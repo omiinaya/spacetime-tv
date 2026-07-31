@@ -15,6 +15,7 @@ import { server } from "@/mocks/server";
 
 const FAV_KEY = "stv_channel_favorites";
 const WATCHLIST_KEY = "stv_watchlist";
+const SERIES_KEY = "stv_watchlist_series";
 const DEVICE_KEY = "stv_device_id";
 
 describe("useCloudBackup", () => {
@@ -45,7 +46,8 @@ describe("useCloudBackup", () => {
   it("uploadBackup succeeds and sets lastUpload timestamp", async () => {
     // Seed some local data
     localStorage.setItem(FAV_KEY, JSON.stringify([101, 202]));
-    localStorage.setItem(WATCHLIST_KEY, JSON.stringify({ "1": true }));
+    localStorage.setItem(WATCHLIST_KEY, JSON.stringify([1, 2]));
+    localStorage.setItem(SERIES_KEY, JSON.stringify([3, 4]));
 
     const { result } = renderHook(() => useCloudBackup());
 
@@ -58,6 +60,30 @@ describe("useCloudBackup", () => {
     expect(result.current.backupStatus.lastUpload).toBeGreaterThan(0);
     expect(result.current.backupStatus.loading).toBe(false);
     expect(result.current.backupStatus.error).toBeNull();
+  });
+
+  it("uploadBackup sends favorites and both watchlists", async () => {
+    localStorage.setItem(FAV_KEY, JSON.stringify([101, 202]));
+    localStorage.setItem(WATCHLIST_KEY, JSON.stringify([1, 2]));
+    localStorage.setItem(SERIES_KEY, JSON.stringify([3, 4]));
+
+    let sentBody: Record<string, unknown> | null = null;
+    server.use(
+      http.post("/api/cloud/backup", async ({ request }) => {
+        sentBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ status: "ok" });
+      }),
+    );
+
+    const { result } = renderHook(() => useCloudBackup());
+    await act(async () => {
+      await result.current.uploadBackup();
+    });
+
+    expect(sentBody).not.toBeNull();
+    expect(sentBody!.favorites).toEqual([101, 202]);
+    expect(sentBody!.watchlist).toEqual([1, 2]);
+    expect(sentBody!.series_watchlist).toEqual([3, 4]);
   });
 
   it("uploadBackup returns false on server error", async () => {
@@ -121,12 +147,13 @@ describe("useCloudBackup", () => {
 
   // ── downloadBackup ──────────────────────────────────────────
 
-  it("downloadBackup succeeds and returns favorites/watchlist", async () => {
+  it("downloadBackup succeeds and returns favorites/watchlists", async () => {
     const { result } = renderHook(() => useCloudBackup());
 
     let data: {
       favorites: number[];
-      watchlist: Record<string, boolean>;
+      watchlist: number[];
+      seriesWatchlist: number[];
     } | null = null;
     await act(async () => {
       data = await result.current.downloadBackup();
@@ -134,7 +161,9 @@ describe("useCloudBackup", () => {
 
     expect(data).not.toBeNull();
     expect(data!.favorites).toEqual([101, 202, 303]);
-    expect(data!.watchlist).toEqual({ "1": true, "2": false });
+    // Legacy record shape { "1": true, "2": false } is normalized to [1]
+    expect(data!.watchlist).toEqual([1]);
+    expect(data!.seriesWatchlist).toEqual([7, 8]);
     expect(result.current.backupStatus.lastDownload).toBeGreaterThan(0);
     expect(result.current.backupStatus.loading).toBe(false);
     expect(result.current.backupStatus.error).toBeNull();
@@ -167,7 +196,7 @@ describe("useCloudBackup", () => {
         await new Promise((r) => setTimeout(r, 50));
         return HttpResponse.json({
           status: "ok",
-          data: { favorites: [], watchlist: {} },
+          data: { favorites: [], watchlist: [], series_watchlist: [] },
         });
       }),
     );

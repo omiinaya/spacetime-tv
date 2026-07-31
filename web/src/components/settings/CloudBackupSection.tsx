@@ -1,14 +1,45 @@
 import { useState } from "react";
 import { Cloud, Upload, Download, Merge } from "lucide-react";
 
+interface CloudBackupData {
+  favorites: number[];
+  watchlist: number[];
+  seriesWatchlist: number[];
+}
+
 interface CloudBackupSectionProps {
   cloudLoading: boolean;
   cloudError: string | null;
   lastUpload: number | null;
   lastDownload: number | null;
   onUpload: () => Promise<boolean>;
-  onDownload: () => Promise<unknown>;
-  onMerge: () => Promise<unknown>;
+  onDownload: () => Promise<CloudBackupData | null>;
+  onMerge: () => Promise<number[] | null>;
+}
+
+const FAV_KEY = "stv_channel_favorites";
+const WATCHLIST_KEY = "stv_watchlist";
+const SERIES_WATCHLIST_KEY = "stv_watchlist_series";
+
+/** Write restored data to localStorage then reload so consumers re-read on mount. */
+function applyRestore(data: CloudBackupData) {
+  try {
+    localStorage.setItem(FAV_KEY, JSON.stringify(data.favorites));
+    localStorage.setItem(WATCHLIST_KEY, JSON.stringify(data.watchlist));
+    localStorage.setItem(
+      SERIES_WATCHLIST_KEY,
+      JSON.stringify(data.seriesWatchlist),
+    );
+  } catch {} // DOMException: localStorage quota
+  window.location.reload();
+}
+
+/** Write merged favorites to localStorage then reload. */
+function applyMerged(merged: number[]) {
+  try {
+    localStorage.setItem(FAV_KEY, JSON.stringify(merged));
+  } catch {} // DOMException: localStorage quota
+  window.location.reload();
 }
 
 export default function CloudBackupSection({
@@ -22,14 +53,29 @@ export default function CloudBackupSection({
 }: CloudBackupSectionProps) {
   const [working, setWorking] = useState(false);
 
-  const wrap = (fn: () => Promise<unknown>) => async () => {
-    setWorking(true);
-    try {
-      await fn();
-    } finally {
-      setWorking(false);
-    }
-  };
+  const withWorking =
+    (fn: () => Promise<unknown>) => async (): Promise<void> => {
+      setWorking(true);
+      try {
+        await fn();
+      } finally {
+        setWorking(false);
+      }
+    };
+
+  const handleUpload = withWorking(async () => {
+    await onUpload();
+  });
+
+  const handleDownload = withWorking(async () => {
+    const data = await onDownload();
+    if (data) applyRestore(data);
+  });
+
+  const handleMerge = withWorking(async () => {
+    const merged = await onMerge();
+    if (merged) applyMerged(merged);
+  });
 
   return (
     <section className="space-y-3">
@@ -49,7 +95,7 @@ export default function CloudBackupSection({
       {cloudError && <p className="text-xs text-red-500">{cloudError}</p>}
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={wrap(onUpload)}
+          onClick={handleUpload}
           disabled={cloudLoading || working}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
         >
@@ -57,7 +103,7 @@ export default function CloudBackupSection({
           {cloudLoading ? "Uploading..." : "Upload Backup"}
         </button>
         <button
-          onClick={wrap(onDownload)}
+          onClick={handleDownload}
           disabled={cloudLoading || working}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
         >
@@ -65,7 +111,7 @@ export default function CloudBackupSection({
           {cloudLoading ? "Downloading..." : "Download & Restore"}
         </button>
         <button
-          onClick={wrap(onMerge)}
+          onClick={handleMerge}
           disabled={cloudLoading || working}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
         >

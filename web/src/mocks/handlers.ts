@@ -443,7 +443,9 @@ export const handlers = [
         status: "ok",
         data: {
           favorites: [101, 202, 303],
+          // Legacy record shape — the hook must normalize to number[]
           watchlist: { "1": true, "2": false },
+          series_watchlist: [7, 8],
         },
       });
     }
