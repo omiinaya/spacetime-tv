@@ -1,4 +1,4 @@
-.PHONY: build test lint fmt fix dev-up dev-down publish-module help
+.PHONY: build test lint fmt fmt-check fix dev-up dev-down publish-module help
 
 BIN := .venv/bin
 PYTHON := $(BIN)/python3 || python3
@@ -30,18 +30,26 @@ test-all: test-backend test-frontend  ## Run full test suite
 lint: lint-backend lint-frontend  ## Lint all code
 
 lint-backend:  ## Lint backend Python with ruff
-	cd server && ruff check 2>/dev/null || ~/.local/bin/ruff check 2>/dev/null || echo "ruff not installed — run: pip install ruff"
+	cd server && (ruff check . || ~/.local/bin/ruff check .)
 
-lint-frontend:  ## Check frontend TypeScript
-	cd web && npx tsc --noEmit 2>/dev/null || echo "TypeScript type checking failed"
+lint-frontend:  ## Lint frontend TypeScript with eslint
+	cd web && npm run lint
 
 fmt: fmt-backend fmt-frontend  ## Format all code
 
 fmt-backend:  ## Format backend Python with ruff
-	cd server && ruff format 2>/dev/null || ~/.local/bin/ruff format 2>/dev/null || echo "ruff not installed — run: pip install ruff"
+	cd server && ruff format . 2>/dev/null || ~/.local/bin/ruff format . 2>/dev/null || echo "ruff not installed — run: pip install ruff"
 
 fmt-frontend:  ## Format frontend with Prettier
 	cd web && npx prettier --write src/ 2>/dev/null || echo "Install prettier for TS formatting"
+
+fmt-check: fmt-check-backend fmt-check-frontend  ## Check formatting (read-only, fails on violations)
+
+fmt-check-backend:  ## Check backend formatting with ruff
+	cd server && (ruff format --check . || ~/.local/bin/ruff format --check .)
+
+fmt-check-frontend:  ## Check frontend formatting with Prettier
+	cd web && npx prettier --check src/
 
 fix: lint fmt  ## Fix all auto-fixable issues
 

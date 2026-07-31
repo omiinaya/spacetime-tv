@@ -4,15 +4,15 @@
 
 echo "🔍 Running pre-commit checks..."
 
-# Check for unformatted code
+# Check for unformatted code (read-only — never reformat on commit)
 if [ -f Makefile ]; then
-  if grep -q '^fmt:' Makefile; then
+  if grep -q '^fmt-check:' Makefile; then
     echo "  Running fmt check..."
-    make fmt-check 2>/dev/null || make fmt 2>/dev/null
+    make fmt-check
   fi
   if grep -q '^lint:' Makefile; then
     echo "  Running lint check..."
-    make lint 2>/dev/null || true
+    make lint
   fi
 fi
 
