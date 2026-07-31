@@ -439,3 +439,141 @@ def test_record_endpoints_require_admin_key(client):
             continue
         # Should be 401 or 403
         assert resp.status_code in (401, 403), f"Expected 401/403 for {method} {url}, got {resp.status_code}"
+
+
+# ── Error-path coverage: corrupt meta, EPG type errors, kill-on-timeout ─────
+
+
+def test_load_meta_returns_empty_on_corrupt_json(monkeypatch, tmp_path, client):
+    """GET /recordings tolerates a corrupt _meta.json (JSONDecodeError → {})."""
+    _, record_dir, meta_file = _install_mocks(monkeypatch, tmp_path)
+    meta_file.write_text("{this is not valid json")
+
+    from routes import record as record_module
+
+    record_module._active.clear()  # isolate from earlier tests that leave procs running
+
+    resp = client.get("/api/v1/recordings")
+    assert resp.status_code == 200
+    assert resp.json()["recordings"] == []
+
+
+def test_load_meta_returns_empty_on_unreadable_file(monkeypatch, tmp_path, client):
+    """GET /recordings tolerates an unreadable _meta.json path (OSError → {})."""
+    _, record_dir, meta_file = _install_mocks(monkeypatch, tmp_path)
+    # Replace the meta file with a directory — read_text() raises IsADirectoryError
+    meta_file.unlink(missing_ok=True)
+    meta_file.mkdir()
+
+    from routes import record as record_module
+
+    record_module._active.clear()  # isolate from earlier tests that leave procs running
+
+    resp = client.get("/api/v1/recordings")
+    assert resp.status_code == 200
+    assert resp.json()["recordings"] == []
+
+
+def test_start_recording_tolerates_malformed_epg_types(monkeypatch, tmp_path, client):
+    """POST /record/start falls back to 'Channel {id}' when EPG data has bad types."""
+    mock_proc, record_dir, meta_file = _install_mocks(monkeypatch, tmp_path)
+
+    import time
+
+    from state import _cache
+
+    # Timestamps as strings → `start <= now` raises TypeError → caught
+    _cache["epg_programmes"] = (
+        time.time(),
+        [
+            {
+                "channel_id": 31337,
+                "title": "Bad Types",
+                "start_timestamp": "not-a-number",
+                "stop_timestamp": "also-not-a-number",
+            }
+        ],
+    )
+
+    resp = _start_a_recording(client, stream_id=31337, stream_name="")
+    assert resp.status_code == 200
+    assert resp.json()["name"] == "Channel 31337"
+
+    # Clean up so we don't leave a fake running process for later tests
+    from routes import record as record_module
+
+    record_module._active.clear()
+
+
+def test_stop_recording_kills_process_on_wait_timeout(monkeypatch, tmp_path, client):
+    """POST /record/stop kills the ffmpeg process when terminate() times out."""
+    mock_proc, record_dir, meta_file = _install_mocks(monkeypatch, tmp_path)
+
+    resp = _start_a_recording(client, stream_id=555, stream_name="Kill Timeout")
+    assert resp.status_code == 200
+    rec_id = resp.json()["recording_id"]
+
+    # First wait() times out, second (after kill) returns cleanly
+    mock_proc.wait = AsyncMock(side_effect=[TimeoutError, 0])
+
+    resp = client.post("/api/v1/record/stop", params={"recording_id": rec_id})
+    assert resp.status_code == 200
+    mock_proc.terminate.assert_called_once()
+    mock_proc.kill.assert_called_once()
+    assert resp.json()["status"] in ("completed", "failed")
+
+
+def test_list_recordings_refreshes_finished_process(monkeypatch, tmp_path, client):
+    """GET /recordings marks a recording completed when its process exited."""
+    mock_proc, record_dir, meta_file = _install_mocks(monkeypatch, tmp_path)
+
+    resp = _start_a_recording(client, stream_id=777, stream_name="Auto Complete")
+    assert resp.status_code == 200
+    rec_id = resp.json()["recording_id"]
+
+    # Simulate ffmpeg exiting on its own, with a real file on disk
+    mock_proc.returncode = 0
+    rec_file = record_dir / f"{rec_id}.mp4"
+    rec_file.write_text("recorded content bytes")
+
+    resp = client.get("/api/v1/recordings")
+    assert resp.status_code == 200
+    rec = next(r for r in resp.json()["recordings"] if r["id"] == rec_id)
+    assert rec["status"] == "completed"
+    assert rec["size_bytes"] > 0
+    assert "stopped_at" in rec
+
+
+def test_list_recordings_handles_missing_file_for_finished_process(monkeypatch, tmp_path, client):
+    """GET /recordings sets size_bytes=0 when the finished recording's file is gone."""
+    mock_proc, record_dir, meta_file = _install_mocks(monkeypatch, tmp_path)
+
+    resp = _start_a_recording(client, stream_id=778, stream_name="Gone File")
+    assert resp.status_code == 200
+    rec_id = resp.json()["recording_id"]
+
+    mock_proc.returncode = 0
+    # No file written → Path.stat() raises OSError → size_bytes = 0
+
+    resp = client.get("/api/v1/recordings")
+    assert resp.status_code == 200
+    rec = next(r for r in resp.json()["recordings"] if r["id"] == rec_id)
+    assert rec["status"] == "completed"
+    assert rec["size_bytes"] == 0
+
+
+def test_delete_recording_kills_process_on_wait_timeout(monkeypatch, tmp_path, client):
+    """DELETE /recordings/{id} kills the ffmpeg process when terminate() times out."""
+    mock_proc, record_dir, meta_file = _install_mocks(monkeypatch, tmp_path)
+
+    resp = _start_a_recording(client, stream_id=999, stream_name="Delete Timeout")
+    assert resp.status_code == 200
+    rec_id = resp.json()["recording_id"]
+
+    mock_proc.wait = AsyncMock(side_effect=[TimeoutError, 0])
+
+    resp = client.delete(f"/api/v1/recordings/{rec_id}")
+    assert resp.status_code == 200
+    assert resp.json()["deleted"] == rec_id
+    mock_proc.terminate.assert_called_once()
+    mock_proc.kill.assert_called_once()

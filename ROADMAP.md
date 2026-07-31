@@ -1,8 +1,8 @@
-# SpacetimeTV Roadmap v7 — Current State
+# SpacetimeTV Roadmap v8 — Current State
 
-> **Audit date:** 2026-07-30 (7th session — cleanup unification + backend disconnect handling)
+> **Audit date:** 2026-07-30 (8th session — DVR record.py coverage closed to 100%)
 > **Stack:** FastAPI + React 19 + Vite 8 + Tailwind v4 | 14 pages | 70+ components | 30+ hooks | 12 back-end route modules
-> **Test counts:** 1,313 backend pass + 1,530 frontend pass | 0 TypeScript errors | 0 production `any` types
+> **Test counts:** 1,276 backend pass (1 skipped, 3 xfailed) + 1,530+ frontend pass | 0 TypeScript errors | 0 production `any` types
 > **CI:** GitHub Actions (lint → test → tsc → build)
 > **Hook test coverage:** 27/27 (100%) — all custom hooks have unit tests
 
@@ -71,8 +71,8 @@ All other files < 350 lines.
 
 ### Backend
 - Modules at full route coverage (25/25)
-- record.py at 24% coverage (runtime-only ffmpeg subprocess — hard to unit test)
-- state.py at 72% coverage (cache cleanup loop — runtime-only)
+- record.py at **100% coverage** (was 87% — 7 error-path tests added: corrupt meta, EPG type errors, kill-on-timeout, finished-process refresh)
+- state.py at **100% coverage** (cache cleanup loop fully tested)
 - Consider extracting service layer from route modules if routes grow
 
 ### Infrastructure
