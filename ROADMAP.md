@@ -1,8 +1,8 @@
 # SpacetimeTV Roadmap v8 — Current State
 
-> **Audit date:** 2026-07-30 (8th session — DVR record.py coverage closed to 100%)
+> **Audit date:** 2026-07-31 (9th session — EPG refresh dedup cross-module fix)
 > **Stack:** FastAPI + React 19 + Vite 8 + Tailwind v4 | 14 pages | 70+ components | 30+ hooks | 12 back-end route modules
-> **Test counts:** 1,326 backend pass + 1,560 frontend pass | 0 TypeScript errors | 0 production `any` types
+> **Test counts:** 1,314 backend pass + 1,560 frontend pass | 0 TypeScript errors | 0 production `any` types
 > **CI:** GitHub Actions (lint → test → tsc → build)
 > **Hook test coverage:** 27/27 (100%) — all custom hooks have unit tests
 
@@ -27,6 +27,7 @@ All other files < 350 lines.
 ### Bug Fixes
 | Bug | File | Fix |
 |-----|------|-----|
+| EPG refresh dedup broken across modules | `guide_epg.py`, `admin.py` | `_epg_refresh_task` rebind on local copies left `state._epg_refresh_task = None` forever → admin could spawn duplicate concurrent XMLTV refreshes. Both modules now use `state._epg_refresh_task` attribute access |
 | LiveTV sessionStorage cache not restoring | `LiveTV.tsx` | `setAllStreams(allStreams)` → `setAllStreams(parsed.a)` |
 | Native playback event listeners leak | `useVideoPlayer.ts` | Self-cleaning mechanism via `__stv_native_listeners__` flag |
 | VOD ffmpeg orphaned on disconnect | `stream_vod.py` | Added `request.is_disconnected()` check to all VOD routes (remux, transcode, proxy) |

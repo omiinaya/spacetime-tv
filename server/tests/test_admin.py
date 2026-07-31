@@ -207,6 +207,27 @@ def test_admin_epg_refresh_twice_returns_already_running(client: TestClient):
     assert "message" in data2
 
 
+def test_admin_epg_refresh_records_task_on_shared_state(client: TestClient):
+    """POST /api/admin/epg/refresh must record the task on the state module.
+
+    Regression: the endpoint imported ``_epg_refresh_task`` by value and rebound
+    a local copy, so ``state._epg_refresh_task`` stayed ``None`` forever. The
+    dedup check then always saw "not running" and every call spawned a NEW
+    concurrent XMLTV fetch — even while guide_epg's background refresh was
+    already in flight.
+    """
+    import state
+
+    with _admin_client() as c:
+        resp = c.post("/api/v1/admin/epg/refresh")
+
+    assert resp.status_code == 200
+    # The task must be visible on the shared state module — this is what makes
+    # the cross-module dedup work (was None before the fix).
+    assert state._epg_refresh_task is not None
+    assert resp.json()["refresh_started"] is True
+
+
 # ── Stream Health Dashboard Tests ──────────────────────────────
 
 

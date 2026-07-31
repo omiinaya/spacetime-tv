@@ -17,6 +17,23 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Recently Completed
 
+### ✅ P2 — Fix EPG refresh dedup broken across modules — duplicate concurrent XMLTV fetches (Bug)
+
+`state._epg_refresh_task` is the canonical "EPG refresh in flight" tracker, but both
+`guide_epg.load_epg_background()` and `admin_epg_refresh()` did `from state import
+_epg_refresh_task` and then rebound a **local module copy** (`global` + assignment).
+The shared `state._epg_refresh_task` stayed `None` forever, so `admin_epg_refresh`'s
+`already_running` check always read "not running" and every `POST /admin/epg/refresh`
+spawned a NEW concurrent `_refresh_epg_background()` task — even while guide_epg's
+refresh was already in flight. Result: duplicate XMLTV downloads, double provider
+load, and races on `epg_cache` writes.
+
+Fix: both modules now read/write `state._epg_refresh_task` as a module attribute
+(single source of truth). Added regression test
+`test_admin_epg_refresh_records_task_on_shared_state` (fails on old code, passes on
+new) and hardened `test_load_epg_background_stale_triggers_refresh` to assert the
+task is visible on `state` rather than on a private copy. Full backend suite 1314 pass.
+
 ### ✅ P2 — Fix DVR recording lifecycle bugs in record.py (Bug)
 `list_recordings` had three lifecycle bugs. (1) **Lost persistence**: `if _active: _save_meta(meta)` skipped the save when the last active recording's process exited, leaving it stuck as "recording" on disk forever. (2) **Crashes marked completed**: an exited ffmpeg with a 0-byte/missing output file was marked "completed" instead of "failed". (3) **Orphaned entries stuck**: after a server restart, meta entries with status "recording" had no tracked process and were never reconciled. Fixes: new `_finalize_recording()` helper (file size = source of truth), `changed`-flag persistence, orphan reconciliation pass in `list_recordings`, and live `size_bytes` reporting for still-running recordings so the RecordingsPage (polls every 3s) shows growth. 6 new lifecycle tests; `test_record.py` now 34 tests. Full backend suite 1326 pass.
 

@@ -251,31 +251,32 @@ class TestLoadEpgBackground:
     @patch("routes.guide_epg.load_epg")
     async def test_load_epg_background_fresh_data(self, mock_load_epg):
         """When data is fresh, return it and don't create background task."""
+        import state
         from routes.guide_epg import load_epg_background
-        from state import _epg_refresh_task, epg_cache
+        from state import epg_cache
 
         now = time.time()
         epg_cache["data"] = {"channels": [], "programmes": []}
         epg_cache["fetched"] = now
 
         # Stop any existing refresh task so we can observe no new task
-        if _epg_refresh_task is not None and not _epg_refresh_task.done():
-            _epg_refresh_task.cancel()
+        if state._epg_refresh_task is not None and not state._epg_refresh_task.done():
+            state._epg_refresh_task.cancel()
 
         result = await load_epg_background()
 
         assert result == epg_cache["data"]
         mock_load_epg.assert_not_called()
 
-    @patch("routes.guide_epg.load_epg")
+    @patch("routes.guide_epg.load_epg", new_callable=AsyncMock)
     async def test_load_epg_background_stale_triggers_refresh(self, mock_load_epg):
         """When data is stale, return stale data immediately and start background refresh."""
-        # Ensure clean state — force None so condition triggers
-        import routes.guide_epg as _ge
+        import state
         from routes.guide_epg import load_epg_background
         from state import epg_cache
 
-        _ge._epg_refresh_task = None
+        # Ensure clean state — force None so condition triggers
+        state._epg_refresh_task = None
 
         old_time = time.time() - 99999
         stale_data = {"channels": [], "programmes": ["stale"]}
@@ -285,8 +286,20 @@ class TestLoadEpgBackground:
         result = await load_epg_background()
 
         assert result == stale_data
-        # Should have created a background refresh task
-        assert _ge._epg_refresh_task is not None
+        # Should have created a background refresh task — tracked on the SHARED
+        # state module so admin.py's dedup check can see it (regression: the
+        # task used to be rebound on a local copy and state stayed None).
+        assert state._epg_refresh_task is not None
+        # Await the background task inside the test — if it's left pending,
+        # its first `await load_epg()` can run AFTER this test's @patch
+        # context is torn down, calling the REAL load_epg() against a closed
+        # httpx client and failing the run ("Cannot send a request, as the
+        # client has been closed"). Under full-suite load the event loop is
+        # busy enough that the task routinely survives past teardown.
+        refresh_task = state._epg_refresh_task
+        mock_load_epg.return_value = {"channels": [], "programmes": []}
+        await refresh_task
+        mock_load_epg.assert_awaited_once()
 
     @patch("routes.guide_epg.load_epg")
     async def test_load_epg_background_no_data(self, mock_load_epg):

@@ -6,6 +6,7 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+import state
 from config import ProviderConfig
 
 log = logging.getLogger("spacetime-tv")
@@ -189,13 +190,16 @@ async def admin_warm_full_cache():
 @router.post("/admin/epg/refresh")
 async def admin_epg_refresh():
     """Trigger an immediate EPG refresh in the background."""
-    from state import _epg_refresh_task, epg_cache
+    from state import epg_cache
 
-    already_running = _epg_refresh_task is not None and not _epg_refresh_task.done()
+    # Read the task from the shared state module so we dedup against refreshes
+    # started by guide_epg.load_epg_background() — a local import copy would
+    # always read None and spawn duplicate concurrent refreshes.
+    already_running = state._epg_refresh_task is not None and not state._epg_refresh_task.done()
     from routes.guide import _refresh_epg_background
 
     if not already_running:
-        _epg_refresh_task = asyncio.create_task(_refresh_epg_background())
+        state._epg_refresh_task = asyncio.create_task(_refresh_epg_background())
 
     last_fetch = epg_cache["fetched"]
     age = round(time.time() - last_fetch, 0) if last_fetch else None

@@ -11,9 +11,10 @@ from datetime import UTC, datetime, timedelta
 
 import httpx
 
+import state
 from config import EPG_CACHE_FILE, EPG_CACHE_TTL
 from iptv_client import cached_fetch, client, iptv_xmltv_url
-from state import CACHE_LIVE_ALL, _epg_clients, _epg_refresh_task, _guide_cache, epg_cache
+from state import CACHE_LIVE_ALL, _epg_clients, _guide_cache, epg_cache
 
 from .guide_core import parse_xmltv
 
@@ -85,9 +86,10 @@ async def load_epg_background() -> dict:
     now = time.time()
     if epg_cache["data"] is not None:
         if (now - epg_cache["fetched"]) >= EPG_CACHE_TTL:
-            global _epg_refresh_task
-            if _epg_refresh_task is None or _epg_refresh_task.done():
-                _epg_refresh_task = asyncio.create_task(_refresh_epg_background())
+            # Track the task on the shared state module (not a local copy) so
+            # admin.py's dedup check can see in-flight refreshes.
+            if state._epg_refresh_task is None or state._epg_refresh_task.done():
+                state._epg_refresh_task = asyncio.create_task(_refresh_epg_background())
         return epg_cache["data"]
     return await load_epg()
 
