@@ -59,5 +59,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
     exclude: ["e2e/**", "node_modules/**"],
+    // Full-suite parallel runs (47 workers on this host) cause CPU contention
+    // that intermittently pushes marginal async tests past vitest's default
+    // 5s per-test budget. Give every test 3x headroom — flakiness class fix.
+    testTimeout: 15000,
+    hookTimeout: 15000,
   },
 });
