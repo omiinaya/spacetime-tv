@@ -30,6 +30,11 @@ def convert_client(client, tmp_path):
     1. Patches CACHE_DIR so conversion tests touch tmp_path, not real disk.
     2. On teardown, cancels any lingering conversion tasks *before* the
        TestClient closes — preventing hangs from orphaned subprocess calls.
+
+    Real subprocess spawning is blocked globally by the autouse
+    ``_no_real_subprocesses`` fixture in conftest.py (curl/ffmpeg would
+    otherwise create BaseSubprocessTransport objects that leak until GC
+    after the event loop closes — a flaky PytestUnraisableException).
     """
     import routes.stream_convert as sc
 

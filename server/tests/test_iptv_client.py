@@ -11,6 +11,7 @@ Tests cover:
   - _get_provider_client() client creation and caching
 """
 
+import asyncio
 from unittest.mock import patch
 
 import httpx
@@ -524,10 +525,13 @@ class TestGetProviderClient:
 
     def teardown_method(self):
         """Close any clients that were created and clean up."""
+
         for client in _provider_clients.values():
             try:
                 if not client.is_closed:
-                    client.aclose()
+                    # aclose() is a coroutine — must be awaited, not called
+                    # bare (that would emit "coroutine never awaited").
+                    asyncio.run(client.aclose())
             except Exception:
                 pass
         _provider_clients.clear()

@@ -41,6 +41,7 @@ _static_dir.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import contextlib
+from unittest.mock import AsyncMock
 from unittest.mock import patch as _cached_fetch_patch
 
 import pytest
@@ -64,6 +65,31 @@ def override_lifespan():
 
     app.lifespan_context = contextlib.nullcontext
     yield
+
+
+@pytest.fixture(autouse=True)
+def _no_real_subprocesses():
+    """Never spawn real subprocesses during tests.
+
+    Streaming/conversion routes spawn curl/ffmpeg via
+    ``asyncio.create_subprocess_exec`` (transcode pipes, HLS segmenter,
+    MP4 conversion, media probing). A real spawn during a test creates a
+    BaseSubprocessTransport bound to the TestClient's event loop; when the
+    loop closes before GC collects the transport, pytest raises a flaky
+    ``PytestUnraisableExceptionWarning: Event loop is closed`` — and, when
+    GC timing is unlucky, a full INTERNALERROR that aborts the session
+    mid-run. Route tests that need specific subprocess behavior mock
+    ``asyncio.create_subprocess_exec`` themselves (inner patch wins).
+    """
+    mock_proc = AsyncMock()
+    mock_proc.returncode = 1  # fast-fail: routes treat nonzero as failure
+    mock_proc.communicate.return_value = (b"", b"mocked subprocess failure")
+    # Closed-stream shape: `while proc.stdout:` / `while proc.stderr:`
+    # loops exit immediately instead of awaiting MagicMock attributes.
+    mock_proc.stdout = None
+    mock_proc.stderr = None
+    with _cached_fetch_patch("asyncio.create_subprocess_exec", return_value=mock_proc):
+        yield
 
 
 @pytest.fixture(autouse=True)
