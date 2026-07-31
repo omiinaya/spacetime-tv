@@ -296,7 +296,7 @@ class TestLoadEpgBackground:
         # httpx client and failing the run ("Cannot send a request, as the
         # client has been closed"). Under full-suite load the event loop is
         # busy enough that the task routinely survives past teardown.
-        refresh_task = state._epg_refresh_task
+        refresh_task: asyncio.Task = state._epg_refresh_task
         mock_load_epg.return_value = {"channels": [], "programmes": []}
         await refresh_task
         mock_load_epg.assert_awaited_once()

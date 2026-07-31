@@ -231,11 +231,15 @@ export function saveProgress(params: SaveProgressParams): void {
                 `stv_series_current_idx_${seriesId}`,
                 String(currentIdx + 1),
               );
-              setTimeout(
-                () =>
-                  sessionStorage.removeItem(`stv_auto_advanced_${seriesId}`),
-                1000,
-              );
+              setTimeout(() => {
+                // Guard: storage can be unavailable (private mode, SSR,
+                // or test env teardown after the timer was scheduled).
+                try {
+                  sessionStorage.removeItem(`stv_auto_advanced_${seriesId}`);
+                } catch {
+                  /* storage unavailable — flag stays set, harmless */
+                }
+              }, 1000);
               onAutoAdvance(`/watch/series/${seriesId}/${nextEp.id}`);
             }
           } catch {} // DOMException: storage quota

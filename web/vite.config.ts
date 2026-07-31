@@ -59,9 +59,16 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
     exclude: ["e2e/**", "node_modules/**"],
-    // Full-suite parallel runs (47 workers on this host) cause CPU contention
-    // that intermittently pushes marginal async tests past vitest's default
-    // 5s per-test budget. Give every test 3x headroom — flakiness class fix.
+    // Full-suite parallel runs on this host (48 cores) default to ~47 fork
+    // workers — oversubscription starves individual workers for >15s, causing
+    // rotating "Test timed out" flakes even on synchronous tests. Cap the pool
+    // so each worker gets real CPU; stability over raw throughput.
+    poolOptions: {
+      forks: {
+        maxForks: 16,
+        minForks: 4,
+      },
+    },
     testTimeout: 15000,
     hookTimeout: 15000,
   },

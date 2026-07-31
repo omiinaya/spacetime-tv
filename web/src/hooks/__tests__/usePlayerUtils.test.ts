@@ -271,6 +271,13 @@ describe("saveProgress", () => {
     localStorage.clear();
     sessionStorage.clear();
     vi.clearAllMocks();
+    // Fake timers so the 1s auto-advance flag-clearing setTimeout never
+    // fires in real time after the jsdom environment is torn down.
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("saves watch position for a movie", () => {

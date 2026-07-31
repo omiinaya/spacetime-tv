@@ -1,6 +1,13 @@
 import "@testing-library/jest-dom/vitest";
 import { beforeAll, afterAll, afterEach, vi } from "vitest";
+import { configure } from "@testing-library/react";
 import { server } from "@/mocks/server";
+
+// Testing Library's waitFor/findBy* default to a 1000ms timeout. Under full
+// parallel-suite CPU contention that is too tight and causes rotating flaky
+// failures (LiveTV/Search/Series/SeriesOverlay/PlayerCenterControls). Raise
+// the default so async assertions get the same headroom as testTimeout.
+configure({ asyncUtilTimeout: 4000 });
 
 // Mock ResizeObserver for jsdom (used by useGridKeyboardNav et al.)
 vi.stubGlobal("ResizeObserver", function MockResizeObserver(
