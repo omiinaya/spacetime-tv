@@ -50,6 +50,18 @@
 - `img-src` includes `https://image.tmdb.org`, `https://*.tmdb.org`, `http://photo-tmdb.com`, `https://photo-tmdb.com`
 - `media-src` includes `blob: data: https: http:` for HLS/mpegts streams
 - `frame-src 'none'`, `object-src 'none'` blocks plugins and framing
+- **Accepted tradeoffs (documented 2026-07-31):**
+  - `script-src 'unsafe-inline'` — required by React inline event handlers and
+    Vite dev-mode module scripts. Removing it needs a nonce-based CSP.
+  - `script-src 'unsafe-eval'` — required by the live-TV player stack:
+    `mpegts.js` (used for mpegts live streams) contains
+    `new Function("return this")` (global-this shim, verified in
+    `node_modules/mpegts.js/dist/mpegts.js`). `hls.js` and `shaka-player`
+    dists do NOT eval directly, so a future tightening could scope
+    `unsafe-eval` to the mpegts chunk only — tracked in kanban-suggestions.json.
+  - Mitigations that remain active: `frame-src 'none'` + `object-src 'none'`
+    (no plugins/framing), explicit `img-src`/`media-src`/`connect-src`
+    allowlists, and React's built-in output escaping.
 - **Risk:** Low — CSP provides defense-in-depth against XSS
 
 ### 4. ⚠️ CORS Configuration — Score: 70/100

@@ -2,7 +2,7 @@
   {
     "title": "Wire Playwright E2E tests (13 specs in web/e2e/) into CI — currently never run",
     "priority": 1,
-    "description": "VERIFIED (re-checked 2026-07-31): web/e2e/ contains 13 Playwright spec files and `npm run test:e2e` is defined, but NO GitHub Actions job executes them. .github/workflows/e2e.yml is misnamed — it is actually the 'Release Build' workflow (docker build+push to ghcr.io on master/release branches) and never invokes playwright. .github/workflows/ci.yml runs pytest, vitest, tsc, and build only. BLOCKER discovered during re-check: e2e/playwright.config.ts targets baseURL http://127.0.0.1:8720 — the REAL FastAPI backend (which serves the built frontend) — and the live-tv/movies/series/search specs need real IPTV data, so a CI job would require IPTV_USER/IPTV_PASS as GitHub secrets (or a full MSW/mock backend). Fix options: (a) add e2e job to ci.yml + IPTV creds as CI secrets; (b) rename e2e.yml to release.yml; (c) document explicitly why E2E is excluded (credential dependency) in README/ROADMAP."
+    "description": "VERIFIED (re-checked 2026-07-31): web/e2e/ contains 13 Playwright spec files and `npm run test:e2e` is defined, but NO GitHub Actions job executes them. BLOCKER: e2e/playwright.config.ts targets baseURL http://127.0.0.1:8720 — the REAL FastAPI backend — and the live-tv/movies/series/search specs need real IPTV data, so a CI job would require IPTV_USER/IPTV_PASS as GitHub secrets (or a full MSW/mock backend). RESOLVED 2026-07-31 (kanban worker): (b) misnamed .github/workflows/e2e.yml renamed to release.yml with an explanatory header comment; (c) E2E-exclusion rationale documented in README.md 'Testing' section. REMAINING (optional, needs a decision): (a) add an e2e job to ci.yml + IPTV creds as CI secrets, or build a mock backend for the specs."
   },
   {
     "title": "Decompose App.tsx (476 lines — grew back from 399) and useSearchPage.ts (460 lines)",
@@ -12,7 +12,7 @@
   {
     "title": "Tighten CSP script-src (currently 'unsafe-inline' 'unsafe-eval') or document the tradeoff",
     "priority": 1,
-    "description": "VERIFIED: server/main.py SecurityHeadersMiddleware + web/nginx.conf both set script-src 'self' 'unsafe-inline' 'unsafe-eval'. unsafe-eval is required by hls.js/shaka (WebAssembly/worker eval patterns) and unsafe-inline by React hydration, but this combination defeats most XSS mitigations. Audit whether hls.js/shaka truly need unsafe-eval at runtime (modern versions don't always); if they do, document the accepted risk in SECURITY_AUDIT.md with a rationale instead of leaving it silent."
+    "description": "VERIFIED: server/main.py SecurityHeadersMiddleware + web/nginx.conf both set script-src 'self' 'unsafe-inline' 'unsafe-eval'. unsafe-eval is required by the live-TV player stack (mpegts.js contains new Function(\"return this\"); verified in node_modules/mpegts.js/dist/mpegts.js) and unsafe-inline by React hydration, but this combination defeats most XSS mitigations. TRADEOFF DOCUMENTED 2026-07-31 in SECURITY_AUDIT.md finding #3 (hls.js/shaka dists do NOT eval directly). REMAINING: runtime audit to scope 'unsafe-eval' to the mpegts chunk only (nonce-based CSP is the eventual goal)."
   },
   {
     "title": "Verify stream preflight latency and CDN behavior at runtime",

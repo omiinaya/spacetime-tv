@@ -1,3 +1,8 @@
+# NOTE: this file was renamed from e2e.yml → release.yml (2026-07-31).
+# It was misnamed — it is the container release-build workflow and never
+# ran Playwright. The Playwright E2E specs in web/e2e/ are NOT wired into
+# CI because they require a live backend with IPTV credentials (see README
+# "E2E tests" section for the rationale).
 name: Release Build
 
 on:

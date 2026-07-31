@@ -32,6 +32,26 @@ npm run dev            # starts on :5183, proxies /api to :8720
 | 8720 | FastAPI backend | API, IPTV proxy, VOD streaming |
 | 8722 | nginx (production) | Serves built frontend, proxied to backend |
 | 5183 | Vite dev server | Frontend hot-reload |
+## Testing
+
+```bash
+cd web && npm test          # frontend unit tests (vitest)
+cd server && python -m pytest tests/ --ignore=tests/test_live.py   # backend unit tests
+```
+
+### E2E tests (not wired into CI)
+
+`web/e2e/` contains 13 Playwright specs (`npm run test:e2e`), but they are
+**deliberately excluded from CI**: the specs exercise the real UI against a
+live backend (`baseURL http://127.0.0.1:8720`) and the live-tv / movies /
+series / search flows need real IPTV credentials, so a CI job would require
+`IPTV_USER`/`IPTV_PASS` as GitHub secrets (or a full mock backend) to be
+non-flaky. Run them locally against a running backend with valid
+credentials:
+```bash
+cd web && npm run test:e2e
+```
+
 ## Documentation
 
 | Document | Audience | Purpose |
