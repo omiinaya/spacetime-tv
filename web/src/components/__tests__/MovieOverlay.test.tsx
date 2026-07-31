@@ -163,11 +163,16 @@ describe("MovieOverlay", () => {
     mockTmdbDetails.mockResolvedValue(null);
     renderOverlay();
 
-    expect(await screen.findByText("Inception")).toBeTruthy();
-    expect(screen.getByText(/corporate secrets/)).toBeTruthy();
-    expect(screen.getByText("Action")).toBeTruthy();
-    expect(screen.getByText("Sci-Fi")).toBeTruthy();
-    expect(screen.getByText("Thriller")).toBeTruthy();
+    // All assertions inside one waitFor: title, plot and genres render from
+    // separate async state updates; asserting each with a bare getByText
+    // after findByText(title) races the later updates under CPU contention.
+    await waitFor(() => {
+      expect(screen.getByText("Inception")).toBeTruthy();
+      expect(screen.getByText(/corporate secrets/)).toBeTruthy();
+      expect(screen.getByText("Action")).toBeTruthy();
+      expect(screen.getByText("Sci-Fi")).toBeTruthy();
+      expect(screen.getByText("Thriller")).toBeTruthy();
+    });
   });
 
   it("renders rating, year, and duration from provider data", async () => {
@@ -175,11 +180,12 @@ describe("MovieOverlay", () => {
     mockTmdbDetails.mockResolvedValue(null);
     renderOverlay();
 
-    expect(await screen.findByText("8.8")).toBeTruthy();
-    expect(screen.getByText("2010")).toBeTruthy();
-    // Duration appears in both meta row and body section, so use getAllByText
-    const durationElements = screen.getAllByText("2h 28m");
-    expect(durationElements.length).toBeGreaterThanOrEqual(1);
+    await waitFor(() => {
+      expect(screen.getByText("8.8")).toBeTruthy();
+      expect(screen.getByText("2010")).toBeTruthy();
+      // Duration appears in both meta row and body section
+      expect(screen.getAllByText("2h 28m").length).toBeGreaterThanOrEqual(1);
+    });
   });
 
   it("renders cast and director", async () => {

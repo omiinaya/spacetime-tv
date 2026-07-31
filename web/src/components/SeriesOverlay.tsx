@@ -294,7 +294,14 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
       playButton={
         <div className="flex items-center gap-2">
           <button
-            onClick={() => playEpisode(episodeList[0]?.id || 1)}
+            onClick={() => {
+              // Guard: only navigate when the first episode is actually
+              // loaded. The old `|| 1` fallback produced a broken URL
+              // (/watch/series/{id}/1) that the watch route can't resolve
+              // when the overlay was clicked mid-load.
+              const first = episodeList[0];
+              if (first) playEpisode(first.id);
+            }}
             disabled={loading || episodeList.length === 0}
             className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
           >

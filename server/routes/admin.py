@@ -262,12 +262,15 @@ async def admin_reorder_provider(idx: int, new_order: int):
 
     if idx < 0 or idx >= len(PROVIDERS):
         raise HTTPException(404, f"Provider index {idx} not found")
-    PROVIDERS[idx].order = new_order
-    PROVIDERS.sort(key=lambda x: x.order)
-    # Re-index
-    for i, p in enumerate(PROVIDERS):
-        p.order = i
-    return {"message": f"Provider '{PROVIDERS[idx].name}' reordered to position {new_order}"}
+    # Pop-and-insert: move the provider to the target position, then re-index.
+    # (Setting order + stable sort is a no-op when the target slot is already
+    # occupied by another provider with the same order value.)
+    p = PROVIDERS.pop(idx)
+    new_order = max(0, min(new_order, len(PROVIDERS)))
+    PROVIDERS.insert(new_order, p)
+    for i, pp in enumerate(PROVIDERS):
+        pp.order = i
+    return {"message": f"Provider '{p.name}' reordered to position {new_order}"}
 
 
 @router.post("/admin/providers/reset-health")
@@ -365,8 +368,11 @@ async def admin_update_provider(idx: int, body: dict):
     if "enabled" in body:
         p.enabled = bool(body["enabled"])
     if "order" in body:
-        p.order = int(body["order"])
-        PROVIDERS.sort(key=lambda x: x.order)
+        # Pop-and-insert so the provider actually moves to the requested slot
+        # (stable sort + equal order values is a no-op for occupied targets).
+        PROVIDERS.pop(idx)
+        target = max(0, min(int(body["order"]), len(PROVIDERS)))
+        PROVIDERS.insert(target, p)
         for i, pp in enumerate(PROVIDERS):
             pp.order = i
 
