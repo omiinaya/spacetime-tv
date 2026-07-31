@@ -16,12 +16,13 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Install ruff
         run: pip install ruff
 
       - name: Ruff lint (Python)
+        working-directory: server
         run: ruff check .
 
       - name: Setup Node
@@ -46,7 +47,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       - name: Setup Node
         uses: actions/setup-node@v4

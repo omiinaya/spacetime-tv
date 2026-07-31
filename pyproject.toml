@@ -1,9 +1,9 @@
 [tool.ruff]
 # Target Python version
-target-version = "py310"
+target-version = "py311"
 
 # Select strict rules
-select = ["E", "W", "F", "I", "N", "D", "UP", "YTT", "ANN", "ASYNC", "BLE", "B", "A", "C4", "DTZ", "T10", "EM", "ERA", "EXE", "FBT", "FLY", "INT", "ISC", "ICN", "LOG", "NPY", "PD", "PERF", "PGH", "PLC", "PLE", "PLR", "PLW", "PT", "PTH", "PYI", "Q", "RET", "RSE", "RUF", "S", "SIM", "SLF", "SLOT", "TCH", "TD", "TID", "TRY", "FL", "G", "INP", "PIE", "SE", "FA", "AIR", "CPY"]
+select = ["E", "W", "F", "I", "N", "D", "UP", "YTT", "ANN", "ASYNC", "BLE", "B", "A", "C4", "DTZ", "T10", "EM", "ERA", "EXE", "FBT", "FLY", "INT", "ISC", "ICN", "LOG", "NPY", "PD", "PERF", "PGH", "PLC", "PLE", "PLR", "PLW", "PT", "PTH", "PYI", "Q", "RET", "RSE", "RUF", "S", "SIM", "SLF", "SLOT", "TCH", "TD", "TID", "TRY", "G", "INP", "PIE", "FA", "AIR", "CPY"]
 
 # Ignore specific rules that might be too strict for existing code
 ignore = [
@@ -27,6 +27,7 @@ dummy-variable-rgx = "^(_+|_(_[a-zA-Z0-9_]*)?)$"
 # Exclude certain directories
 exclude = [
     ".git",
+    "venv",
     "node_modules",
     "__pycache__",
     "build",
@@ -38,11 +39,8 @@ exclude = [
 [per-file-ignores]
 "tests/*" = ["S", "ANN", "D", "TRY", "RSE", "PLR"]
 
-[tool.ruff.mccabe]
+[tool.ruff.lint.mccabe]
 max-complexity = 15
 
-[tool.ruff.flake8-import-order]
-style = "google"
-
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["app", "backend"]

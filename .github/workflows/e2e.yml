@@ -1,10 +1,10 @@
-name: E2E
+name: Release Build
 
 on:
   push:
-    branches: [main, 'release/*']
+    branches: [master, 'release/*']
   pull_request:
-    branches: [main]
+    branches: [master]
 
 env:
   REGISTRY: ghcr.io
@@ -19,12 +19,13 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install ruff
         run: pip install ruff
 
       - name: Ruff lint (Python)
+        working-directory: server
         run: ruff check .
 
       - name: Install Node.js

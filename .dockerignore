@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+venv/
+server/venv/
+server/.venv/
+
+# Build output
+dist/
+web/dist/
+*.tsbuildinfo
+server/htmlcov/
+coverage/
+htmlcov/
+
+# Git
+.git/
+.gitignore
+.gitmessage
+.githooks/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Test / runtime artifacts
+epg_cache.json
+server/data/
+test-results/
+playwright-report/
+.coverage
+.coverage.*
