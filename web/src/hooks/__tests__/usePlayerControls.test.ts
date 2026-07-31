@@ -117,7 +117,7 @@ describe("usePlayerControls", () => {
     const v = deps.videoRef.current!;
 
     // currentTime setter throws when seeking
-    let currentTime = 0;
+    const currentTime = 0;
     Object.defineProperty(v, "currentTime", {
       get: () => currentTime,
       set: () => {
@@ -141,7 +141,7 @@ describe("usePlayerControls", () => {
     const deps = createDeps({ remuxVodUrlRef: { current: "http://stream" } });
     const v = deps.videoRef.current!;
 
-    let currentTime = 0;
+    const currentTime = 0;
     Object.defineProperty(v, "currentTime", {
       get: () => currentTime,
       set: () => {
