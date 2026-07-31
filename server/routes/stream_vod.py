@@ -16,6 +16,7 @@ from .stream_core import (
     _http_feed_stdin,
     _mime_from_url,
     build_stream_url,
+    preflight_stream,
     stream_vod_bytes,
 )
 
@@ -40,6 +41,14 @@ async def handle_vod_request(req: Request, stream_id: int, stream_type: str, con
         return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
     out_content_type = content_type or _mime_from_url(url)
     range_header = req.headers.get("range")
+
+    # Preflight the CDN before committing the response: a dead stream raises
+    # inside the generator AFTER the 200/206 status is sent, leaving the
+    # client with an empty body ("Detecting video format" forever). Fail fast
+    # with a proper 502 instead. (See preflight_stream docstring.)
+    if not await preflight_stream(url, range_header=range_header):
+        log.error(f"VOD PREFLIGHT FAIL ({stream_type} {stream_id})")
+        return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
 
     if range_header:
         return StreamingResponse(
@@ -152,6 +161,9 @@ async def stream_movie_remux(request: Request, stream_id: int, start: float | No
     except RuntimeError as e:
         log.error(f"VOD remux URL build error (movie {stream_id}): {e}")
         return JSONResponse(status_code=502, content={"detail": "Remux failed"})
+    if not await preflight_stream(url):
+        log.error(f"MOVIE REMUX PREFLIGHT FAIL id={stream_id}")
+        return JSONResponse(status_code=502, content={"detail": "Remux failed"})
     try:
         return StreamingResponse(
             stream_vod_mpegts(url, start, request),
@@ -170,6 +182,9 @@ async def stream_series_remux(request: Request, series_id: int, episode_id: int,
         url = await build_stream_url(episode_id, "series")
     except RuntimeError as e:
         log.error(f"VOD remux URL build error (series {episode_id}): {e}")
+        return JSONResponse(status_code=502, content={"detail": "Remux failed"})
+    if not await preflight_stream(url):
+        log.error(f"SERIES REMUX PREFLIGHT FAIL id={episode_id}")
         return JSONResponse(status_code=502, content={"detail": "Remux failed"})
     try:
         return StreamingResponse(
@@ -190,6 +205,9 @@ async def stream_movie_transcode(request: Request, stream_id: int):
     except RuntimeError as e:
         log.error(f"VOD remux URL build error (movie {stream_id}): {e}")
         return JSONResponse(status_code=502, content={"detail": "Remux failed"})
+    if not await preflight_stream(url):
+        log.error(f"MOVIE TRANSCODE PREFLIGHT FAIL id={stream_id}")
+        return JSONResponse(status_code=502, content={"detail": "Transcode failed"})
     try:
         return StreamingResponse(
             stream_vod_transcode(url, request),
@@ -209,6 +227,9 @@ async def stream_series_transcode(request: Request, series_id: int, episode_id: 
     except RuntimeError as e:
         log.error(f"VOD remux URL build error (series {episode_id}): {e}")
         return JSONResponse(status_code=502, content={"detail": "Remux failed"})
+    if not await preflight_stream(url):
+        log.error(f"SERIES TRANSCODE PREFLIGHT FAIL id={episode_id}")
+        return JSONResponse(status_code=502, content={"detail": "Transcode failed"})
     try:
         return StreamingResponse(
             stream_vod_transcode(url, request),

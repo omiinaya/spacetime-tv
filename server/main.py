@@ -104,6 +104,14 @@ async def auth_middleware(request: Request, call_next):
     """
     path = request.url.path
 
+    # CORS preflight: pass OPTIONS through to CORSMiddleware (which is mounted
+    # INNER to this middleware). Browsers never send auth headers on preflight,
+    # so authing it here returns 401 with no Access-Control-Allow-Origin and
+    # the browser blocks the real request. This was a real bug: external-origin
+    # clients got 401 on OPTIONS instead of the CORS 200 + ACAO response.
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
     # Dev/bypass: allow all localhost and internal network requests
     client_host = request.client.host if request.client else ""
     if client_host in ("127.0.0.1", "::1", "localhost", "192.0.2.10") or client_host.startswith("192.168."):

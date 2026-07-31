@@ -210,6 +210,40 @@ async def _http_iter_chunks(
                 yield chunk  # pragma: no cover — async generator yield (covered at runtime, not tracked by coverage)
 
 
+async def preflight_stream(url: str, range_header: str | None = None, timeout: int = 10) -> bool:
+    """Verify the CDN accepts a stream URL BEFORE committing a 200 response.
+
+    StreamingResponse sends its status line before the body generator runs,
+    so an error raised inside the generator (dead channel, CDN 405) surfaces
+    to the client as a 200 with an empty/truncated body — the player shows
+    "Detecting video format" forever. This preflight opens a short connection,
+    checks the status and reads one byte, so routes can return a proper 502
+    instead.
+
+    Cost: one extra connection setup (~100-300ms) per stream start. Success
+    returns as soon as the first byte arrives; dead channels fail fast.
+    """
+    headers = {"User-Agent": UA_STR}
+    if range_header:
+        headers["Range"] = range_header
+    status_ok = (200, 206) if range_header else (200,)
+    timeout_obj = aiohttp.ClientTimeout(total=timeout)
+    try:
+        async with aiohttp.ClientSession(timeout=timeout_obj) as session:
+            async with session.get(url, headers=headers) as resp:
+                if resp.status not in status_ok:
+                    log.warning(f"preflight: CDN returned HTTP {resp.status} for {mask_url_credentials(url[:80])}...")
+                    return False
+                # Read one byte — a 2xx status alone can still lie (CDN that
+                # accepts the connection but never delivers). Forces the body
+                # to actually start flowing.
+                await resp.content.read(1)
+                return True
+    except (TimeoutError, aiohttp.ClientError, OSError) as e:
+        log.warning(f"preflight failed for {mask_url_credentials(url[:80])}: {e}")
+        return False
+
+
 async def stream_bytes(url: str):
     """Generator that yields bytes from a live stream URL via curl_cffi."""
     async for chunk in _http_iter_chunks(url, status_ok=(200,)):
@@ -307,6 +341,13 @@ async def stream_vod_bytes(url: str, range_header: str | None = None):
 async def stream_proxy(url: str, content_type: str):
     """Stream a remote URL through our backend, bypassing CORS."""
     try:
+        # Preflight before committing 200 — see preflight_stream docstring.
+        # The raw IPTV proxy has the same silent-failure shape as live/VOD:
+        # a dead URL yields 200 with an empty body because the generator
+        # raises after the status line is sent.
+        if not await preflight_stream(url):
+            log.warning(f"Stream proxy preflight failed ({mask_url_credentials(url[:80])})")
+            return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
         return StreamingResponse(
             stream_bytes(url),
             media_type=content_type,

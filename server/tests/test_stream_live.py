@@ -9,7 +9,7 @@ Conftest provides the ``client`` fixture with mocked ``cached_fetch``,
 X-Admin-Key header, lifespan override, and shared-state reset.
 """
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -22,8 +22,45 @@ async def _mock_ts_packets(*args, **kwargs):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  502 — build_stream_url raises RuntimeError
+#  Preflight — dead channels return 502 instead of 200/empty body
 # ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestPreflightFailure:
+    """A failed CDN preflight returns 502 BEFORE any 200 is committed.
+
+    Regression: the body generators raise inside the StreamingResponse after
+    the status line is sent, so dead channels used to reach the player as
+    ``200 OK`` with an empty body ("Detecting video format" forever).
+    """
+
+    def test_live_returns_502_when_preflight_fails(self, client):
+        with patch("routes.stream_live.preflight_stream", new=AsyncMock(return_value=False)):
+            resp = client.get("/api/v1/stream/live/1")
+        assert resp.status_code == 502
+        assert resp.json() == {"detail": "Stream unavailable"}
+
+    def test_transcode_returns_502_when_preflight_fails(self, client):
+        with patch("routes.stream_live.preflight_stream", new=AsyncMock(return_value=False)):
+            resp = client.get("/api/v1/stream/live/1/transcode")
+        assert resp.status_code == 502
+
+    def test_quality_returns_502_when_preflight_fails(self, client):
+        with patch("routes.stream_live.preflight_stream", new=AsyncMock(return_value=False)):
+            resp = client.get("/api/v1/stream/live/1/quality/720")
+        assert resp.status_code == 502
+
+    def test_timeshift_returns_502_when_preflight_fails(self, client):
+        with patch("routes.stream_live.preflight_stream", new=AsyncMock(return_value=False)):
+            resp = client.get("/api/v1/stream/live/1/timeshift?duration=60")
+        assert resp.status_code == 502
+
+    def test_live_proceeds_when_preflight_passes(self, client):
+        """Preflight passing means the stream proceeds (200, not 502)."""
+        with patch("routes.stream_live.stream_bytes", side_effect=_mock_ts_packets):
+            resp = client.get("/api/v1/stream/live/1")
+        assert resp.status_code == 200
+        assert resp.headers["content-type"].startswith("video/mp2t")
 
 
 class TestBuildUrlFailure:

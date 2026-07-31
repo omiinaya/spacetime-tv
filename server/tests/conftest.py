@@ -160,6 +160,27 @@ async def reset_shared_state():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _no_real_stream_preflight():
+    """Preflight CDN checks succeed by default in route tests.
+
+    Stream routes now call ``preflight_stream`` before committing a 200/206
+    (dead channels return 502 instead of an empty body). Route tests exercise
+    the streaming path with fake CDN hosts — a real preflight would attempt
+    an actual aiohttp connection (DNS fail → 502). Patch at the route-module
+    level so stream_core's own preflight unit tests are unaffected. Tests
+    that exercise the 502-on-dead-channel path patch preflight_stream to
+    return False themselves (inner patch wins).
+    """
+    from unittest.mock import AsyncMock, patch
+
+    with (
+        patch("routes.stream_live.preflight_stream", new=AsyncMock(return_value=True)),
+        patch("routes.stream_vod.preflight_stream", new=AsyncMock(return_value=True)),
+    ):
+        yield
+
+
 @pytest.fixture
 def client():
     """App TestClient — upstream IPTV calls are mocked to return empty data.

@@ -5,6 +5,52 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# 0. Preflight — dead VOD returns 502 instead of 200/empty body
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestPreflightFailure:
+    """A failed CDN preflight returns 502 BEFORE any 200/206 is committed.
+
+    Regression: the body generators raise inside the StreamingResponse after
+    the status line is sent, so dead VOD used to reach the player as 200 with
+    an empty body. Preflight converts that into a proper 502.
+    """
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "/api/v1/stream/movie/1",
+            "/api/v1/stream/movie/1/transcode",
+            "/api/v1/stream/movie/1/remux",
+            "/api/v1/stream/series/1/2",
+            "/api/v1/stream/series/1/2/transcode",
+            "/api/v1/stream/series/1/2/remux",
+        ],
+    )
+    def test_vod_returns_502_when_preflight_fails(self, client, path):
+        with patch("routes.stream_vod.preflight_stream", new=AsyncMock(return_value=False)):
+            resp = client.get(path)
+        assert resp.status_code == 502
+        assert resp.json()["detail"] in ("Stream unavailable", "Remux failed", "Transcode failed")
+
+    def test_movie_range_request_returns_502_when_preflight_fails(self, client):
+        """Even a Range/206 request preflights — a dead file must not 206 with an empty body."""
+        with patch("routes.stream_vod.preflight_stream", new=AsyncMock(return_value=False)):
+            resp = client.get("/api/v1/stream/movie/1", headers={"Range": "bytes=0-"})
+        assert resp.status_code == 502
+
+    def test_movie_proceeds_when_preflight_passes(self, client):
+        """Preflight passing means the stream proceeds (200, not 502)."""
+        with (
+            patch("routes.stream_vod.preflight_stream", new=AsyncMock(return_value=True)),
+            patch("routes.stream_vod.stream_vod_bytes", return_value=iter([b"data"])),
+        ):
+            resp = client.get("/api/v1/stream/movie/1")
+        assert resp.status_code == 200
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # 1. Route mounting and basic responses
 # ═══════════════════════════════════════════════════════════════════════════════
 

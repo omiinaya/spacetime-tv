@@ -1059,6 +1059,102 @@ def test_http_iter_chunks_passes_range_header():
     assert captured.get("url") == "http://test/stream"
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+#  preflight_stream — dead-channel 502 conversion
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def test_preflight_stream_true_on_2xx():
+    """preflight_stream returns True when CDN answers 200 and delivers a byte."""
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock
+
+    from routes.stream_core import preflight_stream
+
+    mock_resp = MagicMock()
+    mock_resp.status = 200
+    mock_content = AsyncMock()
+    mock_content.read = AsyncMock(return_value=b"\x47")
+    mock_resp.content = mock_content
+
+    mock_session = MagicMock()
+    mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_resp)
+    mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("routes.stream_core.aiohttp.ClientSession") as MockSession:
+        MockSession.return_value.__aenter__.return_value = mock_session
+        MockSession.return_value.__aexit__.return_value = None
+        assert asyncio.run(preflight_stream("http://test/stream")) is True
+    # status + one byte read = the CDN really is streaming
+    mock_content.read.assert_awaited_once_with(1)
+
+
+def test_preflight_stream_false_on_non_2xx():
+    """preflight_stream returns False when CDN answers 4xx/5xx (dead channel)."""
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock
+
+    from routes.stream_core import preflight_stream
+
+    mock_resp = MagicMock()
+    mock_resp.status = 405
+
+    mock_session = MagicMock()
+    mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_resp)
+    mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("routes.stream_core.aiohttp.ClientSession") as MockSession:
+        MockSession.return_value.__aenter__.return_value = mock_session
+        MockSession.return_value.__aexit__.return_value = None
+        assert asyncio.run(preflight_stream("http://test/stream")) is False
+
+
+def test_preflight_stream_accepts_206_with_range():
+    """preflight_stream accepts 206 when a Range header is sent (VOD seeking)."""
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock
+
+    from routes.stream_core import preflight_stream
+
+    captured = {}
+
+    def _side_effect(url, *, headers=None, **kw):
+        captured["range"] = headers.get("Range", None) if headers else None
+        mock_resp = MagicMock()
+        mock_resp.status = 206
+        mock_resp.content = AsyncMock()
+        mock_resp.content.read = AsyncMock(return_value=b"x")
+        cm = MagicMock()
+        cm.__aenter__ = AsyncMock(return_value=mock_resp)
+        cm.__aexit__ = AsyncMock(return_value=None)
+        return cm
+
+    mock_session = MagicMock()
+    mock_session.get.side_effect = _side_effect
+
+    with patch("routes.stream_core.aiohttp.ClientSession") as MockSession:
+        MockSession.return_value.__aenter__.return_value = mock_session
+        MockSession.return_value.__aexit__.return_value = None
+        assert asyncio.run(preflight_stream("http://test/vod.mkv", range_header="bytes=0-")) is True
+    assert captured["range"] == "bytes=0-"
+
+
+def test_preflight_stream_false_on_transport_error():
+    """preflight_stream returns False when the connection fails entirely."""
+    import asyncio
+    from unittest.mock import MagicMock
+
+    from routes.stream_core import preflight_stream
+
+    mock_session = MagicMock()
+    mock_session.get.side_effect = OSError("connection refused")
+
+    with patch("routes.stream_core.aiohttp.ClientSession") as MockSession:
+        MockSession.return_value.__aenter__.return_value = mock_session
+        MockSession.return_value.__aexit__.return_value = None
+        assert asyncio.run(preflight_stream("http://test/stream")) is False
+
+
 def test_ffmpeg_pipe_yields_stdout():
     """_ffmpeg_pipe yields data from proc.stdout and cleans up."""
     import asyncio

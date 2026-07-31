@@ -62,6 +62,26 @@ def test_cors_unknown_origin_rejected(client):
     assert "access-control-allow-origin" not in resp.headers
 
 
+def test_cors_preflight_not_blocked_by_auth(client):
+    """OPTIONS preflight must not be 401'd by the auth middleware.
+
+    Regression: auth_middleware runs OUTSIDE CORSMiddleware, so a preflight
+    (which carries no auth headers by spec) used to get 401 with no
+    Access-Control-Allow-Origin — the browser then blocked the real request.
+    Auth middleware must pass OPTIONS through so CORS can answer it.
+    """
+    resp = client.options(
+        "/api/v1/live/categories",
+        headers={
+            "Origin": "http://localhost:5180",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.headers.get("access-control-allow-origin") == "http://localhost:5180"
+    assert resp.headers.get("access-control-allow-methods") is not None
+
+
 # ── /api/error (POST) ─────────────────────────────────────────────────
 
 

@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from iptv_client import build_timeshift_url, mask_url_credentials
 from state import track_hit
 
-from .stream_core import build_stream_url, stream_bytes, stream_bytes_transcode
+from .stream_core import build_stream_url, preflight_stream, stream_bytes, stream_bytes_transcode
 
 log = logging.getLogger("spacetime-tv")
 router = APIRouter(tags=["stream"])
@@ -27,6 +27,14 @@ async def stream_live(stream_id: int, request: Request):
         log.error(f"Stream URL build error (id={stream_id}): {e}")
         return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
     log.info(f"STREAM LIVE START id={stream_id}")
+
+    # Preflight the CDN BEFORE returning the StreamingResponse: a dead
+    # channel raises inside the generator after the 200 status is already
+    # committed, so the client would see 200 with an empty body instead of
+    # a meaningful 502. (See preflight_stream docstring.)
+    if not await preflight_stream(url):
+        log.error(f"STREAM LIVE PREFLIGHT FAIL id={stream_id}")
+        return JSONResponse(status_code=502, content={"detail": "Stream unavailable"})
 
     try:
 
@@ -62,6 +70,9 @@ async def stream_live_transcode(stream_id: int):
     except RuntimeError as e:
         log.error(f"Timeshift URL build error (id={stream_id}): {e}")
         return JSONResponse(status_code=502, content={"detail": "Timeshift stream unavailable"})
+    if not await preflight_stream(url):
+        log.error(f"STREAM TRANSCODE PREFLIGHT FAIL id={stream_id}")
+        return JSONResponse(status_code=502, content={"detail": "Transcode failed"})
     try:
         return StreamingResponse(
             stream_bytes_transcode(url),
@@ -87,6 +98,10 @@ async def stream_live_timeshift(
     track_hit("live", stream_id)
     url = build_timeshift_url(stream_id, duration)
     log.info(f"STREAM TIMESHIFT id={stream_id} duration={duration}s")
+
+    if not await preflight_stream(url):
+        log.error(f"STREAM TIMESHIFT PREFLIGHT FAIL id={stream_id} dur={duration}")
+        return JSONResponse(status_code=502, content={"detail": "Timeshift stream unavailable"})
 
     try:
 
@@ -122,6 +137,9 @@ async def stream_live_quality(stream_id: int, height: int):
     except RuntimeError as e:
         log.error(f"Timeshift URL build error (id={stream_id}): {e}")
         return JSONResponse(status_code=502, content={"detail": "Timeshift stream unavailable"})
+    if not await preflight_stream(url):
+        log.error(f"STREAM QUALITY PREFLIGHT FAIL id={stream_id} h={height}")
+        return JSONResponse(status_code=502, content={"detail": "Transcode failed"})
     try:
         return StreamingResponse(
             stream_bytes_transcode(url, target_height=height),
