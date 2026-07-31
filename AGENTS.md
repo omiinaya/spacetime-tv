@@ -27,8 +27,8 @@ Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :
 ```
 
 **Layers:**
-- **Frontend** (React 19 + Vite 8 + Tailwind) — 11 pages, custom HLS/mpegts player. Proxies `/api/*` to backend.
-- **Backend** (FastAPI Python) — 12 route modules. Handles live TV streaming, VOD remux (ffmpeg), EPG parsing, search, watchlists.
+- **Frontend** (React 19 + Vite 8 + Tailwind) — 13 pages, custom HLS/mpegts player. Proxies `/api/*` to backend.
+- **Backend** (FastAPI Python) — 25 route modules. Handles live TV streaming, VOD remux (ffmpeg), EPG parsing, search, watchlists.
 - **External:** IPTV provider (iptv-provider.example.com via aiohttp), TMDB API for metadata.
 
 ---
@@ -43,10 +43,10 @@ Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :
 8|
 **SpacetimeTV** is an IPTV cable TV dashboard — Live TV streaming, EPG guide with schedule, Movies & Series catalog with search and watchlist, and VOD streaming with remux.
 
-- ~40 Python source files (server/, 4,579 lines)
-- 66 TypeScript/React frontend test files (17,479 lines)
-- 32 Python backend test files (server/tests/)
-- 12 API route modules
+- 31 Python source files (server/, 6,575 lines)
+- 100 TypeScript/React frontend test files (25,407 lines)
+- 54 Python backend test files (server/tests/)
+- 25 API route modules
 - 13 frontend page components (was 11)
 - Stack: FastAPI + React 19 + Vite 8 + Tailwind + nginx + ffmpeg
 17|
@@ -73,7 +73,7 @@ Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :
 38|│   │   ├── admin.py      # Admin: stats, cache, EPG refresh
 39|│   │   ├── misc.py       # IPTV proxy, image proxy, SPA fallback
 40|│   │   └── watchlist.py  # Watchlist CRUD
-41|│   ├── tests/            # pytest tests (34 test files)
+41|│   ├── tests/            # pytest tests (54 test files)
 42|│   └── Dockerfile        # Production backend container
 43|│
 44|├── web/                  # React/Vite frontend
@@ -167,7 +167,7 @@ Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :
 132|
 133|### Backend (FastAPI)
 134|
-135|The backend is a single `main.py` entry point that includes 12 route modules from `server/routes/`. Each module is a FastAPI `APIRouter` with `prefix=""` (routes define their own full path). All modules are included via `app.include_router()` in `main.py`.
+135|The backend is a single `main.py` entry point that includes 25 route modules from `server/routes/`. Each module is a FastAPI `APIRouter` with `prefix=""` (routes define their own full path). All modules are included via `app.include_router()` in `main.py`.
 136|
 137|Configuration comes from `config.py` (reads `.env` file). Key env vars:
 138|
