@@ -140,20 +140,42 @@ body {
 
 /* ── Overlay / Modal animations ──────────────────────────────── */
 @keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 @keyframes zoom-in-95 {
-  from { transform: scale(0.93); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.93);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 @keyframes slide-up {
-  from { transform: translateY(8px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 @keyframes slide-in-right {
-  from { transform: translateX(16px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 .animate-in {
@@ -175,13 +197,12 @@ body {
 
 /* ── Skeleton shimmer ────────────────────────────────────────── */
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* ── Page section spacing ────────────────────────────────────── */
-.page-section {
-  @apply space-y-6 sm:space-y-8;
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* ── Card hover elevation ────────────────────────────────────── */
@@ -219,13 +240,13 @@ body {
 }
 
 /* ── Tab / Chip base ─────────────────────────────────────────── */
-.tab-chip {
-  @apply shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
-         border cursor-pointer select-none;
-}
 .tab-chip-active {
-  @apply tab-chip bg-primary/15 text-primary border-primary/20;
+  @apply shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
+         border cursor-pointer select-none
+         bg-primary/15 text-primary border-primary/20;
 }
 .tab-chip-inactive {
-  @apply tab-chip bg-muted text-muted-foreground hover:text-foreground border-transparent;
+  @apply shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
+         border cursor-pointer select-none
+         bg-muted text-muted-foreground hover:text-foreground border-transparent;
 }
