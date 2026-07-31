@@ -1160,25 +1160,6 @@ def test_preflight_stream_false_on_transport_error():
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def _mock_preflight_session(status: int = 200, body: bytes = b"\x47", exc: Exception | None = None):
-    """Build a mocked aiohttp.ClientSession for preflight tests."""
-    from unittest.mock import AsyncMock, MagicMock
-
-    mock_resp = MagicMock()
-    mock_resp.status = status
-    mock_content = AsyncMock()
-    mock_content.read = AsyncMock(return_value=body)
-    mock_resp.content = mock_content
-
-    mock_session = MagicMock()
-    if exc is not None:
-        mock_session.get.side_effect = exc
-    else:
-        mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_resp)
-        mock_session.get.return_value.__aexit__ = AsyncMock(return_value=None)
-    return mock_session
-
-
 def _counting_preflight_session(status: int = 200):
     """Build a mocked session whose get() counts calls and returns a fresh 200/206 CM.
 

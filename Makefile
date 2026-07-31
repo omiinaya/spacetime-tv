@@ -41,7 +41,7 @@ fmt-backend:  ## Format backend Python with ruff
 	cd server && ruff format . 2>/dev/null || ~/.local/bin/ruff format . 2>/dev/null || echo "ruff not installed — run: pip install ruff"
 
 fmt-frontend:  ## Format frontend with Prettier
-	cd web && npx prettier --write src/ 2>/dev/null || echo "Install prettier for TS formatting"
+	cd web && npm run format
 
 fmt-check: fmt-check-backend fmt-check-frontend  ## Check formatting (read-only, fails on violations)
 
@@ -49,7 +49,7 @@ fmt-check-backend:  ## Check backend formatting with ruff
 	cd server && (ruff format --check . || ~/.local/bin/ruff format --check .)
 
 fmt-check-frontend:  ## Check frontend formatting with Prettier
-	cd web && npx prettier --check src/
+	cd web && npm run format:check
 
 fix: lint fmt  ## Fix all auto-fixable issues
 

@@ -12,6 +12,8 @@
     "test:e2e": "npx playwright test --config e2e/playwright.config.ts",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
     "prepare": "cd .. && git config core.hooksPath .githooks",
     "postinstall": "cd .. && git config core.hooksPath .githooks"
   },
@@ -44,6 +46,7 @@
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
     "msw": "^2.14.6",
+    "prettier": "^3.9.6",
     "tailwindcss": "^4.3.2",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.62.1",

@@ -27,6 +27,24 @@ as diminishing returns for further splitting.
 
 ## Recent Improvements (sessions 7-10)
 
+### Session 11 (2026-07-31) — tooling gates + audit reconciliation
+- **Pre-commit hook fixed** — was a silent no-op gate: `make fmt-check`/`make lint`
+  failures were never propagated, so commits with lint/format violations succeeded.
+  Hook now aborts the commit on any staged-file violation (ruff format+lint for
+  Python, prettier+eslint for TS/CSS) and scopes checks to staged files only.
+- **Prettier is now a real dependency** — `prettier@^3.9.6` added to devDependencies,
+  `web/.prettierrc` pins the codebase style (prettier defaults), Makefile format
+  targets use the npm scripts. `npm run format:check` is clean on all committed
+  source.
+- **SECURITY_AUDIT.md reconciled** — HTTPS/TLS 20→75 (nginx TLS + ENFORCE_HTTPS
+  redirect + ACME) and Auth Coverage 60→85 (auth middleware covers all `/api/*`,
+  LAN bypass gated by `ALLOW_LAN_BYPASS`); overall 72→78.
+- **Dead test helper removed** — `_mock_preflight_session` in test_stream.py was
+  never called; deleted (single `_counting_preflight_session` remains).
+- **Frontend count verified** — fresh `npm test`: 1559 passed / 1560 (100 files);
+  the 1 failure is the known parallel-load flake (Movies.test.tsx passes 40/40
+  isolated).
+
 ### Session 10 (2026-07-31) — hardening + preflight tuning
 - **ALLOW_LAN_BYPASS env flag** — the dev convenience that skips auth for all
   localhost/192.168.x.x requests is now gated by `ALLOW_LAN_BYPASS` (default
@@ -97,8 +115,8 @@ as diminishing returns for further splitting.
 ### Infrastructure
 - ✅ CI with GitHub Actions (lint + test + tsc + build)
 - ✅ Docker Compose for deployment
-- ✅ Nginx + self-signed TLS
-- Pre-commit hooks not auto-installed
+- ✅ Nginx + TLS (443, http2, HSTS; Let's Encrypt via ACME_DOMAIN, self-signed fallback)
+- ✅ Pre-commit hooks auto-installed via `npm install` (`prepare`/`postinstall` set `core.hooksPath .githooks`); hook gates staged files on ruff/prettier/eslint and fails the commit on violations
 
 ## What's Solid
 - **0 TypeScript errors** in production code

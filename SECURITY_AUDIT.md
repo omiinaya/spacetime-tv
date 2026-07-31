@@ -1,12 +1,12 @@
 # SpacetimeTV Security Audit Report
 
-**Date:** 2026-07-06 (updated — cloud backup auth verified)
+**Date:** 2026-07-31 (re-audit — HTTPS + auth coverage reconciled against current code)
 **Auditor:** Hermes Agent (automated)
-**Target:** FastAPI backend on `localhost:8720`
+**Target:** FastAPI backend on `localhost:8720` (behind nginx TLS on :8722)
 
 ---
 
-## OVERALL SCORE: 72/100 (🟡 MODERATE RISK — cloud backup auth fixed)
+## OVERALL SCORE: 78/100 (🟡 MODERATE RISK — TLS + auth coverage reconciled)
 
 | Category | Score | Risk | Details |
 |----------|-------|------|---------|
@@ -17,9 +17,9 @@
 | **Request Body Limits** | 90/100 | 🟢 Info | 1MB limit enforced at middleware level. Works correctly. |
 | **Error Response Leakage** | 80/100 | 🟢 Low | No stack traces leaked. Generic "Internal Server Error". Debug=False. |
 | **Stream ACAO** | 60/100 | 🟡 Medium | No ACAO headers on stream endpoints — fine for direct use, but wildcards not an issue. |
-| **Auth Coverage** | 60/100 | 🟡 Medium | `/admin/*` and `/cloud/*` require auth. Watchlist/stream/search/iptv still open. 2 of 8 route groups protected. |
+| **Auth Coverage** | 85/100 | 🟢 Low | All `/api/*` routes require X-Admin-Key or X-Device-Token via middleware. LAN bypass gated by `ALLOW_LAN_BYPASS` (default true; set false = hardened). Exempt: health/error, cloud-backup registration, profiles. |
 | **Secrets in Code** | 70/100 | 🟡 Medium | GITHUB_TOKEN/ACC_GITHUB_TOKEN read at startup. IPTV creds in URL params. |
-| **HTTPS/TLS** | 20/100 | 🔴 **High** | No HTTPS anywhere. Plain HTTP on port 8720. |
+| **HTTPS/TLS** | 75/100 | 🟢 Low | TLS termination at nginx on 443 (http2, TLSv1.2/1.3) with HTTP→HTTPS 301 redirect (nginx + `ENFORCE_HTTPS` middleware, default true). HSTS preload. Let's Encrypt via ACME_DOMAIN; self-signed fallback certs otherwise. |
 | **SSRF Protections** | 75/100 | 🟡 Medium | Image-proxy has host allowlist. But stream probe passes user-controlled URLs to ffprobe. |
 | **Cloud Backup Auth** | 90/100 | 🟢 Good | **SHA-256 hashed device token scoping with admin override. 26 tests pass.** |
 | **Security Headers** | 90/100 | 🟢 Good | CSP, HSTS, XFO, XCTO, Referrer-Policy, Permissions-Policy active in both nginx + backend middleware. |
@@ -79,32 +79,45 @@
 - For browser-based HLS playback this means some CDN fetches might be blocked if serving cross-origin
 - No `Access-Control-Allow-Origin: *` on stream resources
 
-### 8. 🟡 **Auth Coverage** — Score: 60/100
-Admin and cloud routes require auth. Watchlist, stream, search, iptv, and image-proxy are still open:
+### 8. ✅ **Auth Coverage** — Score: 85/100
+Auth middleware in `server/main.py` now covers **every `/api/*` route**. Requests without a valid
+credential get 401; a wrong credential gets 403. Exceptions (deliberate):
 
 | Route | Auth | Notes |
 |-------|------|-------|
+| `/api/*` (all) | ✅ X-Admin-Key or X-Device-Token | Middleware-enforced |
 | `/admin/*` | ✅ X-Admin-Key | Protected |
-| `/cloud/backup` | ✅ **X-Device-Token or X-Admin-Key** | **SHA-256 device token scoping added** |
-| `/cloud/merge` | ✅ **X-Device-Token or X-Admin-Key** | **Same device token scoping** |
-| `/watchlist/*` | ❌ NONE | Read/write any watchlist |
-| `/search/enrich` | ❌ NONE | CPU-intensive batch enrichment |
-| `/stream/*` | ❌ NONE | Stream proxying (bandwidth cost) |
-| `/iptv/*` | ❌ NONE | Raw IPTV proxy to upstream provider |
-| `/image-proxy` | ❌ NONE | SSRF-capable image fetching |
-| `/*` (SPA) | ❌ NONE | SPA catch-all |
+| `/cloud/backup`, `/cloud/merge` | ✅ **X-Device-Token or X-Admin-Key** | SHA-256 device token scoping |
+| `/api/health`, `/api/error` | ✅ Public | Liveness/error reporting by design |
+| `/api/v1/cloud/backup*` | ✅ Registration flow | First upload establishes device identity |
+| `/api/v1/profiles` | ✅ Public | Profile selection before auth |
+| LAN / localhost | ⚠️ Bypass **gated by `ALLOW_LAN_BYPASS`** | Default `true` (dev convenience). Set `ALLOW_LAN_BYPASS=false` in `.env` for hardened deployments where every request must authenticate |
+| `/*` (SPA) | ✅ Public | Static frontend |
+
+Remaining gap: the **default** `ALLOW_LAN_BYPASS=true` still lets any LAN client
+(192.168.x.x, localhost) through without a credential. Hardened deployments must
+set it to `false`.
 
 ### 9. ⚠️ Secrets in Code — Score: 70/100
 - **Found:** GITHUB_TOKEN and ACC_GITHUB_TOKEN read at startup for auto-starring repo
 - IPTV_USER and IPTV_PASS appear in **URL query parameters** of stream URLs (e.g., `{base}/live/{user}/{pass}/{id}.ts`)
 - **Risk:** Medium — credentials exposed in URL params could leak in server logs/referrer headers
 
-### 10. 🔴 **HIGH: No HTTPS** — Score: 20/100
-- Server runs on **plain HTTP** on port 8720
-- No TLS termination at FastAPI level
-- Nginx frontend (normally on 8722) not running
-- docker-compose has no TLS config
-- **Risk:** All traffic in transit is unencrypted — IPTV credentials, TMDB API keys, user data
+### 10. ✅ **TLS: HTTPS now terminated at nginx** — Score: 75/100
+- **nginx (port 443, ssl http2)** terminates TLS — `web/nginx.conf` serves the SPA over HTTPS with
+  `ssl_protocols TLSv1.2 TLSv1.3`, HSTS preload, and the full security-header set
+- **HTTP→HTTPS redirect everywhere**: port 80 returns `301` to `https://$host` (nginx), and the
+  backend's `ENFORCE_HTTPS` middleware (default `true`, `server/main.py`) redirects any plain-HTTP
+  API request as well
+- **Let's Encrypt ready**: `web/Dockerfile` installs certbot, `docker-compose.yml` maps `80:80` +
+  `443:443` and mounts a `stv-certificates` volume; set `ACME_DOMAIN`/`ACME_EMAIL` for real certs
+  (see `docker-entrypoint.sh`)
+- **Caveats (why not 100):**
+  - Default certs are **self-signed** (`server.crt`/`server.key` fallback) unless `ACME_DOMAIN` is set
+  - TLS terminates at nginx; backend↔nginx traffic inside the Docker network is plain HTTP
+    (acceptable for a private network, but not zero-trust)
+  - `ENFORCE_HTTPS` default true means a bare `http://<host>:8720` API call redirects — verify
+    reverse-proxy setups pass `X-Forwarded-Proto` correctly (nginx does)
 
 ### 11. ⚠️ SSRF Protections — Score: 75/100
 - **Image proxy:** Has host allowlist (`image.tmdb.org`, `cmc.exchange-cdn.com`) ✅
@@ -167,17 +180,18 @@ All verified active in both nginx (port 8722) and backend middleware (port 8720)
 7. ~~**Move IPTV credentials from URL path to headers** — avoid credential exposure in logs~~ ✅ **DONE — Credentials encrypted at rest (crypto_utils) + HTTPS for transit; Xtream API requires URL-based auth, mitigated via TLS**
 8. **Add distributed rate limiting** — Redis-backed for multi-instance deployments
 9. **Add CORS exception handler** — return 204 instead of 400 for OPTIONS preflight
+10. **Set `ALLOW_LAN_BYPASS=false` in production `.env`** — the default `true` skips auth for all LAN/localhost clients (see finding 8)
 
 ### 🟢 Low
-10. **Make 500 errors return JSON** — consistent content-type
-11. **Remove auto-star logic or move to separate script** — GITHUB_TOKEN in main.py
-12. **Add request ID tracking** — for correlating errors across the pipeline
+11. **Make 500 errors return JSON** — consistent content-type
+12. **Remove auto-star logic or move to separate script** — GITHUB_TOKEN in main.py
+13. **Add request ID tracking** — for correlating errors across the pipeline
 
 ---
 
 ## Methodology
 
-All tests performed with curl against the running server at `http://localhost:8720`. Tests included:
+Initial audit performed with curl against the running server at `http://localhost:8720`. Tests included:
 - Direct endpoint access with/without auth headers
 - Rapid-fire requests to test rate limiting
 - Large payloads to test body limits
@@ -186,3 +200,10 @@ All tests performed with curl against the running server at `http://localhost:87
 - SSRF attempts against internal/cloud metadata endpoints
 - Response header inspection
 - Source code review for secrets and auth gaps
+
+**2026-07-31 re-audit:** HTTPS and Auth Coverage rows were stale and contradicted the
+codebase — verified against `server/main.py` (ENFORCE_HTTPS redirect middleware + auth
+middleware covering all `/api/*`), `server/config.py` (ALLOW_LAN_BYPASS, ENFORCE_HTTPS
+defaults), `web/nginx.conf` (TLS termination, HSTS, ACME), `web/Dockerfile` +
+`docker-compose.yml` (certbot, 443 mapping, letsencrypt volume), and `server/auth.py`
+(verify_device_token_generic). Scores updated to match current reality.

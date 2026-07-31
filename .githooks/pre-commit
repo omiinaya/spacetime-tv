@@ -1,29 +1,65 @@
 #!/bin/sh
-# Pre-commit hook — run lint checks before every commit
-# Installed via: make setup-git-hooks
+# Pre-commit hook — run lint/format checks before every commit
+# Installed via: make setup-git-hooks (or npm prepare/postinstall → core.hooksPath .githooks)
+#
+# FAILS the commit (non-zero exit) when any STAGED file violates the format
+# or lint gates. Only staged files are checked, so unrelated in-progress
+# work in the working tree never blocks a commit (and checks stay fast).
+#
+# Previously this hook ran `make fmt-check` / `make lint` but never
+# propagated their exit codes — a failing lint or format check still fell
+# through to "✅ Pre-commit checks complete" and the commit succeeded.
+# This was a silent no-op gate. Fixed: every check failure now aborts the
+# commit with a non-zero exit.
+
+set -u
 
 echo "🔍 Running pre-commit checks..."
 
-# Check for unformatted code (read-only — never reformat on commit)
-if [ -f Makefile ]; then
-  if grep -q '^fmt-check:' Makefile; then
-    echo "  Running fmt check..."
-    make fmt-check
+FAILED=0
+
+# ── Collect staged files (Added/Copied/Modified — nothing to check on delete) ──
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+
+if [ -n "$STAGED" ]; then
+  # Staged paths are repo-root-relative; strip the tree prefix so the paths
+  # resolve after `cd server` / `cd web` below (this was broken before — the
+  # checks ran `web/src/...` from inside web/ and always failed).
+  BACKEND_FILES=$(printf '%s\n' "$STAGED" | grep '^server/.*\.py$' | sed 's#^server/##' || true)
+  FRONTEND_FILES=$(printf '%s\n' "$STAGED" | grep -E '^web/.*\.(ts|tsx|js|jsx|css)$' | sed 's#^web/##' || true)
+
+  # ── Backend: ruff format + lint on staged Python ────────────────────────
+  if [ -n "$BACKEND_FILES" ]; then
+    echo "  Ruff format+lint on $(printf '%s\n' "$BACKEND_FILES" | wc -l | tr -d ' ') staged file(s)..."
+    if ! (cd server && ((ruff format --check $BACKEND_FILES && ruff check $BACKEND_FILES) || (~/.local/bin/ruff format --check $BACKEND_FILES && ~/.local/bin/ruff check $BACKEND_FILES))); then
+      echo "❌ Backend format/lint failed — run: make fmt-backend && make lint-backend, then re-stage"
+      FAILED=1
+    fi
   fi
-  if grep -q '^lint:' Makefile; then
-    echo "  Running lint check..."
-    make lint
+
+  # ── Frontend: prettier + eslint on staged TS/CSS ────────────────────────
+  if [ -n "$FRONTEND_FILES" ]; then
+    echo "  Prettier + ESLint on $(printf '%s\n' "$FRONTEND_FILES" | wc -l | tr -d ' ') staged file(s)..."
+    if ! (cd web && npx prettier --check $FRONTEND_FILES && npx eslint $FRONTEND_FILES); then
+      echo "❌ Frontend format/lint failed — run: make fmt-frontend && make lint-frontend, then re-stage"
+      FAILED=1
+    fi
   fi
 fi
 
-# Check that AGENTS.md exists
+# ── Informational warnings (never fail the commit) ──────────────────────
 if [ ! -f AGENTS.md ]; then
   echo "⚠️  WARNING: AGENTS.md is missing — consider adding it"
 fi
 
-# Check for debug artifacts
-if git diff --cached --name-only | grep -q '\.only\|console\.log\|dbg!'; then
+if git diff --cached --name-only | grep -q '\.only\b\|console\.log\|dbg!'; then
   echo "⚠️  WARNING: Found possible debug artifacts (.only, console.log, dbg!)"
+fi
+
+# ── Gate ────────────────────────────────────────────────────────────────
+if [ "$FAILED" -ne 0 ]; then
+  echo "❌ Pre-commit checks FAILED — commit aborted"
+  exit 1
 fi
 
 echo "✅ Pre-commit checks complete"

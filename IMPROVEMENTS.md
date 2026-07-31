@@ -17,6 +17,54 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Recently Completed
 
+### ✅ P1 — Fix pre-commit hook: silent no-op gate (exit codes never propagated) (Bug/DX)
+`.githooks/pre-commit` ran `make fmt-check` / `make lint` but never propagated their
+exit codes — a failing lint or format check still fell through to "✅ Pre-commit
+checks complete" and the commit succeeded (the exact anti-pattern of a gate that
+silently passes). Rewritten: every check failure now aborts the commit with a
+non-zero exit, and checks are scoped to **staged files only** (whole-tree checks
+would fail commits for unrelated in-progress work). Staged Python → `ruff format
+--check` + `ruff check`; staged TS/TSX/JS/CSS → `prettier --check` + `eslint`.
+Also fixed the compounding issue: `make fmt-check-frontend` invoked `npx prettier`
+with no prettier dependency anywhere (unresolvable on a clean machine) — prettier
+is now a real devDependency.
+
+### ✅ P1 — Add Prettier as a real devDependency + config + format scripts (DX)
+`web/package.json` had `format`/`format:check` scripts but **no prettier
+dependency** (only resolvable via a stale npx cache dir) and no config file.
+Added `prettier@^3.9.6` to devDependencies, `web/.prettierrc` explicitly pinning
+the codebase style (prettier defaults: double quotes, semi, 80 width, trailing
+comma all), and wired Makefile `fmt-frontend`/`fmt-check-frontend` to the npm
+scripts. Verified: `npm run format:check` passes on all committed source; only the
+4 in-progress uncommitted UI files (App.tsx, ProfilePicker.tsx, index.css,
+HomePage.tsx) are flagged.
+
+### ✅ P1 — Refresh SECURITY_AUDIT.md — HTTPS + Auth Coverage rows contradicted the code (Docs)
+The audit (2026-07-06) still scored "HTTPS/TLS 20/100 — No HTTPS anywhere" and
+"Auth Coverage 60/100 — watchlist/stream/search/iptv still open", both stale:
+- `ENFORCE_HTTPS` redirect middleware exists in `server/main.py` (default **true**),
+  nginx terminates TLS on 443 (http2, TLSv1.2/1.3, HSTS preload) with HTTP→HTTPS
+  301 on port 80, docker-compose maps 80/443 + letsencrypt volume, Dockerfile
+  installs certbot with ACME_DOMAIN support
+- Auth middleware now covers **every `/api/*` route** (X-Admin-Key or X-Device-Token;
+  401/403 otherwise), with LAN bypass gated by `ALLOW_LAN_BYPASS` (default true,
+  false = hardened)
+Rows updated: HTTPS 20→75, Auth Coverage 60→85, overall 72→78. Added remediation
+item 10 (set `ALLOW_LAN_BYPASS=false` in production). Re-audit method documented.
+
+### ✅ P3 — Remove dead `_mock_preflight_session` helper in test_stream.py (Maintainability)
+The consolidation suggestion found two session-builder helpers; on inspection
+`_mock_preflight_session` (28 lines) was **dead code** — defined once, never
+called (the original preflight tests build their sessions inline). Removed it;
+`_counting_preflight_session` remains the single helper for the 5 cache tests.
+`tests/test_stream.py`: 120 passed, 3 xfailed.
+
+### ✅ P3 — Docs verification: frontend test count (Test hygiene)
+Verified the ROADMAP "1,500+ frontend" claim against a fresh `npm test` run:
+**1559 passed / 1560 total (100 files)**. The 1 failure was the known
+parallel-load flake (Movies.test.tsx "shows skeleton grid while movies load") —
+passes 40/40 in isolation. No regression.
+
 ### ✅ P3 — Frontend full-suite flakiness under parallel load (Test hygiene)
 Full `vitest run` intermittently failed a rotating set of tests (LiveTV category switch, Search TMDB badges, Series watchlist hearts, PlayerCenterControls click) with `waitFor`/`userEvent` 5s timeouts; serial runs passed 100%. Fixed three ways: (1) `test-setup.ts` raises Testing Library `asyncUtilTimeout` 1000ms → 4000ms so async assertions survive CPU contention from 100 parallel worker transforms; (2) `SeriesOverlay` Play button now disabled until episodes load (was navigable with fallback episode id 1 during loading — clicking early navigated to the wrong episode; tests updated to wait for loaded state `Play S1 E1`); (3) `usePlayerUtils` guards `sessionStorage.removeItem` in the 1s auto-advance `setTimeout` (throws in private mode/SSR/test teardown), test uses fake timers so the timer never fires after jsdom teardown. Also fixed the matching backend flake: `test_load_epg_background_stale_triggers_refresh` left its background EPG refresh task fire-and-forget — the task's first `await load_epg()` could run AFTER the `@patch` context was torn down, calling the REAL `load_epg()` against a closed httpx client under full-suite load (`Cannot send a request, as the client has been closed`). Test now awaits the task with an AsyncMock. Verification: backend 1314 passed / 17 skipped / 3 xfailed; frontend 100 files / 1560 tests passed in parallel. Commits `825685e`, `875fdb9`, `8febcd7`.
 
