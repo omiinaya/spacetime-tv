@@ -2,7 +2,7 @@
 
 > **Audit date:** 2026-07-30 (8th session — DVR record.py coverage closed to 100%)
 > **Stack:** FastAPI + React 19 + Vite 8 + Tailwind v4 | 14 pages | 70+ components | 30+ hooks | 12 back-end route modules
-> **Test counts:** 1,276 backend pass (1 skipped, 3 xfailed) + 1,530+ frontend pass | 0 TypeScript errors | 0 production `any` types
+> **Test counts:** 1,326 backend pass + 1,560 frontend pass | 0 TypeScript errors | 0 production `any` types
 > **CI:** GitHub Actions (lint → test → tsc → build)
 > **Hook test coverage:** 27/27 (100%) — all custom hooks have unit tests
 
@@ -68,6 +68,7 @@ All other files < 350 lines.
 ### Frontend
 - `useVideoPlayer.ts` (816 lines) — main effect is dense orchestration; further sub-hook extraction possible but diminishing returns
 - E2E test count could grow for edge cases
+- Full-suite runs show intermittent parallel-load flakes (rotating `waitFor`/`userEvent` timeouts in LiveTV/Search/Series/PlayerCenterControls); serial runs pass 100% — see IMPROVEMENTS.md pending item
 
 ### Backend
 - Modules at full route coverage (25/25)

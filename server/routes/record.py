@@ -5,6 +5,7 @@ manifest at RECORDINGS_DIR / _meta.json. Supports concurrent recordings.
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -44,6 +45,23 @@ def _load_meta() -> dict[str, dict]:
 def _save_meta(meta: dict[str, dict]) -> None:
     """Persist recordings metadata to disk."""
     META_FILE.write_text(json.dumps(meta, indent=2, default=str))
+
+
+def _finalize_recording(rec: dict) -> None:
+    """Mark a recording as completed (file has content) or failed (0 bytes).
+
+    Uses the output file size as the source of truth: a fragmented MP4 with
+    any bytes is playable, so it is "completed"; a 0-byte or missing file
+    means ffmpeg never produced anything usable, so it is "failed".
+    """
+    file_path = Path(rec.get("file", ""))
+    try:
+        size = file_path.stat().st_size if file_path.exists() else 0
+    except OSError:
+        size = 0
+    rec["size_bytes"] = size
+    rec["stopped_at"] = datetime.now(UTC).isoformat()
+    rec["status"] = "completed" if size > 0 else "failed"
 
 
 @router.post("/record/start")
@@ -143,18 +161,13 @@ async def stop_recording(recording_id: str = Query(...)):
             await proc.wait()
         _active.pop(recording_id, None)
 
-    file_path = Path(rec["file"])
-    file_size = file_path.stat().st_size if file_path.exists() else 0
-
-    rec["status"] = "completed" if file_size > 0 else "failed"
-    rec["stopped_at"] = datetime.now(UTC).isoformat()
-    rec["size_bytes"] = file_size
+    _finalize_recording(rec)
     _save_meta(meta)
 
     return {
         "recording_id": recording_id,
         "status": rec["status"],
-        "size_bytes": file_size,
+        "size_bytes": rec.get("size_bytes", 0),
     }
 
 
@@ -162,20 +175,31 @@ async def stop_recording(recording_id: str = Query(...)):
 async def list_recordings():
     """List all recordings, newest first."""
     meta = _load_meta()
-    # Refresh status for active recordings
-    for rid, proc in list(_active.items()):
-        if proc.returncode is not None:
-            rec = meta.get(rid, {})
-            if rec.get("status") == "recording":
-                rec["status"] = "completed"
-                rec["stopped_at"] = datetime.now(UTC).isoformat()
-                try:
-                    rec["size_bytes"] = Path(rec.get("file", "")).stat().st_size
-                except OSError:
-                    rec["size_bytes"] = 0
-            _active.pop(rid, None)
+    changed = False
 
-    if _active:
+    # Refresh status for tracked processes
+    for rid, proc in list(_active.items()):
+        rec = meta.get(rid, {})
+        if proc.returncode is not None:
+            # Process exited (or crashed) — finalize its status and persist.
+            if rec.get("status") == "recording":
+                _finalize_recording(rec)
+            changed = True
+            _active.pop(rid, None)
+        elif rec.get("status") == "recording":
+            # Still running — report current file size so the UI can show growth.
+            with contextlib.suppress(OSError):
+                rec["size_bytes"] = Path(rec.get("file", "")).stat().st_size
+
+    # Reconcile orphaned entries: a "recording" status with no tracked process
+    # means the server restarted (child processes are gone). Finalize them so
+    # they don't stay stuck as "recording" forever.
+    for rid, rec in meta.items():
+        if rec.get("status") == "recording" and rid not in _active:
+            _finalize_recording(rec)
+            changed = True
+
+    if changed:
         _save_meta(meta)
 
     recordings = sorted(meta.values(), key=lambda r: r.get("started_at", ""), reverse=True)

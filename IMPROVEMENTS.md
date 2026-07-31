@@ -11,11 +11,17 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-- (no pending items — all known issues addressed
+- **P3 — Frontend full-suite flakiness under parallel load (Test hygiene).** Full `vitest run` intermittently fails a rotating set of tests (`LiveTV` category switch, `Search` TMDB badges, `Series` watchlist hearts, `PlayerCenterControls` click) with `waitFor`/`userEvent` 5s timeouts. Serial runs (`--maxWorkers=1`) pass 100% (100 files / 1560 tests). Suspected cause: CPU contention from 100 parallel worker transforms pushing marginal async tests past their timeouts. Needs timeout/teardown hardening (e.g. raising `testTimeout` for heavy files, `userEvent.setup()` with explicit delay, or splitting transforms via `poolOptions`).
 
 ---
 
 ## Recently Completed
+
+### ✅ P2 — Fix DVR recording lifecycle bugs in record.py (Bug)
+`list_recordings` had three lifecycle bugs. (1) **Lost persistence**: `if _active: _save_meta(meta)` skipped the save when the last active recording's process exited, leaving it stuck as "recording" on disk forever. (2) **Crashes marked completed**: an exited ffmpeg with a 0-byte/missing output file was marked "completed" instead of "failed". (3) **Orphaned entries stuck**: after a server restart, meta entries with status "recording" had no tracked process and were never reconciled. Fixes: new `_finalize_recording()` helper (file size = source of truth), `changed`-flag persistence, orphan reconciliation pass in `list_recordings`, and live `size_bytes` reporting for still-running recordings so the RecordingsPage (polls every 3s) shows growth. 6 new lifecycle tests; `test_record.py` now 34 tests. Full backend suite 1326 pass.
+
+### ✅ P4 — Add RecordingsPage component tests (Coverage)
+`RecordingsPage` had zero tests despite being routed and used. Added 12 tests: loading spinner, empty state, name/metadata rendering, MB/GB size formatting, active "Recording…" indicator, 0-byte failed recording, play navigation, delete confirm/cancel flows, manual refresh, and the 3s polling loop (with fake timers) that runs only while a recording is active. Mocked `@/hooks/useRecording` (hook fetch logic already covered by its own 11 tests).
 
 ### ✅ P2 — Fix cloud backup "Download & Restore" / "Merge Favorites" silent no-op (Bug)
 Regression from the SettingsPage extraction refactor (`8a6654c`): both buttons

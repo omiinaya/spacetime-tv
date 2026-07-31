@@ -13,6 +13,20 @@ import pytest
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 
+@pytest.fixture(autouse=True)
+def _clear_active_recordings():
+    """Ensure no stale recording processes leak between tests.
+
+    `_active` is module-global and not cleared by the shared conftest, so
+    recordings started in one test would otherwise linger into the next.
+    """
+    import routes.record as record_mod
+
+    record_mod._active.clear()
+    yield
+    record_mod._active.clear()
+
+
 def _install_mocks(monkeypatch, tmp_path):
     """Install all mocks needed for recording route tests.
 
@@ -398,20 +412,166 @@ def test_serve_recording_file_missing_returns_404(monkeypatch, tmp_path, client)
     assert resp.status_code == 404
 
 
-# ── Progress endpoint ────────────────────────────────────────────────────────
+# ── List lifecycle: exited / crashed / orphaned / live recordings ────────────
 
 
-@pytest.mark.skip(reason="/api/v1/record/progress endpoint is not yet implemented in routes/record.py")
-def test_record_progress_returns_data(client):
-    """GET /record/progress returns progress data for recordings.
+def _write_meta(meta_file, meta):
+    """Persist a meta dict to the (mocked) meta file."""
+    meta_file.write_text(json.dumps(meta))
 
-    NOTE: This endpoint does not currently exist in routes/record.py.
-    Once implemented, this test should verify it returns valid progress info.
+
+def test_list_recordings_finalizes_exited_process_and_persists(monkeypatch, tmp_path, client):
+    """GET /recordings finalizes an exited process AND persists it to disk.
+
+    Regression test: previously `if _active: _save_meta(meta)` skipped the
+    save when the last active recording exited, leaving the recording stuck
+    as "recording" on disk forever.
     """
-    resp = client.get("/api/v1/record/progress")
+    mock_proc, record_dir, meta_file = _install_mocks(monkeypatch, tmp_path)
+
+    resp = _start_a_recording(client, stream_id=321, stream_name="Exit Test")
     assert resp.status_code == 200
-    resp.json()
-    # Future assertion: assert "progress" in data or isinstance(data, dict)
+    rec_id = resp.json()["recording_id"]
+
+    # Simulate ffmpeg exiting cleanly with a produced file on disk
+    (record_dir / f"{rec_id}.mp4").write_text("fake mp4 content")
+    mock_proc.returncode = 0
+
+    resp = client.get("/api/v1/recordings")
+    assert resp.status_code == 200
+    data = resp.json()
+    rec = next(r for r in data["recordings"] if r["id"] == rec_id)
+    assert rec["status"] == "completed"
+    assert rec["size_bytes"] > 0
+
+    # Critical: the finalize must be persisted even though _active is now empty
+    meta = json.loads(meta_file.read_text())
+    assert meta[rec_id]["status"] == "completed"
+    assert "stopped_at" in meta[rec_id]
+
+
+def test_list_recordings_marks_zero_byte_crash_failed(monkeypatch, tmp_path, client):
+    """GET /recordings marks a crashed ffmpeg (0-byte output) as failed."""
+    mock_proc, record_dir, meta_file = _install_mocks(monkeypatch, tmp_path)
+
+    resp = _start_a_recording(client, stream_id=654, stream_name="Crash Test")
+    assert resp.status_code == 200
+    rec_id = resp.json()["recording_id"]
+
+    # ffmpeg crashed at startup — non-zero exit, no file produced
+    mock_proc.returncode = 1
+
+    resp = client.get("/api/v1/recordings")
+    data = resp.json()
+    rec = next(r for r in data["recordings"] if r["id"] == rec_id)
+    assert rec["status"] == "failed"
+    assert rec["size_bytes"] == 0
+
+    meta = json.loads(meta_file.read_text())
+    assert meta[rec_id]["status"] == "failed"
+
+
+def test_list_recordings_reconciles_orphaned_recording(monkeypatch, tmp_path, client):
+    """GET /recordings finalizes meta entries stuck as 'recording' with no process.
+
+    Simulates a server restart: child processes are gone and _active is empty,
+    but the meta file still says "recording". Previously these stayed stuck
+    as "recording" forever.
+    """
+    _, record_dir, meta_file = _install_mocks(monkeypatch, tmp_path)
+
+    _write_meta(
+        meta_file,
+        {
+            "orphan001": {
+                "id": "orphan001",
+                "stream_id": 1,
+                "name": "Orphaned",
+                "started_at": "2026-07-30T00:00:00+00:00",
+                "status": "recording",
+                "file": str(record_dir / "orphan001.mp4"),
+            }
+        },
+    )
+
+    resp = client.get("/api/v1/recordings")
+    assert resp.status_code == 200
+    rec = resp.json()["recordings"][0]
+    assert rec["status"] == "failed"
+    assert rec["size_bytes"] == 0
+
+    # The fix must be persisted — a second call stays consistent
+    meta = json.loads(meta_file.read_text())
+    assert meta["orphan001"]["status"] == "failed"
+
+
+def test_list_recordings_orphan_with_file_becomes_completed(monkeypatch, tmp_path, client):
+    """An orphaned recording with a real file on disk is finalized as completed."""
+    _, record_dir, meta_file = _install_mocks(monkeypatch, tmp_path)
+
+    (record_dir / "orphan002.mp4").write_text("video bytes")
+    _write_meta(
+        meta_file,
+        {
+            "orphan002": {
+                "id": "orphan002",
+                "stream_id": 2,
+                "name": "Orphan With File",
+                "started_at": "2026-07-30T00:00:00+00:00",
+                "status": "recording",
+                "file": str(record_dir / "orphan002.mp4"),
+            }
+        },
+    )
+
+    resp = client.get("/api/v1/recordings")
+    rec = resp.json()["recordings"][0]
+    assert rec["status"] == "completed"
+    assert rec["size_bytes"] == len("video bytes")
+
+    meta = json.loads(meta_file.read_text())
+    assert meta["orphan002"]["status"] == "completed"
+
+
+def test_list_recordings_reports_live_size_for_active(monkeypatch, tmp_path, client):
+    """GET /recordings reports current file size for still-running recordings.
+
+    The RecordingsPage polls every 3s while a recording is active; the size
+    must reflect growth without finalizing the recording.
+    """
+    mock_proc, record_dir, meta_file = _install_mocks(monkeypatch, tmp_path)
+
+    resp = _start_a_recording(client, stream_id=789, stream_name="Live Size")
+    assert resp.status_code == 200
+    rec_id = resp.json()["recording_id"]
+
+    # Still running, but the file is growing on disk
+    (record_dir / f"{rec_id}.mp4").write_text("partial bytes")
+
+    resp = client.get("/api/v1/recordings")
+    rec = next(r for r in resp.json()["recordings"] if r["id"] == rec_id)
+    assert rec["status"] == "recording"
+    assert rec["size_bytes"] == len("partial bytes")
+
+    # Not finalized on disk while still running
+    meta = json.loads(meta_file.read_text())
+    assert meta[rec_id]["status"] == "recording"
+    assert "stopped_at" not in meta[rec_id]
+
+
+def test_stop_recording_marks_failed_when_no_file(monkeypatch, tmp_path, client):
+    """POST /record/stop marks a recording failed when nothing was produced."""
+    mock_proc, record_dir, meta_file = _install_mocks(monkeypatch, tmp_path)
+
+    resp = _start_a_recording(client, stream_id=101, stream_name="Empty Stop")
+    assert resp.status_code == 200
+    rec_id = resp.json()["recording_id"]
+
+    resp = client.post("/api/v1/record/stop", params={"recording_id": rec_id})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "failed"
+    assert data["size_bytes"] == 0
 
 
 # ── Auth guard ───────────────────────────────────────────────────────────────
@@ -553,12 +713,12 @@ def test_list_recordings_handles_missing_file_for_finished_process(monkeypatch, 
     rec_id = resp.json()["recording_id"]
 
     mock_proc.returncode = 0
-    # No file written → Path.stat() raises OSError → size_bytes = 0
-
+    # No file written → Path.stat() raises OSError → size_bytes = 0 and the
+    # recording is failed (ffmpeg never produced anything usable).
     resp = client.get("/api/v1/recordings")
     assert resp.status_code == 200
     rec = next(r for r in resp.json()["recordings"] if r["id"] == rec_id)
-    assert rec["status"] == "completed"
+    assert rec["status"] == "failed"
     assert rec["size_bytes"] == 0
 
 
