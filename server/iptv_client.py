@@ -23,7 +23,8 @@ from urllib.parse import urlencode
 import httpx
 from fastapi import HTTPException
 
-from config import PROVIDERS, ProviderConfig
+import config
+from config import ProviderConfig
 from state import CACHE_TTL, _cache, _cache_hits, _cache_misses
 
 log = logging.getLogger("spacetime-tv")
@@ -92,7 +93,11 @@ def _get_provider_client(provider: ProviderConfig) -> httpx.AsyncClient:
 
 def get_enabled_providers() -> list[ProviderConfig]:
     """Return list of enabled providers, sorted by priority (order asc)."""
-    return [p for p in PROVIDERS if p.enabled]
+    # Read through config.PROVIDERS (not a bound import-time copy) so any
+    # rebind of the module list — e.g. importlib.reload in tests, or future
+    # admin edits — is seen immediately. A bound copy silently desyncs
+    # get_active_provider() from the real provider list.
+    return [p for p in config.PROVIDERS if p.enabled]
 
 
 def get_active_provider() -> ProviderConfig | None:
