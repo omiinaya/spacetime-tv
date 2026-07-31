@@ -50,7 +50,7 @@ describe("useRecording", () => {
       expect.objectContaining({ method: "POST" }),
     );
     // Verify stream_id param
-    const url = (fetchMock.mock.calls[0][0] as string);
+    const url = fetchMock.mock.calls[0][0] as string;
     expect(url).toContain("stream_id=42");
     expect(url).toContain("stream_name=Test+Channel");
   });
@@ -144,7 +144,15 @@ describe("useRecordings", () => {
   it("fetches recordings on mount", async () => {
     const mockData = {
       recordings: [
-        { id: "1", name: "Test", status: "completed", stream_id: 1, started_at: "2024-01-01T00:00:00", file: "/path/to/file.mp4", size_bytes: 1024 },
+        {
+          id: "1",
+          name: "Test",
+          status: "completed",
+          stream_id: 1,
+          started_at: "2024-01-01T00:00:00",
+          file: "/path/to/file.mp4",
+          size_bytes: 1024,
+        },
       ],
       total: 1,
     };
@@ -178,8 +186,22 @@ describe("useRecordings", () => {
   it("deleteRecording removes recording from list", async () => {
     const mockData = {
       recordings: [
-        { id: "1", name: "A", status: "completed", stream_id: 1, started_at: "2024-01-01T00:00:00", file: "/path/1.mp4" },
-        { id: "2", name: "B", status: "completed", stream_id: 2, started_at: "2024-01-02T00:00:00", file: "/path/2.mp4" },
+        {
+          id: "1",
+          name: "A",
+          status: "completed",
+          stream_id: 1,
+          started_at: "2024-01-01T00:00:00",
+          file: "/path/1.mp4",
+        },
+        {
+          id: "2",
+          name: "B",
+          status: "completed",
+          stream_id: 2,
+          started_at: "2024-01-02T00:00:00",
+          file: "/path/2.mp4",
+        },
       ],
       total: 2,
     };
@@ -204,7 +226,14 @@ describe("useRecordings", () => {
   it("deleteRecording handles network error gracefully", async () => {
     const mockData = {
       recordings: [
-        { id: "1", name: "A", status: "completed", stream_id: 1, started_at: "2024-01-01T00:00:00", file: "/path/1.mp4" },
+        {
+          id: "1",
+          name: "A",
+          status: "completed",
+          stream_id: 1,
+          started_at: "2024-01-01T00:00:00",
+          file: "/path/1.mp4",
+        },
       ],
       total: 1,
     };

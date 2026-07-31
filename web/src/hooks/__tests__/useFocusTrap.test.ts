@@ -35,9 +35,7 @@ describe("useFocusTrap", () => {
   it("does nothing when active is false", () => {
     const containerRef = { current: null };
 
-    const { unmount } = renderHook(() =>
-      useFocusTrap(containerRef, false),
-    );
+    const { unmount } = renderHook(() => useFocusTrap(containerRef, false));
 
     // No errors — should be a no-op
     unmount();

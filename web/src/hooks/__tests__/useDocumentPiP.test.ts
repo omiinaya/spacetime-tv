@@ -55,9 +55,7 @@ describe("useDocumentPiP", () => {
   it("starts with PiP inactive", () => {
     const videoRef = { current: document.createElement("video") };
     const containerRef = { current: document.createElement("div") };
-    const { result } = renderHook(() =>
-      useDocumentPiP(videoRef, containerRef),
-    );
+    const { result } = renderHook(() => useDocumentPiP(videoRef, containerRef));
 
     expect(result.current.isPiPActive).toBe(false);
   });
@@ -65,9 +63,7 @@ describe("useDocumentPiP", () => {
   it("isDocumentPiPSupported matches hook value", () => {
     const videoRef = { current: document.createElement("video") };
     const containerRef = { current: document.createElement("div") };
-    const { result } = renderHook(() =>
-      useDocumentPiP(videoRef, containerRef),
-    );
+    const { result } = renderHook(() => useDocumentPiP(videoRef, containerRef));
 
     expect(result.current.isDocumentPiPSupported).toBe(
       isDocumentPiPSupported(),
@@ -77,9 +73,7 @@ describe("useDocumentPiP", () => {
   it("enterPiP does nothing when refs are null", async () => {
     const videoRef = { current: null };
     const containerRef = { current: null };
-    const { result } = renderHook(() =>
-      useDocumentPiP(videoRef, containerRef),
-    );
+    const { result } = renderHook(() => useDocumentPiP(videoRef, containerRef));
 
     await act(async () => {
       await result.current.enterPiP();
@@ -91,9 +85,7 @@ describe("useDocumentPiP", () => {
   it("fallback to video PiP when document PiP is unavailable", async () => {
     const videoRef = { current: document.createElement("video") };
     const containerRef = { current: document.createElement("div") };
-    const { result } = renderHook(() =>
-      useDocumentPiP(videoRef, containerRef),
-    );
+    const { result } = renderHook(() => useDocumentPiP(videoRef, containerRef));
 
     // Mock requestPictureInPicture
     const requestPiP = vi.fn().mockResolvedValue(undefined);
@@ -110,9 +102,7 @@ describe("useDocumentPiP", () => {
   it("exitPiP handles null ref gracefully", async () => {
     const videoRef = { current: null };
     const containerRef = { current: null };
-    const { result } = renderHook(() =>
-      useDocumentPiP(videoRef, containerRef),
-    );
+    const { result } = renderHook(() => useDocumentPiP(videoRef, containerRef));
 
     await act(async () => {
       await result.current.exitPiP();
@@ -124,9 +114,7 @@ describe("useDocumentPiP", () => {
   it("enterPiP with null video ref does nothing", async () => {
     const videoRef = { current: null };
     const containerRef = { current: document.createElement("div") };
-    const { result } = renderHook(() =>
-      useDocumentPiP(videoRef, containerRef),
-    );
+    const { result } = renderHook(() => useDocumentPiP(videoRef, containerRef));
 
     await act(async () => {
       await result.current.enterPiP();
@@ -138,9 +126,7 @@ describe("useDocumentPiP", () => {
   it("exitPiP with no active PiP does nothing", async () => {
     const videoRef = { current: document.createElement("video") };
     const containerRef = { current: document.createElement("div") };
-    const { result } = renderHook(() =>
-      useDocumentPiP(videoRef, containerRef),
-    );
+    const { result } = renderHook(() => useDocumentPiP(videoRef, containerRef));
 
     await act(async () => {
       await result.current.exitPiP();

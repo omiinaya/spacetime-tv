@@ -20,7 +20,7 @@ export default function LiveChannelCard({
       key={stream.stream_id}
       onClick={() => navigate(`/watch/live/${stream.stream_id}`)}
       data-watch-link
-      className="channel-card bg-card rounded-xl border border-border p-4 text-left hover:border-primary/30 relative group/card card-hover"
+      className="channel-card bg-card rounded-xl border border-border p-5 text-left hover:border-primary/30 relative group/card transition-all duration-200 hover:shadow-lg hover:shadow-primary/5"
     >
       <button
         onClick={(e) => {

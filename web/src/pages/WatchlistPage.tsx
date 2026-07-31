@@ -12,8 +12,8 @@ export default function WatchlistPage() {
   return (
     <div>
       {/* Header */}
-      <div className="page-header mb-6 sm:mb-8">
-        <div className="page-header-icon">
+      <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
           <Heart className="h-5 w-5 text-primary" />
         </div>
         <div>

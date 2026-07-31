@@ -146,10 +146,7 @@ export default function MovieGrid({
   gridRef,
 }: MovieGridProps) {
   return (
-    <div
-      ref={gridRef}
-      className="poster-grid"
-    >
+    <div ref={gridRef} className="poster-grid">
       {movies.map((m, idx) => (
         <MovieCard
           key={m.tmdb || m.stream_id}

@@ -134,7 +134,9 @@ describe("useProfile hook", () => {
   });
 
   it("refreshProfiles re-fetches and updates list", async () => {
-    mockFetch({ profiles: [{ profile_id: "1", name: "A", avatar: "d", created: 1 }] });
+    mockFetch({
+      profiles: [{ profile_id: "1", name: "A", avatar: "d", created: 1 }],
+    });
 
     const { result } = renderHook(() => useProfile());
 
@@ -143,7 +145,9 @@ describe("useProfile hook", () => {
     });
 
     // Mock a different response for refresh
-    mockFetch({ profiles: [{ profile_id: "2", name: "B", avatar: "d", created: 2 }] });
+    mockFetch({
+      profiles: [{ profile_id: "2", name: "B", avatar: "d", created: 2 }],
+    });
 
     let refreshed: unknown[] = [];
     await act(async () => {
@@ -160,7 +164,9 @@ describe("fetchProfiles", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("returns profiles list on success", async () => {
-    const data = { profiles: [{ profile_id: "1", name: "Test", avatar: "a", created: 1 }] };
+    const data = {
+      profiles: [{ profile_id: "1", name: "Test", avatar: "a", created: 1 }],
+    };
     mockFetch(data);
 
     const result = await fetchProfiles();
@@ -178,7 +184,12 @@ describe("createProfile", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("sends correct payload and returns profile", async () => {
-    const profile = { profile_id: "new", name: "User", avatar: "default", created: 1 };
+    const profile = {
+      profile_id: "new",
+      name: "User",
+      avatar: "default",
+      created: 1,
+    };
     mockFetch({ profile });
 
     const result = await createProfile("User", "1234");
@@ -228,7 +239,9 @@ describe("switchProfile", () => {
     expect(result!.token).toBe("sess_token");
 
     expect(localStorage.getItem("stv_profile_token")).toBe("sess_token");
-    expect(JSON.parse(localStorage.getItem("stv_current_profile")!)).toEqual(profile);
+    expect(JSON.parse(localStorage.getItem("stv_current_profile")!)).toEqual(
+      profile,
+    );
   });
 });
 

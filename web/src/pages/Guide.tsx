@@ -151,7 +151,7 @@ export default function Guide() {
     >
       {/* Header */}
       {loading ? (
-        <div className="page-header">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Skeleton className="w-10 h-10 rounded-xl" />
           <div className="space-y-1.5">
             <Skeleton className="w-28 h-5" />
@@ -160,8 +160,8 @@ export default function Guide() {
         </div>
       ) : (
         <>
-          <div className="page-header">
-            <div className="page-header-icon">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
               <Tv className="h-5 w-5 text-primary" />
             </div>
             <div>
@@ -191,7 +191,7 @@ export default function Guide() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search programmes..."
-              className="search-input"
+              className="w-full h-9 sm:h-10 pl-9 pr-8 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all duration-200"
             />
             {searchQuery && (
               <button

@@ -39,7 +39,11 @@ export function CategoryTabs({
     >
       <button
         onClick={() => onSelect(ALL_CAT)}
-        className={activeCat === ALL_CAT ? "tab-chip-active" : "tab-chip-inactive"}
+        className={
+          activeCat === ALL_CAT
+            ? "shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border cursor-pointer select-none bg-primary/15 text-primary border-primary/20"
+            : "shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border cursor-pointer select-none bg-muted text-muted-foreground hover:text-foreground border-transparent"
+        }
       >
         All
       </button>
@@ -47,7 +51,11 @@ export function CategoryTabs({
         <button
           key={cat.category_id}
           onClick={() => onSelect(cat.category_id)}
-          className={activeCat === cat.category_id ? "tab-chip-active" : "tab-chip-inactive"}
+          className={
+            activeCat === cat.category_id
+              ? "shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border cursor-pointer select-none bg-primary/15 text-primary border-primary/20"
+              : "shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border cursor-pointer select-none bg-muted text-muted-foreground hover:text-foreground border-transparent"
+          }
         >
           {cat.category_name}
         </button>

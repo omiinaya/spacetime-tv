@@ -171,7 +171,7 @@ export default function LiveTV() {
     <div className="space-y-6 sm:space-y-8">
       {/* Header */}
       {loading ? (
-        <div className="page-header">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Skeleton className="w-10 h-10 rounded-xl" />
           <div className="space-y-1.5">
             <Skeleton className="w-28 h-5" />
@@ -179,8 +179,8 @@ export default function LiveTV() {
           </div>
         </div>
       ) : (
-        <div className="page-header">
-          <div className="page-header-icon">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
             <Tv className="h-5 w-5 text-primary" />
           </div>
           <div>

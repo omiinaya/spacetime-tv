@@ -57,9 +57,7 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
   );
 
   // ── Episode progress (from localStorage) ────────────────────────
-  const [episodeProgress] = useState(() =>
-    getSeriesProgress(series.series_id),
-  );
+  const [episodeProgress] = useState(() => getSeriesProgress(series.series_id));
 
   // ── Compute watched count per season for season tab badges ──────
   const seasonWatched = useMemo(() => {
@@ -185,9 +183,7 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
   const cast =
     series.cast ||
     info?.cast ||
-    (tmdb?.created_by
-      ? tmdb.created_by.map((c) => c.name).join(", ")
-      : "") ||
+    (tmdb?.created_by ? tmdb.created_by.map((c) => c.name).join(", ") : "") ||
     "";
   const director = series.director || info?.director || "";
 

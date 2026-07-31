@@ -43,14 +43,24 @@ describe("runProbe", () => {
 
   it("returns needsTranscode=true when cache says hevc", async () => {
     transcodeCache.set("stream_1", "hevc");
-    const result = await runProbe("/url", "stream_1", new AbortController().signal, true);
+    const result = await runProbe(
+      "/url",
+      "stream_1",
+      new AbortController().signal,
+      true,
+    );
     expect(result.needsTranscode).toBe(true);
     expect(mockProbeStream).not.toHaveBeenCalled();
   });
 
   it("returns needsTranscode=false when cache says native", async () => {
     transcodeCache.set("stream_1", "native");
-    const result = await runProbe("/url", "stream_1", new AbortController().signal, true);
+    const result = await runProbe(
+      "/url",
+      "stream_1",
+      new AbortController().signal,
+      true,
+    );
     expect(result.needsTranscode).toBe(false);
     expect(mockProbeStream).not.toHaveBeenCalled();
   });
@@ -58,7 +68,12 @@ describe("runProbe", () => {
   it("fetches probe and caches native result", async () => {
     mockProbeStream.mockResolvedValue({ codec: "h264", native: true });
 
-    const result = await runProbe("/url", "stream_2", new AbortController().signal, true);
+    const result = await runProbe(
+      "/url",
+      "stream_2",
+      new AbortController().signal,
+      true,
+    );
 
     expect(result.needsTranscode).toBe(false);
     expect(transcodeCache.get("stream_2")).toBe("native");
@@ -67,7 +82,12 @@ describe("runProbe", () => {
   it("fetches probe and caches HEVC result", async () => {
     mockProbeStream.mockResolvedValue({ codec: "hevc", height: 2160 });
 
-    const result = await runProbe("/url", "stream_3", new AbortController().signal, true);
+    const result = await runProbe(
+      "/url",
+      "stream_3",
+      new AbortController().signal,
+      true,
+    );
 
     expect(result.needsTranscode).toBe(true);
     expect(result.probeHeight).toBe(2160);
@@ -85,7 +105,12 @@ describe("runProbe", () => {
   it("defaults to native on probe error", async () => {
     mockProbeStream.mockRejectedValue(new Error("Network error"));
 
-    const result = await runProbe("/url", "stream_5", new AbortController().signal, true);
+    const result = await runProbe(
+      "/url",
+      "stream_5",
+      new AbortController().signal,
+      true,
+    );
     expect(result.needsTranscode).toBe(false);
     expect(transcodeCache.get("stream_5")).toBe("native");
   });

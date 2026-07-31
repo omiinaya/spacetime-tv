@@ -25,9 +25,7 @@ export function MediaCastSection({ cast, director }: MediaCastSectionProps) {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate(
-                      `/person/${encodeURIComponent(name.trim())}`,
-                    );
+                    navigate(`/person/${encodeURIComponent(name.trim())}`);
                   }}
                   className="hover:text-primary transition-colors cursor-pointer inline"
                 >

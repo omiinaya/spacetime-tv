@@ -7,7 +7,10 @@ import SimilarMovies from "@/components/SimilarMovies";
 import TmdbSimilarMovies from "@/components/TmdbSimilarMovies";
 import { isInWatchlist, toggleWatchlist } from "@/lib/watchlist";
 import { MovieLanguageSelector } from "@/components/movie/MovieLanguageSelector";
-import { MoviePlayButton, TrailerEmbed } from "@/components/movie/MoviePlayButton";
+import {
+  MoviePlayButton,
+  TrailerEmbed,
+} from "@/components/movie/MoviePlayButton";
 import { MediaCastSection } from "@/components/media/MediaCastSection";
 import { MediaInfoBar } from "@/components/media/MediaInfoBar";
 
@@ -227,7 +230,9 @@ export default function MovieOverlay({ movie, onClose }: MovieOverlayProps) {
           onToggleTrailer={() => setShowTrailer(!showTrailer)}
         />
       }
-      trailerEmbed={showTrailer && trailer ? <TrailerEmbed trailer={trailer} /> : null}
+      trailerEmbed={
+        showTrailer && trailer ? <TrailerEmbed trailer={trailer} /> : null
+      }
     >
       {/* Cast, Director, Extra info */}
       {!loading && !error && (

@@ -40,8 +40,8 @@ export default function HistoryPage() {
   return (
     <div className="space-y-8 sm:space-y-10">
       {/* Header */}
-      <div className="page-header">
-        <div className="page-header-icon">
+      <div className="flex items-center gap-3 sm:gap-4">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
           <History className="h-5 w-5 text-primary" />
         </div>
         <div>
@@ -95,7 +95,7 @@ export default function HistoryPage() {
                 key={`history-ch-${ch.stream_id}`}
                 onClick={() => navigate(`/watch/live/${ch.stream_id}`)}
                 data-watch-link
-                className="channel-card bg-card rounded-xl border border-border p-4 text-left hover:border-primary/30 card-hover"
+                className="channel-card bg-card rounded-xl border border-border p-5 text-left hover:border-primary/30 transition-all duration-200 hover:shadow-lg hover:shadow-primary/5"
               >
                 {ch.icon ? (
                   <img

@@ -119,7 +119,9 @@ export default function HomePage() {
         <section>
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="h-4 w-4 text-primary" />
-            <h2 className="text-base sm:text-lg font-bold">Trending This Week</h2>
+            <h2 className="text-base sm:text-lg font-bold">
+              Trending This Week
+            </h2>
             <span className="text-xs text-muted-foreground/50">Movies</span>
           </div>
           <ContentRow
@@ -184,7 +186,9 @@ export default function HomePage() {
         <section>
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="h-4 w-4 text-primary" />
-            <h2 className="text-base sm:text-lg font-bold">Trending This Week</h2>
+            <h2 className="text-base sm:text-lg font-bold">
+              Trending This Week
+            </h2>
             <span className="text-xs text-muted-foreground/50">Series</span>
           </div>
           <ContentRow

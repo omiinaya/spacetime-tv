@@ -130,7 +130,12 @@ export function useStreamProber(
         }, 5_000);
 
         try {
-          const result = await runProbe(probeUrl, streamId, abortController.signal, isLive);
+          const result = await runProbe(
+            probeUrl,
+            streamId,
+            abortController.signal,
+            isLive,
+          );
           if (cancelled.current) return;
 
           clearTimeout(safetyTimer);
