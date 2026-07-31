@@ -38,7 +38,7 @@ export default function HistoryPage() {
     channels.length > 0 || seriesCW.length > 0 || movieCW.length > 0;
 
   return (
-    <div className="space-y-8 sm:space-y-10">
+    <div className="space-y-10 sm:space-y-14">
       {/* Header */}
       <div className="flex items-center gap-3 sm:gap-4">
         <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">

@@ -70,16 +70,19 @@ body {
 /* ── Channel grid (Live TV) ──────────────────────────────────── */
 .channel-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1.25rem;
 }
 @media (min-width: 640px) {
-  .channel-grid { gap: 1.25rem; }
+  .channel-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
+  }
 }
 
 .channel-card {
   transition: all 0.15s ease;
-  padding: 1.25rem;
+  padding: 1.5rem;
 }
 .channel-card:hover {
   transform: translateY(-2px);
@@ -89,19 +92,19 @@ body {
 /* ── Poster grid (Movies) ────────────────────────────────────── */
 .poster-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 1.25rem;
 }
 @media (min-width: 640px) {
   .poster-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1.5rem;
   }
 }
 @media (min-width: 1024px) {
   .poster-grid {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 1.5rem;
+    gap: 1.75rem;
   }
 }
 

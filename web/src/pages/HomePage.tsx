@@ -32,7 +32,7 @@ export default function HomePage() {
   const hasTrending = trendingMovies.length > 0 || trendingSeries.length > 0;
 
   return (
-    <div className="space-y-8 sm:space-y-12">
+    <div className="space-y-10 sm:space-y-16">
       {/* ── Hero Welcome Section ────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border border-primary/10 p-6 sm:p-8 lg:p-10">
         {/* Decorative gradient blob */}

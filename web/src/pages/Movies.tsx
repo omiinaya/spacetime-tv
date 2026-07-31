@@ -182,7 +182,7 @@ export default function Movies() {
 
   // ── Render ──
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-8 sm:space-y-12">
       {/* Header */}
       <div className="flex items-center gap-3 sm:gap-4">
         <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">

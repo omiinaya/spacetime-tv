@@ -307,7 +307,7 @@ function AppLayout() {
 
         <div
           className={
-            isWatchRoute ? "" : "p-4 sm:p-8 lg:p-10"
+            isWatchRoute ? "" : "p-6 sm:p-10 lg:p-12"
           }
         >
           <Suspense fallback={<PageLoader />}>

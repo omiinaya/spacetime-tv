@@ -144,7 +144,7 @@ export default function Guide() {
   return (
     <div
       ref={guideRef}
-      className="space-y-6 sm:space-y-8"
+      className="space-y-8 sm:space-y-12"
       tabIndex={0}
       role="grid"
       aria-label="TV Guide"

@@ -39,7 +39,7 @@ export default function SearchPage() {
   } = useSearchPage();
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-8 sm:space-y-12">
       <SearchHeader
         query={query}
         loading={loading}

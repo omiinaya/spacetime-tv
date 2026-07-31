@@ -155,7 +155,7 @@ export default function ContentRow({
         {/* Scrollable row */}
         <div
           ref={rowRef}
-          className="flex gap-3 overflow-x-auto scrollbar-none scroll-smooth pb-1"
+          className="flex gap-4 sm:gap-5 overflow-x-auto scrollbar-none scroll-smooth pb-1"
           style={{ touchAction: "manipulation" }}
         >
           {children}
@@ -166,7 +166,7 @@ export default function ContentRow({
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
-                  className="w-[150px] aspect-[2/3] rounded-xl bg-muted animate-pulse shrink-0"
+                  className="w-[160px] aspect-[2/3] rounded-xl bg-muted animate-pulse shrink-0"
                 />
               ))}
             </div>

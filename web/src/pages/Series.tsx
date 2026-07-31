@@ -322,7 +322,7 @@ export default function SeriesPage() {
   if (loading) return <SeriesPageSkeleton />;
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-8 sm:space-y-12">
       <SeriesHeader categoryCount={filteredCatsBySettings.length} />
       <SeriesWatchingSection navigate={navigate} />
       <TrendingSeriesRow />
