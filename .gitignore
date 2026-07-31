@@ -11,6 +11,7 @@ playwright-report/
 .pytest_cache/
 .env
 epg_cache.json
+venv/
 *.egg-info/
 *.tsbuildinfo
 web/[0-9]*/
