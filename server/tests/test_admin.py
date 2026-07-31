@@ -500,7 +500,6 @@ def test_admin_key_auto_generates_when_empty(client: TestClient):
 
     # Save the original ADMIN_API_KEY
     old_key = os.environ.get("ADMIN_API_KEY", "")
-    old_cfg_key = cfg.ADMIN_API_KEY
     try:
         # Simulate auto-gen: set empty, reload config
         os.environ["ADMIN_API_KEY"] = ""
@@ -515,6 +514,10 @@ def test_admin_key_auto_generates_when_empty(client: TestClient):
         assert r.status_code == 401
         assert "detail" in r.json()
     finally:
-        # Restore env and config
+        # Restore env and config — reload config from the restored env so the
+        # module's PROVIDERS list and _AUTO_GEN_KEY are rebuilt consistently.
+        # (Leaving the reloaded module in place rebinds config.PROVIDERS to a
+        # fresh object mid-suite, which intermittently desyncs later tests
+        # that snapshot/restore provider state.)
         os.environ["ADMIN_API_KEY"] = old_key
-        cfg.ADMIN_API_KEY = old_cfg_key
+        importlib.reload(cfg)

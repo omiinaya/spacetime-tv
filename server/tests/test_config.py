@@ -7,6 +7,7 @@ for each test scenario, then verify the resulting module-level state.
 
 import importlib
 import json
+import os as _os
 from unittest.mock import patch
 
 import pytest
@@ -35,6 +36,62 @@ def _reload_config(monkeypatch, setenv=None, delenv=None):
     monkeypatch.setattr(dotenv, "load_dotenv", lambda _path=None, **kw: None)
     importlib.reload(cfg)
     return cfg
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Cross-module isolation
+# ═══════════════════════════════════════════════════════════════════════════════
+# Every test in this module reloads ``config`` with monkeypatched env vars.
+# monkeypatch restores the *env vars* afterwards, but the reloaded module
+# keeps the last scenario's state — e.g. config.PROVIDERS left pointing at
+# "env.tv" providers. Without restoring the module, every later test file
+# that reads config.PROVIDERS (iptv_client.get_active_provider, admin routes,
+# stream URL builders, ...) sees the polluted list and fails.
+#
+# The autouse fixture below snapshots the baseline env at import time (after
+# conftest set the test env) and re-applies it + reloads config after each
+# test, so the module is pristine for the next test.
+
+_BASELINE_ENV = {
+    key: _os.environ.get(key)
+    for key in (
+        "IPTV_BASE",
+        "IPTV_USER",
+        "IPTV_PASS",
+        "PROVIDERS_JSON",
+        "ENCRYPT_CREDENTIALS",
+        "ADMIN_API_KEY",
+        "TMDB_API_KEY",
+        "TMDB_BASE",
+        "STV_DATA_DIR",
+        "CACHE_WARM_ENABLED",
+        "CACHE_TTL_HOURS",
+        "CLEANUP_INTERVAL",
+        "EPG_CACHE_FILE",
+        "ENFORCE_HTTPS",
+    )
+}
+
+
+@pytest.fixture(autouse=True)
+def _restore_config_module():
+    """Restore ``config`` to the baseline state after each test.
+
+    Re-applies the original test env vars and reloads the module, undoing
+    whatever scenario a test left it in. load_dotenv is stubbed so the real
+    server/.env never leaks into the reload.
+    """
+    yield
+
+    import config as cfg
+
+    for key, value in _BASELINE_ENV.items():
+        if value is None:
+            _os.environ.pop(key, None)
+        else:
+            _os.environ[key] = value
+    with patch("dotenv.load_dotenv", lambda _path=None, **kw: None):
+        importlib.reload(cfg)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
