@@ -84,14 +84,14 @@ async def load_epg() -> dict:
 async def load_epg_background() -> dict:
     """Load EPG — returns cached data immediately (even stale), refreshes in background."""
     now = time.time()
-    if epg_cache["data"] is not None:
-        if (now - epg_cache["fetched"]) >= EPG_CACHE_TTL:
-            # Track the task on the shared state module (not a local copy) so
-            # admin.py's dedup check can see in-flight refreshes.
-            if state._epg_refresh_task is None or state._epg_refresh_task.done():
-                state._epg_refresh_task = asyncio.create_task(_refresh_epg_background())
-        return epg_cache["data"]
-    return await load_epg()
+    if epg_cache["data"] is None:
+        return await load_epg()
+    if (now - epg_cache["fetched"]) >= EPG_CACHE_TTL:
+        # Track the task on the shared state module (not a local copy) so
+        # admin.py's dedup check can see in-flight refreshes.
+        if state._epg_refresh_task is None or state._epg_refresh_task.done():
+            state._epg_refresh_task = asyncio.create_task(_refresh_epg_background())
+    return epg_cache["data"]
 
 
 async def _refresh_epg_background():
