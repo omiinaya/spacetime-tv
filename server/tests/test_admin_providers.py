@@ -49,24 +49,6 @@ def _snapshot_providers():
     ]
 
 
-def _restore_providers(snapshot):
-    """Restore config.PROVIDERS to a snapshot (clear + rebuild)."""
-    import config as cfg
-
-    cfg.PROVIDERS.clear()
-    for entry in snapshot:
-        cfg.PROVIDERS.append(
-            cfg.ProviderConfig(
-                name=entry["name"],
-                base_url=entry["base_url"],
-                username=entry["username"],
-                password=entry["password"],
-                enabled=entry["enabled"],
-                order=entry["order"],
-            )
-        )
-
-
 # ── Fixture: protect PROVIDERS + health state + file writes ────────────────
 
 
@@ -76,6 +58,10 @@ def _apply_provider_fixture():
     from state import _provider_health
 
     snapshot = _snapshot_providers()
+    saved_list = cfg.PROVIDERS  # capture list OBJECT identity too — a prior
+    # test's importlib.reload(config) can rebind config.PROVIDERS to a fresh
+    # list; restore must rebind the module attribute, not just clear+append
+    # (which only fixes the contents of whatever list is current at teardown).
     _provider_health.clear()
     patchers = [
         patch.object(cfg, "_save_providers_to_file", lambda providers: None),
@@ -87,7 +73,19 @@ def _apply_provider_fixture():
     finally:
         for p in patchers:
             p.stop()
-        _restore_providers(snapshot)
+        saved_list.clear()
+        for entry in snapshot:
+            saved_list.append(
+                cfg.ProviderConfig(
+                    name=entry["name"],
+                    base_url=entry["base_url"],
+                    username=entry["username"],
+                    password=entry["password"],
+                    enabled=entry["enabled"],
+                    order=entry["order"],
+                )
+            )
+        cfg.PROVIDERS = saved_list  # restore identity (handles mid-test rebind)
         _provider_health.clear()
 
 
