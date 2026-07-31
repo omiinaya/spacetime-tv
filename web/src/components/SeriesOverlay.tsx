@@ -295,7 +295,8 @@ export default function SeriesOverlay({ series, onClose }: SeriesOverlayProps) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => playEpisode(episodeList[0]?.id || 1)}
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 transition-colors"
+            disabled={loading || episodeList.length === 0}
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-white text-black text-sm font-semibold hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
           >
             <Play className="h-4 w-4 fill-black text-black" />
             Play{" "}

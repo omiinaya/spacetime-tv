@@ -254,7 +254,7 @@ describe("SeriesOverlay", () => {
     renderOverlay();
 
     expect(await screen.findByText("Breaking Bad")).toBeTruthy();
-    expect(screen.getByText(/turns to crime/)).toBeTruthy();
+    expect(await screen.findByText(/turns to crime/)).toBeTruthy();
   });
 
   it("renders genres from provider data", async () => {
@@ -344,7 +344,10 @@ describe("SeriesOverlay", () => {
     mockTmdbTvDetails.mockResolvedValue(null);
     renderOverlay();
 
-    const playBtn = await screen.findByText(/Play/);
+    // Wait for the loaded state — the button is disabled while details load,
+    // and clicking it early would navigate with the fallback episode id (1)
+    // instead of the first real episode (ep1).
+    const playBtn = await screen.findByText("Play S1 E1");
     fireEvent.click(playBtn);
     expect(mockNavigate).toHaveBeenCalledWith("/watch/series/1001/ep1");
   });
