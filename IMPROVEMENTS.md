@@ -11,11 +11,14 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-- **P3 — Frontend full-suite flakiness under parallel load (Test hygiene).** Full `vitest run` intermittently fails a rotating set of tests (`LiveTV` category switch, `Search` TMDB badges, `Series` watchlist hearts, `PlayerCenterControls` click) with `waitFor`/`userEvent` 5s timeouts. Serial runs (`--maxWorkers=1`) pass 100% (100 files / 1560 tests). Suspected cause: CPU contention from 100 parallel worker transforms pushing marginal async tests past their timeouts. Needs timeout/teardown hardening (e.g. raising `testTimeout` for heavy files, `userEvent.setup()` with explicit delay, or splitting transforms via `poolOptions`).
+(none — see Recently Completed)
 
 ---
 
 ## Recently Completed
+
+### ✅ P3 — Frontend full-suite flakiness under parallel load (Test hygiene)
+Full `vitest run` intermittently failed a rotating set of tests (LiveTV category switch, Search TMDB badges, Series watchlist hearts, PlayerCenterControls click) with `waitFor`/`userEvent` 5s timeouts; serial runs passed 100%. Fixed three ways: (1) `test-setup.ts` raises Testing Library `asyncUtilTimeout` 1000ms → 4000ms so async assertions survive CPU contention from 100 parallel worker transforms; (2) `SeriesOverlay` Play button now disabled until episodes load (was navigable with fallback episode id 1 during loading — clicking early navigated to the wrong episode; tests updated to wait for loaded state `Play S1 E1`); (3) `usePlayerUtils` guards `sessionStorage.removeItem` in the 1s auto-advance `setTimeout` (throws in private mode/SSR/test teardown), test uses fake timers so the timer never fires after jsdom teardown. Also fixed the matching backend flake: `test_load_epg_background_stale_triggers_refresh` left its background EPG refresh task fire-and-forget — the task's first `await load_epg()` could run AFTER the `@patch` context was torn down, calling the REAL `load_epg()` against a closed httpx client under full-suite load (`Cannot send a request, as the client has been closed`). Test now awaits the task with an AsyncMock. Verification: backend 1314 passed / 17 skipped / 3 xfailed; frontend 100 files / 1560 tests passed in parallel. Commits `825685e`, `875fdb9`, `8febcd7`.
 
 ### ✅ P2 — Fix EPG refresh dedup broken across modules — duplicate concurrent XMLTV fetches (Bug)
 
