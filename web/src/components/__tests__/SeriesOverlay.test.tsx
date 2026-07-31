@@ -419,12 +419,23 @@ describe("SeriesOverlay", () => {
     mockTmdbTvDetails.mockResolvedValue({ enabled: false, info: null });
     renderOverlay();
 
-    // Provider genres should be used
-    expect(await screen.findByText("Crime")).toBeTruthy();
-    expect(screen.getByText("Drama")).toBeTruthy();
-    expect(screen.getByText("Thriller")).toBeTruthy();
+    // Provider genres come from the series prop; the meta bar ("2 seasons")
+    // renders from the async details state in a separate update. Give each
+    // assertion its own waitFor window so a late meta-bar commit under CPU
+    // contention can't expire a shared window.
+    await waitFor(() => {
+      expect(screen.getByText("Crime")).toBeTruthy();
+    });
+    await waitFor(() => {
+      expect(screen.getByText("Drama")).toBeTruthy();
+    });
+    await waitFor(() => {
+      expect(screen.getByText("Thriller")).toBeTruthy();
+    });
     // Provider season count used as fallback
-    expect(screen.getByText("2 seasons")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText("2 seasons")).toBeTruthy();
+    });
   });
 
   // ── Episode progress indicators ──────────────────────
