@@ -99,6 +99,21 @@ app.include_router(profiles_router, prefix="/api/v1")
 app.include_router(misc_router)
 
 
+# ── Cache-control middleware: never let browsers hold stale builds ──────
+# index.html (the SPA shell) is served WITHOUT a versioned URL, so browsers
+# must revalidate it on every load (no-cache). Hashed /assets/* files are
+# content-addressed and safe to cache aggressively (immutable).
+@app.middleware("http")
+async def cache_control_middleware(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/assets/"):
+        response.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
+    elif path == "/" or path.endswith(".html"):
+        response.headers.setdefault("Cache-Control", "no-cache, no-store, must-revalidate")
+    return response
+
+
 # ── Auth middleware: enforce X-Device-Token or X-Admin-Key ───────
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
