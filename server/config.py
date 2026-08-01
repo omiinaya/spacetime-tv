@@ -161,7 +161,10 @@ ALLOW_LAN_BYPASS = os.getenv("ALLOW_LAN_BYPASS", "true").lower() == "true"
 
 # Rate limiting (env-configurable)
 RATE_WINDOW = int(os.getenv("RATE_WINDOW", "60"))  # seconds
-RATE_SEARCH_LIMIT = int(os.getenv("RATE_SEARCH_LIMIT", "100"))  # requests per window for search/proxy
+# Search is 2 requests per search (main + guide EPG) + load-more paging; a
+# power user / E2E suite can easily exceed 100/min. Bumped to 300 to keep
+# search usable while still capping abuse.
+RATE_SEARCH_LIMIT = int(os.getenv("RATE_SEARCH_LIMIT", "300"))  # requests per window for search/proxy
 RATE_DEFAULT_LIMIT = int(os.getenv("RATE_DEFAULT_LIMIT", "1000"))  # requests per window for everything else
 
 # Stream preflight (env-configurable)

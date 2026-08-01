@@ -812,7 +812,7 @@ class TestConstantsDefaults:
 
     def test_rate_search_limit_default(self, monkeypatch):
         cfg = _reload_config(monkeypatch, delenv=["RATE_SEARCH_LIMIT"])
-        assert cfg.RATE_SEARCH_LIMIT == 100
+        assert cfg.RATE_SEARCH_LIMIT == 300
 
     def test_rate_default_limit_default(self, monkeypatch):
         cfg = _reload_config(monkeypatch, delenv=["RATE_DEFAULT_LIMIT"])

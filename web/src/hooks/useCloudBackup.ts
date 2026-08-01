@@ -7,14 +7,19 @@ const WATCHLIST_KEY = "stv_watchlist";
 const SERIES_WATCHLIST_KEY = "stv_watchlist_series";
 
 function getDeviceId(): string {
-  let id = localStorage.getItem(DEVICE_KEY);
+  let id: string | null = null;
+  try {
+    id = localStorage.getItem(DEVICE_KEY);
+  } catch {} // DOMException: storage quota or unavailable
   if (!id) {
     const segments: string[] = [];
     for (let i = 0; i < 4; i++) {
       segments.push(Math.random().toString(36).substring(2, 10));
     }
     id = segments.join("-");
-    localStorage.setItem(DEVICE_KEY, id);
+    try {
+      localStorage.setItem(DEVICE_KEY, id);
+    } catch {} // DOMException: storage quota or unavailable
   }
   return id;
 }
