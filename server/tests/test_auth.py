@@ -243,6 +243,80 @@ class TestProfileCrud:
         created = create_profile("Test", TEST_PIN)
         assert verify_profile_pin(created["profile_id"], "") is False
 
+    def test_verify_profile_pin_no_pin_unlocked(self):
+        """A profile WITHOUT a PIN is unlocked: empty pin verifies."""
+        import secrets
+
+        from auth import _load_profiles, _save_profiles, verify_profile_pin
+
+        profiles = _load_profiles()
+        pid = secrets.token_hex(8)
+        profiles[pid] = {
+            "name": "NoPin",
+            "pin_hash": "",
+            "avatar": "default",
+            "created": 0,
+            "favorites": [],
+            "watchlist": {},
+            "progress": {},
+            "settings": {},
+            "restrictions": {},
+        }
+        _save_profiles(profiles)
+        assert verify_profile_pin(pid, "") is True
+        assert verify_profile_pin(pid, "1234") is False
+
+    def test_verify_profile_pin_no_pin_endpoint(self, client):
+        """Verify endpoint accepts empty pin for no-PIN profiles."""
+        import secrets
+
+        from auth import _load_profiles, _save_profiles
+
+        profiles = _load_profiles()
+        pid = secrets.token_hex(8)
+        profiles[pid] = {
+            "name": "NoPinEndpoint",
+            "pin_hash": "",
+            "avatar": "default",
+            "created": 0,
+            "favorites": [],
+            "watchlist": {},
+            "progress": {},
+            "settings": {},
+            "restrictions": {},
+        }
+        _save_profiles(profiles)
+        response = client.post(f"/api/v1/profiles/{pid}/verify", json={"pin": ""})
+        assert response.status_code == 200
+        assert response.json()["valid"] is True
+
+    def test_profile_session_no_pin(self, client):
+        """Session endpoint works for no-PIN profiles with empty pin."""
+        import secrets
+
+        from auth import _load_profiles, _save_profiles
+
+        profiles = _load_profiles()
+        pid = secrets.token_hex(8)
+        profiles[pid] = {
+            "name": "NoPinSession",
+            "pin_hash": "",
+            "avatar": "default",
+            "created": 0,
+            "favorites": [],
+            "watchlist": {},
+            "progress": {},
+            "settings": {},
+            "restrictions": {},
+        }
+        _save_profiles(profiles)
+        response = client.post(
+            "/api/v1/profiles/session",
+            json={"profile_id": pid, "pin": ""},
+        )
+        assert response.status_code == 200
+        assert "token" in response.json()
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # 4. Profile watch history

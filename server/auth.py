@@ -180,14 +180,20 @@ def create_profile(name: str, pin: str, avatar: str = "") -> dict:
 
 
 def verify_profile_pin(profile_id: str, pin: str) -> bool:
-    """Verify a profile PIN. Returns True if valid."""
+    """Verify a profile PIN. Returns True if valid.
+
+    A profile with NO PIN set (empty pin_hash) is unlocked: selecting it
+    succeeds with an empty pin. Only profiles with an actual PIN require
+    the matching pin to unlock.
+    """
     profiles = _load_profiles()
     profile = profiles.get(profile_id)
     if not profile:
         return False
     stored = profile.get("pin_hash") or profile.get("pin", "")
     if not stored:
-        return False
+        # No PIN set — unlocked profile; an empty pin is valid.
+        return pin == ""
     return _verify_pin(stored, pin)
 
 

@@ -88,10 +88,13 @@ async def api_create_profile(payload: dict, request: Request):
 
 @router.post("/profiles/{profile_id}/verify")
 async def api_verify_profile_pin(profile_id: str, payload: dict):
-    """Verify a profile PIN. Returns success/failure."""
+    """Verify a profile PIN. Returns success/failure.
+
+    Empty pin is allowed: for a profile with no PIN set, an empty pin
+    verifies as valid (the profile is unlocked). Profiles with a PIN
+    require the matching pin.
+    """
     pin = payload.get("pin", "").strip()
-    if not pin:
-        raise HTTPException(400, "PIN is required")
     valid = verify_profile_pin(profile_id, pin)
     return {"valid": valid}
 
@@ -267,11 +270,12 @@ async def api_switch_profile(payload: dict, request: Request):
     """Switch active profile by verifying PIN. Returns new session token.
 
     Body: {"profile_id": "...", "pin": "1234"}
+    Empty pin is allowed for profiles with no PIN set (unlocked profiles).
     """
     profile_id = payload.get("profile_id", "")
     pin = payload.get("pin", "").strip()
-    if not profile_id or not pin:
-        raise HTTPException(400, "profile_id and pin are required")
+    if not profile_id:
+        raise HTTPException(400, "profile_id is required")
     if not verify_profile_pin(profile_id, pin):
         raise HTTPException(403, "Invalid PIN")
 

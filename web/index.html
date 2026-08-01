@@ -31,8 +31,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Spacetime-TV" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <!-- Inline critical CSS — design tokens, base reset + initial layout (prevents FOUC/CLS before full CSS loads) -->
+    <!-- Inline critical CSS — design tokens, base reset + initial layout (prevents FOUC/CLS before full CSS loads).
+         Wrapped in @layer base so Tailwind v4 utilities (in @layer utilities, a higher layer) always win. -->
     <style>
+      @layer base {
       /* ── Design tokens (dark mode default) ── */
       :root {
         --color-background: oklch(0.09 0.004 285.823);
@@ -98,9 +100,8 @@
       @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
       .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 
-<<<<<<< Updated upstream
       @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-=======
+
       /* ── Scrollbar (prevents scrollbar reflow) ── */
       ::-webkit-scrollbar {
         width: 6px;
@@ -404,12 +405,12 @@
       }
 
       /* ── Skeleton shimmer (prevents flash of empty space) ── */
->>>>>>> Stashed changes
       @keyframes shimmer {
         0% { background-position: 200% 0; }
         100% { background-position: -200% 0; }
       }
       .fade-in { animation: fade-in 200ms both; }
+      }
     </style>
     
   </head>
