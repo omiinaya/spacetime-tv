@@ -53,6 +53,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Spacetime-TV", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
+
+# hermes-id agent authentication (env: HERMES_AUTH_SERVER_URL / HERMES_AUTH_PROJECT / HERMES_AUTH_VERIFY)
+from hermes_id.fastapi_plugin import install_agent_auth
+
+install_agent_auth(app)
 # GZip compression for API responses — JSON payloads compress 5-10x
 from fastapi.middleware.gzip import GZipMiddleware
 
