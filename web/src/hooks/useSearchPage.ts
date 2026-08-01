@@ -306,12 +306,22 @@ export default function useSearchPage(): UseSearchPageReturn {
       setEnrichData({});
       return;
     }
+    // Abort previous enrich so rapid searches can't race (older response
+    // overwriting a newer query's enrichment).
+    const controller = new AbortController();
     api
-      .searchEnrich(movies, seriesResults)
+      .searchEnrich(movies, seriesResults, controller.signal)
       .then((data) => {
-        setEnrichData({ ...data.movies, ...data.series });
+        if (!controller.signal.aborted) {
+          setEnrichData({ ...data.movies, ...data.series });
+        }
       })
-      .catch(() => {});
+      .catch((e) => {
+        if ((e as Error).name !== "AbortError") {
+          // non-critical — enrichment is best-effort
+        }
+      });
+    return () => controller.abort();
   }, [results]);
 
   // ── Clear ──
