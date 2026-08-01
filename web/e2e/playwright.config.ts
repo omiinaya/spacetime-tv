@@ -14,6 +14,9 @@ export default defineConfig({
     headless: true,
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    // Seed a selected profile so specs start past the profile picker
+    // (fresh browsers otherwise hit the "Who's Watching?" gate).
+    storageState: "e2e/.auth/main-profile.json",
   },
   projects: [
     {

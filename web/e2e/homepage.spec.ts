@@ -16,8 +16,8 @@ test.describe("Homepage", () => {
     await page.waitForLoadState("load");
     await page.waitForTimeout(2000);
 
-    // Welcome header
-    await expect(page.getByText("Welcome")).toBeVisible({ timeout: 5_000 });
+    // Welcome header (heading role — avoids matching "Welcome to Spacetime-TV")
+    await expect(page.getByRole("heading", { name: "Welcome" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("Browse live TV, movies, series, and more")).toBeVisible({ timeout: 3_000 });
   });
 
@@ -26,10 +26,14 @@ test.describe("Homepage", () => {
     await page.waitForLoadState("load");
     await page.waitForTimeout(2000);
 
+    // Home quick-link cards live in <main> — scope locators there so we
+    // don't accidentally click the sidebar nav buttons (same labels).
+    const main = page.locator("main");
+
     // Check for quick link buttons
     const quickLinks = ["Live TV", "Movies", "Series", "Watchlist"];
     for (const label of quickLinks) {
-      const btn = page.getByText(label, { exact: true }).first();
+      const btn = main.getByText(label, { exact: true }).first();
       await expect(btn).toBeVisible({ timeout: 3_000 });
     }
 
@@ -40,7 +44,7 @@ test.describe("Homepage", () => {
       "Series": "/series",
       "Watchlist": "/watchlist",
     })) {
-      const btn = page.getByText(label, { exact: true }).first();
+      const btn = main.getByText(label, { exact: true }).first();
       if (await btn.isVisible()) {
         await btn.click();
         await page.waitForLoadState("load");

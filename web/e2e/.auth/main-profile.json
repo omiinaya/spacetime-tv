@@ -1,0 +1,23 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://127.0.0.1:8720",
+      "localStorage": [
+        {
+          "name": "stv_current_profile",
+          "value": "{\"name\":\"Main Profile\",\"avatar\":\"default\",\"created\":1785478685}"
+        }
+      ]
+    },
+    {
+      "origin": "http://192.0.2.10:8720",
+      "localStorage": [
+        {
+          "name": "stv_current_profile",
+          "value": "{\"name\":\"Main Profile\",\"avatar\":\"default\",\"created\":1785478685}"
+        }
+      ]
+    }
+  ]
+}

@@ -149,7 +149,14 @@ export async function fetchWithRetry(
 
 async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   const res = await fetchWithRetry(`${API}${path}`, { signal });
-  if (!res.ok) throw new Error(`API error ${res.status}`);
+  if (!res.ok) {
+    if (res.status === 429) {
+      throw new Error(
+        "Too many requests — please wait a moment and try again.",
+      );
+    }
+    throw new Error(`API error ${res.status}`);
+  }
   return res.json();
 }
 

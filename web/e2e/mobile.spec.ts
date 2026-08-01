@@ -11,6 +11,15 @@
 
 import { test, expect } from "@playwright/test";
 
+// This spec is mobile/tablet-specific — pin a small touch viewport so it
+// passes regardless of which project runs it (desktop chromium would
+// otherwise hide the md:hidden hamburger and fail the toggle test).
+test.use({
+  viewport: { width: 390, height: 844 },
+  isMobile: true,
+  hasTouch: true,
+});
+
 // ── Helpers ──────────────────────────────────────────────────────
 
 async function dismissInstallPrompt(page: import("@playwright/test").Page) {
