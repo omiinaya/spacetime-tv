@@ -15,12 +15,40 @@ import {
   waitFor,
   act,
 } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { http, HttpResponse } from "msw";
 import { server } from "@/mocks/server";
 import AdminDashboard from "@/pages/AdminDashboard";
 
 // ── Sample admin stats ────────────────────────────────────────
-const sampleStats = {
+interface AdminStatsSample {
+  uptime: number;
+  cache: {
+    total_entries: number;
+    hits: number;
+    misses: number;
+    hit_rate: number;
+    vod_categories: number;
+    series_categories: number;
+    epg_age: number | null;
+  };
+  streams: {
+    total_hits: number;
+    unique_streams: number;
+    popular: { stream: string; hits: number }[];
+  };
+  errors: {
+    total: number;
+    recent: { ts: number; message: string; path: string }[];
+  };
+  searches: {
+    total: number;
+    recent: { ts: number; query: string }[];
+  };
+  sse_clients: number;
+}
+
+const sampleStats: AdminStatsSample = {
   uptime: 123456,
   cache: {
     total_entries: 1500,
@@ -112,7 +140,11 @@ beforeEach(() => {
 
 // ── Helper ────────────────────────────────────────────────────
 function renderDashboard() {
-  return render(<AdminDashboard />);
+  return render(
+    <MemoryRouter>
+      <AdminDashboard />
+    </MemoryRouter>,
+  );
 }
 
 // ── Tests ─────────────────────────────────────────────────────
