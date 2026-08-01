@@ -326,11 +326,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        # CSP — allow inline styles/scripts (React hydration), self for assets,
-        # blob/data for media streams (HLS/mpegts), TMDB for poster images.
+        # CSP — no inline scripts (SW registration moved to the bundle) and no
+        # eval: mpegts.js's global-this polyfill (new Function("return this"))
+        # catches the CSP violation and falls back to window, so the player
+        # works without unsafe-eval. Verify at runtime: console must show no
+        # CSP violations when playing live TV. hls.js/shaka do not eval.
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+            "script-src 'self'; "
             "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data: https://image.tmdb.org https://*.tmdb.org http://photo-tmdb.com https://photo-tmdb.com; "
             "media-src 'self' blob: data: https: http:; "

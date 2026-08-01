@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-const CACHE_NAME = "spacetimetv-v2";
+const CACHE_NAME = "spacetimetv-v3";
 const STATIC_ASSETS = ["/", "/manifest.json"];
 
 // TMDB image base URLs to pre-cache
@@ -16,7 +16,7 @@ const IMAGE_CACHE_MAX_ENTRIES = 200;
 // Install: pre-cache shell assets
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)),
   );
   // Activate immediately, don't wait for old tabs
   self.skipWaiting();
@@ -25,11 +25,13 @@ self.addEventListener("install", (event) => {
 // Activate: clean old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
-      )
-    )
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)),
+        ),
+      ),
   );
   // Take control of all clients immediately
   self.clients.claim();
@@ -64,12 +66,14 @@ async function flushPendingProgress() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(entry),
-        })
-      )
+        }),
+      ),
     );
 
     // Remove successfully synced entries
-    const remaining = pending.filter((_, i) => results[i].status === "rejected");
+    const remaining = pending.filter(
+      (_, i) => results[i].status === "rejected",
+    );
 
     if (remaining.length > 0) {
       await cache.put(queueRequest, new Response(JSON.stringify(remaining)));
@@ -159,7 +163,10 @@ async function cacheFirst(event) {
  * Stale-while-revalidate: return cached immediately, then update cache in background.
  * Good for TMDB images that are large and slow.
  */
-async function staleWhileRevalidate(event, maxEntries = IMAGE_CACHE_MAX_ENTRIES) {
+async function staleWhileRevalidate(
+  event,
+  maxEntries = IMAGE_CACHE_MAX_ENTRIES,
+) {
   const cache = await caches.open(CACHE_NAME);
   const cached = await cache.match(event.request);
 
@@ -180,6 +187,19 @@ async function staleWhileRevalidate(event, maxEntries = IMAGE_CACHE_MAX_ENTRIES)
 // Fetch: routing by request type
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
+
+  // ── Navigation requests: ALWAYS network-first ──────────────────────
+  // The SPA shell (index.html) is NOT content-hashed, so caching it
+  // cache-first means every deploy shows a stale build forever — the
+  // browser never even sees the server's Cache-Control headers because
+  // the SW intercepts first. networkFirst() revalidates the shell on
+  // every navigation (updating the offline fallback) while still
+  // serving the cached shell offline. This is the #1 fix for the
+  // "UI still broken after deploy" class of bug.
+  if (event.request.mode === "navigate") {
+    event.respondWith(networkFirst(event));
+    return;
+  }
 
   // ── API endpoints: network-first with cache fallback ──────────────
   if (url.pathname.startsWith("/api/")) {

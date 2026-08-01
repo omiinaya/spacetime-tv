@@ -1,22 +1,27 @@
 [
   {
-    "title": "Wire Playwright E2E tests (13 specs in web/e2e/) into CI — currently never run",
+    "title": "Wire Playwright E2E tests (13 specs in web/e2e/) into CI \u2014 currently never run",
     "priority": 1,
-    "description": "VERIFIED (re-checked 2026-07-31): web/e2e/ contains 13 Playwright spec files and `npm run test:e2e` is defined, but NO GitHub Actions job executes them. BLOCKER: e2e/playwright.config.ts targets baseURL http://127.0.0.1:8720 — the REAL FastAPI backend — and the live-tv/movies/series/search specs need real IPTV data, so a CI job would require IPTV_USER/IPTV_PASS as GitHub secrets (or a full MSW/mock backend). RESOLVED 2026-07-31 (kanban worker): (b) misnamed .github/workflows/e2e.yml renamed to release.yml with an explanatory header comment; (c) E2E-exclusion rationale documented in README.md 'Testing' section. REMAINING (optional, needs a decision): (a) add an e2e job to ci.yml + IPTV creds as CI secrets, or build a mock backend for the specs."
+    "description": "VERIFIED (re-checked 2026-07-31): web/e2e/ contains 13 Playwright spec files and `npm run test:e2e` is defined, but NO GitHub Actions job executes them. BLOCKER: e2e/playwright.config.ts targets baseURL http://127.0.0.1:8720 \u2014 the REAL FastAPI backend \u2014 and the live-tv/movies/series/search specs need real IPTV data, so a CI job would require IPTV_USER/IPTV_PASS as GitHub secrets (or a full MSW/mock backend). RESOLVED 2026-07-31 (kanban worker): (b) misnamed .github/workflows/e2e.yml renamed to release.yml with an explanatory header comment; (c) E2E-exclusion rationale documented in README.md 'Testing' section. REMAINING (optional, needs a decision): (a) add an e2e job to ci.yml + IPTV creds as CI secrets, or build a mock backend for the specs."
   },
   {
-    "title": "Decompose App.tsx (476 lines — grew back from 399) and useSearchPage.ts (460 lines)",
-    "priority": 1,
-    "description": "VERIFIED: ROADMAP.md v8 claims App.tsx is 'Decomposed ✅' at 399 lines — now false. App.tsx is 476 lines (router + layout + settings wiring grew back), useSearchPage.ts is 460. Largest frontend files after useVideoPlayer.ts (816, documented as diminishing returns). Extract the settings/sidebar/layout composition from App.tsx and the filter/search-state orchestration from useSearchPage.ts using the established module-extraction recipe. NOTE: web/src/App.tsx (and ProfilePicker.tsx, Sidebar.tsx, index.css, HomePage.tsx) carry UNCOMMITTED in-progress UI polish — coordinate or base the extraction on top of it. Update ROADMAP.md file-size table afterward."
+    "title": "Decompose App.tsx (476 lines \u2014 grew back from 399) and useSearchPage.ts (460 lines)",
+    "priority": 0,
+    "description": "RESOLVED 2026-08-01 (commit be2be5d): App.tsx 485\u2192145 lines (extracted useSidebarResize.ts, MobileNav.tsx, AppRoutes.tsx, backNavigation.ts), useSearchPage.ts 460\u2192394 (filter/sort extracted to lib/searchFiltering.ts + 10 new tests). Full frontend suite 101 files / 1570 tests pass, tsc clean, build succeeds."
   },
   {
     "title": "Tighten CSP script-src (currently 'unsafe-inline' 'unsafe-eval') or document the tradeoff",
-    "priority": 1,
-    "description": "VERIFIED: server/main.py SecurityHeadersMiddleware + web/nginx.conf both set script-src 'self' 'unsafe-inline' 'unsafe-eval'. unsafe-eval is required by the live-TV player stack (mpegts.js contains new Function(\"return this\"); verified in node_modules/mpegts.js/dist/mpegts.js) and unsafe-inline by React hydration, but this combination defeats most XSS mitigations. TRADEOFF DOCUMENTED 2026-07-31 in SECURITY_AUDIT.md finding #3 (hls.js/shaka dists do NOT eval directly). REMAINING: runtime audit to scope 'unsafe-eval' to the mpegts chunk only (nonce-based CSP is the eventual goal)."
+    "priority": 0,
+    "description": "RESOLVED 2026-08-01: script-src tightened from 'self' 'unsafe-inline' 'unsafe-eval' \u2192 'self' only. SW registration moved from inline <script> in index.html into src/main.tsx (bundle), so no inline scripts exist. mpegts.js's global-this polyfill (new Function('return this')) catches the CSP violation and falls back to window \u2014 verified live: played channel 483976 under strict CSP, video readyState 4, zero CSP violations/JS errors. hls.js/shaka do not eval. 4 regression tests added (TestSecurityHeaders). Nonce-based CSP no longer needed since no inline scripts remain."
   },
   {
     "title": "Verify stream preflight latency and CDN behavior at runtime",
-    "priority": 2,
-    "description": "VERIFIED CODE (session 2026-07-31): preflight_stream() in server/routes/stream_core.py opens a short aiohttp connection (status check + 1-byte read) before every live/VOD/remux/transcode/proxy StreamingResponse so dead channels return 502 instead of 200-with-empty-body; results are cached short-TTL (30s success / 5s failure) keyed by URL+Range, with env-configurable STREAM_PREFLIGHT_TIMEOUT. Unit + route tests added (test_stream.py, test_stream_live.py TestPreflightFailure, test_stream_vod.py TestPreflightFailure) and passing — full backend suite 1379 pass / 17 skip / 3 xfail. Remaining risk: verify against the real provider (iptv-provider.example.com) that (a) channel zapping latency is acceptable with the cache, (b) the 1-byte read does not desync mpegts.js, (c) dead channel IDs (e.g. 250, 1) now return 502 quickly."
+    "priority": 0,
+    "description": "VERIFIED AT RUNTIME (2026-08-01): preflight_stream() in server/routes/stream_core.py tested against the REAL provider (iptv-provider.example.com). Working channel 483976: preflight=True in 751ms cold, 0ms cached (30s success TTL). Dead channels 1 and 250: preflight=False fast (325ms/185ms), 0ms cached (5s failure TTL). The 1-byte body read does not desync mpegts.js (stream succeeds and returns). Rapid re-zaps skip the redundant CDN connection via the short-TTL cache. All three kanban risk areas verified: (a) latency acceptable, (b) no desync, (c) dead channels return 502 quickly. RESOLVED."
+  },
+  {
+    "title": "TMDB trending needs API key \u2014 wiring exists, credential missing",
+    "priority": 0,
+    "description": "VERIFIED 2026-08-01: routes/tmdb.py + HomePage trending sections are fully wired and render when data is present. TMDB_API_KEY is not set anywhere on the machine (.env, hermes config, all spacetime-* projects) and no tmdb-enrich CLI binary exists. Requires a TMDB v3 API key (free account) from the owner to enable. No-key behavior is clean: sections hide, no broken empty state."
   }
 ]

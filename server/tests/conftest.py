@@ -33,6 +33,28 @@ os.environ.setdefault("ENCRYPT_CREDENTIALS", "false")
 os.environ.setdefault("TMDB_API_KEY", "test-tmdb-key")
 os.environ.setdefault("TMDB_BASE", "https://api.themoviedb.org/3")
 
+# hermes-id agent auth (main.py installs the plugin, which hard-requires
+# HERMES_AUTH_SERVER_URL + HERMES_AUTH_PROJECT at import). Load the project's
+# auth env file so tests are deterministic regardless of parent shell env.
+_auth_env_path = Path(
+    os.environ.get(
+        "HERMES_AUTH_ENV_FILE",
+        str(Path.home() / ".hermes" / "auth" / "projects" / "spacetime-tv.env"),
+    )
+)
+if _auth_env_path.exists():
+    for _line in _auth_env_path.read_text().splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _v = _line.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip())
+else:
+    # Fallback for CI / machines without the auth env file: point at a local
+    # (unreachable is fine — tests never call the auth server) URL + project.
+    os.environ.setdefault("HERMES_AUTH_SERVER_URL", "https://127.0.0.1:9488")
+    os.environ.setdefault("HERMES_AUTH_PROJECT", "spacetime-tv")
+    os.environ.setdefault("HERMES_AUTH_VERIFY", "false")
+
 # Isolate ALL persistent state to a temp dir so tests NEVER write to the
 # real server/data/ (profiles.json, providers.json, watch_progress.json, etc).
 # Without this, every test run that calls create_profile() pollutes the

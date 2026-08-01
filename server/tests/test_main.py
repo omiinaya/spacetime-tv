@@ -723,3 +723,39 @@ class TestWarmCacheSeries:
         finally:
             cw.CACHE_WARM_ENABLED = old_enabled
             cw.CACHE_WARM_CATEGORIES = old_cats
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Security headers / CSP
+# ══════════════════════════════════════════════════════════════════════════
+
+
+class TestSecurityHeaders:
+    """CSP + security headers — strict policy, no inline scripts, no eval."""
+
+    def test_csp_has_no_unsafe_eval(self, client):
+        r = client.get("/")
+        csp = r.headers.get("content-security-policy", "")
+        assert "script-src 'self'" in csp
+        assert "unsafe-eval" not in csp
+        assert "unsafe-inline" not in csp.split("script-src")[1].split(";")[0]
+
+    def test_csp_allows_media_sources(self, client):
+        r = client.get("/")
+        csp = r.headers.get("content-security-policy", "")
+        assert "media-src 'self' blob: data: https: http:" in csp
+        assert "img-src" in csp and "image.tmdb.org" in csp
+
+    def test_security_headers_present(self, client):
+        r = client.get("/")
+        assert r.headers.get("x-content-type-options") == "nosniff"
+        assert r.headers.get("x-frame-options") == "DENY"
+        assert "strict-origin-when-cross-origin" in r.headers.get("referrer-policy", "")
+
+    def test_sw_registration_moved_out_of_inline_script(self, client):
+        """The SW registration must NOT be an inline script in index.html —
+        it lives in the JS bundle so script-src 'self' works."""
+        r = client.get("/")
+        html = r.text
+        assert "serviceWorker.register" not in html
+        assert "<script>" not in html or "serviceWorker" not in html
