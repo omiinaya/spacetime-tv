@@ -54,6 +54,7 @@ const RecordingsPage = lazy(() => import("@/pages/RecordingsPage"));
 const Player = lazy(() => import("@/components/Player"));
 const WatchRecording = lazy(() => import("@/components/WatchRecording"));
 const AdminDashboard = lazy(() => import("@/pages/AdminDashboard"));
+const AgentAccess = lazy(() => import("@/pages/AgentAccess"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 // Loading fallback for lazy routes
@@ -401,6 +402,14 @@ function AppLayout() {
                 element={
                   <ErrorBoundary name="Admin">
                     <AdminDashboard />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/admin/agents"
+                element={
+                  <ErrorBoundary name="Agent Access">
+                    <AgentAccess />
                   </ErrorBoundary>
                 }
               />

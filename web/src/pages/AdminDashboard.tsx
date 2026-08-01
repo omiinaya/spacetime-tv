@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router";
 import {
   Activity,
   Database,
@@ -158,12 +159,20 @@ export default function AdminDashboard() {
             </p>
           </div>
         </div>
-        <button
-          onClick={refresh}
-          className="px-3 py-1.5 rounded-lg bg-muted text-xs hover:bg-muted/80 transition-colors"
-        >
-          {loading ? "Refreshing…" : "Refresh"}
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/admin/agents"
+            className="px-3 py-1.5 rounded-lg bg-muted text-xs hover:bg-muted/80 transition-colors"
+          >
+            Agent Access
+          </Link>
+          <button
+            onClick={refresh}
+            className="px-3 py-1.5 rounded-lg bg-muted text-xs hover:bg-muted/80 transition-colors"
+          >
+            {loading ? "Refreshing…" : "Refresh"}
+          </button>
+        </div>
       </div>
 
       {/* Stats grid */}

@@ -2,9 +2,11 @@
 
 import asyncio
 import logging
+import os
 import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 import state
 from config import ProviderConfig
@@ -378,3 +380,83 @@ async def admin_update_provider(idx: int, body: dict):
 
     _save_providers_to_file(PROVIDERS)
     return {"message": f"Provider '{p.name}' updated"}
+
+
+# ── Hermes-ID Agent Access ─────────────────────────────────────────────
+# Proxy endpoints for the Agent Access page: list/approve/deny hermes-id
+# agents requesting access to this project. The auth server env vars are
+# set via the systemd EnvironmentFile:
+#   HERMES_AUTH_SERVER_URL, HERMES_AUTH_PROJECT, HERMES_ID_ADMIN_KEY,
+#   HERMES_AUTH_VERIFY (optional CA bundle path).
+
+
+async def _hermes_id_request(method: str, path: str, params: dict | None = None) -> JSONResponse:
+    """Proxy a request to the hermes-id auth server admin API.
+
+    Authenticates with the per-app scoped admin key (HERMES_ID_ADMIN_KEY)
+    so the proxy can only touch this project's agents. Returns the auth
+    server's JSON body directly; on upstream errors returns a JSONResponse
+    carrying the upstream status code and detail.
+    """
+    import httpx
+
+    server_url = os.environ.get("HERMES_AUTH_SERVER_URL", "").rstrip("/")
+    project = os.environ.get("HERMES_AUTH_PROJECT", "")
+    admin_key = os.environ.get("HERMES_ID_ADMIN_KEY", "")
+
+    if not server_url or not project or not admin_key:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Hermes-ID auth server not configured — set HERMES_AUTH_SERVER_URL, "
+                "HERMES_AUTH_PROJECT and HERMES_ID_ADMIN_KEY"
+            ),
+        )
+
+    url = f"{server_url}{path}"
+    query = dict(params or {})
+    query.setdefault("project", project)
+    headers = {"X-Admin-Key": admin_key}
+    verify = os.environ.get("HERMES_AUTH_VERIFY") or True
+
+    try:
+        async with httpx.AsyncClient(verify=verify, timeout=30.0) as client:
+            resp = await client.request(method, url, params=query, headers=headers)
+    except httpx.HTTPError as e:
+        log.error(f"[HERMES-ID] auth server request failed: {e}")
+        return JSONResponse(status_code=502, content={"detail": f"Auth server unreachable: {e}"})
+
+    if resp.status_code >= 400:
+        detail: str = resp.text
+        try:
+            body = resp.json()
+            if isinstance(body, dict) and "detail" in body:
+                detail = str(body["detail"])
+        except ValueError:
+            pass
+        log.warning(f"[HERMES-ID] auth server returned {resp.status_code}: {detail}")
+        return JSONResponse(status_code=resp.status_code, content={"detail": detail})
+
+    try:
+        body = resp.json()
+    except ValueError:
+        body = {"raw": resp.text}
+    return JSONResponse(status_code=resp.status_code, content=body)
+
+
+@router.get("/admin/hermes-id/agents")
+async def admin_hermes_id_agents(status: str = "pending", page: int = 1, page_size: int = 50):
+    """List hermes-id agents for this project (default: pending)."""
+    return await _hermes_id_request("GET", "/agents", {"status": status, "page": page, "page_size": page_size})
+
+
+@router.post("/admin/hermes-id/agents/{did}/approve")
+async def admin_hermes_id_approve(did: str):
+    """Approve a pending hermes-id agent for this project."""
+    return await _hermes_id_request("POST", f"/agents/{did}/approve")
+
+
+@router.post("/admin/hermes-id/agents/{did}/deny")
+async def admin_hermes_id_deny(did: str):
+    """Deny a pending hermes-id agent for this project."""
+    return await _hermes_id_request("POST", f"/agents/{did}/deny")
