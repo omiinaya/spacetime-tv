@@ -14,6 +14,7 @@ import type {
 } from "@/lib/types";
 import { addSearchHistory } from "@/components/SearchHistory";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
+import { filterAndSortResults, countResults } from "@/lib/searchFiltering";
 
 type LoadingSection = "live" | "movies" | "series" | null;
 
@@ -343,84 +344,20 @@ export default function useSearchPage(): UseSearchPageReturn {
   );
 
   // ── Derived ──
-  const total = results
-    ? results.live.length + results.movies.length + results.series.length
-    : 0;
+  const total = countResults(results);
   const liveCount = results?.live.length ?? 0;
   const movieCount = results?.movies.length ?? 0;
   const seriesCount = results?.series.length ?? 0;
 
-  // ── Sort helpers ──
-  const getSortValue = useCallback(
-    (
-      item: Movie | Series | LiveStream,
-      section: "movies" | "series",
-    ): number => {
-      if (sortBy === "rating") {
-        const id =
-          section === "movies"
-            ? (item as Movie).stream_id
-            : (item as Series).series_id;
-        const enr = enrichData?.[String(id)];
-        if (enr?.rating != null) return -enr.rating;
-        const rb = (item as Movie).rating_5based ?? 0;
-        return -rb;
-      }
-      return 0;
-    },
-    [sortBy, enrichData],
+  const filteredResults = useMemo(
+    () =>
+      results
+        ? filterAndSortResults(results, filter, sortBy, enrichData)
+        : null,
+    [results, filter, sortBy, enrichData],
   );
 
-  const sortByName = useCallback(
-    (a: { name?: string }, b: { name?: string }) => {
-      return (a.name || "").localeCompare(b.name || "");
-    },
-    [],
-  );
-
-  const filteredResults = useMemo(() => {
-    if (!results) return null;
-    let filtered: SearchResults;
-    switch (filter) {
-      case "live":
-        filtered = { ...results, movies: [], series: [] };
-        break;
-      case "movies":
-        filtered = { ...results, live: [], series: [] };
-        break;
-      case "series":
-        filtered = { ...results, live: [], movies: [] };
-        break;
-      default:
-        filtered = { ...results };
-    }
-
-    if (sortBy === "name") {
-      filtered = {
-        live: [...filtered.live].sort(sortByName),
-        movies: [...filtered.movies].sort(sortByName),
-        series: [...filtered.series].sort(sortByName),
-      };
-    } else if (sortBy === "rating") {
-      filtered = {
-        live: filtered.live,
-        movies: [...filtered.movies].sort(
-          (a, b) => getSortValue(a, "movies") - getSortValue(b, "movies"),
-        ),
-        series: [...filtered.series].sort(
-          (a, b) => getSortValue(a, "series") - getSortValue(b, "series"),
-        ),
-      };
-    }
-
-    return filtered;
-  }, [results, filter, sortBy, sortByName, getSortValue]);
-
-  const filteredTotal = filteredResults
-    ? filteredResults.live.length +
-      filteredResults.movies.length +
-      filteredResults.series.length
-    : 0;
+  const filteredTotal = countResults(filteredResults);
 
   // ── Now-playing EPG ──
   const nowPlayingStreamIds = useMemo(() => {
