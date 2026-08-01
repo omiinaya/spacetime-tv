@@ -17,6 +17,30 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Recently Completed
 
+### ✅ P0 — Backend suite: 518 auth failures → 1386 pass (Bug/DX)
+conftest used `os.environ.setdefault("ADMIN_API_KEY", "test-admin-key-insecure")`, but the parent shell env (spacetime-tv runs under the Hermes gateway env) already carries the REAL admin key, and `load_dotenv()` in config.py never overrides an existing var. So config resolved the production key while tests sent the test key → the auth middleware 403'd every API request. All 518 failures across 55 files were this single env-shadowing bug. Fixed: conftest FORCES `ADMIN_API_KEY` + `ALLOW_LAN_BYPASS=true` (not setdefault). Also loads hermes-id auth env from `~/.hermes/auth/projects/spacetime-tv.env` (or CI fallback) so tests are deterministic regardless of parent shell env. 2 config tests updated to reload without STV_DATA_DIR for true-default verification.
+
+### ✅ P1 — AdminDashboard.test.tsx: 16 failures → 18/18 (Test hygiene)
+`renderDashboard()` rendered `<AdminDashboard />` bare, but the component uses react-router `<Link>` — every Link threw `Cannot destructure property 'basename' of useContext(...) as it is null`, crashing 16/18 tests. Wrapped in `<MemoryRouter>` (same pattern as the other 5 page suites) + typed the sample-stats fixture so `epg_age: null` is legal.
+
+### ✅ P1 — App.tsx 485→145 + useSearchPage.ts 460→394 decomposition (Maintainability)
+Extracted `useSidebarResize` (sidebar width + drag resize), `MobileNav` (drawer + mobile header), `AppRoutes` (all 18 lazy routes + Suspense/ErrorBoundary), `backNavigation` (stv_back_url tracking), and `lib/searchFiltering` (pure filter/sort pipeline, +10 unit tests covering filter tabs, name/rating sort, TMDB enrich priority, immutability). tsc clean, build succeeds, 1,570 frontend tests pass.
+
+### ✅ P1 — Strict CSP: script-src 'self' (Security)
+Removed `'unsafe-inline' 'unsafe-eval'` from script-src. SW registration moved from inline `<script>` in index.html into `src/main.tsx` so the app has zero inline scripts. mpegts.js's global-this polyfill catches the CSP eval block and falls back to window — verified live (channel 483976 plays, video readyState 4, zero violations). 4 regression tests (`TestSecurityHeaders`).
+
+### ✅ P1 — SW cache-first stale-build bug (Bug — root cause of "UI still broken after fix")
+`sw.js` routed ALL static assets cache-first, including the unhashed `index.html` shell pre-cached at install. After a deploy, browsers served the cached old shell forever — the HTTP Cache-Control headers were never consulted because the SW intercepted first. Navigation requests are now network-first (revalidates shell every load, still serves cached offline); API stays network-first; hashed assets stay cache-first. Cache name bumped v2→v3 so existing clients get the new SW and purge the old cache on activate.
+
+### ✅ P2 — HTTP cache headers for SPA shell (Bug)
+index.html was served with no Cache-Control → browsers heuristically cached the old build. Now: index.html `no-cache, no-store, must-revalidate`; /assets/* `public, max-age=31536000, immutable` (cache-control middleware in main.py).
+
+### ✅ P2 — E2E suite repaired (Test hygiene)
+Fresh Playwright browsers hit the profile gate, so specs expecting app content failed. Added storageState seed (e2e/.auth/main-profile.json), scoped quick-link locators to `<main>`, pinned a mobile touch viewport in mobile.spec.ts via test.use(). Chromium run: 85 passed / 1 failed / 3 flaky against the live backend (was gate-blocked). Search 429 surfaced as raw "API error 429" → now a friendly "Too many requests" message.
+
+### ✅ P2 — Preflight verified at runtime (Verification)
+Tested preflight_stream() against the real iptv-provider.example.com provider: working channel 483976 → True in 751ms cold / 0ms cached; dead channels (1, 250) → False fast (325/185ms), 0ms cached. No mpegts desync from the 1-byte body read. All three kanban risk areas verified.
+
 ### ✅ P1 — Fix pre-commit hook: silent no-op gate (exit codes never propagated) (Bug/DX)
 `.githooks/pre-commit` ran `make fmt-check` / `make lint` but never propagated their
 exit codes — a failing lint or format check still fell through to "✅ Pre-commit

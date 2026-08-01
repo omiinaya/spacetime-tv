@@ -1,21 +1,22 @@
-# SpacetimeTV Roadmap v8 — Current State
+# SpacetimeTV Roadmap v9 — Current State
 
-> **Audit date:** 2026-07-31 (10th session — LAN auth bypass flag + preflight cache)
+> **Audit date:** 2026-08-01 (11th session — backend suite restored, UI fix hardening, security)
 > **Stack:** FastAPI + React 19 + Vite 8 + Tailwind v4 | 13 pages | 133 components | 31 hooks | 25 back-end route modules
-> **Test counts:** 1,379 backend pass (17 skipped, 3 xfail) + 1,500+ frontend pass | 0 TypeScript errors | 0 production `any` types
+> **Test counts:** 1,386 backend pass (17 skipped, 3 xfail) + 1,570 frontend pass (101 files) | 0 TypeScript errors | 0 production `any` types
 > **CI:** GitHub Actions (lint → test → tsc → build)
 > **Hook test coverage:** 31/31 (100%) — all custom hooks have unit tests
+> **E2E:** Playwright chromium run 85+ passed against live backend (profile-gate seeded via storageState); not in CI (needs IPTV creds as secrets)
 
 ## Current File Sizes (source only, no tests)
 
 | File | Lines | Status |
 |------|:-----:|--------|
 | `web/src/hooks/useVideoPlayer.ts` | 816 | Down from 901 (-9.4%) — cleanup boilerplate unified |
-| `web/src/App.tsx` | 476 | Grew back from 399 — layout/settings wiring; candidate for extraction (see kanban-suggestions.json) |
-| `web/src/hooks/useSearchPage.ts` | 460 | Filter/search-state orchestration; candidate for extraction |
-| `web/src/lib/types.ts` | 445 | Type definitions — flat, low churn |
 | `web/src/pages/Series.tsx` | 429 | Decomposed ✅ (was 957) |
-| `server/main.py` | 413 | Entry point + middleware — stable |
+| `web/src/hooks/useSearchPage.ts` | 394 | Down from 460 — filter/sort extracted to lib/searchFiltering.ts ✅ |
+| `web/src/lib/types.ts` | 445 | Type definitions — flat, low churn |
+| `web/src/App.tsx` | 145 | Down from 485 — extracted useSidebarResize, MobileNav, AppRoutes, backNavigation ✅ |
+| `server/main.py` | 442 | Entry point + middleware — stable |
 | `web/src/pages/LiveTV.tsx` | 363 | Down from 493 (-26%) — inline components extracted ✅ |
 | `server/iptv_client.py` | 502 | Provider client — well-structured service module |
 | `server/auth.py` | 371 | Auth utilities — stable |
@@ -25,9 +26,45 @@ Largest remaining files are all documented extraction candidates or
 deliberately flat data/type modules. useVideoPlayer.ts (816) is documented
 as diminishing returns for further splitting.
 
-## Recent Improvements (sessions 7-10)
+## Recent Improvements
 
-### Session 11 (2026-07-31) — tooling gates + audit reconciliation
+### Session 11 (2026-08-01) — suite restoration + security hardening
+- **Backend suite 518 failures → 1382+ pass** — root cause: conftest used
+  `os.environ.setdefault("ADMIN_API_KEY")` but the parent shell env carries the
+  REAL admin key, and `load_dotenv()` never overrides an existing var — every
+  test sent the test key while config resolved the production key → auth
+  middleware 403'd all 518 API tests. conftest now FORCES the test key + LAN
+  bypass. Also loads hermes-id auth env from `~/.hermes/auth/projects/spacetime-tv.env`
+  (or CI fallback) so tests are deterministic regardless of parent shell env.
+- **Frontend AdminDashboard 16 failures → 18/18** — bare render lacked a Router
+  ancestor; every `<Link>` crashed on `useContext` null. Wrapped in MemoryRouter.
+- **Strict CSP** — `script-src 'self'` (was `'self' 'unsafe-inline' 'unsafe-eval'`).
+  SW registration moved from inline `<script>` to the bundle; verified live:
+  channel 483976 plays (video readyState 4) with zero CSP violations.
+- **SW cache fix** — sw.js was cache-first for ALL static assets including
+  index.html (unhashed shell), so the old build served forever after deploy,
+  bypassing HTTP Cache-Control entirely. Navigation now network-first;
+  cache name bumped v2→v3. This is the real mechanism behind the "UI still
+  broken after fix" reports.
+- **HTTP cache headers** — index.html `no-cache, no-store, must-revalidate`;
+  hashed /assets/* `public, max-age=31536000, immutable` (cache-control middleware).
+- **E2E repaired** — profile-gate storage seed + locator scoping + pinned mobile
+  viewport; 85+ passing against live backend.
+- **App.tsx 485→145, useSearchPage.ts 460→394** — extracted useSidebarResize,
+  MobileNav, AppRoutes, backNavigation, lib/searchFiltering (+10 tests).
+- **Preflight verified at runtime** — working channel 483976 preflights True in
+  751ms cold / 0ms cached; dead channels (1, 250) fail fast; no mpegts desync.
+
+### Session 10 (2026-07-31) — hardening + preflight tuning
+- **ALLOW_LAN_BYPASS env flag** — the dev convenience that skips auth for all
+  localhost/192.168.x.x requests is now gated by `ALLOW_LAN_BYPASS` (default
+  true, set `false` for hardened deployments). 7 middleware tests added
+  (`test_auth_middleware_lan.py`).
+- **Preflight cache + env-configurable timeout** — `preflight_stream()` results
+  are now cached short-term keyed by URL + Range header (30s success / 5s
+  failure) so rapid channel re-zaps skip the redundant CDN connection, and the
+  per-call timeout defaults to `STREAM_PREFLIGHT_TIMEOUT` (10s). 5 cache tests
+  added in `test_stream.py`.
 - **Pre-commit hook fixed** — was a silent no-op gate: `make fmt-check`/`make lint`
   failures were never propagated, so commits with lint/format violations succeeded.
   Hook now aborts the commit on any staged-file violation (ruff format+lint for
@@ -102,8 +139,7 @@ as diminishing returns for further splitting.
 
 ### Frontend
 - `useVideoPlayer.ts` (816 lines) — main effect is dense orchestration; further sub-hook extraction possible but diminishing returns
-- `App.tsx` (476) and `useSearchPage.ts` (460) grew back — extraction candidates (see kanban-suggestions.json)
-- E2E test count could grow for edge cases; 13 Playwright specs exist but are NOT wired into CI (see kanban-suggestions.json)
+- E2E: 3 flaky specs remain (timing-sensitive negative assertions vs live backend; one search spec hit a real 429 rate limit — now friendly-messaged). CI wiring still needs IPTV_USER/IPTV_PASS as GitHub secrets or a mock backend
 - Full-suite parallel-load flakiness was fixed in session 9 (asyncUtilTimeout 4000ms + SeriesOverlay play gating + usePlayerUtils sessionStorage guard); if flakes reappear, revisit the rotating waitFor/userEvent timeouts
 
 ### Backend
@@ -117,11 +153,13 @@ as diminishing returns for further splitting.
 - ✅ Docker Compose for deployment
 - ✅ Nginx + TLS (443, http2, HSTS; Let's Encrypt via ACME_DOMAIN, self-signed fallback)
 - ✅ Pre-commit hooks auto-installed via `npm install` (`prepare`/`postinstall` set `core.hooksPath .githooks`); hook gates staged files on ruff/prettier/eslint and fails the commit on violations
+- ⏳ E2E in CI — blocked on IPTV credentials as GitHub secrets (or mock backend); suite runs locally against live backend
 
 ## What's Solid
 - **0 TypeScript errors** in production code
-- **0 pre-existing test failures** (1,500+ frontend tests)
+- **0 pre-existing test failures** (1,570 frontend tests / 101 files, 1,386 backend)
 - **0 `any` types** in production source
+- **Strict CSP** — script-src 'self' only (no unsafe-inline/eval), verified with live playback
 - **Clean build** with proper code splitting (hls.js, shaka-player in separate chunks)
 - **Good accessibility:** alt text, aria-labels, skip-to-content, roles
 - **No circular imports** in backend
