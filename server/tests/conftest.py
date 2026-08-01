@@ -27,8 +27,16 @@ os.environ.setdefault("ENCRYPT_CREDENTIALS", "false")
 os.environ.setdefault("TMDB_API_KEY", "test-tmdb-key")
 os.environ.setdefault("TMDB_BASE", "https://api.themoviedb.org/3")
 
+# Isolate ALL persistent state to a temp dir so tests NEVER write to the
+# real server/data/ (profiles.json, providers.json, watch_progress.json, etc).
+# Without this, every test run that calls create_profile() pollutes the
+# production profile list with Alice/Bob/Charlie/Test User duplicates.
+_test_data_dir = Path(os.environ.get("STV_TEST_DATA_DIR", "/tmp/stv-test-data"))
+_test_data_dir.mkdir(parents=True, exist_ok=True)
+os.environ["STV_DATA_DIR"] = str(_test_data_dir)
+
 # Wipe persistent state files to prevent cross-session contamination
-_state_dir = Path(__file__).resolve().parent.parent / "server" / "data"
+_state_dir = _test_data_dir
 _hits_file = _state_dir / "stream_hits.json"
 if _hits_file.exists():
     _hits_file.unlink()
