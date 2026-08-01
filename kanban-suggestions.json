@@ -2,7 +2,7 @@
   {
     "title": "Wire Playwright E2E tests (13 specs in web/e2e/) into CI \u2014 currently never run",
     "priority": 1,
-    "description": "VERIFIED (re-checked 2026-07-31): web/e2e/ contains 13 Playwright spec files and `npm run test:e2e` is defined, but NO GitHub Actions job executes them. BLOCKER: e2e/playwright.config.ts targets baseURL http://127.0.0.1:8720 \u2014 the REAL FastAPI backend \u2014 and the live-tv/movies/series/search specs need real IPTV data, so a CI job would require IPTV_USER/IPTV_PASS as GitHub secrets (or a full MSW/mock backend). RESOLVED 2026-07-31 (kanban worker): (b) misnamed .github/workflows/e2e.yml renamed to release.yml with an explanatory header comment; (c) E2E-exclusion rationale documented in README.md 'Testing' section. REMAINING (optional, needs a decision): (a) add an e2e job to ci.yml + IPTV creds as CI secrets, or build a mock backend for the specs."
+    "description": "PARTIALLY RESOLVED 2026-08-01: E2E suite was gate-blocked (fresh browsers hit the profile picker). Fixed with storageState seed (e2e/.auth/main-profile.json), locator scoping (getByRole heading, <main> scope), and pinned mobile viewport (test.use). Chromium run: 85 passed / 1 failed / 3 flaky against the live backend with real IPTV data (was ~0 passing). 429 search rate-limit surfaced as raw API error \u2014 now friendly message. REMAINING: CI wiring still requires IPTV_USER/IPTV_PASS as GitHub secrets (or a mock backend) \u2014 E2E runs locally against the live backend on :8720; document this in README."
   },
   {
     "title": "Decompose App.tsx (476 lines \u2014 grew back from 399) and useSearchPage.ts (460 lines)",
