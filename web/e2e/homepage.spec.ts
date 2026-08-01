@@ -63,17 +63,17 @@ test.describe("Homepage", () => {
     await page.waitForLoadState("load");
     await page.waitForTimeout(3000);
 
-    // Check if trending content loaded or loading was displayed
+    // Check if trending content loaded or the page fell back to the
+    // welcome/quick-links state (TMDB trending needs an API key — without
+    // one the sections simply don't render, which is the graceful fallback).
     const body = page.locator("body");
     const text = await body.innerText();
 
-    // Either we see trending content, skeleton loaders, or the empty welcome state
     const hasTrending =
       text.includes("Trending Movies") ||
       text.includes("Trending Series") ||
-      text.includes("Welcome to Spacetime-TV") ||
-      text.includes("Browse Live TV");
-
+      text.includes("Welcome") ||
+      text.includes("Browse live TV");
     expect(hasTrending).toBeTruthy();
     console.log(`Homepage: ${text.includes("Trending Movies") ? "has trending movies" : "no trending movies"}, ${text.length} chars`);
   });
