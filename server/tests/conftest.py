@@ -22,7 +22,13 @@ os.environ.setdefault("CACHE_WARM_CATEGORIES", "")
 os.environ.setdefault("CLEANUP_INTERVAL", "3600")
 os.environ.setdefault("CACHE_TTL_HOURS", "0")
 os.environ.setdefault("ENFORCE_HTTPS", "false")
-os.environ.setdefault("ADMIN_API_KEY", "test-admin-key-insecure")
+# Force the admin key + LAN bypass (NOT setdefault): the parent shell env
+# carries a real ADMIN_API_KEY (spacetime-tv is started from the Hermes
+# gateway env), and load_dotenv() in config.py won't override an existing
+# var — so setdefault() silently kept the REAL key, every test request
+# sent the test key, and the auth middleware 403'd all 518 API tests.
+os.environ["ADMIN_API_KEY"] = "test-admin-key-insecure"
+os.environ["ALLOW_LAN_BYPASS"] = "true"
 os.environ.setdefault("ENCRYPT_CREDENTIALS", "false")
 os.environ.setdefault("TMDB_API_KEY", "test-tmdb-key")
 os.environ.setdefault("TMDB_BASE", "https://api.themoviedb.org/3")

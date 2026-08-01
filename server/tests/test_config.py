@@ -839,7 +839,10 @@ class TestProvidersFilePath:
         assert hasattr(PROVIDERS_FILE, "parent")
         assert PROVIDERS_FILE.name == "providers.json"
 
-    def test_data_dir_default_is_relative_to_config(self):
+    def test_data_dir_default_is_relative_to_config(self, monkeypatch):
+        # conftest forces STV_DATA_DIR for test isolation — reload config
+        # without it to verify the TRUE default (relative to config.py).
+        _reload_config(monkeypatch, delenv=["STV_DATA_DIR"])
         from config import DATA_DIR
 
         assert DATA_DIR.name == "data"
@@ -971,7 +974,10 @@ class TestExtraDefaults:
 
     # -- DATA_DIR / CACHE_DIR ------------------------------------------------
 
-    def test_data_dir_default(self):
+    def test_data_dir_default(self, monkeypatch):
+        # conftest forces STV_DATA_DIR for test isolation — reload config
+        # without it to verify the TRUE default.
+        _reload_config(monkeypatch, delenv=["STV_DATA_DIR"])
         from config import DATA_DIR
 
         assert DATA_DIR.name == "data"
