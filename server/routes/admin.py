@@ -417,7 +417,15 @@ async def _hermes_id_request(method: str, path: str, params: dict | None = None)
     query = dict(params or {})
     query.setdefault("project", project)
     headers = {"X-Admin-Key": admin_key}
-    verify = os.environ.get("HERMES_AUTH_VERIFY") or True
+    # HERMES_AUTH_VERIFY is documented as an optional CA-bundle path, but
+    # deployments/conftest also use the literal string "false" to disable
+    # verification. `verify="false"` is truthy and gets treated as a CA
+    # bundle path → SSL error → 502. Normalize the boolean spellings.
+    _verify_raw = os.environ.get("HERMES_AUTH_VERIFY", "")
+    if _verify_raw.lower() in ("false", "0", "no", "off"):
+        verify: str | bool = False
+    else:
+        verify = _verify_raw or True
 
     try:
         async with httpx.AsyncClient(verify=verify, timeout=30.0) as client:

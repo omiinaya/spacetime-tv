@@ -4,8 +4,9 @@ Uses the same test fixtures as other backend tests (env vars set in conftest,
 mocked upstream IPTV provider, cleared cache before each test).
 """
 
+import asyncio
 import time
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -521,3 +522,82 @@ def test_admin_key_auto_generates_when_empty(client: TestClient):
         # that snapshot/restore provider state.)
         os.environ["ADMIN_API_KEY"] = old_key
         importlib.reload(cfg)
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# hermes-id proxy — HERMES_AUTH_VERIFY normalization (security fix)
+# ══════════════════════════════════════════════════════════════════════════
+
+
+class TestHermesIdVerifyNormalization:
+    """HERMES_AUTH_VERIFY is documented as a CA-bundle path but is also set to
+    the literal string "false" (conftest + deployments) to disable verification.
+    `verify="false"` is truthy and would be passed as a CA path → SSL error.
+    The proxy must normalize the boolean spellings to verify=False."""
+
+    def _fake_client_factory(self, captured: dict):
+        """Return a FakeAsyncClient class that records kwargs and returns 200."""
+
+        class FakeAsyncClient:
+            def __init__(self, **kwargs):
+                captured["verify"] = kwargs.get("verify")
+                self._resp = MagicMock()
+                self._resp.status_code = 200
+                self._resp.json.return_value = {"ok": True}
+                self._resp.text = '{"ok": true}'
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
+            async def request(self, *a, **kw):
+                return self._resp
+
+        return FakeAsyncClient
+
+    def test_verify_disabled_when_env_false(self, monkeypatch):
+        from routes.admin import _hermes_id_request
+
+        captured: dict = {}
+        import httpx
+
+        monkeypatch.setenv("HERMES_AUTH_SERVER_URL", "https://auth.test")
+        monkeypatch.setenv("HERMES_AUTH_PROJECT", "test-proj")
+        monkeypatch.setenv("HERMES_ID_ADMIN_KEY", "test-admin-key")
+        monkeypatch.setenv("HERMES_AUTH_VERIFY", "false")
+
+        with patch.object(httpx, "AsyncClient", self._fake_client_factory(captured)):
+            asyncio.run(_hermes_id_request("GET", "/agents", {"page": 1}))
+        assert captured["verify"] is False
+
+    def test_verify_defaults_true_when_unset(self, monkeypatch):
+        from routes.admin import _hermes_id_request
+
+        captured: dict = {}
+        import httpx
+
+        monkeypatch.setenv("HERMES_AUTH_SERVER_URL", "https://auth.test")
+        monkeypatch.setenv("HERMES_AUTH_PROJECT", "test-proj")
+        monkeypatch.setenv("HERMES_ID_ADMIN_KEY", "test-admin-key")
+        monkeypatch.delenv("HERMES_AUTH_VERIFY", raising=False)
+
+        with patch.object(httpx, "AsyncClient", self._fake_client_factory(captured)):
+            asyncio.run(_hermes_id_request("GET", "/agents"))
+        assert captured["verify"] is True
+
+    def test_verify_uses_ca_path_when_provided(self, monkeypatch):
+        from routes.admin import _hermes_id_request
+
+        captured: dict = {}
+        import httpx
+
+        monkeypatch.setenv("HERMES_AUTH_SERVER_URL", "https://auth.test")
+        monkeypatch.setenv("HERMES_AUTH_PROJECT", "test-proj")
+        monkeypatch.setenv("HERMES_ID_ADMIN_KEY", "test-admin-key")
+        monkeypatch.setenv("HERMES_AUTH_VERIFY", "/etc/ssl/certs/ca.pem")
+
+        with patch.object(httpx, "AsyncClient", self._fake_client_factory(captured)):
+            asyncio.run(_hermes_id_request("GET", "/agents"))
+        assert captured["verify"] == "/etc/ssl/certs/ca.pem"

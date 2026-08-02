@@ -1,0 +1,10 @@
+# Test-only backend dependencies — not shipped to production.
+# CI installs this (it contains requirements.txt) so `python -m pytest`
+# works on a clean checkout; previously CI silently relied on GitHub
+# runners having pytest pre-installed, and `pip install -r requirements.txt`
+# then `python -m pytest` failed with an ImportError for new contributors.
+-r requirements.txt
+
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-timeout>=2.2.0

@@ -58,7 +58,20 @@ async def load_epg() -> dict:
             EPG_CACHE_FILE.write_text(json.dumps({"data": data, "fetched": now}))
             log.info(f"EPG parsed: {len(data.get('programmes', []))} programmes")
             return data
-        except (TimeoutError, httpx.HTTPError, httpx.TimeoutException, RuntimeError, json.JSONDecodeError) as e:
+        except (
+            TimeoutError,
+            httpx.HTTPError,
+            httpx.TimeoutException,
+            RuntimeError,
+            json.JSONDecodeError,
+            IsADirectoryError,
+            OSError,
+        ) as e:
+            # IsADirectoryError/OSError: docker-compose bind-mounts
+            # ./server/epg_cache.json, which Docker auto-creates as a
+            # DIRECTORY on a fresh clone (the file is gitignored) → the
+            # EPG write below raises instead of degrading to in-memory.
+            # Fall back to the in-memory cache either way.
             log.error(f"EPG fetch failed: {e}")
             if epg_cache["data"]:
                 return epg_cache["data"]

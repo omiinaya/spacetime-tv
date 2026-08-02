@@ -402,7 +402,10 @@ from routes.cache_warmer import (  # noqa: F401 — re-exported for tests
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Cache TTL / Auto-cleanup ────────────────────────────────────────────────
-CLEANUP_TTL_HOURS = 2  # Delete stale cache entries older than this (env: CACHE_TTL_HOURS for backward compat)
+# NOTE: hardcoded — the CACHE_TTL_HOURS / CLEANUP_INTERVAL env vars are only
+# honored in tests (conftest sets sentinels). Wiring them here would change
+# runtime behavior; kept constant deliberately until a config review.
+CLEANUP_TTL_HOURS = 2
 CLEANUP_INTERVAL = 600
 _cleanup_task: asyncio.Task | None = None
 
