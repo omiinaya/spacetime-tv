@@ -33,6 +33,11 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 - **Config docs** (M8): `.env.example` pinned the real `RATE_SEARCH_LIMIT=300` (was 100), added ENCRYPT_CREDENTIALS/STV_ENCRYPT_KEY/EPG_CACHE_FILE/STATIC_DIR/STV_DATA_DIR/CACHE_WARM_*/PROFILE_TOKEN_SECRET; documented that CACHE_TTL_HOURS/CLEANUP_INTERVAL are hardcoded (not runtime-wired) and why.
 - **Tests**: 1397 backend (+3 hermes-id), 1571 frontend, tsc clean, build clean, chromium E2E 88 passed / 1 known flake.
 
+### ✅ Session 12.3 (2026-08-02) — rate-limit eviction + channelIconUrl + admin guard
+- **Rate-limit unbounded-memory leak** (discovered during review): `_rate_limits` keyed by device-token/IP was never evicted — every unique token ever seen left an entry forever. Added opportunistic stale-bucket sweep (at most once per RATE_WINDOW, lossless). +1 test. Backend 1398.
+- **`channelIconUrl()` extracted** (perf audit #12): the iptv-provider proxy-icon URL construction was copy-pasted in LiveChannelCard, LiveSearchResults, HistoryPage. Centralized in lib/api.ts; updated the two test mocks that render those components.
+- **admin warm-full concurrency guard** (audit L1): `/admin/cache/warm-full` now no-ops when a warm is already running (was identical to clear-cache but could double-spawn warm tasks).
+
 ### ✅ Session 12 (2026-08-02) — security findings, SW stream fix, a11y + perf batch, task guards
 - **CORS real origins** (SECURITY_AUDIT #9): origin list was missing the frontend dev port 5183 + LAN host 192.0.2.10 — their preflights 400'd with no ACAO. Added both (16 origins). CORS 70→85, overall 78→80.
 - **image-proxy JSON 502** (SECURITY_AUDIT #11): uncaught `httpx.HTTPStatusError`/transport error → 500 text/plain. Now clean JSON 502, no upstream detail leak. Error-Leakage 80→90.
