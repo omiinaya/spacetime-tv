@@ -14,7 +14,11 @@ export default function SeriesSearchInput({
   return (
     <div className="relative max-w-md">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+      <label htmlFor="series-search" className="sr-only">
+        {placeholder}
+      </label>
       <input
+        id="series-search"
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -24,9 +28,10 @@ export default function SeriesSearchInput({
       {value && (
         <button
           onClick={() => onChange("")}
+          aria-label="Clear search"
           className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       )}
     </div>

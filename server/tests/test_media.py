@@ -269,14 +269,16 @@ class TestGetSubtitles:
     @patch("asyncio.create_subprocess_exec")
     @patch("asyncio.wait_for")
     def test_get_subtitles_ffmpeg_fails(self, mock_wait_for, mock_create_subprocess, client):
-        """Should return 500 when ffmpeg fails."""
+        """Should return 404 (graceful) when ffmpeg extraction fails — a 500
+        here makes the <track> element fail hard. CDN-down is common, so a
+        clean 404 lets the client show 'subtitles unavailable'."""
         proc = _make_mock_process(1, b"", b"error")
         mock_create_subprocess.return_value = proc
         mock_wait_for.return_value = (b"", b"error")
 
         resp = client.get("/api/v1/subtitles/movie/999/0")
-        assert resp.status_code == 500
-        assert "Subtitle extraction failed" in resp.text
+        assert resp.status_code == 404
+        assert "Subtitle track unavailable" in resp.text
 
     @patch("asyncio.create_subprocess_exec")
     @patch("asyncio.wait_for")

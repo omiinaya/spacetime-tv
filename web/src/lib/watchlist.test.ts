@@ -8,13 +8,17 @@ import {
   isSeriesInWatchlist,
   toggleSeriesWatchlist,
   getSeriesWatchlistCount,
+  resetWatchlistCaches,
 } from "./watchlist";
 
 const MOVIE_KEY = "stv_watchlist";
 const SERIES_KEY = "stv_watchlist_series";
 
 describe("watchlist (movies)", () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    resetWatchlistCaches(); // module-level Set cache must not leak across tests
+  });
   afterEach(() => localStorage.clear());
 
   it("returns empty list when nothing stored", () => {
@@ -26,11 +30,18 @@ describe("watchlist (movies)", () => {
     expect(getWatchlist()).toEqual([]);
   });
 
-  it("returns what localStorage has for non-array JSON (function doesn't validate)", () => {
+  it("normalizes legacy non-array JSON to empty array (record-shape backup)", () => {
     localStorage.setItem(MOVIE_KEY, JSON.stringify({ not: "array" }));
     const result = getWatchlist();
-    // The function parses and returns whatever is stored; it doesn't enforce array type
-    expect(Array.isArray(result)).toBe(false);
+    // Legacy record-shape backups ({"550": true}) restore as number[]; a
+    // non-array store normalizes to [] rather than corrupting consumers.
+    expect(Array.isArray(result)).toBe(true);
+    expect(result).toEqual([]);
+  });
+
+  it("filters non-number entries from stored arrays", () => {
+    localStorage.setItem(MOVIE_KEY, JSON.stringify([1, "two", 3, null]));
+    expect(getWatchlist()).toEqual([1, 3]);
   });
 
   it("returns stored watchlist", () => {
@@ -101,7 +112,10 @@ describe("watchlist (movies)", () => {
 });
 
 describe("watchlist (series)", () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    resetWatchlistCaches(); // module-level Set cache must not leak across tests
+  });
   afterEach(() => localStorage.clear());
 
   it("returns empty list when nothing stored", () => {

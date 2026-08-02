@@ -251,6 +251,13 @@ export default function Player({ type }: PlayerProps) {
         playsInline
         webkit-playsinline="true"
         x-webkit-airplay="allow"
+        aria-label={
+          type === "live"
+            ? "Live TV stream"
+            : type === "movie"
+              ? "Movie player"
+              : "Series player"
+        }
       />
 
       {/* Transparent overlay to handle play/pause taps */}

@@ -201,7 +201,20 @@ export default function PersonPage() {
                       navigate(`/series?q=${encodeURIComponent(title)}`);
                     }
                   }}
-                  className="group flex flex-col rounded-xl overflow-hidden bg-card border border-border hover:border-primary/40 transition-all cursor-pointer"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      if (ct === "movie") {
+                        navigate(`/movies?q=${encodeURIComponent(title)}`);
+                      } else {
+                        navigate(`/series?q=${encodeURIComponent(title)}`);
+                      }
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open ${title} ${ct === "movie" ? "movie" : "series"} search`}
+                  className="group flex flex-col rounded-xl overflow-hidden bg-card border border-border hover:border-primary/40 transition-all cursor-pointer focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
                 >
                   {/* Poster */}
                   <div className="relative aspect-[2/3] bg-muted overflow-hidden">

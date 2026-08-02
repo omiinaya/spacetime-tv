@@ -347,7 +347,11 @@ describe("LiveTV", () => {
       renderLiveTV();
 
       await waitFor(() => {
-        const subtitle = screen.getByText(/channels/);
+        // The subtitle "4 channels · 3 categories" — scoped to <p> because
+        // the search box now has a sr-only label containing "channels".
+        const subtitle = screen.getByText(/channels/, {
+          selector: "p",
+        });
         expect(subtitle).toBeInTheDocument();
         expect(subtitle.textContent).toContain("4");
       });

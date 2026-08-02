@@ -16,7 +16,10 @@ export default function PlayerErrorOverlay({
   if (phase !== "error") return null;
 
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-10 gap-4">
+    <div
+      role="alert"
+      className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-10 gap-4"
+    >
       {errorType === "retry_exhausted" ? (
         <Tv className="w-10 h-10 text-orange-400" />
       ) : errorType === "transcode_timeout" ? (

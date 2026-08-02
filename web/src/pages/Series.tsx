@@ -288,8 +288,14 @@ export default function SeriesPage() {
     [showAllCatId, fetchShowAll],
   );
 
-  // Lazy-fetch visible rows
-  const visibleCats = filteredCatsBySettings.slice(0, visibleRows);
+  // Lazy-fetch visible rows. Memoized: a fresh .slice() identity every render
+  // made this array an unstable effect dep, re-running the fetch effect and
+  // re-evaluating filteredCats (with per-row .some() over series) on every
+  // render — including watchlist-triggered re-renders.
+  const visibleCats = useMemo(
+    () => filteredCatsBySettings.slice(0, visibleRows),
+    [filteredCatsBySettings, visibleRows],
+  );
   useEffect(() => {
     for (const cat of visibleCats) {
       const existing = rows.get(cat.category_id);

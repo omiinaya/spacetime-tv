@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { X, Star, Loader2, AlertCircle } from "lucide-react";
 import { imageUrl } from "@/lib/api";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 interface MediaOverlayProps {
   onClose: () => void;
@@ -51,6 +52,19 @@ export default function MediaOverlay({
 }: MediaOverlayProps) {
   useLockBodyScroll(onClose);
   const [showFullPlot, setShowFullPlot] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+  // Dialog focus management: move focus into the modal on open, trap Tab
+  // inside it, restore focus to the trigger on close (a11y HIGH — the most
+  // used modal in the app previously left focus on the card behind).
+  // Escape-to-close is handled by useLockBodyScroll.
+  useFocusTrap(modalRef, true);
+  useEffect(() => {
+    if (!modalRef.current) return;
+    const first = modalRef.current.querySelector<HTMLElement>(
+      'button, a[href], [tabindex]:not([tabindex="-1"])',
+    );
+    first?.focus();
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center">
@@ -62,6 +76,7 @@ export default function MediaOverlay({
 
       {/* Modal */}
       <div
+        ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-label={title}

@@ -265,7 +265,15 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ movies, series }),
       signal,
-    }).then((r) => r.json()) as Promise<SearchEnrichResponse>,
+    }).then(async (r) => {
+      // 502/error bodies were previously parsed as valid SearchEnrichResponse
+      // data, silently corrupting the search UI on upstream failure. Check
+      // .ok and reject so callers can fall back gracefully.
+      if (!r.ok) {
+        throw new Error(`Search enrich failed (${r.status})`);
+      }
+      return r.json() as Promise<SearchEnrichResponse>;
+    }),
   watchlist: {
     progress: (signal?: AbortSignal) =>
       get<{ progress: Record<string, ServerProgressEntry[]> }>(

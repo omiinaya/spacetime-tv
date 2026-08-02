@@ -95,7 +95,17 @@ async def get_subtitles(media_type: str, stream_id: int, track_index: int):
         )
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=60.0)
         if proc.returncode != 0 or not stdout:
-            raise HTTPException(500, "Subtitle extraction failed")
+            # Upstream CDN down / no such track — a 500 here makes the
+            # <track> element fail hard with no graceful path. Return 404
+            # so the client can show "subtitles unavailable".
+            log.warning(
+                "[MEDIA] subtitle extraction failed media_type=%s stream_id=%s track=%s rc=%s",
+                media_type,
+                stream_id,
+                track_index,
+                proc.returncode,
+            )
+            raise HTTPException(404, "Subtitle track unavailable")
         vtt = stdout.decode("utf-8", errors="replace")
         SUBTITLE_VTT_CACHE[cache_key] = vtt
         return Response(

@@ -402,9 +402,9 @@ describe("SeriesPage (MSW)", () => {
       const searchInput = screen.getByPlaceholderText("Filter series...");
       fireEvent.change(searchInput, { target: { value: "Action" } });
 
-      // Find and click the X clear button
+      // Find and click the X clear button (has accessible name now)
       await waitFor(() => {
-        const clearBtn = screen.getByRole("button", { name: "" });
+        const clearBtn = screen.getByRole("button", { name: "Clear search" });
         if (clearBtn) fireEvent.click(clearBtn);
       });
 

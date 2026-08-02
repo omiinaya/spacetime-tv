@@ -33,12 +33,13 @@ export default function VolumeControl({
         <div className="absolute bottom-full mb-2 left-0 flex flex-col items-center gap-2 bg-zinc-900/95 border border-white/10 rounded-lg px-1.5 py-3 shadow-xl z-30">
           <button
             onClick={onToggleMute}
+            aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
             className="text-white/60 hover:text-white/80"
           >
             {muted || volume === 0 ? (
-              <VolumeX className="w-4 h-4" />
+              <VolumeX className="w-4 h-4" aria-hidden="true" />
             ) : (
-              <Volume2 className="w-4 h-4" />
+              <Volume2 className="w-4 h-4" aria-hidden="true" />
             )}
           </button>
           <input
