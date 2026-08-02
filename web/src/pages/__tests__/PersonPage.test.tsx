@@ -12,11 +12,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router";
 import PersonPage from "@/pages/PersonPage";
-import {
-  TmdbPersonSearchResponse,
-  TmdbPersonInfo,
-  TmdbPersonCredit,
-} from "@/lib/types";
+import { TmdbPersonSearchResponse, TmdbPersonInfo } from "@/lib/types";
 
 // ── Mock api ─────────────────────────────────────────────
 const mockPersonSearch = vi.fn();

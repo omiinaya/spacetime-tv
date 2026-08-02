@@ -5,7 +5,7 @@
  * and displays them in a horizontal scrollable row with loading skeletons.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import TmdbSimilarMovies from "@/components/TmdbSimilarMovies";
 
 const mockNavigate = vi.fn();

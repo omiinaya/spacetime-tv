@@ -59,7 +59,6 @@ describe("EpisodeCard", () => {
 
   it("renders duration", () => {
     const { container } = renderCard();
-    const durationEls = container.querySelectorAll('[class*="tabular-nums"]');
     // Should find the duration formatted as "45m" somewhere in the card
     expect(container.textContent).toContain("45m");
   });

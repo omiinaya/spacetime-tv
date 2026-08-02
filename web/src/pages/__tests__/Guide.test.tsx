@@ -10,13 +10,7 @@
  * rendering state with channel rows + favorites interaction.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  act,
-} from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import Guide from "@/pages/Guide";
 import type { ChannelGroup, Programme } from "@/lib/types";

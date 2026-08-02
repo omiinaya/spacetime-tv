@@ -11,7 +11,6 @@
 import { test, expect } from "@playwright/test";
 
 const TEST_MOVIE_ID = 346372;
-const TEST_MOVIE_TITLE = "The Batman";
 
 test.describe("Watchlist", () => {
   test("watchlist page loads", async ({ page }) => {

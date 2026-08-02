@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import useSearchPage from "@/hooks/useSearchPage";
-import type { SearchResults, FilterTab, SortBy } from "@/lib/types";
+import type { SearchResults } from "@/lib/types";
 
 // ── Mock modules ──────────────────────────────────────────────────────────
 

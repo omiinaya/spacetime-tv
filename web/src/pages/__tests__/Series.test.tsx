@@ -18,7 +18,6 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import SeriesPage from "@/pages/Series";
-import type { Series, Category } from "@/lib/types";
 import type { SeriesProgress } from "@/lib/continueWatching";
 
 // ── MSW for API interception ──────────────────────────────
@@ -236,7 +235,6 @@ describe("SeriesPage (MSW)", () => {
     it("shows loading state without heading content", () => {
       renderSeries();
       // Skeleton elements should be present for the header
-      const skeletonElements = document.querySelectorAll(".skeleton\\:");
       // Just ensure loading state does not crash
       expect(screen.queryByText("Series")).not.toBeInTheDocument();
     });
@@ -714,11 +712,12 @@ describe("SeriesPage (MSW)", () => {
 
       await waitFor(() => {
         // The Office has no rating
-        expect(screen.getByText("The Office")).toBeInTheDocument();
-        // No rating badge for The Office
-        const ratings = screen.queryAllByText(/^\d\.\d$/);
-        const officeRatings = ratings.filter((r) => r.textContent === "");
-        // Just ensure it doesn't crash
+        const officeCard = screen
+          .getByText("The Office")
+          .closest("[class*='group']");
+        expect(officeCard).not.toBeNull();
+        // No rating badge inside The Office's card (rating renders only when set)
+        expect(officeCard!.querySelector(".text-yellow-400")).toBeNull();
       });
     });
 

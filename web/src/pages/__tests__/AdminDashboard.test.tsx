@@ -7,7 +7,7 @@
  * EPG refresh, popular content (populated and empty), error log (populated and empty),
  * search queries (populated and empty), and interactive button functionality.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import {
   render,
   screen,

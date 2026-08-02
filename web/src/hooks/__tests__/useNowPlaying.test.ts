@@ -4,7 +4,7 @@
  * Fetches from /api/guide/now with periodic refresh (30s interval).
  * Uses real timers (fake timers conflict with MSW's internal scheduling).
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "@/mocks/server";

@@ -11,7 +11,7 @@
  * resume position, and cleanup/destroy lifecycle.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useHlsPlayer, type HlsPlayerCallbacks } from "@/hooks/useHlsPlayer";
 

@@ -16,7 +16,6 @@ import { server } from "@/mocks/server";
 const FAV_KEY = "stv_channel_favorites";
 const WATCHLIST_KEY = "stv_watchlist";
 const SERIES_KEY = "stv_watchlist_series";
-const DEVICE_KEY = "stv_device_id";
 
 describe("useCloudBackup", () => {
   beforeEach(() => {

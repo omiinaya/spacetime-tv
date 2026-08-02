@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useChannelFavorites } from "../useChannelFavorites";
 
@@ -73,7 +73,7 @@ describe("useChannelFavorites", () => {
   });
 
   it("isFavorite uses ref so stale closures don't matter", () => {
-    const { result, rerender } = renderHook(() => useChannelFavorites());
+    const { result, _rerender } = renderHook(() => useChannelFavorites());
     const isFav = result.current.isFavorite;
     act(() => result.current.toggleFavorite(7));
     // This call uses the old reference but should still see updated state via the ref

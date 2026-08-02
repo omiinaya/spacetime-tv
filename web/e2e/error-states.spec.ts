@@ -11,32 +11,14 @@
  * Run: npm run test:e2e
  */
 
-import { test, expect, type Page } from "@playwright/test";
-
-const API_BASE = process.env.API_BASE || "http://127.0.0.1:8720";
+import { test, expect } from "@playwright/test";
 
 /**
- * Helper: set the page's base URL by navigating to the real frontend
- * but overriding the API base via a global that FE code may read.
- * The E2E pages are served by the built frontend on :8720 directly,
- * so we navigate to the frontend URL and test the UI state without
- * relying on the real API.
+ * Error-state tests: verify the SPA renders a usable app shell (nav, layout)
+ * and graceful fallbacks instead of a blank/crashed page when the backend API
+ * is unreachable. The E2E pages are served by the built frontend on :8720;
+ * each test routes/aborts /api/* requests to simulate a downed backend.
  */
-async function setupWithFakeApi(page: Page, fakeBase: string) {
-  // Navigate to the actual frontend first
-  await page.goto("/");
-  await page.waitForLoadState("domcontentloaded");
-
-  // Inject an API interceptor that blocks /api/* calls to the real backend
-  // We do this by routing all /api/* requests to a fake server URL
-  await page.route("**/api/**", async (route) => {
-    const url = new URL(route.request().url());
-    // Rewrite to a guaranteed-down URL so fetch fails with network error
-    await route.abort("connectionrefused");
-  });
-  await page.waitForTimeout(500);
-}
-
 test.describe("Error states", () => {
   test("shows error UI when backend is unreachable on homepage", async ({ page }) => {
     await page.goto("/");

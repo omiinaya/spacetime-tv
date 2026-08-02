@@ -7,13 +7,7 @@
  * category filtering, search, favorites, and channel card rendering.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  act,
-} from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import LiveTV from "@/pages/LiveTV";
 import type { Category, LiveStream } from "@/lib/types";
@@ -533,7 +527,6 @@ describe("LiveTV", () => {
       fireEvent.change(searchInput, { target: { value: "CNN" } });
 
       // Clear button should appear
-      const clearBtn = screen.getByRole("button", { name: "" });
       // Find the X button (it's the one nested in search input area)
       const xButtons = document.querySelectorAll("button");
       // Click the clear/X button in the search input

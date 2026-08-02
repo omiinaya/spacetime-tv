@@ -11,13 +11,7 @@
  * and navigation CTA buttons.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  act,
-} from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import WatchlistPage from "@/pages/WatchlistPage";
 import type { UnifiedMovie, Series } from "@/lib/types";

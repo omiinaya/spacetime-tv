@@ -14,7 +14,7 @@
  *   - server.resetHandlers() is called afterEach to restore defaults
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { api } from "@/lib/api";
 import { server } from "@/mocks/server";
 import { http, HttpResponse } from "msw";

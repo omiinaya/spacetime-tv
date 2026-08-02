@@ -4,7 +4,7 @@
  * Covers: playVodRemux lifecycle, MEDIA_INFO, LOADING_COMPLETE, STATISTICS_INFO,
  * ERROR handling (3 retry threshold), timeouts, progress saving, cleanup.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import {
   useRemuxPlayer,

@@ -25,8 +25,6 @@ describe("SubtitleSelector", () => {
     vi.unstubAllGlobals();
   });
 
-  const probeUrl = "/api/subtitles/probe/movie/123";
-
   const sampleTracks = [
     { index: 0, language: "eng", title: "English", codec: "webvtt" },
     { index: 1, language: "spa", title: "Spanish", codec: "webvtt" },

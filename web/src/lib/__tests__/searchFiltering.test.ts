@@ -1,11 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { filterAndSortResults, countResults } from "@/lib/searchFiltering";
-import type {
-  SearchResults,
-  FilterTab,
-  SortBy,
-  TmdbEnrichData,
-} from "@/lib/types";
+import type { SearchResults, TmdbEnrichData } from "@/lib/types";
 
 function makeResults(overrides?: Partial<SearchResults>): SearchResults {
   return {

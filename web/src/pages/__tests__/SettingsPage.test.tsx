@@ -13,7 +13,6 @@ import {
   screen,
   fireEvent,
   waitFor,
-  act,
   within,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
@@ -66,7 +65,6 @@ let mockSettings = {
 };
 const mockUpdate = vi.fn();
 const mockReset = vi.fn();
-const mockAdultUnlocked = false;
 
 vi.mock("@/context/SettingsContext", () => ({
   useSettings: () => ({
@@ -113,10 +111,6 @@ const sampleSeriesCats: Category[] = [
 ];
 
 // ── Helpers ──────────────────────────────────────────────
-function resolveAfter<T>(val: T, ms = 0): Promise<T> {
-  return new Promise((r) => setTimeout(() => r(val), ms));
-}
-
 function renderSettingsPage() {
   return render(
     <MemoryRouter>

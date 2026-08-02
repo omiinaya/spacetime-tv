@@ -70,8 +70,19 @@ test.describe("Recordings (DVR)", () => {
     await page.waitForLoadState("load");
     await page.waitForTimeout(2000);
 
-    // The sidebar should have the recordings icon — check for the nav element
-    const nav = page.locator("nav, header, [role='navigation']").first();
+    // The sidebar should have the recordings icon — check for the nav element.
+    // On mobile the desktop sidebar is display:none and the drawer nav only
+    // renders once the hamburger is opened, so assert on the hamburger first,
+    // then on the :visible nav after opening.
+    const isMobile = page.viewportSize()!.width < 768;
+
+    if (isMobile) {
+      const toggle = page.getByRole("button", { name: /open navigation/i });
+      await expect(toggle).toBeVisible({ timeout: 5_000 });
+      await toggle.click();
+    }
+
+    const nav = page.locator("[role='navigation']:visible").first();
     await expect(nav).toBeVisible({ timeout: 5_000 });
 
     // The nav or page should reference recordings

@@ -42,7 +42,7 @@ export function useRecording(): UseRecordingReturn {
       recordingIdRef.current = data.recording_id;
       setActiveRecordingId(data.recording_id);
       return data.recording_id;
-    } catch (e) {
+    } catch {
       toast.error("Record start error");
       return null;
     }
@@ -59,7 +59,7 @@ export function useRecording(): UseRecordingReturn {
         recordingIdRef.current = null;
         setActiveRecordingId(null);
       }
-    } catch (e) {
+    } catch {
       toast.error("Record stop error");
     }
   }, []);
@@ -95,7 +95,7 @@ export function useRecordings() {
         const data = await r.json();
         setRecordings(data.recordings || []);
       }
-    } catch (e) {
+    } catch {
       toast.error("Failed to fetch recordings");
     } finally {
       setLoading(false);
@@ -112,7 +112,7 @@ export function useRecordings() {
       if (r.ok) {
         setRecordings((prev) => prev.filter((rec) => rec.id !== id));
       }
-    } catch (e) {
+    } catch {
       toast.error("Failed to delete recording");
     }
   }, []);

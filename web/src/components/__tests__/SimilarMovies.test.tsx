@@ -7,7 +7,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import SimilarMovies from "@/components/SimilarMovies";
-import { imageUrl } from "@/lib/api";
 
 vi.mock("@/lib/api", () => ({
   imageUrl: (url: string) => url,

@@ -4,7 +4,7 @@
  * Covers: playMPEGTS lifecycle, error recovery (reconnect), health-check
  * reconnect after 15s no-stats, DVR time tracking, cleanup/destroy.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import {
   useMpegtsPlayer,

@@ -96,7 +96,6 @@ describe("useSwipeToGoBack", () => {
   it("handleTouchEnd triggers goBack on right-swipe past 80px threshold", () => {
     const { result } = renderHook(() => useSwipeToGoBack());
     const centerRef = { current: false };
-    const originalLocation = window.location.href;
 
     // We can't easily mock window.location.href assignment,
     // so let's test the logic differently — check goBack is reachable

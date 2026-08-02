@@ -11,13 +11,8 @@ import {
   createProfile,
   verifyProfilePin,
   deleteProfileApi,
-  fetchProfileProgress,
-  syncProfileProgress,
   fetchProfileHistory,
-  addProfileHistory,
-  clearProfileHistory,
   switchProfile,
-  refreshProfileToken,
 } from "@/hooks/useProfile";
 
 // Mock fetch globally

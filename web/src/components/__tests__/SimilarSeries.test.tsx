@@ -7,7 +7,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import SimilarSeries from "@/components/SimilarSeries";
-import { imageUrl } from "@/lib/api";
 
 const mockNavigate = vi.fn();
 

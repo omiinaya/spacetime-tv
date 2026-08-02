@@ -131,8 +131,19 @@ test.describe("Navigation & Routing", () => {
     await page.goto("/");
     await page.waitForLoadState("load");
 
-    // Check for navigation elements — links/buttons in nav/header
-    const nav = page.locator("nav, header, [role='navigation']").first();
+    // Check for navigation elements — links/buttons in nav/header.
+    // On mobile the desktop sidebar is display:none (hidden md:flex) and the
+    // drawer nav only renders once the hamburger is opened, so assert on the
+    // hamburger first, then on the :visible nav after opening.
+    const isMobile = page.viewportSize()!.width < 768;
+
+    if (isMobile) {
+      const toggle = page.getByRole("button", { name: /open navigation/i });
+      await expect(toggle).toBeVisible({ timeout: 5_000 });
+      await toggle.click();
+    }
+
+    const nav = page.locator("[role='navigation']:visible").first();
     await expect(nav).toBeVisible({ timeout: 5_000 });
 
     // Key nav links should be present

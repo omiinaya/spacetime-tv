@@ -92,7 +92,6 @@ describe("watchProgressSync", () => {
   // ── removePendingProgress ──────────────────────────
 
   it("removes a specific queued entry", async () => {
-    const pending = await getPendingProgress();
     // Find the entry to remove
     const db = await openDB();
     const { keys, values } = await getAllFromStore(db, "pending");
@@ -146,9 +145,9 @@ describe("watchProgressSync", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(null, { status: 200 }),
     );
-    // Count current entries
+    // Count current entries — flush will clear them
     const before = await getPendingProgress();
-    const countBefore = before.length;
+    expect(before.length).toBeGreaterThanOrEqual(1);
 
     const result = await flushPendingProgress();
     expect(result.flushed).toBeGreaterThanOrEqual(1);

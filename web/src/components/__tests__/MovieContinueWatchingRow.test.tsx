@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MovieContinueWatchingRow } from "@/components/MovieContinueWatchingRow";
-import type { UnifiedMovie, TmdbMovieResult } from "@/lib/types";
+import type { UnifiedMovie } from "@/lib/types";
 import type { MovieProgress } from "@/lib/continueWatching";
 
 // Mock the API modules

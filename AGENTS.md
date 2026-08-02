@@ -73,7 +73,7 @@ Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :
 38|│   │   ├── admin.py      # Admin: stats, cache, EPG refresh
 39|│   │   ├── misc.py       # IPTV proxy, image proxy, SPA fallback
 40|│   │   └── watchlist.py  # Watchlist CRUD
-41|│   ├── tests/            # pytest tests (54 test files)
+41|│   ├── tests/            # pytest tests (55 test files)
 42|│   └── Dockerfile        # Production backend container
 43|│
 44|├── web/                  # React/Vite frontend

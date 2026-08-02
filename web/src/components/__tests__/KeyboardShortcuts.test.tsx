@@ -4,7 +4,7 @@
  * KeyboardShortcuts renders an overlay with keyboard shortcut info.
  * Toggled via custom event 'stv:toggle-shortcuts'.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 

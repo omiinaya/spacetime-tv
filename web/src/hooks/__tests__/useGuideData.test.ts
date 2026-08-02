@@ -64,10 +64,6 @@ function createMockEs() {
   return mockEventSourceInstance!;
 }
 
-function getMockEs(): MockEsInstance {
-  return mockEventSourceInstance!;
-}
-
 // ── Sample channel groups ──────────────────────────────────
 const sampleGuideData = {
   channel_groups: [

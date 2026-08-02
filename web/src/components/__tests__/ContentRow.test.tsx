@@ -118,7 +118,6 @@ describe("ContentRow", () => {
     // Initially canScrollLeft=false, canScrollRight=true (default state)
     // The arrow buttons use ChevronLeft / ChevronRight icons
     const chevronLeft = document.querySelector(".lucide-chevron-left");
-    const chevronRight = document.querySelector(".lucide-chevron-right");
     // ChevronLeft arrow is only rendered when canScrollLeft is true (initially false)
     expect(chevronLeft).toBeFalsy();
     // ChevronRight arrow wrapper is always rendered in the scroll direction

@@ -252,7 +252,7 @@ const sampleSearchResults = {
   totals: { live: 3, movies: 3, series: 2 },
 };
 
-const sampleEmptyResults = {
+const _sampleEmptyResults = {
   live: [],
   movies: [],
   series: [],
@@ -336,7 +336,6 @@ describe("SearchPage", () => {
       // After debounce, loading should show spinner
       await waitFor(
         () => {
-          const searchBtn = screen.getByText("Search").closest("button");
           // Button should be disabled and contain a spinner
           const spinner = document.querySelector(".animate-spin");
           expect(spinner).toBeInTheDocument();

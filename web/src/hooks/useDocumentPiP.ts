@@ -123,7 +123,7 @@ export function useDocumentPiP(
         });
 
         return;
-      } catch (err) {
+      } catch {
         toast.error("Picture-in-Picture failed — falling back to video PiP");
       }
     }
@@ -132,7 +132,7 @@ export function useDocumentPiP(
     try {
       await video.requestPictureInPicture();
       setIsPiPActive(true);
-    } catch (err) {
+    } catch {
       toast.error("Video Picture-in-Picture failed");
     }
   }, [videoRef, containerRef]);
@@ -163,7 +163,7 @@ export function useDocumentPiP(
       try {
         await document.exitPictureInPicture();
         setIsPiPActive(false);
-      } catch (err) {
+      } catch {
         toast.error("Failed to exit Picture-in-Picture");
       }
     }

@@ -6,7 +6,7 @@
  * an empty state when no channels exist and supports "Clear all".
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import HistoryPage from "@/pages/HistoryPage";
 import type { RecentChannel } from "@/lib/recentChannels";

@@ -130,11 +130,10 @@ describe("TrendingMoviesRow", () => {
 
   it("does not show year badge when release_date is empty", () => {
     const trending = [makeTmdbMovie({ release_date: "" })];
-    const { container } = render(
+    render(
       <TrendingMoviesRow trending={trending} movies={[]} onSelect={onSelect} />,
     );
     // The year badge renders inside a div with bg-black/70
-    const yearBadges = container.querySelectorAll(".bg-black\\/70");
     // Only one badge (no year badge), but the rating badge also uses bg-black/70
     // So just verify the text is not in the document
     expect(screen.queryByText(/^\\d{4}$/)).not.toBeInTheDocument();
