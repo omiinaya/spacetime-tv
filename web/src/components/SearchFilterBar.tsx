@@ -43,6 +43,7 @@ export default function SearchFilterBar({
           <button
             key={tab.key}
             onClick={() => onFilterChange(tab.key)}
+            aria-pressed={filter === tab.key}
             className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
               filter === tab.key
                 ? "bg-primary/15 text-primary border border-primary/20"
@@ -80,6 +81,7 @@ export default function SearchFilterBar({
               <button
                 key={opt.key}
                 onClick={() => onSortChange(opt.key)}
+                aria-pressed={sortBy === opt.key}
                 className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md font-medium transition-colors ${
                   sortBy === opt.key
                     ? "bg-primary/10 text-primary border border-primary/15"

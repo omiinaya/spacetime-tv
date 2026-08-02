@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { AlertCircle, Loader2, Tv } from "lucide-react";
 
 interface PlayerErrorOverlayProps {
@@ -7,7 +8,7 @@ interface PlayerErrorOverlayProps {
   onRetry: () => void;
 }
 
-export default function PlayerErrorOverlay({
+function PlayerErrorOverlay({
   phase,
   errorMsg,
   errorType,
@@ -64,3 +65,7 @@ export default function PlayerErrorOverlay({
     </div>
   );
 }
+
+// Scalar/memo-safe props (onRetry is a useCallback in useVideoPlayer) — memo
+// so it doesn't re-render on every player timeupdate while playing.
+export default memo(PlayerErrorOverlay);

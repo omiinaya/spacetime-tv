@@ -59,6 +59,7 @@ export function Pagination({
           <button
             key={p}
             onClick={() => onPageChange(p)}
+            aria-current={p === currentPage ? "page" : undefined}
             className={`min-w-[36px] h-9 px-2 rounded-lg text-sm font-medium transition-colors ${
               p === currentPage
                 ? "bg-primary text-primary-foreground"

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Loader2 } from "lucide-react";
 
 interface PlayerLoadingOverlayProps {
@@ -6,7 +7,7 @@ interface PlayerLoadingOverlayProps {
   errorMsg: string | null;
 }
 
-export default function PlayerLoadingOverlay({
+function PlayerLoadingOverlay({
   phase,
   loadingStep,
   errorMsg,
@@ -26,3 +27,6 @@ export default function PlayerLoadingOverlay({
     </div>
   );
 }
+
+// Scalar props only — memo so it doesn't re-render on every player timeupdate.
+export default memo(PlayerLoadingOverlay);

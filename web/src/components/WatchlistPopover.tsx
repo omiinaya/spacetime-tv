@@ -128,6 +128,8 @@ export default function WatchlistPopover({ onClose }: { onClose: () => void }) {
   return (
     <div
       ref={ref}
+      role="dialog"
+      aria-label="Watchlist"
       className="absolute left-full top-0 ml-2 w-72 bg-card border border-border rounded-xl shadow-xl shadow-black/40 z-[60] overflow-hidden"
     >
       {/* Header */}
