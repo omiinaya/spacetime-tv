@@ -78,6 +78,7 @@ export default function SeasonSelector({
                   behavior: "smooth",
                 });
               }}
+              aria-pressed={isActive}
               className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                 isActive
                   ? "bg-white text-black"

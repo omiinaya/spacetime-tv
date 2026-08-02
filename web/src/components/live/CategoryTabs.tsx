@@ -39,6 +39,7 @@ export function CategoryTabs({
     >
       <button
         onClick={() => onSelect(ALL_CAT)}
+        aria-pressed={activeCat === ALL_CAT}
         className={
           activeCat === ALL_CAT
             ? "shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border cursor-pointer select-none bg-primary/15 text-primary border-primary/20"
@@ -51,6 +52,7 @@ export function CategoryTabs({
         <button
           key={cat.category_id}
           onClick={() => onSelect(cat.category_id)}
+          aria-pressed={activeCat === cat.category_id}
           className={
             activeCat === cat.category_id
               ? "shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border cursor-pointer select-none bg-primary/15 text-primary border-primary/20"

@@ -28,6 +28,7 @@ export default function ThemeSelector({ theme, onUpdate }: ThemeSelectorProps) {
           <button
             key={mode}
             onClick={() => onUpdate({ theme: mode })}
+            aria-pressed={theme === mode}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors border ${
               theme === mode
                 ? "bg-primary/15 text-primary border-primary/20"
