@@ -177,9 +177,17 @@ async def admin_warm_cache():
 
 @router.post("/admin/cache/warm-full")
 async def admin_warm_full_cache():
-    """Clear THEN warm the full cache."""
-    from routes.cache_warmer import start_cache_warmer
+    """Clear THEN warm the full cache.
+
+    Shares the real logic with /admin/cache/clear, but respects the
+    is-warm-running guard (clear's precedence was to re-warm unconditionally;
+    both end at the same "cleared + warming" state). No-op if already warming.
+    """
+    from routes.cache_warmer import is_warm_running, start_cache_warmer
     from state import _cache, epg_cache
+
+    if is_warm_running():
+        return {"message": "Cache warming already in progress."}
 
     count = len(_cache)
     _cache.clear()
