@@ -1,8 +1,8 @@
 # SpacetimeTV Roadmap v9 — Current State
 
-> **Audit date:** 2026-08-01 (11th session — backend suite restored, UI fix hardening, security)
+> **Audit date:** 2026-08-02 (12th session — security findings closed, SW stream fix, a11y + perf, task guards)
 > **Stack:** FastAPI + React 19 + Vite 8 + Tailwind v4 | 13 pages | 133 components | 31 hooks | 25 back-end route modules
-> **Test counts:** 1,394 backend pass (17 skipped, 3 xfail) + 1,570 frontend pass (101 files) | 0 TypeScript errors | 0 production `any` types
+> **Test counts:** 1,394 backend pass (17 skipped, 3 xfail) + 1,571 frontend pass (101 files) | 0 TypeScript errors | 0 production `any` types
 > **CI:** GitHub Actions (lint → test → tsc → build)
 > **Hook test coverage:** 31/31 (100%) — all custom hooks have unit tests
 > **E2E:** Playwright chromium run 85+ passed against live backend (profile-gate seeded via storageState); not in CI (needs IPTV creds as secrets)
@@ -27,6 +27,25 @@ deliberately flat data/type modules. useVideoPlayer.ts (816) is documented
 as diminishing returns for further splitting.
 
 ## Recent Improvements
+
+### Session 12 (2026-08-02) — security findings closed, SW stream fix, a11y + perf
+- **CRITICAL SW fix** — every `/api/*` GET was routed to `networkFirst()` which
+  does `clone.blob()`; infinite live streams never resolved (playback hung),
+  multi-GB VOD remux was fully buffered. SW now bypasses `/api/stream|media|
+  iptv|movie/hls|series/hls` entirely, and API cache keys hash the profile
+  token (per-profile isolation; was cross-profile mixing). Cache v3→v4.
+- **Security findings closed** — CORS origins now include the real frontend
+  dev port (5183) + LAN host; image-proxy upstream failures → JSON 502 (was
+  500 text/plain); `X-Request-ID` middleware added. SECURITY_AUDIT 78→80,
+  remaining: distributed rate limiting + `ALLOW_LAN_BYPASS=false` in prod.
+- **A11y** — MediaOverlay focus trap, MobileNav focus trap, labeled search
+  inputs, accessible icon buttons, no nested `<button>`s, keyboard-reachable
+  PersonPage cards, `<video>` name + error `role=alert`.
+- **Perf** — watchlist membership via cached Set (O(1)), memoized Series
+  visibleCats + LiveTV favorites, stable `getNowPlaying` closures.
+- **Backend resilience** — task-level Exception guards on `_epg_broadcast_loop`,
+  `warm_cache`, `_fetch_one` (silent task-kill elimination + provider-health
+  recording); subtitle extraction failure → 404 not 500.
 
 ### Session 11 (2026-08-01) — suite restoration + security hardening
 - **Backend suite 518 failures → 1382+ pass** — root cause: conftest used
@@ -157,7 +176,7 @@ as diminishing returns for further splitting.
 
 ## What's Solid
 - **0 TypeScript errors** in production code
-- **0 pre-existing test failures** (1,570 frontend tests / 101 files, 1,394 backend)
+- **0 pre-existing test failures** (1,571 frontend tests / 101 files, 1,394 backend)
 - **0 `any` types** in production source
 - **Strict CSP** — script-src 'self' only (no unsafe-inline/eval), verified with live playback
 - **Clean build** with proper code splitting (hls.js, shaka-player in separate chunks)

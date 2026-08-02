@@ -11,11 +11,27 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-(none — see Recently Completed)
+- **P2 — distributed rate limiting** (SECURITY_AUDIT #8) — Redis-backed for multi-instance
+- **P2 — `ALLOW_LAN_BYPASS=false` in production `.env`** (SECURITY_AUDIT #10)
+- **P3 — WatchlistPopover dialog semantics + focus** (a11y audit M4 — has aria-haspopup=dialog but no role=dialog/trap/focus-move)
+- **P3 — PlayerResumePrompt untrapped modal** (a11y audit M6)
+- **P3 — tab-like controls missing aria-pressed / aria-current** (a11y audit M8: SearchFilterBar, CategoryTabs, ThemeSelector, SeasonSelector, Pagination)
+- **P4 — player control row touch targets < 44px** (a11y audit low: Speed/Record/Download/Quality/Volume/SleepTimer/SubtitleSelector/MobileMoreMenu)
+- **P4 — ChannelRow / Player overlays React.memo** (perf audit #3/#8 — static player overlays re-render every timeupdate)
 
 ---
 
 ## Recently Completed
+
+### ✅ Session 12 (2026-08-02) — security findings, SW stream fix, a11y + perf batch, task guards
+- **CORS real origins** (SECURITY_AUDIT #9): origin list was missing the frontend dev port 5183 + LAN host 192.0.2.10 — their preflights 400'd with no ACAO. Added both (16 origins). CORS 70→85, overall 78→80.
+- **image-proxy JSON 502** (SECURITY_AUDIT #11): uncaught `httpx.HTTPStatusError`/transport error → 500 text/plain. Now clean JSON 502, no upstream detail leak. Error-Leakage 80→90.
+- **Request-ID middleware** (SECURITY_AUDIT #13): `X-Request-ID` echoed/generated + logged per request for end-to-end correlation.
+- **SW stream-path bypass (CRITICAL)**: every `/api/*` GET went to `networkFirst()` which does `clone.blob()` — infinite live streams never resolved (playback hung), multi-GB VOD remux buffered fully. Added `STREAM_PATH_PREFIXES`; SW never intercepts `/api/stream|media|iptv|movie/hls|series/hls`. Cache keys now hash X-Profile-Token (per-profile isolation — was cross-profile mixing). v3→v4.
+- **A11y (audit H1/H2/H3/M1/M2/M3/M5/M9)**: MediaOverlay focus trap + initial focus; Player `<video>` name + error `role=alert`; sr-only labels on 4 search inputs + 4 icon-only clear buttons + VolumeControl mute; PersonPage clickable cards → real `role=button`; MobileNav focus trap; LiveChannelCard + ProfilePicker nested-`<button>` → `div[role=button]`; HiddenCategories button-in-label → div + aria-pressed; guard z-focus of invisible delete/favorite buttons.
+- **Perf (audit #1/#2/#4/#5)**: watchlist memberships via cached Set (O(1), was O(n) JSON.parse ×2 per card ×200 cards); Series visibleCats memoized; LiveTV favorites subset memoized; getNowPlaying useCallback ×2 + called once per card.
+- **Backend resilience (audit L1/L2/L3/M1/M2)**: `_epg_broadcast_loop` + `warm_cache` + `_fetch_one` get Exception/top-level guards (silent "Task exception was never retrieved" kills eliminated); `_fetch_one` logs + records provider health on non-HTTPException edges; subtitle extraction failure → 404 instead of 500; api.ts searchEnrich checks `res.ok` (was parsing 502 bodies as valid data).
+- **Tests**: 1571 frontend (was 1570, +1), 1394 backend (was 1386, +8 in the security batch). Commits `a37d7bc` `ccefc14` `5c8ca9f` `bf5b67e` `19eebbf` on master.
 
 ### ✅ P0 — Backend suite: 518 auth failures → 1386 pass (Bug/DX)
 conftest used `os.environ.setdefault("ADMIN_API_KEY", "test-admin-key-insecure")`, but the parent shell env (spacetime-tv runs under the Hermes gateway env) already carries the REAL admin key, and `load_dotenv()` in config.py never overrides an existing var. So config resolved the production key while tests sent the test key → the auth middleware 403'd every API request. All 518 failures across 55 files were this single env-shadowing bug. Fixed: conftest FORCES `ADMIN_API_KEY` + `ALLOW_LAN_BYPASS=true` (not setdefault). Also loads hermes-id auth env from `~/.hermes/auth/projects/spacetime-tv.env` (or CI fallback) so tests are deterministic regardless of parent shell env. 2 config tests updated to reload without STV_DATA_DIR for true-default verification.
