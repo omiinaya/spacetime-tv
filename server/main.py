@@ -258,6 +258,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
 
 _rate_limits: dict[str, tuple[float, int]] = {}
+_rate_limits_last_cleanup: float = 0.0
 
 MAX_CONTENT_LENGTH = 1_048_576  # 1 MB default for request bodies
 
@@ -315,6 +316,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 headers={"Retry-After": str(int(RATE_WINDOW - (now - window_start)))},
             )
         _rate_limits[key] = (window_start, count + 1)
+        # Opportunistic eviction: every unique device-token / IP ever seen
+        # would otherwise live in _rate_limits forever (unbounded memory on a
+        # long-running server). Sweep at most once per window, dropping any
+        # bucket whose window has already lapsed — a re-request simply
+        # re-creates it from (now, 0), so eviction is lossless.
+        global _rate_limits_last_cleanup
+        if now - _rate_limits_last_cleanup > RATE_WINDOW:
+            _rate_limits_last_cleanup = now
+            stale = [k for k, (ws, _) in _rate_limits.items() if now - ws > RATE_WINDOW]
+            for k in stale:
+                del _rate_limits[k]
         return await call_next(request)
 
 

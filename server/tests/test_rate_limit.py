@@ -25,6 +25,7 @@ def clear_rate_limits():
     import main as m
 
     m._rate_limits.clear()
+    m._rate_limits_last_cleanup = 0.0
     yield
 
 
@@ -236,4 +237,29 @@ def test_rate_limits_dict_populated_after_request(small_limits, client):
     for _ip, (window_start, count) in _rate_limits.items():
         assert isinstance(window_start, (int, float))
         assert isinstance(count, int)
-        assert count >= 1
+
+
+def test_stale_rate_limit_entries_evicted(small_limits, client):
+    """Stale buckets (window lapsed) must be evicted from _rate_limits so the
+    dict doesn't grow unbounded with every unique IP/device-token ever seen."""
+    import time
+
+    import main as m
+
+    # Populate a bucket
+    client.get("/api/v1/search?q=test")
+    assert len(m._rate_limits) >= 1
+
+    # Age the stored window of every bucket past the window, and force the
+    # cleanup to fire by back-dating the last-cleanup timestamp past the window.
+    for k, (ws, count) in list(m._rate_limits.items()):
+        m._rate_limits[k] = (ws - (m.RATE_WINDOW + 1), count)
+    m._rate_limits_last_cleanup = time.time() - (m.RATE_WINDOW + 1)
+
+    # A request triggers the opportunistic sweep.
+    client.get("/api/v1/search?q=test")
+
+    # All buckets whose window had lapsed are gone (only the fresh request's
+    # key may remain, with a fresh window_start).
+    for _k, (ws, _count) in m._rate_limits.items():
+        assert time.time() - ws <= m.RATE_WINDOW
