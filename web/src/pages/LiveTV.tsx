@@ -85,6 +85,14 @@ export default function LiveTV() {
     return new Set(favorites);
   }, [favoritesOnly, favorites]);
 
+  // Memoized favorites subset for the Favorites section — allStreams is the
+  // full provider catalogue (tens of thousands), so filtering it inline in
+  // render on every now-playing refresh / favorite toggle was an O(n) scan.
+  const favoriteStreams = useMemo(() => {
+    if (favorites.size === 0) return [];
+    return allStreams.filter((s) => favorites.has(s.stream_id)).slice(0, 50);
+  }, [allStreams, favorites]);
+
   const filteredItems = useMemo(() => {
     let items = q
       ? searchMatches.slice(0, visibleItems.length || BATCH)
@@ -269,18 +277,15 @@ export default function LiveTV() {
                 </span>
               </h2>
               <div className="channel-grid">
-                {allStreams
-                  .filter((s) => favorites.has(s.stream_id))
-                  .slice(0, 50)
-                  .map((s) => (
-                    <LiveChannelCard
-                      key={`fav-${s.stream_id}`}
-                      stream={s}
-                      isFavorite={favorites.has(s.stream_id)}
-                      onToggleFavorite={toggleFavorite}
-                      getNowPlaying={getNowPlaying}
-                    />
-                  ))}
+                {favoriteStreams.map((s) => (
+                  <LiveChannelCard
+                    key={`fav-${s.stream_id}`}
+                    stream={s}
+                    isFavorite={favorites.has(s.stream_id)}
+                    onToggleFavorite={toggleFavorite}
+                    getNowPlaying={getNowPlaying}
+                  />
+                ))}
               </div>
             </div>
           )}

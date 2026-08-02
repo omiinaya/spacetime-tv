@@ -122,7 +122,11 @@ async def _epg_broadcast_loop():
                 if q in _epg_clients:
                     _epg_clients.remove(q)
             log.info(f"[EPG-SSE] Broadcast to {len(_epg_clients)} clients")
-        except (OSError, RuntimeError) as e:
+        except Exception as e:
+            # Task-level guard: any unexpected exception must not kill the
+            # loop silently (the task reference is dropped at creation —
+            # 'Task exception was never retrieved'). load_epg() may raise
+            # HTTPException, JSONDecodeError, KeyError, etc. on bad EPG data.
             log.error(f"[EPG-SSE] Broadcast failed: {e}")
 
 

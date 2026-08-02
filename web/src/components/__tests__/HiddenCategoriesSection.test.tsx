@@ -69,11 +69,9 @@ describe("HiddenCategoriesSection", () => {
         onToggle={onToggle}
       />,
     );
-    // Find the checkbox button for News
-    const labels = screen.getAllByText("News");
-    const label = labels[0].closest("label");
-    const btn = label?.querySelector("button");
-    fireEvent.click(btn!);
+    // Find the toggle button for News (has an accessible name now)
+    const btn = screen.getByRole("button", { name: "Hide News" });
+    fireEvent.click(btn);
     expect(onToggle).toHaveBeenCalledWith("1");
   });
 

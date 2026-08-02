@@ -10,7 +10,9 @@ import {
   Radio,
   Search,
 } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 const MOBILE_NAV_ITEMS = [
   { id: "/", label: "Home", Icon: Tv },
@@ -38,6 +40,19 @@ export function MobileNav({
   onNavigate,
   isActive,
 }: MobileNavProps) {
+  const drawerRef = useRef<HTMLDivElement>(null);
+  // Full-screen modal drawer: trap focus inside while open (Tab can't escape
+  // to the page behind), restore focus to the hamburger on close.
+  useFocusTrap(drawerRef, open);
+  // Lock body scroll while the drawer is open (matched overlay behavior) —
+  // conditional so scrolling is restored immediately on close.
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 md:hidden animate-in fade-in">
@@ -45,7 +60,10 @@ export function MobileNav({
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative w-72 h-full animate-in slide-in-right">
+      <div
+        ref={drawerRef}
+        className="relative w-72 h-full animate-in slide-in-right"
+      >
         <div className="flex flex-col h-full bg-sidebar border-r border-border shrink-0">
           {/* Brand header */}
           <div className="flex items-center gap-3 px-5 h-14 border-b border-border shrink-0">

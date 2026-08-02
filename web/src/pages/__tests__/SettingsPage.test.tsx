@@ -522,14 +522,14 @@ describe("hidden categories section", () => {
     await waitFor(() => {
       expect(screen.getByText("EN| Entertainment")).toBeInTheDocument();
     });
-    // Find the checkbox/button for EN| Entertainment
-    const entertainmentRow = screen
-      .getByText("EN| Entertainment")
-      .closest("label");
-    expect(entertainmentRow).toBeTruthy();
-    const toggleBtn = entertainmentRow!.querySelector("button");
-    expect(toggleBtn).toBeTruthy();
-    fireEvent.click(toggleBtn!);
+    // Find the toggle button for EN| Entertainment (has accessible name now)
+    await waitFor(() => {
+      expect(screen.getByText("EN| Entertainment")).toBeInTheDocument();
+    });
+    const toggleBtn = screen.getByRole("button", {
+      name: "Hide EN| Entertainment",
+    });
+    fireEvent.click(toggleBtn);
     expect(mockUpdate).toHaveBeenCalledWith({
       hiddenCategories: ["1"],
     });
@@ -541,11 +541,12 @@ describe("hidden categories section", () => {
     await waitFor(() => {
       expect(screen.getByText("EN| Entertainment")).toBeInTheDocument();
     });
-    const entertainmentRow = screen
-      .getByText("EN| Entertainment")
-      .closest("label");
-    const toggleBtn = entertainmentRow!.querySelector("button");
-    fireEvent.click(toggleBtn!);
+    const entertainmentRow = await screen.findByText("EN| Entertainment");
+    expect(entertainmentRow).toBeTruthy();
+    const toggleBtn = screen.getByRole("button", {
+      name: "Unhide EN| Entertainment",
+    });
+    fireEvent.click(toggleBtn);
     expect(mockUpdate).toHaveBeenCalledWith({
       hiddenCategories: [],
     });

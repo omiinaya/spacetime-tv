@@ -52,6 +52,18 @@ async def warm_cache():
     Moved here from main.py so cache_warmer and all route modules
     (admin, etc.) can access it without circular imports.
     """
+    try:
+        await _warm_cache_inner()
+    except Exception as e:
+        # Top-level task guard: warm_cache() runs as a fire-and-forget task
+        # from start_cache_warmer(). Inner sections only catch HTTPException,
+        # so edge paths (decrypt() on malformed password, KeyError in item
+        # tagging, JSON decode) would otherwise escape and kill the task with
+        # a silent 'Task exception was never retrieved'.
+        log.error(f"[WARMER] Unexpected failure in warm_cache: {e}")
+
+
+async def _warm_cache_inner():
     from iptv_client import cached_fetch
     from state import (
         CACHE_LIVE_ALL,

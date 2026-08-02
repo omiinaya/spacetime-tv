@@ -15,6 +15,7 @@ Usage:
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -134,8 +135,16 @@ async def fetch_all_providers(action: str, **params) -> list:
                 item["_provider_idx"] = idx
             return items
         except HTTPException:
+            # _fetch_single_provider already logged + updated provider health
             return []
-        except Exception:
+        except Exception as e:
+            # Edge paths NOT covered by _fetch_single_provider's handlers:
+            # decrypt() on a malformed encrypted password, KeyError in item
+            # tagging, etc. Log loudly + record health so a dead provider is
+            # visible in the admin Stream-Health UI instead of silently empty.
+            log.error(f"Provider '{provider.name}' unexpected error ({action}): {e}")
+            with contextlib.suppress(Exception):
+                _update_provider_health(provider, success=False, error=str(e))
             return []
 
     tasks = [_fetch_one(idx, p) for idx, p in enumerate(providers) if p.enabled]

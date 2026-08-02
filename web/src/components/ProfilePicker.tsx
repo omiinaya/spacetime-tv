@@ -256,10 +256,18 @@ export default function ProfilePicker({
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
             {profiles.map((p) => (
-              <button
+              <div
                 key={p.profile_id}
+                role="button"
+                tabIndex={0}
                 onClick={() => handleProfileClick(p)}
-                className="group flex flex-col items-center gap-3 p-6 rounded-2xl bg-[#1a1a2e] border border-[#2a2a4e] hover:border-blue-500/50 hover:bg-[#1e1e38] transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50 relative"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleProfileClick(p);
+                  }
+                }}
+                className="group flex flex-col items-center gap-3 p-6 rounded-2xl bg-[#1a1a2e] border border-[#2a2a4e] hover:border-blue-500/50 hover:bg-[#1e1e38] transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50 relative cursor-pointer"
               >
                 <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg group-hover:scale-110 transition-transform">
                   {p.avatar === "default" ? (
@@ -271,12 +279,13 @@ export default function ProfilePicker({
                 <span className="text-sm font-medium text-white">{p.name}</span>
                 <button
                   onClick={(e) => handleDelete(p.profile_id, e)}
-                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/10 text-red-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 transition-all"
+                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-500/10 text-red-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-red-500/20 transition-all"
                   title="Delete profile"
+                  aria-label={`Delete profile ${p.name}`}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
-              </button>
+              </div>
             ))}
             <button
               onClick={() => setShowCreate(true)}

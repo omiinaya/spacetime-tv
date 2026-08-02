@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { GuideNowResult } from "@/lib/types";
 
@@ -41,15 +41,23 @@ export function useNowPlaying(streamIds: number[]) {
     };
   }, [streamIds.join(",")]);
 
-  const getNowPlaying = (streamId: number): string | null => {
-    const prog = programmes.get(streamId);
-    return prog ? prog.title : null;
-  };
+  // Stable identities so cards/callers don't re-render on every parent
+  // render (each fresh closure previously forced LiveChannelCard to reconcile).
+  const getNowPlaying = useCallback(
+    (streamId: number): string | null => {
+      const prog = programmes.get(streamId);
+      return prog ? prog.title : null;
+    },
+    [programmes],
+  );
 
-  const getNowPlayingChannel = (streamId: number): string | null => {
-    const prog = programmes.get(streamId);
-    return prog ? prog.channel_name : null;
-  };
+  const getNowPlayingChannel = useCallback(
+    (streamId: number): string | null => {
+      const prog = programmes.get(streamId);
+      return prog ? prog.channel_name : null;
+    },
+    [programmes],
+  );
 
   return { programmes, getNowPlaying, getNowPlayingChannel };
 }

@@ -37,7 +37,11 @@ export default function HiddenCategoriesSection({
 
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+        <label htmlFor="hidden-cats-search" className="sr-only">
+          Search categories
+        </label>
         <input
+          id="hidden-cats-search"
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -55,19 +59,25 @@ export default function HiddenCategoriesSection({
           filtered.slice(0, 100).map((cat) => {
             const hidden = hiddenIds.includes(cat.id);
             return (
-              <label
+              <div
                 key={`${cat.type}-${cat.id}`}
-                className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/50 cursor-pointer"
+                className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted/50"
               >
                 <button
                   onClick={() => onToggle(cat.id)}
+                  aria-label={
+                    hidden ? `Unhide ${cat.name}` : `Hide ${cat.name}`
+                  }
+                  aria-pressed={hidden}
                   className={`shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
                     hidden
                       ? "bg-destructive/20 border-destructive/30 text-destructive"
                       : "border-border text-transparent hover:border-muted-foreground/30"
                   }`}
                 >
-                  {hidden && <Check className="h-2.5 w-2.5" />}
+                  {hidden && (
+                    <Check className="h-2.5 w-2.5" aria-hidden="true" />
+                  )}
                 </button>
                 <span className="text-[10px] text-muted-foreground/60 w-14 shrink-0">
                   {cat.type}
@@ -77,7 +87,7 @@ export default function HiddenCategoriesSection({
                 >
                   {cat.name}
                 </span>
-              </label>
+              </div>
             );
           })
         )}

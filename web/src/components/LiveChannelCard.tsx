@@ -16,18 +16,27 @@ export default function LiveChannelCard({
   const navigate = useNavigate();
 
   return (
-    <button
+    <div
       key={stream.stream_id}
+      role="button"
+      tabIndex={0}
       onClick={() => navigate(`/watch/live/${stream.stream_id}`)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          navigate(`/watch/live/${stream.stream_id}`);
+        }
+      }}
       data-watch-link
-      className="channel-card bg-card rounded-xl border border-border p-5 text-left hover:border-primary/30 relative group/card transition-all duration-200 hover:shadow-lg hover:shadow-primary/5"
+      aria-label={`Watch ${stream.name}`}
+      className="channel-card bg-card rounded-xl border border-border p-5 text-left hover:border-primary/30 relative group/card transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/40 cursor-pointer"
     >
       <button
         onClick={(e) => {
           e.stopPropagation();
           onToggleFavorite(stream.stream_id);
         }}
-        className="absolute top-2.5 right-2.5 z-10 opacity-0 group-hover/card:opacity-100 transition-all duration-200 p-1 rounded-md hover:bg-black/30"
+        className="absolute top-2.5 right-2.5 z-10 opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100 transition-all duration-200 p-1 rounded-md hover:bg-black/30"
         aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
       >
         <Star
@@ -62,11 +71,16 @@ export default function LiveChannelCard({
       <p className="text-xs font-medium leading-tight line-clamp-2 group-hover/card:text-primary transition-colors">
         {stream.name}
       </p>
-      {getNowPlaying(stream.stream_id) && (
-        <p className="text-[10px] text-muted-foreground/50 mt-1.5 truncate leading-tight">
-          {getNowPlaying(stream.stream_id)}
-        </p>
-      )}
-    </button>
+      {(() => {
+        // Call once per render — previously called twice, and each call
+        // traversed the programmes Map with a fresh closure.
+        const nowPlaying = getNowPlaying(stream.stream_id);
+        return nowPlaying ? (
+          <p className="text-[10px] text-muted-foreground/50 mt-1.5 truncate leading-tight">
+            {nowPlaying}
+          </p>
+        ) : null;
+      })()}
+    </div>
   );
 }
