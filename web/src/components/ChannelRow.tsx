@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import {
   Play,
   Tv,
@@ -37,13 +37,17 @@ export function ChannelRow({
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasStream = group.stream_id != null;
 
-  const liveProgramme = group.programmes.find((p) => p.is_live);
-  const upcomingProgrammes = group.programmes.filter((p) => !p.is_live);
-
-  const sorted = [
-    ...(liveProgramme ? [liveProgramme] : []),
-    ...upcomingProgrammes.sort((a, b) => a.start.localeCompare(b.start)),
-  ];
+  // Memoize the programme sort pipeline — Guide re-renders on every favorite
+  // toggle / search keystroke / infinite-scroll append, and this row's
+  // .sort() + find/filter used to re-run for all ~60 visible rows each time.
+  const sorted = useMemo(() => {
+    const live = group.programmes.find((p) => p.is_live);
+    const upcoming = group.programmes.filter((p) => !p.is_live);
+    return [
+      ...(live ? [live] : []),
+      ...upcoming.sort((a, b) => a.start.localeCompare(b.start)),
+    ];
+  }, [group.programmes]);
 
   return (
     <div
