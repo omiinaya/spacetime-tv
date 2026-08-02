@@ -22,6 +22,17 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Recently Completed
 
+### ✅ Session 12.2 (2026-08-02) — ops/CI/security audit batch
+- **release.yml build broken** (H1): used `context: .` with no root Dockerfile — every master push failed 'Dockerfile not found'. Now a 2-image matrix (server + web Dockerfiles) with correct contexts/tags. Commits `6a5921f`.
+- **master unguarded** (H2): ci.yml `pull_request` ignored master — direct PRs to master had zero test gating. PRs now run on all branches. Commits `6a5921f`.
+- **test deps undeclared** (M3): backend CI + fresh contributors got ImportError — pytest/pytest-asyncio/pytest-timeout were runner-preinstalled, never in requirements. New `requirements-dev.txt`, CI installs it.
+- **EPG cache dir bug** (M2): docker-compose bind-mounted the gitignored `epg_cache.json` file → Docker auto-creates a DIRECTORY → first EPG write raised IsADirectoryError. Fixed two ways: guide_epg catches IsADirectoryError/OSError (falls back to in-memory), AND compose now mounts `server/data` dir (mkdir-safe) with EPG_CACHE_FILE/STV_DATA_DIR pointed at `/app/data`.
+- **HERMES_AUTH_VERIFY='false' bug** (M7): the literal string was treated as a CA-bundle path (truthy) → SSL error → 502 on every hermes-id admin proxy call when verification disabled. Normalized boolean spellings; 3 new tests.
+- **nginx CSP/COEP** (L4): prod nginx still shipped `'unsafe-inline' 'unsafe-eval'` (weak CSP) while backend was hardened; aligned to strict. Removed COEP `require-corp` which blocked directly-loaded cross-origin TMDB/photo-tmdb posters (those CDNs send no CORP). CORP+COOP retained.
+- **Deps cleanup** (M5/M6): removed unused `@sentry/react`; moved platform-specific `@rolldown/binding-linux-x64-gnu` from dependencies → devDependencies.
+- **Config docs** (M8): `.env.example` pinned the real `RATE_SEARCH_LIMIT=300` (was 100), added ENCRYPT_CREDENTIALS/STV_ENCRYPT_KEY/EPG_CACHE_FILE/STATIC_DIR/STV_DATA_DIR/CACHE_WARM_*/PROFILE_TOKEN_SECRET; documented that CACHE_TTL_HOURS/CLEANUP_INTERVAL are hardcoded (not runtime-wired) and why.
+- **Tests**: 1397 backend (+3 hermes-id), 1571 frontend, tsc clean, build clean, chromium E2E 88 passed / 1 known flake.
+
 ### ✅ Session 12 (2026-08-02) — security findings, SW stream fix, a11y + perf batch, task guards
 - **CORS real origins** (SECURITY_AUDIT #9): origin list was missing the frontend dev port 5183 + LAN host 192.0.2.10 — their preflights 400'd with no ACAO. Added both (16 origins). CORS 70→85, overall 78→80.
 - **image-proxy JSON 502** (SECURITY_AUDIT #11): uncaught `httpx.HTTPStatusError`/transport error → 500 text/plain. Now clean JSON 502, no upstream detail leak. Error-Leakage 80→90.
