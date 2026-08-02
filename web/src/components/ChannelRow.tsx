@@ -83,6 +83,7 @@ export function ChannelRow({
                 src={group.channel_icon}
                 alt={group.channel_name ? `${group.channel_name} icon` : ""}
                 className="w-7 h-7 object-contain"
+                loading="lazy"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = "none";
                 }}
@@ -303,6 +304,7 @@ function ProgrammeCard({
                   src={enrichResult.poster}
                   alt={enrichResult.title}
                   className="shrink-0 w-[90px] h-[135px] rounded-lg object-cover"
+                  loading="lazy"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = "none";
                   }}
