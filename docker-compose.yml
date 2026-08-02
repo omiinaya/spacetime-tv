@@ -10,7 +10,16 @@ services:
       - ./server/.env
     volumes:
       - ./web/dist:/app/web/dist
-      - ./server/epg_cache.json:/app/epg_cache.json
+      # Bind-mount the server data dir (NOT the epg_cache.json file itself):
+      # Docker auto-creates missing bind-mount paths as DIRECTORIES, so
+      # mounting a file that's gitignored (epg_cache.json) made a fresh clone
+      # create a directory at that path -> first EPG write raised
+      # IsADirectoryError. The data dir is safe (mkdir -p semantics) and the
+      # app persists epg_cache.json + profiles + providers inside it.
+      - ./server/data:/app/data
+    environment:
+      - EPG_CACHE_FILE=/app/data/epg_cache.json
+      - STV_DATA_DIR=/app/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8720/api/health')"]
