@@ -25,6 +25,7 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 - **CORS expose-headers** — `CORSMiddleware` now exposes `X-Request-ID`, `X-RateLimit-Limit`, `X-RateLimit-Remaining` cross-origin, so the :5183 dev frontend + LAN host can correlate requests and check quota like same-origin clients.
 - **Tests**: +2 backend (quota-remaining header, CORS expose-headers). Backend 1398→**1400 passed**. Commit `53b8976`.
 - **Lazy-loading gap closed** — ChannelRow channel icons + enrich posters had no `loading` attr (eager fetch of ~60 icons per guide render); now `loading="lazy"`. MediaOverlay/PersonPage hero images intentionally stay eager (modal/LCP). Commit `8c290b1`.
+- **Coverage drive** — POST `/api/search/query` had zero tests (7 added incl. upstream-degradation + service-exception paths); GET `/search` `_search_all` movies/series fast path untested (added); `profiles.py` (lowest, 62%) got 15 security-critical tests for `_require_profile_access` branches (wrong-token 403s, admin-key delete, refresh/me guardrails, switch validation, PIN verify). `search.py` 67→89%, `profiles.py` 62→72%. Backend 1400→**1421**. Commit `3366653`.
 
 ## Recently Completed
 
