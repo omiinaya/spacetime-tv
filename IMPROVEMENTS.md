@@ -24,6 +24,7 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 - **Rate-quota visibility** — `RateLimitMiddleware` now sets `X-RateLimit-Limit`/`X-RateLimit-Remaining` on every response so clients read their live budget (was: only `Retry-After` on 429, otherwise guess).
 - **CORS expose-headers** — `CORSMiddleware` now exposes `X-Request-ID`, `X-RateLimit-Limit`, `X-RateLimit-Remaining` cross-origin, so the :5183 dev frontend + LAN host can correlate requests and check quota like same-origin clients.
 - **Tests**: +2 backend (quota-remaining header, CORS expose-headers). Backend 1398→**1400 passed**. Commit `53b8976`.
+- **Lazy-loading gap closed** — ChannelRow channel icons + enrich posters had no `loading` attr (eager fetch of ~60 icons per guide render); now `loading="lazy"`. MediaOverlay/PersonPage hero images intentionally stay eager (modal/LCP). Commit `8c290b1`.
 
 ## Recently Completed
 
