@@ -22,7 +22,12 @@ test.describe("Live TV channel playback", () => {
     await page.waitForLoadState("networkidle");
 
     // Should show channel count (48k+)
-    await expect(page.getByText(/channels/)).toBeVisible({ timeout: 10_000 });
+    // Scoped to main + the count pattern: the LiveTV search box now has a
+    // sr-only label containing "channels", so a bare getByText(/channels/)
+    // strict-mode-resolves to two elements.
+    await expect(
+      page.locator("main").getByText(/\d+,\d+ channels/),
+    ).toBeVisible({ timeout: 10_000 });
     const text = await page.locator("main").innerText();
     expect(text).toMatch(/\d+,\d+ channels/);
   });
