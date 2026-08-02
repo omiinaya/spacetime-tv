@@ -2,7 +2,7 @@
 
 > **Audit date:** 2026-08-01 (11th session — backend suite restored, UI fix hardening, security)
 > **Stack:** FastAPI + React 19 + Vite 8 + Tailwind v4 | 13 pages | 133 components | 31 hooks | 25 back-end route modules
-> **Test counts:** 1,386 backend pass (17 skipped, 3 xfail) + 1,570 frontend pass (101 files) | 0 TypeScript errors | 0 production `any` types
+> **Test counts:** 1,394 backend pass (17 skipped, 3 xfail) + 1,570 frontend pass (101 files) | 0 TypeScript errors | 0 production `any` types
 > **CI:** GitHub Actions (lint → test → tsc → build)
 > **Hook test coverage:** 31/31 (100%) — all custom hooks have unit tests
 > **E2E:** Playwright chromium run 85+ passed against live backend (profile-gate seeded via storageState); not in CI (needs IPTV creds as secrets)
@@ -157,7 +157,7 @@ as diminishing returns for further splitting.
 
 ## What's Solid
 - **0 TypeScript errors** in production code
-- **0 pre-existing test failures** (1,570 frontend tests / 101 files, 1,386 backend)
+- **0 pre-existing test failures** (1,570 frontend tests / 101 files, 1,394 backend)
 - **0 `any` types** in production source
 - **Strict CSP** — script-src 'self' only (no unsafe-inline/eval), verified with live playback
 - **Clean build** with proper code splitting (hls.js, shaka-player in separate chunks)

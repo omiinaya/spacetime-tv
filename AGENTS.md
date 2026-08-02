@@ -45,7 +45,7 @@ Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :
 
 - 34 Python source files (server/, ~7,200 lines)
 - 101 TypeScript/React frontend test files (101 files, 1,570 tests)
-- 55 Python backend test files (server/tests/, 1,386 passing)
+- 55 Python backend test files (server/tests/, 1,394 passing)
 - 20 API route modules
 - 14 frontend page components
 - Stack: FastAPI + React 19 + Vite 8 + Tailwind + nginx + ffmpeg
