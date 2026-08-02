@@ -47,7 +47,20 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log.warning(f"[PROFILES] Could not ensure default profile: {e}")
     start_cache_warmer()
-    _epg_broadcast_task = asyncio.create_task(_epg_broadcast_loop())
+    task = asyncio.create_task(_epg_broadcast_loop())
+
+    def _on_epg_task_done(t: asyncio.Task):
+        if t.cancelled():
+            return
+        exc = t.exception()
+        if exc is not None:
+            # _epg_broadcast_loop catches Exception internally, but a
+            # BaseException (CancelledError, KeyboardInterrupt) or a re-raise
+            # still lands here — log it so an unexpected death is visible
+            # rather than a silent 'Task exception was never retrieved'.
+            log.error(f"[EPG-SSE] Broadcast task died unexpectedly: {exc}")
+
+    task.add_done_callback(_on_epg_task_done)
     yield
 
 
