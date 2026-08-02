@@ -160,11 +160,14 @@ Response headers now include:
 ✅ Content-Security-Policy: default-src 'self' ...
 ✅ Strict-Transport-Security: max-age=31536000; includeSubDomains; preload (when ADMIN_API_KEY set)
 ✅ Referrer-Policy: strict-origin-when-cross-origin
-✅ Permissions-Policy: (inherits from CSP)
+✅ Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=(), browsing-topics=(), usb=(), bluetooth=(), serial=()
 ✅ CORP, COOP (Cross-Origin-Resource-Policy, Cross-Origin-Opener-Policy)
 ```
 
 All verified active in both nginx (port 8722) and backend middleware (port 8720).
+Permissions-Policy is now set explicitly by `SecurityHeadersMiddleware` (was only
+in nginx — direct/dev backend responses lacked it), and CORS `expose_headers`
+covers `X-Request-ID` + `X-RateLimit-Limit/Remaining` for cross-origin clients.
 
 ### 14. Query Injection Risk — Score: 80/100
 - No SQL database in this project — all data is from in-memory cache + external APIs

@@ -14,10 +14,16 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 - **P2 — distributed rate limiting** (SECURITY_AUDIT #8) — Redis-backed for multi-instance
 - **P2 — `ALLOW_LAN_BYPASS=false` in production `.env`** (SECURITY_AUDIT #10)
 - **P2 — wire CACHE_TTL_HOURS/CLEANUP_INTERVAL into runtime** (currently hardcoded; conftest uses sentinels that would break cleanup tests if wired naively)
-- **P3 — docker-compose first-start hardening** — EPG dir bug fixed (mounts server/data now); remaining: `env_file: ./server/.env` is hard-required — compose fails on a fresh clone before the app can auto-generate a key
+- **P3 — `env_file: ./server/.env` is hard-required** — compose fails on a fresh clone before the app can auto-generate a key (**RESOLVED `def0ba6`** — no longer pending)
 - **P4 — player control row touch targets < 44px** (a11y audit low: Speed/Record/Download/Quality/Volume/SleepTimer/SubtitleSelector/MobileMoreMenu — currently 40px; deliberate density compromise, bump only if mobile overflow is re-evaluated)
 
 ---
+
+### ✅ Session 12.4 (2026-08-02) — Permissions-Policy + rate-limit quota headers
+- **Permissions-Policy now on every response** — `SecurityHeadersMiddleware` was setting XCTO/XFO/Referrer/CSP/HSTS but *not* Permissions-Policy (only nginx had it), so direct/dev backend responses missed it. Now emits `camera=(), microphone=(), geolocation=(), interest-cohort=(), browsing-topics=(), usb=(), bluetooth=(), serial=()`. Mirrors `web/nginx.conf`, which gained the same denied capabilities (**was missing usb/bluetooth/serial**). SECURITY_AUDIT §13 corrected — its old "Permissions-Policy (inherits from CSP)" line was wrong (it doesn't inherit; the header just wasn't emitted backend-side).
+- **Rate-quota visibility** — `RateLimitMiddleware` now sets `X-RateLimit-Limit`/`X-RateLimit-Remaining` on every response so clients read their live budget (was: only `Retry-After` on 429, otherwise guess).
+- **CORS expose-headers** — `CORSMiddleware` now exposes `X-Request-ID`, `X-RateLimit-Limit`, `X-RateLimit-Remaining` cross-origin, so the :5183 dev frontend + LAN host can correlate requests and check quota like same-origin clients.
+- **Tests**: +2 backend (quota-remaining header, CORS expose-headers). Backend 1398→**1400 passed**. Commit `53b8976`.
 
 ## Recently Completed
 
