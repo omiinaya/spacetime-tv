@@ -51,6 +51,20 @@ class TestRateLimiter:
         assert "Too many requests" in r.text
         assert "Retry-After" in r.headers
 
+    def test_quota_headers_report_remaining(self, client):
+        """X-RateLimit-Limit/Remaining reflect quota on every response."""
+        import main as m
+        from main import _rate_limits
+
+        _rate_limits.clear()
+        limit = m.RATE_DEFAULT_LIMIT
+
+        r = client.get("/api/v1/health")
+        assert r.status_code == 200
+        assert r.headers.get("x-ratelimit-limit") == str(limit)
+        # First request consumes 1 of limit budget.
+        assert r.headers.get("x-ratelimit-remaining") == str(limit - 1)
+
     def test_window_resets_after_expiry(self, client):
         """After RATE_WINDOW seconds, the counter resets."""
         import main as m
@@ -751,6 +765,10 @@ class TestSecurityHeaders:
         assert r.headers.get("x-content-type-options") == "nosniff"
         assert r.headers.get("x-frame-options") == "DENY"
         assert "strict-origin-when-cross-origin" in r.headers.get("referrer-policy", "")
+        # Permissions-Policy denies every sensitive browser capability.
+        pp = r.headers.get("permissions-policy", "")
+        assert "camera=()" in pp and "microphone=()" in pp and "geolocation=()" in pp
+        assert "usb=()" in pp
 
     def test_sw_registration_moved_out_of_inline_script(self, client):
         """The SW registration must NOT be an inline script in index.html —
@@ -822,3 +840,15 @@ class TestCors:
             },
         )
         assert r.headers.get("access-control-allow-origin") is None
+
+    def test_exposes_correlation_and_quota_headers(self, client):
+        """Cross-origin clients can read X-Request-ID + rate-limit headers."""
+        r = client.get(
+            "/api/v1/live/categories",
+            headers={"Origin": "http://localhost:5183", "X-Device-Token": "dev-token-abc"},
+        )
+        # Non-preflight CORS-readability is granted via Access-Control-Expose-Headers.
+        exposed = r.headers.get("access-control-expose-headers", "")
+        assert "X-Request-ID" in exposed
+        assert "X-RateLimit-Remaining" in exposed
+        assert r.headers.get("x-ratelimit-remaining") is not None

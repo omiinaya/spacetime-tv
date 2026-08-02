@@ -65,7 +65,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Spacetime-TV", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    # Expose correlation + throttling headers so cross-origin clients (dev
+    # frontend on :5183, LAN host) can read them just like same-origin ones.
+    expose_headers=["X-Request-ID", "Retry-After", "X-RateLimit-Remaining"],
+)
 
 # hermes-id agent authentication (env: HERMES_AUTH_SERVER_URL / HERMES_AUTH_PROJECT / HERMES_AUTH_VERIFY)
 from hermes_id.fastapi_plugin import install_agent_auth
@@ -327,7 +335,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             stale = [k for k, (ws, _) in _rate_limits.items() if now - ws > RATE_WINDOW]
             for k in stale:
                 del _rate_limits[k]
-        return await call_next(request)
+        response = await call_next(request)
+        # Quota visibility: clients (incl. cross-origin via CORS expose_headers)
+        # can read how many requests remain in this window instead of guessing.
+        response.headers["X-RateLimit-Limit"] = str(limit)
+        response.headers["X-RateLimit-Remaining"] = str(max(0, limit - (count + 1)))
+        return response
 
 
 app.add_middleware(RequestBodySizeMiddleware)
@@ -344,6 +357,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     - X-Content-Type-Options: prevent MIME sniffing
     - X-Frame-Options: prevent clickjacking
     - Referrer-Policy: limit referrer leakage
+    - Permissions-Policy: deny camera/mic/geolocation/etc. (IPTV app needs none)
     """
 
     async def dispatch(self, request: StarletteRequest, call_next):
@@ -351,6 +365,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        # Permissions-Policy — this app uses none of the sensitive browser
+        # capabilities; deny them all so a compromised asset or XSS cannot
+        # drift into camera/mic/geolocation/USB. Mirrors web/nginx.conf.
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=(), interest-cohort=(), "
+            "browsing-topics=(), usb=(), bluetooth=(), serial=()"
+        )
         # CSP — no inline scripts (SW registration moved to the bundle) and no
         # eval: mpegts.js's global-this polyfill (new Function("return this"))
         # catches the CSP violation and falls back to window, so the player
