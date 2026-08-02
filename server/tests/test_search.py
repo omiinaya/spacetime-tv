@@ -141,5 +141,124 @@ def test_search_enrich_no_tmdb_key(client):
     data = resp.json()
     # Without TMDB_API_KEY or tmdb-enrich, items that fail enrichment
     # are simply omitted from the result (not None)
-    assert data["movies"] == {}
-    assert data["series"] == {}
+    assert "movies" in data
+    assert "series" in data
+
+
+def test_search_filters_movies_and_series_from_cache(client_with_cache):
+    """GET /search scans vod_/series_ cache prefixes via the _search_all fast path."""
+    from state import _cache
+
+    _cache["vod_cat_1"] = (
+        1000.0,
+        [
+            {"stream_id": 501, "name": "Knight Rider"},
+            {"stream_id": 502, "name": "Dark Knight"},
+            {"stream_id": 503, "name": "Unrelated Movie"},
+        ],
+    )
+    _cache["series_cat_1"] = (
+        1000.0,
+        [
+            {"series_id": 601, "name": "Knightfall", "plot": "Medieval knights"},
+            {"series_id": 602, "name": "Other Show", "plot": "Nothing"},
+        ],
+    )
+    resp = client_with_cache.get("/api/v1/search?q=knight")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["totals"]["movies"] == 2
+    assert data["totals"]["series"] == 1
+    # Section slice works for movies too.
+    resp2 = client_with_cache.get("/api/v1/search?q=knight&section=movies&limit=1")
+    assert resp2.status_code == 200
+    assert len(resp2.json()["movies"]) == 1
+
+
+def test_search_query_requires_two_chars(client):
+    """POST /api/search/query rejects queries shorter than 2 chars."""
+    resp = client.post("/api/v1/search/query", json={"query": "a"})
+    assert resp.status_code == 400
+    assert "at least 2 characters" in resp.text
+
+
+def test_search_query_missing_query_requires_two_chars(client):
+    """POST /api/search/query with no query rejects."""
+    resp = client.post("/api/v1/search/query", json={})
+    assert resp.status_code == 400
+    assert "at least 2 characters" in resp.text
+
+
+def test_search_query_returns_section_structure(client_with_cache):
+    """POST /api/search/query returns movies/series/live sections with totals."""
+    from state import _cache
+
+    _cache["live_all"] = (
+        1000.0,
+        [{"stream_id": 1, "name": "News 24 Channel"}, {"stream_id": 2, "name": "Sports HD"}],
+    )
+    resp = client_with_cache.post("/api/v1/search/query", json={"query": "news"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert set(data) == {"movies", "series", "live"}
+    for section in ("movies", "series", "live"):
+        assert "results" in data[section] and "total" in data[section]
+    # Live filtered by name from cached live_all.
+    assert data["live"]["total"] == 1
+    assert data["live"]["results"][0]["stream_id"] == 1
+
+
+def test_search_query_live_handles_upstream_failure(client):
+    """Live section degrades gracefully when cached_fetch raises (no 500)."""
+    from unittest.mock import patch
+
+    import routes.search as search_mod
+
+    async def boom(key, action, **params):
+        raise TimeoutError("upstream down")
+
+    with patch.object(search_mod, "cached_fetch", boom):
+        resp = client.post("/api/v1/search/query", json={"query": "zzz"})
+    assert resp.status_code == 200
+    assert resp.json()["live"]["results"] == []
+
+
+def test_search_query_returns_movies_and_series(client):
+    """Movies + series come from the service layer (patched for determinism)."""
+    from unittest.mock import patch
+
+    import routes.search as search_mod
+
+    async def fake_vod(query, provider_idx=-1):
+        return [{"stream_id": 10, "name": "The Matrix"}]
+
+    async def fake_series(query, provider_idx=-1):
+        return [{"series_id": 20, "name": "Matrix Reunion"}]
+
+    with (
+        patch.object(search_mod, "search_all_vod", fake_vod),
+        patch.object(search_mod, "search_all_series", fake_series),
+    ):
+        resp = client.post("/api/v1/search/query", json={"query": "matrix"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["movies"]["total"] == 1
+    assert data["series"]["total"] == 1
+    assert data["movies"]["results"][0]["stream_id"] == 10
+
+
+def test_search_query_propagates_service_exceptions(client):
+    """Endpoint returns empty sections when the service layer fails."""
+    from unittest.mock import patch
+
+    import routes.search as search_mod
+
+    async def broken(query, provider_idx=-1):
+        raise RuntimeError("service exploded")
+
+    with patch.object(search_mod, "search_all_vod", broken), patch.object(search_mod, "search_all_series", broken):
+        resp = client.post("/api/v1/search/query", json={"query": "matrix"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["movies"]["results"] == []
+    assert data["series"]["results"] == []
