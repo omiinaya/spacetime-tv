@@ -140,9 +140,13 @@ TMDB_ENRICH_PATH = os.getenv("TMDB_ENRICH_PATH")
 # Comma-separated list — overridable via env var
 DEFAULT_CORS_ORIGINS = (
     "http://localhost:5180,http://127.0.0.1:5180,"
+    "http://localhost:5183,http://127.0.0.1:5183,"
     "http://localhost:8720,http://127.0.0.1:8720,"
     "http://localhost:8722,http://127.0.0.1:8722,"
+    "http://192.0.2.10:5180,http://192.0.2.10:5183,"
+    "http://192.0.2.10:8720,http://192.0.2.10:8722,"
     "https://localhost:5180,https://127.0.0.1:5180,"
+    "https://localhost:5183,https://127.0.0.1:5183,"
     "https://localhost:8720,https://127.0.0.1:8720,"
     "https://localhost:8722,https://127.0.0.1:8722"
 )

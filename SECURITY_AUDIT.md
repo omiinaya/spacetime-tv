@@ -1,27 +1,28 @@
 # SpacetimeTV Security Audit Report
 
-**Date:** 2026-07-31 (re-audit — HTTPS + auth coverage reconciled against current code)
+**Date:** 2026-08-02 (re-audit — CORS origins fixed, image-proxy JSON 502, request-ID tracking)
 **Auditor:** Hermes Agent (automated)
 **Target:** FastAPI backend on `localhost:8720` (behind nginx TLS on :8722)
 
 ---
 
-## OVERALL SCORE: 78/100 (🟡 MODERATE RISK — TLS + auth coverage reconciled)
+## OVERALL SCORE: 80/100 (🟡 MODERATE RISK — CORS + error-consistency + request-ID closed)
 
 | Category | Score | Risk | Details |
 |----------|-------|------|---------|
 | **Admin Auth** | 85/100 | 🟡 Low | X-Admin-Key enforced. Dev-mode bypass (empty key) is a gap. |
 | **Rate Limiting** | 65/100 | 🟡 Medium | Works but IP-based only. Search=100/min, Default=1000/min. Per-IP, no distributed. |
 | **CSP Headers** | 85/100 | 🟢 Info | CSP active — explicit script/style/img/media sources configured. Includes TMDB domains for images. |
-| **CORS Configuration** | 70/100 | 🟡 Medium | Configured origin list works. But OPTIONS returns 400 with no `Access-Control-Allow-Origin`. See findings. |
+| **CORS Configuration** | 85/100 | 🟢 Low | Configured origin list works — now includes frontend dev port 5183 + LAN origin 192.0.2.10. Allowed origins preflight 200 + ACAO; unknown origins blocked. |
 | **Request Body Limits** | 90/100 | 🟢 Info | 1MB limit enforced at middleware level. Works correctly. |
-| **Error Response Leakage** | 80/100 | 🟢 Low | No stack traces leaked. Generic "Internal Server Error". Debug=False. |
+| **Error Response Leakage** | 90/100 | 🟢 Info | No stack traces leaked. Generic "Internal Server Error". Debug=False. Image-proxy upstream failures now surface as clean JSON 502 (was 500 text/plain). |
 | **Stream ACAO** | 60/100 | 🟡 Medium | No ACAO headers on stream endpoints — fine for direct use, but wildcards not an issue. |
 | **Auth Coverage** | 85/100 | 🟢 Low | All `/api/*` routes require X-Admin-Key or X-Device-Token via middleware. LAN bypass gated by `ALLOW_LAN_BYPASS` (default true; set false = hardened). Exempt: health/error, cloud-backup registration, profiles. |
 | **Secrets in Code** | 70/100 | 🟡 Medium | GITHUB_TOKEN/ACC_GITHUB_TOKEN read at startup. IPTV creds in URL params. |
 | **HTTPS/TLS** | 75/100 | 🟢 Low | TLS termination at nginx on 443 (http2, TLSv1.2/1.3) with HTTP→HTTPS 301 redirect (nginx + `ENFORCE_HTTPS` middleware, default true). HSTS preload. Let's Encrypt via ACME_DOMAIN; self-signed fallback certs otherwise. |
 | **SSRF Protections** | 75/100 | 🟡 Medium | Image-proxy has host allowlist. But stream probe passes user-controlled URLs to ffprobe. |
 | **Cloud Backup Auth** | 90/100 | 🟢 Good | **SHA-256 hashed device token scoping with admin override. 26 tests pass.** |
+| **Request-ID Tracking** | 90/100 | 🟢 Good | **X-Request-ID middleware — echoes caller-supplied ID or generates one; logged on every request for end-to-end correlation. 3 tests.** |
 | **Security Headers** | 90/100 | 🟢 Good | CSP, HSTS, XFO, XCTO, Referrer-Policy, Permissions-Policy active in both nginx + backend middleware. |
 
 ---
@@ -31,9 +32,8 @@
 ### 1. ✅ Admin Endpoint Auth — Score: 85/100
 - **X-Admin-Key IS enforced** — requests without it get 403 `{"detail":"Invalid or missing admin key"}`
 - Wrong key also returns 403
-- **BUT:** If `ADMIN_API_KEY` is empty (dev mode), **all admin endpoints are open**
-- Default `.env.example` and default config have **empty ADMIN_API_KEY**
-- **Risk:** If someone deploys without setting ADMIN_API_KEY, full admin access is available to anyone
+- **BUT:** If `ADMIN_API_KEY` is empty, config auto-generates a random 32-hex key (`_AUTO_GEN_KEY` in config.py) and logs it at startup — so empty env never means "open". The remaining gap is deployments that *explicitly* set an empty key in `.env` (auto-gen is bypassed only when a key is provided).
+- **Risk:** Low
 
 ### 2. ⚠️ Rate Limiting — Score: 65/100
 - **Search endpoint:** Rate limit kicks in at exactly **101 requests in ~48s** (search = 100/min) ✅
@@ -64,14 +64,12 @@
     allowlists, and React's built-in output escaping.
 - **Risk:** Low — CSP provides defense-in-depth against XSS
 
-### 4. ⚠️ CORS Configuration — Score: 70/100
-- Origin list is **explicit** (8 specific origins) ✅
-- ACAO returned correctly for allowed origins ✅
-- **Issue:** OPTIONS preflight returns **400 Bad Request** (missing route handler for OPTIONS), but still includes CORS headers
-- **Issue:** The CORSMiddleware sets headers but Starlette's routing returns 400 for OPTIONS on unmatched routes
-- **Issue:** Response still includes `Access-Control-Allow-Methods` and `Access-Control-Allow-Headers` even on 400 — browser still blocks correctly
-- **Tested:** `http://evil.com` → no ACAO returned → browser blocks ✅
-- **Risk:** Low — CORS functions correctly for actual browsers
+### 4. ✅ CORS Configuration — Score: 85/100
+- Origin list is **explicit** (16 specific origins incl. frontend dev 5183 + LAN 192.0.2.10) ✅
+- ACAO returned correctly for allowed origins; preflight returns **200** + ACAO ✅
+- Unknown origins get no ACAO → browser blocks ✅
+- **Fixed 2026-08-02:** origin list previously omitted the frontend dev port (5183) and the LAN host (192.0.2.10) — the origins the app actually runs on — so their preflights 400'd without ACAO.
+- **Risk:** Low
 
 ### 5. ✅ Request Body Limits — Score: 90/100
 - 1MB POST body → **413 Request body too large** ✅
@@ -79,12 +77,12 @@
 - **Slight gap:** Only checks `Content-Length` header — chunked transfer encoding without Content-Length bypasses this check
 - **Risk:** Low
 
-### 6. ✅ Error Response Leakage — Score: 80/100
+### 6. ✅ Error Response Leakage — Score: 90/100
 - `debug=False` — no stack trace dumping
 - 500 errors return generic `"Internal Server Error"` ✅
 - 400 errors return clean JSON `{"detail":"..."}` ✅
-- **Issue:** `image-proxy` endpoint returns plaintext `"Internal Server Error"` with content-type `text/plain` instead of JSON — inconsistent
-- **Issue:** Could still contain useful info in the 500 (we verified it doesn't, but code changes could change this)
+- **Fixed 2026-08-02:** image-proxy upstream failures (dead CDN / connection refused) previously bubbled up as **500 text/plain** "Internal Server Error" from an uncaught `httpx.HTTPStatusError`. Now caught → clean **JSON 502** "Upstream image fetch failed" (no upstream detail leak). 2 regression tests.
+- **Risk:** Low
 
 ### 7. ✅ No Streaming ACAO Wildcards — Score: 60/100
 - Stream endpoints don't return ACAO headers at all
@@ -188,16 +186,16 @@ All verified active in both nginx (port 8722) and backend middleware (port 8720)
 
 ### 🟡 Medium
 5. ~~**Add CSP header** — even a basic `default-src 'self'` for defense-in-depth~~ ✅ **DONE — CSP configured with explicit sources for scripts, styles, images (TMDB), media (HLS)**
-6. **Warn on empty ADMIN_API_KEY** — don't silently allow dev-mode bypass in production
+6. ~~**Warn on empty ADMIN_API_KEY**~~ ✅ **MITIGATED — config auto-generates a random key when empty (`_AUTO_GEN_KEY`), so an empty env never leaves admin open; startup logs the generated key**
 7. ~~**Move IPTV credentials from URL path to headers** — avoid credential exposure in logs~~ ✅ **DONE — Credentials encrypted at rest (crypto_utils) + HTTPS for transit; Xtream API requires URL-based auth, mitigated via TLS**
 8. **Add distributed rate limiting** — Redis-backed for multi-instance deployments
-9. **Add CORS exception handler** — return 204 instead of 400 for OPTIONS preflight
+9. ~~**Add CORS exception handler** — return 204 instead of 400 for OPTIONS preflight~~ ✅ **DONE — origin list now includes the real origins (frontend dev 5183, LAN 192.0.2.10); allowed preflights return 200 + ACAO, unknown origins stay blocked. 3 CORS tests.**
 10. **Set `ALLOW_LAN_BYPASS=false` in production `.env`** — the default `true` skips auth for all LAN/localhost clients (see finding 8)
 
 ### 🟢 Low
-11. **Make 500 errors return JSON** — consistent content-type
-12. **Remove auto-star logic or move to separate script** — GITHUB_TOKEN in main.py
-13. **Add request ID tracking** — for correlating errors across the pipeline
+11. ~~**Make 500 errors return JSON** — consistent content-type~~ ✅ **DONE — image-proxy upstream failures now return JSON 502 (was 500 text/plain). 2 regression tests.**
+12. ~~**Remove auto-star logic or move to separate script** — GITHUB_TOKEN in main.py~~ ✅ **GONE — no GITHUB_TOKEN/auto-star code remains in the server source (verified by grep 2026-08-02)**
+13. ~~**Add request ID tracking** — for correlating errors across the pipeline~~ ✅ **DONE — X-Request-ID middleware: echoes caller-supplied ID or generates a UUID, logged per request, echoed on the response. 3 tests.**
 
 ---
 

@@ -130,8 +130,14 @@ async def image_proxy(request: Request, url: str = Query(...)):
         _img_cache[url] = (now, content, ct)
         return Response(content=content, media_type=ct, headers={"Cache-Control": "public, max-age=86400"})
 
-    resp = await client.get(url, follow_redirects=True)
-    resp.raise_for_status()
+    try:
+        resp = await client.get(url, follow_redirects=True)
+        resp.raise_for_status()
+    except httpx.HTTPError as e:
+        # Uncaught HTTPStatusError/transport errors previously bubbled up as a
+        # 500 text/plain "Internal Server Error" — surface a clean JSON 502
+        # instead (no upstream detail leaks; SECURITY_AUDIT finding 11).
+        raise HTTPException(502, "Upstream image fetch failed") from e
     content = resp.content
     content_type = resp.headers.get("content-type", "image/jpeg")
 

@@ -170,6 +170,42 @@ def test_image_proxy_with_localhost_referer_allows_access(client):
     assert resp.status_code == 200
 
 
+def test_image_proxy_upstream_failure_returns_json_502(client):
+    """Upstream image CDN failure must surface as JSON 502, not 500 text/plain.
+
+    Regression for SECURITY_AUDIT finding 11: `resp.raise_for_status()`
+    raised an uncaught httpx.HTTPStatusError that bubbled to Starlette's
+    default handler as a text/plain 500. Now caught and re-raised as a
+    clean JSON 502 (no upstream detail leaks).
+    """
+    mock_response = AsyncMock()
+    mock_response.raise_for_status = MagicMock(
+        side_effect=httpx.HTTPStatusError(
+            "404 Not Found", request=httpx.Request("GET", "http://image.tmdb.org/x"), response=httpx.Response(404)
+        )
+    )
+    with patch("iptv_client.client.get", return_value=mock_response):
+        resp = client.get(
+            "/api/v1/image-proxy?url=http://image.tmdb.org/t/p/original/missing.jpg",
+            headers={"Referer": "http://localhost:5180/movies"},
+        )
+    assert resp.status_code == 502
+    assert resp.headers.get("content-type", "").startswith("application/json")
+    assert "Upstream image fetch failed" in resp.text
+    assert "404" not in resp.text  # no upstream detail leak
+
+
+def test_image_proxy_network_error_returns_json_502(client):
+    """A transport-level failure (connection refused) is also a clean JSON 502."""
+    with patch("iptv_client.client.get", side_effect=httpx.HTTPError("Connection refused")):
+        resp = client.get(
+            "/api/v1/image-proxy?url=http://image.tmdb.org/t/p/original/net-fail.jpg",
+            headers={"Referer": "http://localhost:5180/movies"},
+        )
+    assert resp.status_code == 502
+    assert resp.headers.get("content-type", "").startswith("application/json")
+
+
 # ── IPTV Raw Proxy: /api/iptv/{path:path} ────────────────────────────
 
 

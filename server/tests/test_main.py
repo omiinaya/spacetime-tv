@@ -759,3 +759,66 @@ class TestSecurityHeaders:
         html = r.text
         assert "serviceWorker.register" not in html
         assert "<script>" not in html or "serviceWorker" not in html
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Request-ID tracking (SECURITY_AUDIT finding 13)
+# ══════════════════════════════════════════════════════════════════════════
+
+
+class TestRequestId:
+    """X-Request-ID middleware — echo caller-supplied, generate otherwise."""
+
+    def test_echoes_caller_supplied_request_id(self, client):
+        r = client.get("/api/health", headers={"X-Request-ID": "abc-123"})
+        assert r.headers.get("X-Request-ID") == "abc-123"
+
+    def test_generates_request_id_when_absent(self, client):
+        r = client.get("/api/health")
+        rid = r.headers.get("X-Request-ID")
+        assert rid and len(rid) >= 16
+
+    def test_request_id_present_on_api_responses(self, client):
+        r = client.get("/api/health")
+        assert r.headers.get("X-Request-ID")
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# CORS — real origins must preflight cleanly (SECURITY_AUDIT finding 9)
+# ══════════════════════════════════════════════════════════════════════════
+
+
+class TestCors:
+    """CORS preflight for origins the app actually runs on."""
+
+    def test_preflight_allows_frontend_dev_port_5183(self, client):
+        r = client.options(
+            "/api/v1/live/categories",
+            headers={
+                "Origin": "http://localhost:5183",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+        assert r.status_code == 200
+        assert r.headers.get("access-control-allow-origin") == "http://localhost:5183"
+
+    def test_preflight_allows_lan_origin(self, client):
+        r = client.options(
+            "/api/v1/live/categories",
+            headers={
+                "Origin": "http://192.0.2.10:5183",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+        assert r.status_code == 200
+        assert r.headers.get("access-control-allow-origin") == "http://192.0.2.10:5183"
+
+    def test_preflight_blocks_unknown_origin(self, client):
+        r = client.options(
+            "/api/v1/live/categories",
+            headers={
+                "Origin": "http://evil.com",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+        assert r.headers.get("access-control-allow-origin") is None

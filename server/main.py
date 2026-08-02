@@ -351,6 +351,30 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(SecurityHeadersMiddleware)
 
+# ── Request-ID tracking: correlate logs/errors across the pipeline ──────
+# (SECURITY_AUDIT finding 13.) Accepts a caller-supplied X-Request-ID, else
+# generates a UUID, echoes it back on the response and attaches it to the
+# access-log line so a failing span can be traced end-to-end.
+import uuid as _uuid
+
+
+class RequestIdMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: StarletteRequest, call_next):
+        rid = request.headers.get("X-Request-ID") or _uuid.uuid4().hex
+        log.info(
+            "REQ rid=%s %s %s",
+            rid,
+            request.method,
+            request.url.path,
+        )
+        response = await call_next(request)
+        response.headers.setdefault("X-Request-ID", rid)
+        request.state.request_id = rid
+        return response
+
+
+app.add_middleware(RequestIdMiddleware)
+
 # ── Cache Warming ───────────────────────────────────────────────────────────
 # warm_cache() moved to routes/cache_warmer.py -- admin.py and routes import
 # from there directly, eliminating circular import of main.py.
