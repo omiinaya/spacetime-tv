@@ -14,9 +14,8 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 - **P2 — distributed rate limiting** (SECURITY_AUDIT #8) — Redis-backed for multi-instance
 - **P2 — `ALLOW_LAN_BYPASS=false` in production `.env`** (SECURITY_AUDIT #10)
 - **P2 — wire CACHE_TTL_HOURS/CLEANUP_INTERVAL into runtime** (currently hardcoded; conftest uses sentinels that would break cleanup tests if wired naively)
-- **P3 — docker-compose first-start hardening** — the `./server/epg_cache.json` bind-mount auto-creates a directory on fresh clone; EPG now degrades gracefully (IsADirectoryError caught) but the compose file should mount the parent dir or pre-create the file
+- **P3 — docker-compose first-start hardening** — EPG dir bug fixed (mounts server/data now); remaining: `env_file: ./server/.env` is hard-required — compose fails on a fresh clone before the app can auto-generate a key
 - **P4 — player control row touch targets < 44px** (a11y audit low: Speed/Record/Download/Quality/Volume/SleepTimer/SubtitleSelector/MobileMoreMenu — currently 40px; deliberate density compromise, bump only if mobile overflow is re-evaluated)
-- **P4 — ChannelRow / Guide map memoization** (perf audit #8 — needs stable callbacks from Guide.tsx before React.memo pays off)
 
 ---
 

@@ -7,7 +7,8 @@ services:
     expose:
       - "8720"
     env_file:
-      - ./server/.env
+      - path: ./server/.env
+        required: false
     volumes:
       - ./web/dist:/app/web/dist
       # Bind-mount the server data dir (NOT the epg_cache.json file itself):
