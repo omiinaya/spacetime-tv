@@ -13,11 +13,8 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 - **P2 — distributed rate limiting** (SECURITY_AUDIT #8) — Redis-backed for multi-instance
 - **P2 — `ALLOW_LAN_BYPASS=false` in production `.env`** (SECURITY_AUDIT #10)
-- **P3 — WatchlistPopover dialog semantics + focus** (a11y audit M4 — has aria-haspopup=dialog but no role=dialog/trap/focus-move)
-- **P3 — PlayerResumePrompt untrapped modal** (a11y audit M6)
-- **P3 — tab-like controls missing aria-pressed / aria-current** (a11y audit M8: SearchFilterBar, CategoryTabs, ThemeSelector, SeasonSelector, Pagination)
-- **P4 — player control row touch targets < 44px** (a11y audit low: Speed/Record/Download/Quality/Volume/SleepTimer/SubtitleSelector/MobileMoreMenu)
-- **P4 — ChannelRow / Player overlays React.memo** (perf audit #3/#8 — static player overlays re-render every timeupdate)
+- **P4 — player control row touch targets < 44px** (a11y audit low: Speed/Record/Download/Quality/Volume/SleepTimer/SubtitleSelector/MobileMoreMenu — currently 40px; deliberate density compromise, bump only if mobile overflow is re-evaluated)
+- **P4 — ChannelRow / Guide map memoization** (perf audit #8 — needs stable callbacks from Guide.tsx before React.memo pays off)
 
 ---
 
