@@ -5,7 +5,7 @@
 > **Test counts:** 1,394 backend pass (17 skipped, 3 xfail) + 1,571 frontend pass (101 files) | 0 TypeScript errors | 0 production `any` types
 > **CI:** GitHub Actions (lint → test → tsc → build)
 > **Hook test coverage:** 31/31 (100%) — all custom hooks have unit tests
-> **E2E:** Playwright chromium 88 passed / Mobile Chrome 87 passed against live backend (2 shared search/settings teardown-timeout flakes vs live backend; both pass isolated). Profile-gate seeded via storageState. Not in CI (needs IPTV creds as secrets)
+> **E2E:** Playwright chromium 88 / Mobile Chrome 87 / Tablet 89 passed against live backend (2 shared search/settings teardown-timeout flakes; both pass isolated). Profile-gate seeded via storageState. Not in CI (needs IPTV creds as secrets)
 
 ## Current File Sizes (source only, no tests)
 
