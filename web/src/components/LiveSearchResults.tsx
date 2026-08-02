@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router";
 import { Tv, Loader2, ChevronDown } from "lucide-react";
 import type { LiveStream } from "@/lib/types";
+import { channelIconUrl } from "@/lib/api";
 
 interface LiveSearchResultsProps {
   streams: LiveStream[];
@@ -39,7 +40,7 @@ export default function LiveSearchResults({
           >
             {s.stream_icon ? (
               <img
-                src={`/api/iptv/${s.stream_icon.replace("http://", "").replace("https://", "")}`}
+                src={channelIconUrl(s.stream_icon)}
                 alt={s.name ? `${s.name} logo` : ""}
                 className="w-full h-12 object-contain mb-2 rounded opacity-80"
                 loading="lazy"

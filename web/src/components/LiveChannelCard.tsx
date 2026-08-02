@@ -1,6 +1,7 @@
 import { Star, Tv } from "lucide-react";
 import { useNavigate } from "react-router";
 import type { LiveStream } from "@/lib/types";
+import { channelIconUrl } from "@/lib/api";
 
 export default function LiveChannelCard({
   stream,
@@ -55,7 +56,7 @@ export default function LiveChannelCard({
       )}
       {stream.stream_icon ? (
         <img
-          src={`/api/iptv/${stream.stream_icon.replace("http://", "").replace("https://", "")}`}
+          src={channelIconUrl(stream.stream_icon)}
           alt={stream.name ? `${stream.name} logo` : ""}
           className="w-full h-14 object-contain mb-3 rounded opacity-80 group-hover/card:opacity-100 transition-opacity"
           loading="lazy"

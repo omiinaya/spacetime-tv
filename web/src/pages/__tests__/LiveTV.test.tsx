@@ -51,6 +51,7 @@ vi.mock("@/lib/api", () => ({
   },
   imageUrl: (url: string) => url,
   tmdbImgProps: vi.fn(() => ({ src: "https://image.tmdb.org/poster.jpg" })),
+  channelIconUrl: (raw: string) => raw,
 }));
 
 // ── Mock useInfiniteScroll ────────────────────────────────────

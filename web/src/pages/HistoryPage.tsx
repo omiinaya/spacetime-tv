@@ -6,6 +6,7 @@ import {
   clearRecentChannels,
   type RecentChannel,
 } from "@/lib/recentChannels";
+import { channelIconUrl } from "@/lib/api";
 import {
   getContinueWatching,
   getMovieContinueWatching,
@@ -99,7 +100,7 @@ export default function HistoryPage() {
               >
                 {ch.icon ? (
                   <img
-                    src={`/api/iptv/${ch.icon.replace("http://", "").replace("https://", "")}`}
+                    src={channelIconUrl(ch.icon)}
                     alt={`${ch.name} logo`}
                     className="w-full h-10 object-contain mb-2 rounded opacity-80"
                     loading="lazy"

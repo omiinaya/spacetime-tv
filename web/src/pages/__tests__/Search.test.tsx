@@ -60,6 +60,7 @@ vi.mock("@/lib/api", () => ({
   tmdbSrcset: (path: string) =>
     path ? `https://tmdb.org/w342${path} 342w` : "",
   tmdbImgProps: vi.fn(() => ({ src: "https://tmdb.org/poster.jpg" })),
+  channelIconUrl: (raw: string) => raw,
 }));
 
 // ── Mock useNowPlaying ──────────────────────────────────
