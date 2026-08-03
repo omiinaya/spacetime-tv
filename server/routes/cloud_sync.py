@@ -79,11 +79,18 @@ def _verify_device_access(
     backups = _read_backups()
     entry = backups.get(device_id)
 
-    # No backup yet — anyone can register (first-time setup)
-    # Reject only if a token was provided but is too short (< 8 chars)
+    # No backup yet — first-time registration. Require an admin key or a real
+    # device token (>= 8 chars). Accepting a tokenless write here would store
+    # an empty _token_hash, permanently bricking the device_id — no future
+    # token (including the owner's own) would ever match empty.
     if entry is None:
-        token = request.headers.get("X-Device-Token", None)
-        return not (token is not None and len(token) < 8)
+        from config import ADMIN_API_KEY
+
+        admin_key = request.headers.get("X-Admin-Key", "")
+        if admin_key and admin_key == ADMIN_API_KEY:
+            return True
+        token = request.headers.get("X-Device-Token", "")
+        return len(token) >= 8
 
     # Check admin key first (bypasses device token check)
     from config import ADMIN_API_KEY

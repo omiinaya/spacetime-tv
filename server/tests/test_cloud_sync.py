@@ -340,7 +340,9 @@ class TestDeviceTokenAuth:
         _cleanup()
 
     def test_upload_requires_token(self, client):
-        """POST /cloud/backup without token registers the device (first upload = registration)."""
+        """POST /cloud/backup without a token is rejected — a tokenless
+        registration would store an empty _token_hash and permanently brick
+        the device_id (no future token would ever match)."""
         # client fixture injects X-Admin-Key by default — clear it for this test
         client.headers.clear()
         resp = client.post(
@@ -350,17 +352,30 @@ class TestDeviceTokenAuth:
                 "favorites": [1],
             },
         )
-        # No token = first upload registers the device (no existing backup to protect)
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "ok"
+        # No token = rejected, even for first-time registration
+        assert resp.json()["status"] == "error"
+        assert "Unauthorized" in resp.json()["detail"]
 
-        # But a subsequent read without token should fail (device is now registered)
+        # Short token (< 8 chars) is also rejected
+        resp = client.post(
+            "/api/v1/cloud/backup",
+            json={
+                "device_id": "no-token-device",
+                "favorites": [1],
+            },
+            headers={"X-Device-Token": "short"},
+        )
+        assert resp.json()["status"] == "error"
+
+        # The device was never registered (tokenless write rejected) — a read
+        # with a valid token returns empty data, proving nothing was stored.
         client.headers.clear()
         resp = client.get(
             "/api/v1/cloud/backup?device_id=no-token-device",
+            headers={"X-Device-Token": "test-device-token-abc-123"},
         )
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "error"
+        assert resp.json()["status"] == "ok"
+        assert resp.json()["data"]["favorites"] == []
 
     def test_upload_rejects_wrong_token(self, client):
         """After registering with one token, a different token is rejected."""
@@ -463,7 +478,8 @@ class TestDeviceTokenAuth:
         assert sorted(resp.json()["favorites"]) == [10, 20, 30]
 
     def test_short_token_rejected(self, client):
-        """Token shorter than 8 chars is rejected."""
+        """Token shorter than 8 chars is rejected (device-auth only, no admin)."""
+        client.headers.clear()
         resp = client.post(
             "/api/v1/cloud/backup",
             json={
