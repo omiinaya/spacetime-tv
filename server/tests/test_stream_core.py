@@ -1,7 +1,7 @@
 """Tests for stream_core.py — shared stream helpers, URL building, probe cache, MIME."""
 
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -414,3 +414,220 @@ class TestStreamBytes:
             generator = stream_bytes("http://test.url/stream.ts")
             with pytest.raises(RuntimeError, match="CDN returned HTTP 403"):
                 await generator.__anext__()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 2b. _vod_url — MKV URL for ffprobe/ffmpeg context
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestVodUrl:
+    def test_returns_provider_mkv_url(self):
+        """_vod_url builds the provider MKV URL through iptv_vod_url."""
+        from routes import stream_core
+
+        with patch(
+            "routes.stream_core.stream_core_get_provider",
+            return_value=MagicMock(base_url="http://prov.test", username="u", password="p"),
+        ):
+            with patch(
+                "routes.stream_core.iptv_vod_url",
+                return_value="http://prov.test/movie/u/p/550.mkv",
+            ) as mock_url:
+                url = stream_core._vod_url(550, "movie")
+        assert url == "http://prov.test/movie/u/p/550.mkv"
+        mock_url.assert_called_once_with(550, "movie", provider=mock_url.call_args.kwargs["provider"])
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 2c. _http_feed_stdin — aiohttp fetch piped into ffmpeg stdin
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestHttpFeedStdin:
+    """_http_feed_stdin pipes aiohttp response bytes into a proc stdin."""
+
+    @pytest.mark.asyncio
+    async def test_pipes_chunks_to_stdin_with_range(self):
+        from routes.stream_core import _http_feed_stdin
+
+        class MockResponse:
+            def __init__(self):
+                self._chunks = iter([b"part1", b"part2", b""])
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return None
+
+            def raise_for_status(self):
+                pass
+
+            @property
+            def content(self):
+                return self
+
+            async def read(self, n=-1):
+                return next(self._chunks)
+
+        mock_resp = MockResponse()
+
+        class MockSession:
+            def __init__(self):
+                self.headers_capture = None
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return None
+
+            def get(self, url, headers=None):
+                self.headers_capture = headers
+                return mock_resp
+
+        session = MockSession()
+        mock_proc = MagicMock()
+        mock_proc.stdin.write = MagicMock()
+        mock_proc.stdin.drain = AsyncMock()
+
+        with patch("routes.stream_core.aiohttp.ClientSession", return_value=session):
+            await _http_feed_stdin(mock_proc, "http://test/feed.mkv", range_header="bytes=100-")
+        assert session.headers_capture is not None
+        assert session.headers_capture["Range"] == "bytes=100-"
+        assert mock_proc.stdin.write.call_count == 2
+        mock_proc.stdin.close.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_client_error_is_swallowed_and_stdin_closed(self):
+        """aiohttp.ClientError is logged and stdin still closed."""
+        from routes.stream_core import _http_feed_stdin
+
+        class MockSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return None
+
+            def get(self, url, headers=None):
+                raise aiohttp_client_error()
+
+        def aiohttp_client_error():
+            import aiohttp
+
+            return aiohttp.ClientError("boom")
+
+        mock_proc = MagicMock()
+        mock_proc.stdin.close = MagicMock()
+
+        with patch("routes.stream_core.aiohttp.ClientSession", return_value=MockSession()):
+            await _http_feed_stdin(mock_proc, "http://test/feed.mkv")
+        mock_proc.stdin.close.assert_called_once()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 2d. _ffmpeg_pipe stderr logging + full lifecycle
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestFfmpegPipe:
+    @pytest.mark.asyncio
+    async def test_yields_stdout_and_cancels_tasks(self):
+        """Full _ffmpeg_pipe lifecycle: reads stdout, logs stderr, cancels tasks."""
+        from routes.stream_core import _ffmpeg_pipe
+
+        async def noop_feed(proc):
+            return None
+
+        class FakeStream:
+            def __init__(self, data):
+                self._data = data
+
+            async def read(self, n=-1):
+                if not self._data:
+                    return b""
+                return self._data.pop(0)
+
+            async def readline(self):
+                if not hasattr(self, "_stderr_lines"):
+                    self._stderr_lines = [b"error line", b""]
+                return self._stderr_lines.pop(0)
+
+        class FakeProc:
+            def __init__(self):
+                self.stdout = FakeStream([b"out1", b""])
+                self.stderr = FakeStream([])
+                self.returncode = None
+
+            def kill(self):
+                self.returncode = 1
+
+            async def wait(self):
+                return 0
+
+        proc = FakeProc()
+
+        async def fake_create_subprocess_exec(*a, **k):
+            return proc
+
+        with patch("routes.stream_core.asyncio.create_subprocess_exec", new=fake_create_subprocess_exec):
+            chunks = [c async for c in _ffmpeg_pipe(["ffmpeg"], noop_feed)]
+        assert chunks == [b"out1"]
+        # tasks cancelled after generator ends
+        assert proc.returncode is not None  # kill called because returncode was None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 2e. stream_proxy — preflight + proxy streaming
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestStreamProxy:
+    @pytest.mark.asyncio
+    async def test_returns_streaming_response_when_preflight_passes(self):
+        from routes.stream_core import stream_proxy
+
+        with (
+            patch("routes.stream_core.preflight_stream", new=_async_true()),
+            patch("routes.stream_core.stream_bytes", return_value=_agen([b"x"])),
+        ):
+            result = await stream_proxy("http://test/stream.ts", "video/mp2t")
+        assert result.status_code == 200
+        assert result.media_type == "video/mp2t"
+
+    @pytest.mark.asyncio
+    async def test_returns_502_when_preflight_fails(self):
+        from routes.stream_core import stream_proxy
+
+        with patch("routes.stream_core.preflight_stream", new=_async_false()):
+            result = await stream_proxy("http://test/dead.ts", "video/mp2t")
+        assert result.status_code == 502
+
+    @pytest.mark.asyncio
+    async def test_returns_502_on_runtime_error(self):
+        from routes.stream_core import stream_proxy
+
+        with patch("routes.stream_core.preflight_stream", side_effect=RuntimeError("boom")):
+            result = await stream_proxy("http://test/err.ts", "video/mp2t")
+        assert result.status_code == 502
+
+
+def _async_true():
+    async def inner(*a, **k):
+        return True
+
+    return inner
+
+
+def _async_false():
+    async def inner(*a, **k):
+        return False
+
+    return inner
+
+
+async def _agen(items):
+    for it in items:
+        yield it
