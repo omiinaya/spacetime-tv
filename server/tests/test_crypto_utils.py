@@ -225,3 +225,105 @@ class TestCipherManagement:
         with caplog.at_level("WARNING"):
             crypto_utils._get_or_create_key()
             assert "Invalid STV_ENCRYPT_KEY format" in caplog.text
+
+    def test_get_or_create_key_default_data_dir_when_unset(self, monkeypatch, tmp_path):
+        """No STV_DATA_DIR -> fall back to server/data under the module path."""
+        import crypto_utils
+
+        monkeypatch.setattr(crypto_utils, "_cipher", None)
+        monkeypatch.setattr(crypto_utils, "_KEY_FILE", None)
+        monkeypatch.delenv("STV_ENCRYPT_KEY", raising=False)
+        monkeypatch.delenv("STV_DATA_DIR", raising=False)
+
+        key = crypto_utils._get_or_create_key()
+        assert isinstance(key, bytes)
+
+    def test_get_or_create_key_handles_read_oserror(self, monkeypatch, tmp_path, caplog):
+        """An OSError reading the key file is swallowed (falls through to generate)."""
+        import crypto_utils
+
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        monkeypatch.setenv("STV_DATA_DIR", str(data_dir))
+        monkeypatch.delenv("STV_ENCRYPT_KEY", raising=False)
+        monkeypatch.setattr(crypto_utils, "_cipher", None)
+        monkeypatch.setattr(crypto_utils, "_KEY_FILE", None)
+
+        # Pre-create the key file so exists() is True, then patch read_bytes
+        # on pathlib.Path so the function's fresh Path object hit the OSError.
+        data_dir.joinpath(".encrypt_key").write_bytes(b"valid-key-data")
+        import pathlib
+
+        real_read_bytes = pathlib.Path.read_bytes
+
+        def raising_read(self, *a, **k):
+            if self.name == ".encrypt_key":
+                raise OSError("failed to read")
+            return real_read_bytes(self, *a, **k)
+
+        monkeypatch.setattr(pathlib.Path, "read_bytes", raising_read)
+        key = crypto_utils._get_or_create_key()
+        assert isinstance(key, bytes)
+
+    def test_write_key_oserror_logs_warning(self, monkeypatch, tmp_path, caplog):
+        """OSError writing the key file logs a warning and returns the key."""
+        import pathlib
+
+        import crypto_utils
+
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        monkeypatch.setenv("STV_DATA_DIR", str(data_dir))
+        monkeypatch.delenv("STV_ENCRYPT_KEY", raising=False)
+        monkeypatch.setattr(crypto_utils, "_cipher", None)
+        monkeypatch.setattr(crypto_utils, "_KEY_FILE", None)
+
+        real_write_bytes = pathlib.Path.write_bytes
+        data_dir.joinpath("__touch").write_bytes(b"")  # ensure dir usable elsewhere
+
+        def raising_write(self, *a, **k):
+            if self.name == ".encrypt_key":
+                raise OSError("disk full")
+            return real_write_bytes(self, *a, **k)
+
+        monkeypatch.setattr(pathlib.Path, "write_bytes", raising_write)
+        with caplog.at_level("WARNING"):
+            key = crypto_utils._get_or_create_key()
+        assert isinstance(key, bytes)
+        assert "Could not persist encryption key" in caplog.text
+
+
+class TestCryptoImportMissing:
+    """Fernet fallback when cryptography isn't installed (lines 11-13)."""
+
+    def test_import_error_sets_fernet_none(self, monkeypatch):
+        """Blocking the cryptography import sets Fernet=None and get_cipher raises."""
+        import builtins
+
+        import crypto_utils
+
+        real_import = builtins.__import__
+
+        def block_cryptography(name, *a, **k):
+            if name == "cryptography" or name.startswith("cryptography."):
+                raise ImportError("cryptography not installed")
+            return real_import(name, *a, **k)
+
+        monkeypatch.setattr(builtins, "__import__", block_cryptography)
+        monkeypatch.setattr(crypto_utils, "_cipher", None)
+
+        # re-run the module's import-try block by reloading under the blocker
+        import importlib
+
+        reloaded = importlib.reload(crypto_utils)
+        assert reloaded.Fernet is None
+        assert reloaded.InvalidToken is None
+        with pytest.raises(ImportError, match="cryptography package required"):
+            reloaded.get_cipher()
+
+        # restore then re-import so the real Fernet is used by later tests
+        monkeypatch.undo()
+        import importlib as _il
+
+        _il.reload(crypto_utils)
+        assert crypto_utils.Fernet is not None
