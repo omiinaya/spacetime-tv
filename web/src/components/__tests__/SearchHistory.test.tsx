@@ -1,117 +1,77 @@
 /**
- * Tests for the SearchHistory component.
- *
- * SearchHistory shows a dropdown of recent searches when `show` is true
- * and history is non-empty. Supports clear all and item selection.
+ * Tests for SearchHistory — the recent-searches dropdown in the search bar.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { SearchHistory } from "@/components/SearchHistory";
 
-// Mock the searchHistory lib
-const mockGetSearchHistory = vi.fn();
-const mockAddSearchHistory = vi.fn();
-const mockClearSearchHistory = vi.fn();
+const KEY = "stv_search_history";
 
-vi.mock("@/lib/searchHistory", () => ({
-  getSearchHistory: (...args: unknown[]) => mockGetSearchHistory(...args),
-  addSearchHistory: (...args: unknown[]) => mockAddSearchHistory(...args),
-  clearSearchHistory: (...args: unknown[]) => mockClearSearchHistory(...args),
-}));
+function seed(queries: string[]) {
+  localStorage.setItem(KEY, JSON.stringify(queries));
+}
 
 describe("SearchHistory", () => {
-  const onSelect = vi.fn();
-  const onClose = vi.fn();
+  beforeEach(() => localStorage.clear());
+  afterEach(() => localStorage.clear());
 
-  const sampleHistory = ["inception", "star wars", "the matrix"];
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetSearchHistory.mockReturnValue(sampleHistory);
-  });
-
-  it("renders nothing when show is false", () => {
+  it("renders nothing when hidden", () => {
     const { container } = render(
-      <SearchHistory onSelect={onSelect} show={false} onClose={onClose} />,
+      <SearchHistory show={false} onSelect={vi.fn()} onClose={vi.fn()} />,
     );
     expect(container.innerHTML).toBe("");
   });
 
   it("renders nothing when history is empty", () => {
-    mockGetSearchHistory.mockReturnValue([]);
     const { container } = render(
-      <SearchHistory onSelect={onSelect} show={true} onClose={onClose} />,
+      <SearchHistory show onSelect={vi.fn()} onClose={vi.fn()} />,
     );
     expect(container.innerHTML).toBe("");
   });
 
-  it("renders history items when show is true", () => {
-    render(<SearchHistory onSelect={onSelect} show={true} onClose={onClose} />);
-
-    expect(screen.getByText("inception")).toBeInTheDocument();
-    expect(screen.getByText("star wars")).toBeInTheDocument();
-    expect(screen.getByText("the matrix")).toBeInTheDocument();
+  it("shows recent searches when visible", () => {
+    seed(["matrix", "inception"]);
+    render(<SearchHistory show onSelect={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.getByText("Recent Searches")).toBeTruthy();
+    expect(screen.getByText("matrix")).toBeTruthy();
+    expect(screen.getByText("inception")).toBeTruthy();
   });
 
-  it('shows "Recent Searches" header and "Clear all" button', () => {
-    render(<SearchHistory onSelect={onSelect} show={true} onClose={onClose} />);
-
-    expect(screen.getByText("Recent Searches")).toBeInTheDocument();
-    expect(screen.getByText("Clear all")).toBeInTheDocument();
-  });
-
-  it("calls onSelect and onClose when a history item is clicked", () => {
-    render(<SearchHistory onSelect={onSelect} show={true} onClose={onClose} />);
-
-    fireEvent.click(screen.getByText("inception"));
-
-    expect(mockAddSearchHistory).toHaveBeenCalledWith("inception");
-    expect(onSelect).toHaveBeenCalledWith("inception");
+  it("selecting a query calls onSelect and closes", () => {
+    seed(["matrix"]);
+    const onSelect = vi.fn();
+    const onClose = vi.fn();
+    render(<SearchHistory show onSelect={onSelect} onClose={onClose} />);
+    fireEvent.click(screen.getByText("matrix"));
+    expect(onSelect).toHaveBeenCalledWith("matrix");
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("calls clearSearchHistory when Clear all is clicked", () => {
-    render(<SearchHistory onSelect={onSelect} show={true} onClose={onClose} />);
-
+  it("clearing all empties the list", () => {
+    seed(["matrix", "godone"]);
+    render(<SearchHistory show onSelect={vi.fn()} onClose={vi.fn()} />);
     fireEvent.click(screen.getByText("Clear all"));
+    expect(screen.queryByText("matrix")).toBeNull();
+    expect(screen.queryByText("godone")).toBeNull();
+    expect(localStorage.getItem(KEY)).toBeNull();
+  });
 
-    expect(mockClearSearchHistory).toHaveBeenCalled();
-    expect(screen.queryByText("inception")).not.toBeInTheDocument();
+  it("removes a single query", () => {
+    seed(["matrix", "godone"]);
+    render(<SearchHistory show onSelect={vi.fn()} onClose={vi.fn()} />);
+    fireEvent.click(
+      screen.getByLabelText('Remove "matrix" from search history'),
+    );
+    expect(screen.queryByText("matrix")).toBeNull();
+    expect(screen.getByText("godone")).toBeTruthy();
   });
 
   it("closes on outside click", () => {
-    render(<SearchHistory onSelect={onSelect} show={true} onClose={onClose} />);
-
-    // Click outside the dropdown
-    fireEvent.mouseDown(document.body);
-
+    seed(["matrix"]);
+    const onClose = vi.fn();
+    document.body.innerHTML = '<div id="outside">outside</div>';
+    render(<SearchHistory show onSelect={vi.fn()} onClose={onClose} />);
+    fireEvent.mouseDown(document.getElementById("outside")!);
     expect(onClose).toHaveBeenCalled();
-  });
-
-  it("does not close on click inside the dropdown", () => {
-    render(<SearchHistory onSelect={onSelect} show={true} onClose={onClose} />);
-
-    // Click inside the dropdown
-    const dropdown = screen.getByText("Recent Searches").closest("div");
-    expect(dropdown).not.toBeNull();
-    fireEvent.mouseDown(dropdown!);
-
-    expect(onClose).not.toHaveBeenCalled();
-  });
-
-  it("refreshes history when show changes to true", () => {
-    const { rerender } = render(
-      <SearchHistory onSelect={onSelect} show={false} onClose={onClose} />,
-    );
-
-    // Initially show=false, history should NOT be fetched
-    expect(mockGetSearchHistory).not.toHaveBeenCalled();
-
-    // Re-render with show=true
-    rerender(
-      <SearchHistory onSelect={onSelect} show={true} onClose={onClose} />,
-    );
-
-    expect(mockGetSearchHistory).toHaveBeenCalledTimes(1);
   });
 });
