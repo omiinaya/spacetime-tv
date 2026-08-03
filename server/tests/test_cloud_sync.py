@@ -559,3 +559,84 @@ class TestAdminKeyOverride:
                 headers={"X-Admin-Key": self.ADMIN_KEY},
             )
             assert resp.json()["data"]["favorites"] == [77]
+
+
+# ── Low-level helper error paths ─────────────────────────────────────
+
+
+class TestCloudHelpers:
+    """Direct unit tests for _read/_write backups + _verify_device_access."""
+
+    def test_read_backups_corrupted_returns_empty(self, monkeypatch, caplog):
+        """Corrupt cloud_backup.json -> empty dict (no crash)."""
+        from routes.cloud_sync import _read_backups
+
+        monkeypatch.setattr("routes.cloud_sync.BACKUP_FILE", BACKUP_FILE)
+        BACKUP_FILE.write_text("{corrupt json !!!")
+        try:
+            result = _read_backups()
+        finally:
+            _cleanup()
+        assert result == {}
+
+    def test_read_backups_non_dict_returns_empty(self, monkeypatch):
+        """cloud_backup.json containing a list -> empty dict."""
+        from routes.cloud_sync import _read_backups
+
+        BACKUP_FILE.write_text("[1, 2, 3]")
+        try:
+            result = _read_backups()
+        finally:
+            _cleanup()
+        assert result == {}
+
+    def test_write_backups_oserror_logs_warning(self, monkeypatch, tmp_path, caplog):
+        """OSError writing backups is logged, not raised."""
+        from routes.cloud_sync import _write_backups
+
+        # Point BACKUP_FILE at an unwritable path (parent is a file)
+        blocker = tmp_path / "file"
+        blocker.write_text("x")
+        monkeypatch.setattr("routes.cloud_sync.BACKUP_FILE", blocker / "cloud.json")
+        with caplog.at_level("WARNING"):
+            _write_backups({"device": {}})
+        assert "Failed to write backup" in caplog.text
+
+    def test_verify_existing_entry_short_token_rejected(self, monkeypatch):
+        """Existing entry + token < 8 chars -> False."""
+        from unittest.mock import MagicMock
+
+        from routes.cloud_sync import _verify_device_access
+
+        monkeypatch.setattr(
+            "routes.cloud_sync._read_backups",
+            lambda: {"dev-123": {"_token_hash": "x" * 64}},
+        )
+        req = MagicMock()
+        req.headers.get.return_value = "short"
+        assert _verify_device_access(req, "dev-123") is False
+
+    def test_verify_existing_entry_missing_hash_rejected(self, monkeypatch):
+        """Existing entry without _token_hash -> False even with valid token."""
+        from unittest.mock import MagicMock
+
+        from routes.cloud_sync import _verify_device_access
+
+        monkeypatch.setattr(
+            "routes.cloud_sync._read_backups",
+            lambda: {"dev-123": {"favorites": []}},
+        )
+        req = MagicMock()
+        req.headers.get.return_value = "device-token-1234567890"
+        assert _verify_device_access(req, "dev-123") is False
+
+    def test_verify_no_entry_requires_long_token(self, monkeypatch):
+        """First-time registration with no token -> False (must have >=8 chars)."""
+        from unittest.mock import MagicMock
+
+        from routes.cloud_sync import _verify_device_access
+
+        monkeypatch.setattr("routes.cloud_sync._read_backups", lambda: {})
+        req = MagicMock()
+        req.headers.get.return_value = ""
+        assert _verify_device_access(req, "brand-new-device") is False
