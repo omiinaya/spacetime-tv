@@ -29,31 +29,6 @@ def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def verify_device_token(request: Request, device_id: str) -> bool:
-    """Verify X-Device-Token or X-Admin-Key for a given device."""
-    admin_key = request.headers.get("X-Admin-Key", "")
-    if admin_key and admin_key == ADMIN_API_KEY:
-        return True
-    token = request.headers.get("X-Device-Token", "")
-    if not token or len(token) < 8:
-        return False
-    from state import _backups
-
-    backups = getattr(_backups, "_data", None)
-    if backups is None:
-        try:
-            from routes.cloud_sync import _read_backups
-
-            backups = _read_backups()
-        except (ImportError, OSError, json.JSONDecodeError):
-            return False
-    entry = backups.get(device_id, {})
-    stored_hash = entry.get("_token_hash", "")
-    if not stored_hash:
-        return False
-    return hmac.compare_digest(hash_token(token), stored_hash)
-
-
 def verify_device_token_generic(token: str) -> bool:
     """Verify a device token against any stored backup (not device-specific).
 

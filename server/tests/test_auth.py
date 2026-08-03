@@ -558,3 +558,252 @@ class TestVerifyDeviceTokenGeneric:
         from auth import verify_device_token_generic
 
         assert verify_device_token_generic("short") is False
+
+    def test_matching_token_returns_true(self, monkeypatch):
+        """Match any stored entry's _token_hash."""
+        import auth as _auth
+        from routes import cloud_sync
+
+        token = "device-token-0123456789"
+        monkeypatch.setattr(
+            cloud_sync,
+            "_read_backups",
+            lambda: {"dev1": {"_token_hash": _auth.hash_token(token), "timestamp": 1}},
+        )
+        assert _auth.verify_device_token_generic(token) is True
+
+    def test_non_matching_token_returns_false(self, monkeypatch):
+        import auth as _auth
+        from routes import cloud_sync
+
+        monkeypatch.setattr(
+            cloud_sync,
+            "_read_backups",
+            lambda: {"dev1": {"_token_hash": _auth.hash_token("other-token-00"), "timestamp": 1}},
+        )
+        assert _auth.verify_device_token_generic("device-token-0123456789") is False
+
+    def test_json_decode_error_returns_false(self, monkeypatch):
+        import json
+
+        import auth as _auth
+        from routes import cloud_sync
+
+        def boom():
+            raise json.JSONDecodeError("bad", "doc", 0)
+
+        monkeypatch.setattr(cloud_sync, "_read_backups", boom)
+        assert _auth.verify_device_token_generic("device-token-0123456789") is False
+
+    def test_oserror_returns_false(self, monkeypatch):
+        import auth as _auth
+        from routes import cloud_sync
+
+        def boom():
+            raise OSError("io")
+
+        monkeypatch.setattr(cloud_sync, "_read_backups", boom)
+        assert _auth.verify_device_token_generic("device-token-0123456789") is False
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 9. require_auth (FastAPI dependency)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestRequireAuth:
+    async def test_health_path_bypasses(self):
+        from fastapi import Request
+
+        from auth import require_auth
+        from main import app
+
+        scope = {"type": "http", "method": "GET", "path": "/api/health", "headers": [], "app": app}
+        result = await require_auth(Request(scope))
+        assert result is True
+
+    async def test_non_api_path_bypasses(self):
+        from fastapi import Request
+
+        from auth import require_auth
+        from main import app
+
+        result = await require_auth(
+            Request({"type": "http", "method": "GET", "path": "/static/app.js", "headers": [], "app": app})
+        )
+        assert result is True
+
+    async def test_admin_key_passes(self):
+        from fastapi import Request
+        from starlette.datastructures import Headers
+
+        from auth import require_auth
+        from main import app
+
+        req = Request(
+            {
+                "type": "http",
+                "method": "GET",
+                "path": "/api/v1/watchlist",
+                "headers": Headers({"X-Admin-Key": "test-admin-key-insecure"}).raw,
+                "app": app,
+            }
+        )
+        assert await require_auth(req) is True
+
+    async def test_valid_device_token_passes(self):
+        from fastapi import Request
+        from starlette.datastructures import Headers
+
+        from auth import require_auth
+        from main import app
+
+        req = Request(
+            {
+                "type": "http",
+                "method": "GET",
+                "path": "/api/v1/watchlist",
+                "headers": Headers({"X-Device-Token": "device-token-0123456789"}).raw,
+                "app": app,
+            }
+        )
+        assert await require_auth(req) is True
+
+    async def test_no_credentials_raises_401(self):
+        from fastapi import HTTPException, Request
+
+        from auth import require_auth
+        from main import app
+
+        req = Request({"type": "http", "method": "GET", "path": "/api/v1/watchlist", "headers": [], "app": app})
+        with pytest.raises(HTTPException) as exc:
+            await require_auth(req)
+        assert exc.value.status_code == 401
+        assert "WWW-Authenticate" in exc.value.headers
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 10. profile persistence error paths + lazy init + lockout pruning
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestProfilePersistenceErrors:
+    def test_load_corrupted_json_returns_empty(self, monkeypatch, tmp_path, caplog):
+        import auth as _auth
+
+        bad = tmp_path / "profiles.json"
+        bad.write_text("{not valid json !!!")
+        monkeypatch.setattr(_auth, "PROFILES_FILE", str(bad))
+        with caplog.at_level("WARNING"):
+            assert _auth._load_profiles() == {}
+        assert "Failed to load profiles" in caplog.text
+
+    def test_save_oserror_logs_warning(self, monkeypatch, tmp_path, caplog):
+        import os
+
+        import auth as _auth
+
+        monkeypatch.setattr(_auth, "PROFILES_FILE", str(tmp_path / "profiles.json"))
+
+        def boom(*a, **k):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(os, "chmod", boom)
+        with caplog.at_level("WARNING"):
+            _auth._save_profiles({"x": 1})
+        assert "Failed to save profiles" in caplog.text
+
+    def test_get_profiles_path_lazy_init_from_config(self, monkeypatch):
+        """Empty PROFILES_FILE falls back to config.DATA_DIR/profiles.json."""
+        import auth as _auth
+        from config import DATA_DIR
+
+        monkeypatch.setattr(_auth, "PROFILES_FILE", "")
+        path = _auth._get_profiles_path()
+        assert path == str(DATA_DIR / "profiles.json")
+        # cached after first call
+        monkeypatch.setattr(_auth, "PROFILES_FILE", "")
+        assert _auth._get_profiles_path() == str(DATA_DIR / "profiles.json")
+
+
+class TestPinLockoutPruning:
+    def test_lapsed_timestamps_are_pruned(self, monkeypatch):
+        """_pin_locked drops failures older than the window and doesn't lock."""
+        import auth as _auth
+
+        _auth._pin_failures.clear()
+        old = time.time() - (_auth._PIN_LOCK_SECONDS + 60)
+        _auth._pin_failures["prune-me"] = [old, old]
+        assert _auth._pin_locked("prune-me") is False
+        assert _auth._pin_failures["prune-me"] == []  # lapsed timestamps dropped
+
+    def test_verify_pin_respects_lockout(self, monkeypatch):
+        """Failed attempts reach threshold -> even correct PIN rejected."""
+        import auth as _auth
+        from auth import _load_profiles, create_profile
+
+        _auth._pin_failures.clear()
+        create_profile("Locked", "1234")
+
+        # find the created profile id
+        profiles = _load_profiles()
+        pid = next(p for p in profiles if profiles[p]["name"] == "Locked")
+        # record 5 failures directly
+        _auth._PIN_MAX_FAILED = 5
+        for _ in range(5):
+            _auth._record_pin_failure(pid)
+        assert _auth.verify_profile_pin(pid, "1234") is False  # locked despite correct pin
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 11. favorite init/missing branches
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestFavoriteBranches:
+    def test_add_favorite_initializes_missing_list(self):
+        import auth as _auth
+
+        _auth.create_profile("Init", "1234")
+        profiles = _auth._load_profiles()
+        pid = next(p for p in profiles if profiles[p]["name"] == "Init")
+        # manually strip favorites to force the init branch
+        del profiles[pid]["favorites"]
+        _auth._save_profiles(profiles)
+        assert _auth.add_profile_favorite(pid, {"watchKey": "k1"}) is True
+        assert _auth.get_profile_favorites(pid) == [{"watchKey": "k1"}]
+
+    def test_remove_favorite_missing_list_returns_false(self):
+        """Missing favorites key returns False (no-op) without crashing."""
+        import auth as _auth
+
+        _auth.create_profile("NoFav", "1234")
+        profiles = _auth._load_profiles()
+        pid = next(p for p in profiles if profiles[p]["name"] == "NoFav")
+        del profiles[pid]["favorites"]
+        _auth._save_profiles(profiles)
+        assert _auth.remove_profile_favorite(pid, "whatever") is False
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 12. profile token secret lazy init
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestTokenSecretLazyInit:
+    def test_defaults_to_generated_secret(self, monkeypatch):
+        import auth as _auth
+
+        monkeypatch.setattr(_auth, "PROFILE_TOKEN_SECRET", "")
+        monkeypatch.delenv("PROFILE_TOKEN_SECRET", raising=False)
+        secret = _auth._get_token_secret()
+        assert len(secret) == 64  # token_hex(32)
+        # Generated secret is stable across calls within the process
+        assert _auth._get_token_secret() == secret
+
+    def test_reads_from_env(self, monkeypatch):
+        import auth as _auth
+
+        monkeypatch.setattr(_auth, "PROFILE_TOKEN_SECRET", "")
+        monkeypatch.setenv("PROFILE_TOKEN_SECRET", "env-secret-0123456789abcdef")
+        assert _auth._get_token_secret() == "env-secret-0123456789abcdef"
