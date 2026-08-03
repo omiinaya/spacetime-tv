@@ -144,8 +144,9 @@ async def api_get_profile_progress(profile_id: str, request: Request):
 
 
 @router.put("/profiles/{profile_id}/progress")
-async def api_put_profile_progress(profile_id: str, payload: dict):
+async def api_put_profile_progress(profile_id: str, payload: dict, request: Request):
     """Set watch progress for a profile. Merges with existing progress."""
+    _require_profile_access(profile_id, request)
     profiles = _load_profiles()
     if profile_id not in profiles:
         raise HTTPException(404, "Profile not found")
@@ -170,8 +171,9 @@ async def api_put_profile_progress(profile_id: str, payload: dict):
 
 
 @router.post("/profiles/{profile_id}/history")
-async def api_add_profile_history(profile_id: str, payload: dict):
+async def api_add_profile_history(profile_id: str, payload: dict, request: Request):
     """Add a watch history entry for a profile."""
+    _require_profile_access(profile_id, request)
     watch_key = payload.get("watchKey")
     title = payload.get("title", "")
     content_type = payload.get("contentType", "")
@@ -204,8 +206,9 @@ async def api_get_profile_history(profile_id: str, request: Request, limit: int 
 
 
 @router.delete("/profiles/{profile_id}/history")
-async def api_clear_profile_history(profile_id: str):
+async def api_clear_profile_history(profile_id: str, request: Request):
     """Clear all watch history for a profile."""
+    _require_profile_access(profile_id, request)
     if not clear_profile_history(profile_id):
         raise HTTPException(404, "Profile not found")
     return {"status": "ok"}
@@ -223,8 +226,9 @@ async def api_get_profile_favorites(profile_id: str, request: Request):
 
 
 @router.post("/profiles/{profile_id}/favorites")
-async def api_add_profile_favorite(profile_id: str, payload: dict):
+async def api_add_profile_favorite(profile_id: str, payload: dict, request: Request):
     """Add an item to profile favorites."""
+    _require_profile_access(profile_id, request)
     watch_key = payload.get("watchKey") or payload.get("id", "")
     if not watch_key:
         raise HTTPException(400, "Missing watchKey or id")
@@ -234,8 +238,9 @@ async def api_add_profile_favorite(profile_id: str, payload: dict):
 
 
 @router.delete("/profiles/{profile_id}/favorites/{watch_key}")
-async def api_remove_profile_favorite(profile_id: str, watch_key: str):
+async def api_remove_profile_favorite(profile_id: str, watch_key: str, request: Request):
     """Remove an item from profile favorites."""
+    _require_profile_access(profile_id, request)
     if not remove_profile_favorite(profile_id, watch_key):
         raise HTTPException(404, "Profile or favorite not found")
     return {"status": "ok"}

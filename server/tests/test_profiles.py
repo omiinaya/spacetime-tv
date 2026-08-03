@@ -371,10 +371,13 @@ class TestProfileAccessGuard:
         ]
         return prof, tok
 
+    def _mk_with_token(self, client, name="Guard", pin="9999"):
+        return self._create_and_token(client, name=name, pin=pin)
+
     def test_delete_profile_requires_own_token(self, client):
         """Deleting with the wrong profile's token → 403."""
-        p1, t1 = self._create_and_token(client, "Del1", "1111")
-        _, t2 = self._create_and_token(client, name="Del2", pin="2222")
+        p1, t1 = self._mk_with_token(client, "Del1", "1111")
+        _, t2 = self._mk_with_token(client, name="Del2", pin="2222")
         resp = client.delete(
             f"/api/v1/profiles/{p1['profile_id']}",
             headers={"X-Profile-Token": t2},
@@ -382,7 +385,7 @@ class TestProfileAccessGuard:
         assert resp.status_code == 403
 
     def test_delete_profile_with_own_token(self, client):
-        p1, t1 = self._create_and_token(client, name="Del3", pin="1234")
+        p1, t1 = self._mk_with_token(client, name="Del3", pin="1234")
         resp = client.delete(
             f"/api/v1/profiles/{p1['profile_id']}",
             headers={"X-Profile-Token": t1},
@@ -392,7 +395,7 @@ class TestProfileAccessGuard:
         assert client.get(f"/api/v1/profiles/{p1['profile_id']}").status_code == 404
 
     def test_delete_profile_with_admin_key(self, client):
-        p1, _ = self._create_and_token(client, name="DelAdm", pin="1234")
+        p1, _ = self._mk_with_token(client, name="DelAdm", pin="1234")
         resp = client.delete(
             f"/api/v1/profiles/{p1['profile_id']}",
             headers={"X-Admin-Key": "test-admin-key-insecure"},
@@ -410,8 +413,8 @@ class TestProfileAccessGuard:
         assert client.get("/api/v1/profiles/nope").status_code == 404
 
     def test_progress_wrong_token_forbidden(self, client):
-        p1, _ = self._create_and_token(client, name="PG1", pin="1111")
-        _, t2 = self._create_and_token(client, name="PG2", pin="2222")
+        p1, _ = self._mk_with_token(client, name="PG1", pin="1111")
+        _, t2 = self._mk_with_token(client, name="PG2", pin="2222")
         resp = client.get(
             f"/api/v1/profiles/{p1['profile_id']}/progress",
             headers={"X-Profile-Token": t2},
@@ -419,7 +422,7 @@ class TestProfileAccessGuard:
         assert resp.status_code == 403
 
     def test_refresh_profile_token(self, client):
-        p1, t1 = self._create_and_token(client, name="Refresh", pin="1234")
+        p1, t1 = self._mk_with_token(client, name="Refresh", pin="1234")
         resp = client.post(
             "/api/v1/profiles/session/refresh",
             headers={"X-Profile-Token": t1},
@@ -442,7 +445,7 @@ class TestProfileAccessGuard:
 
     def test_settings_get_own_profile_empty(self, client):
         """A valid token reads its own profile's (empty) settings — 200 {}."""
-        pprof, tok = self._create_and_token(client, name="SetEmpty", pin="1111")
+        pprof, tok = self._mk_with_token(client, name="SetEmpty", pin="1111")
         resp = client.get(
             f"/api/v1/profiles/{pprof['profile_id']}/settings",
             headers={"X-Profile-Token": tok},
@@ -452,8 +455,8 @@ class TestProfileAccessGuard:
 
     def test_settings_wrong_profile_forbidden(self, client):
         """A token bound to profile A cannot read profile B's settings → 403."""
-        p1, _ = self._create_and_token(client, name="SetA", pin="1111")
-        _, t2 = self._create_and_token(client, name="SetB", pin="2222")
+        p1, _ = self._mk_with_token(client, name="SetA", pin="1111")
+        _, t2 = self._mk_with_token(client, name="SetB", pin="2222")
         resp = client.get(
             f"/api/v1/profiles/{p1['profile_id']}/settings",
             headers={"X-Profile-Token": t2},
@@ -465,7 +468,7 @@ class TestProfileAccessGuard:
         assert resp.status_code == 400
 
     def test_switch_profile_bad_pin_403(self, client):
-        pprof, _ = self._create_and_token(client, name="SwitchPin", pin="1234")
+        pprof, _ = self._mk_with_token(client, name="SwitchPin", pin="1234")
         resp = client.post(
             "/api/v1/profiles/session",
             json={"profile_id": pprof["profile_id"], "pin": "0000"},
@@ -473,11 +476,316 @@ class TestProfileAccessGuard:
         assert resp.status_code == 403
 
     def test_verify_pin_endpoint_success_and_failure(self, client):
-        pprof, _ = self._create_and_token(client, name="VerifyPin", pin="5678")
+        pprof, _ = self._mk_with_token(client, name="VerifyPin", pin="5678")
         ok = client.post(f"/api/v1/profiles/{pprof['profile_id']}/verify", json={"pin": "5678"}).json()
         bad = client.post(f"/api/v1/profiles/{pprof['profile_id']}/verify", json={"pin": "0000"}).json()
         assert ok["valid"] is True
         assert bad["valid"] is False
+
+
+class TestProfileWriteAuth:
+    """The 5 write endpoints (progress/history/favorites) MUST require a
+    matching profile token. The auth middleware skips /api/v1/profiles, so
+    each write handler must self-enforce — this class guards that contract."""
+
+    def _mk(self, client, name="W", pin="1234"):
+        prof = client.post("/api/v1/profiles", json={"name": name, "pin": pin}).json()["profile"]
+        return prof
+
+    def _create_and_token(self, client, name="W", pin="1234"):
+        prof = client.post("/api/v1/profiles", json={"name": name, "pin": pin}).json()["profile"]
+        tok = client.post(
+            "/api/v1/profiles/session",
+            json={"profile_id": prof["profile_id"], "pin": pin},
+        ).json()["token"]
+        return prof, tok
+
+    def _mk_with_token(self, client, name="W", pin="1234"):
+        return self._create_and_token(client, name=name, pin=pin)
+
+    def test_progress_put_requires_token(self, client):
+        p = self._mk(client, name="P01")
+        resp = client.put(f"/api/v1/profiles/{p['profile_id']}/progress", json={"watchKey": "movie:1", "position": 30})
+        assert resp.status_code == 401
+
+    def test_progress_put_forbidden_with_wrong_token(self, client):
+        p = self._mk(client, name="P02")
+        _, t2 = self._mk_with_token(client, name="P02b", pin="2222")
+        resp = client.put(
+            f"/api/v1/profiles/{p['profile_id']}/progress",
+            headers={"X-Profile-Token": t2},
+            json={"watchKey": "movie:1", "position": 30},
+        )
+        assert resp.status_code == 403
+
+    def test_progress_put_success_with_own_token(self, client):
+        p, t = self._mk_with_token(client, name="P03", pin="1111")
+        resp = client.put(
+            f"/api/v1/profiles/{p['profile_id']}/progress",
+            headers={"X-Profile-Token": t},
+            json={"watchKey": "movie:1", "position": 30, "seriesData": {"ep": 1}},
+        )
+        assert resp.status_code == 200
+        # Read back with GET (also requires token)
+        got = client.get(
+            f"/api/v1/profiles/{p['profile_id']}/progress",
+            headers={"X-Profile-Token": t},
+        )
+        assert got.status_code == 200
+        assert got.json()["progress"]["movie:1"]["position"] == 30
+
+    def test_progress_put_missing_watchkey_400(self, client):
+        p, t = self._mk_with_token(client, name="P04", pin="1111")
+        resp = client.put(
+            f"/api/v1/profiles/{p['profile_id']}/progress",
+            headers={"X-Profile-Token": t},
+            json={"position": 30},
+        )
+        assert resp.status_code == 400
+
+    def test_progress_put_missing_position_400(self, client):
+        p, t = self._mk_with_token(client, name="P05", pin="1111")
+        resp = client.put(
+            f"/api/v1/profiles/{p['profile_id']}/progress",
+            headers={"X-Profile-Token": t},
+            json={"watchKey": "movie:1"},
+        )
+        assert resp.status_code == 400
+
+    def test_progress_put_missing_profile_404(self, client):
+        resp = client.put(
+            "/api/v1/profiles/nope/progress",
+            headers={"X-Admin-Key": "test-admin-key-insecure"},
+            json={"watchKey": "movie:1", "position": 30},
+        )
+        assert resp.status_code == 404
+
+    def test_history_post_missing_watchkey_400(self, client):
+        p, t = self._mk_with_token(client, name="P06", pin="1111")
+        resp = client.post(
+            f"/api/v1/profiles/{p['profile_id']}/history",
+            headers={"X-Profile-Token": t},
+            json={"title": "No key"},
+        )
+        assert resp.status_code == 400
+
+    def test_history_post_missing_profile_404(self, client):
+        resp = client.post(
+            "/api/v1/profiles/nope/history",
+            headers={"X-Admin-Key": "test-admin-key-insecure"},
+            json={"watchKey": "movie:1", "title": "X"},
+        )
+        assert resp.status_code == 404
+
+    def test_clear_history_requires_token(self, client):
+        p = self._mk(client, name="P07")
+        resp = client.delete(f"/api/v1/profiles/{p['profile_id']}/history")
+        assert resp.status_code == 401
+
+    def test_clear_history_success_with_token(self, client):
+        p, t = self._mk_with_token(client, name="P08", pin="1111")
+        # Add some history first
+        client.post(
+            f"/api/v1/profiles/{p['profile_id']}/history",
+            headers={"X-Profile-Token": t},
+            json={"watchKey": "movie:1", "title": "A"},
+        )
+        resp = client.delete(
+            f"/api/v1/profiles/{p['profile_id']}/history",
+            headers={"X-Profile-Token": t},
+        )
+        assert resp.status_code == 200
+        h = client.get(
+            f"/api/v1/profiles/{p['profile_id']}/history",
+            headers={"X-Profile-Token": t},
+        )
+        assert h.json()["history"] == []
+
+    def test_clear_history_missing_profile_404(self, client):
+        resp = client.delete(
+            "/api/v1/profiles/nope/history",
+            headers={"X-Admin-Key": "test-admin-key-insecure"},
+        )
+        assert resp.status_code == 404
+
+    def test_favorites_post_requires_token(self, client):
+        p = self._mk(client, name="P09")
+        resp = client.post(f"/api/v1/profiles/{p['profile_id']}/favorites", json={"watchKey": "movie:9"})
+        assert resp.status_code == 401
+
+    def test_favorites_post_missing_watchkey_400(self, client):
+        p, t = self._mk_with_token(client, name="P10", pin="1111")
+        resp = client.post(
+            f"/api/v1/profiles/{p['profile_id']}/favorites",
+            headers={"X-Profile-Token": t},
+            json={"title": "no key"},
+        )
+        assert resp.status_code == 400
+
+    def test_favorites_post_missing_profile_404(self, client):
+        resp = client.post(
+            "/api/v1/profiles/nope/favorites",
+            headers={"X-Admin-Key": "test-admin-key-insecure"},
+            json={"watchKey": "movie:9"},
+        )
+        assert resp.status_code == 404
+
+    def test_favorites_remove_requires_token(self, client):
+        p = self._mk(client, name="P11")
+        resp = client.delete(f"/api/v1/profiles/{p['profile_id']}/favorites/movie:1")
+        assert resp.status_code == 401
+
+    def test_favorites_remove_wrong_token_403(self, client):
+        p = self._mk(client, name="P12")
+        _, t2 = self._mk_with_token(client, name="P12b", pin="2222")
+        resp = client.delete(
+            f"/api/v1/profiles/{p['profile_id']}/favorites/movie:1",
+            headers={"X-Profile-Token": t2},
+        )
+        assert resp.status_code == 403
+
+    def test_favorites_remove_missing_404(self, client):
+        resp = client.delete(
+            "/api/v1/profiles/nope/favorites/movie:1",
+            headers={"X-Admin-Key": "test-admin-key-insecure"},
+        )
+        assert resp.status_code == 404
+
+
+class TestProfileAuthEndpoint:
+    """POST /profiles/{id}/auth — distinct from /session."""
+
+    def test_auth_requires_pin(self, client):
+        p = client.post("/api/v1/profiles", json={"name": "Auth0", "pin": "1234"}).json()["profile"]
+        resp = client.post(f"/api/v1/profiles/{p['profile_id']}/auth", json={})
+        assert resp.status_code == 400
+
+    def test_auth_wrong_pin_403(self, client):
+        p = client.post("/api/v1/profiles", json={"name": "Auth1", "pin": "1234"}).json()["profile"]
+        resp = client.post(f"/api/v1/profiles/{p['profile_id']}/auth", json={"pin": "9999"})
+        assert resp.status_code == 403
+
+    def test_auth_success(self, client):
+        p = client.post("/api/v1/profiles", json={"name": "Auth2", "pin": "1234"}).json()["profile"]
+        resp = client.post(f"/api/v1/profiles/{p['profile_id']}/auth", json={"pin": "1234"})
+        assert resp.status_code == 200
+        assert "token" in resp.json()
+        assert resp.json()["profile"]["profile_id"] == p["profile_id"]
+
+
+class TestProfileProgressAndSettingsBranches:
+    """Remaining branch coverage: progress GET 404, fresh-profile progress,
+    favorites id-fallback, settings PUT/clear 404 + merge, /me deleted profile."""
+
+    def _mk_with_token(self, client, name="W", pin="1111"):
+        prof = client.post("/api/v1/profiles", json={"name": name, "pin": pin}).json()["profile"]
+        tok = client.post(
+            "/api/v1/profiles/session",
+            json={"profile_id": prof["profile_id"], "pin": pin},
+        ).json()["token"]
+        return prof, tok
+
+    def test_progress_get_missing_profile_404(self, client):
+        resp = client.get(
+            "/api/v1/profiles/nope/progress",
+            headers={"X-Admin-Key": "test-admin-key-insecure"},
+        )
+        assert resp.status_code == 404
+
+    def test_progress_put_on_fresh_profile_creates_key(self, client):
+        """A profile with no 'progress' key gets one created (line 158 branch)."""
+        p, t = self._mk_with_token(client, name="PFr", pin="1111")
+        resp = client.put(
+            f"/api/v1/profiles/{p['profile_id']}/progress",
+            headers={"X-Profile-Token": t},
+            json={"watchKey": "movie:7", "position": 12},
+        )
+        assert resp.status_code == 200
+        got = client.get(
+            f"/api/v1/profiles/{p['profile_id']}/progress",
+            headers={"X-Profile-Token": t},
+        )
+        assert got.json()["progress"]["movie:7"]["position"] == 12
+
+    def test_favorites_post_id_fallback(self, client):
+        """'id' is accepted when 'watchKey' is absent."""
+        p, t = self._mk_with_token(client, name="PFav", pin="1111")
+        resp = client.post(
+            f"/api/v1/profiles/{p['profile_id']}/favorites",
+            headers={"X-Profile-Token": t},
+            json={"id": "movie:42", "title": "By id"},
+        )
+        assert resp.status_code == 200
+        favs = client.get(
+            f"/api/v1/profiles/{p['profile_id']}/favorites",
+            headers={"X-Profile-Token": t},
+        )
+        assert any(f.get("id") == "movie:42" for f in favs.json()["favorites"])
+
+    def test_settings_put_missing_profile_404(self, client):
+        resp = client.put(
+            "/api/v1/profiles/nope/settings",
+            headers={"X-Admin-Key": "test-admin-key-insecure"},
+            json={"theme": "dark"},
+        )
+        assert resp.status_code == 404
+
+    def test_settings_put_merges_payload(self, client):
+        """PUT settings returns merged settings; preserves prior keys."""
+        p, t = self._mk_with_token(client, name="PSet", pin="1111")
+        r1 = client.put(
+            f"/api/v1/profiles/{p['profile_id']}/settings",
+            headers={"X-Profile-Token": t},
+            json={"theme": "dark"},
+        )
+        assert r1.status_code == 200
+        r2 = client.put(
+            f"/api/v1/profiles/{p['profile_id']}/settings",
+            headers={"X-Profile-Token": t},
+            json={"language": "es"},
+        )
+        assert r2.json()["settings"]["theme"] == "dark"
+        assert r2.json()["settings"]["language"] == "es"
+
+    def test_settings_clear_requires_token(self, client):
+        p = client.post("/api/v1/profiles", json={"name": "PClr", "pin": "1111"}).json()["profile"]
+        resp = client.delete(f"/api/v1/profiles/{p['profile_id']}/settings")
+        assert resp.status_code == 401
+
+    def test_settings_clear_success(self, client):
+        p, t = self._mk_with_token(client, name="PClr2", pin="1111")
+        client.put(
+            f"/api/v1/profiles/{p['profile_id']}/settings",
+            headers={"X-Profile-Token": t},
+            json={"theme": "dark"},
+        )
+        resp = client.delete(
+            f"/api/v1/profiles/{p['profile_id']}/settings",
+            headers={"X-Profile-Token": t},
+        )
+        assert resp.status_code == 200
+        got = client.get(
+            f"/api/v1/profiles/{p['profile_id']}/settings",
+            headers={"X-Profile-Token": t},
+        )
+        assert got.json()["settings"] == {}
+
+    def test_settings_clear_missing_profile_404(self, client):
+        resp = client.delete(
+            "/api/v1/profiles/nope/settings",
+            headers={"X-Admin-Key": "test-admin-key-insecure"},
+        )
+        assert resp.status_code == 404
+
+    def test_me_with_deleted_profile_404(self, client):
+        """A valid token whose profile was deleted → /me 404."""
+        p, t = self._mk_with_token(client, name="PMeDel", pin="1111")
+        client.delete(
+            f"/api/v1/profiles/{p['profile_id']}",
+            headers={"X-Profile-Token": t},
+        )
+        resp = client.get("/api/v1/profiles/me", headers={"X-Profile-Token": t})
+        assert resp.status_code == 404
 
 
 if __name__ == "__main__":

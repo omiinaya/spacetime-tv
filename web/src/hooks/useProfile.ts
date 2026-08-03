@@ -145,7 +145,7 @@ export async function syncProfileProgress(
 ): Promise<boolean> {
   const res = await fetch(`${API_BASE}/profiles/${profileId}/progress`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ watchKey, position, seriesData, movieData }),
   });
   return res.ok;

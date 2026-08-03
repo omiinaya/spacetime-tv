@@ -12,6 +12,7 @@ import {
   verifyProfilePin,
   deleteProfileApi,
   fetchProfileHistory,
+  syncProfileProgress,
   switchProfile,
 } from "@/hooks/useProfile";
 
@@ -269,6 +270,36 @@ describe("deleteProfileApi", () => {
   it("returns false on error", async () => {
     mockFetch({}, false);
     const result = await deleteProfileApi("1");
+    expect(result).toBe(false);
+  });
+});
+
+describe("syncProfileProgress", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("sends X-Profile-Token when a token is stored", async () => {
+    localStorage.setItem("stv_profile_token", "prof-tok-123");
+    const fetchSpy = mockFetch({ status: "ok" }, true);
+
+    const result = await syncProfileProgress("p1", "movie:1", 30);
+
+    expect(result).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/profiles/p1/progress",
+      expect.objectContaining({
+        method: "PUT",
+        headers: expect.objectContaining({
+          "X-Profile-Token": "prof-tok-123",
+          "Content-Type": "application/json",
+        }),
+      }),
+    );
+  });
+
+  it("returns false on 401 (backend now rejects untokenized writes)", async () => {
+    localStorage.clear();
+    mockFetch({ detail: "Authentication required" }, false);
+    const result = await syncProfileProgress("p1", "movie:1", 30);
     expect(result).toBe(false);
   });
 });
