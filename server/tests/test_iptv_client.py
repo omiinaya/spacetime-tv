@@ -891,3 +891,131 @@ class TestUpdateProviderHealth:
         with patch("iptv_client.get_enabled_providers", return_value=[]):
             _update_provider_health(ghost, success=False)  # must not raise
         assert _provider_health == {}
+
+    def test_exception_swallowed_when_health_lookup_fails(self, monkeypatch):
+        """Unexpected error in the health loop is swallowed (best-effort)."""
+        from state import _provider_health
+
+        _provider_health.clear()
+        from iptv_client import _update_provider_health
+
+        p1 = ProviderConfig("H1", "http://h1.test", "u", "p", enabled=True)
+
+        # Force an AttributeError inside the loop -> swallowed
+        monkeypatch.setattr(
+            "iptv_client.get_enabled_providers",
+            lambda: (_ for _ in ()).throw(AttributeError("boom")),
+        )
+        _update_provider_health(p1, success=True)  # must not raise
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# cached_fetch single-provider + failover paths
+# ══════════════════════════════════════════════════════════════════════════
+
+
+class TestCachedFetchSingleProvider:
+    """cached_fetch provider_idx paths: success, stale fallback, re-raise."""
+
+    @pytest.mark.asyncio
+    async def test_single_provider_success(self):
+        from iptv_client import cached_fetch
+
+        p = ProviderConfig("SP", "http://sp.test", "u", "p", enabled=True)
+        with (
+            patch("iptv_client.get_enabled_providers", return_value=[p]),
+            patch("iptv_client.get_provider_by_index", return_value=p),
+            patch("iptv_client._fetch_single_provider", return_value={"data": "ok"}),
+        ):
+            result = await cached_fetch("sp_key", "get_live_streams", provider_idx=0)
+        assert result == {"data": "ok"}
+
+    @pytest.mark.asyncio
+    async def test_single_provider_fails_falls_back_to_stale(self):
+        import time
+
+        from iptv_client import cached_fetch
+        from state import _cache
+
+        p = ProviderConfig("SP", "http://sp.test", "u", "p", enabled=True)
+        _cache["p0:SP:sp_key"] = (time.time() + 3600, {"stale": "data"})
+        with (
+            patch("iptv_client.get_enabled_providers", return_value=[p]),
+            patch("iptv_client.get_provider_by_index", return_value=p),
+            patch(
+                "iptv_client._fetch_single_provider",
+                side_effect=HTTPException(502, "provider down"),
+            ),
+        ):
+            result = await cached_fetch("sp_key", "get_live_streams", provider_idx=0)
+        assert result == {"stale": "data"}
+
+    @pytest.mark.asyncio
+    async def test_single_provider_fails_no_stale_raises(self):
+        from iptv_client import cached_fetch
+
+        p = ProviderConfig("SP", "http://sp.test", "u", "p", enabled=True)
+        with (
+            patch("iptv_client.get_enabled_providers", return_value=[p]),
+            patch("iptv_client.get_provider_by_index", return_value=p),
+            patch(
+                "iptv_client._fetch_single_provider",
+                side_effect=HTTPException(502, "provider down"),
+            ),
+        ):
+            with pytest.raises(HTTPException) as exc:
+                await cached_fetch("sp_key", "get_live_streams", provider_idx=0)
+        assert exc.value.status_code == 502
+
+
+class TestFetchAllProvidersDedupEdges:
+    """fetch_all_providers dedup edge branches: series-id and no-id items."""
+
+    @pytest.mark.asyncio
+    async def test_dedups_series_ids_and_keeps_no_id_items(self):
+        from iptv_client import fetch_all_providers
+
+        with patch("iptv_client.get_enabled_providers", return_value=[ProviderConfig("P1", "http://p1", "u", "p")]):
+            with patch(
+                "iptv_client._fetch_single_provider",
+                return_value=[
+                    {"series_id": 900, "name": "Series A"},
+                    {"series_id": 900, "name": "Series A-dup"},
+                    {"name": "No id item"},
+                ],
+            ):
+                items = await fetch_all_providers("get_series")
+        # series_id 900 deduped -> 1 entry; no-id item kept
+        assert len(items) == 2
+        assert sum(1 for i in items if i.get("series_id") == 900) == 1
+        assert any(i.get("name") == "No id item" for i in items)
+
+    @pytest.mark.asyncio
+    async def test_skips_exception_results(self):
+        from iptv_client import fetch_all_providers
+
+        # A failing provider yields [] (its exception is handled inside
+        # _fetch_one) — fetch_all_providers returns empty without crashing.
+        with patch("iptv_client.get_enabled_providers", return_value=[ProviderConfig("P1", "http://p1", "u", "p")]):
+            with patch(
+                "iptv_client._fetch_single_provider",
+                side_effect=HTTPException(502, "down"),
+            ):
+                items = await fetch_all_providers("get_live_streams")
+        assert items == []
+
+
+class TestFetchSearchAllProviders:
+    """fetch_search_all_providers delegates to fetch_all_providers."""
+
+    @pytest.mark.asyncio
+    async def test_delegates_to_fetch_all(self):
+        from iptv_client import fetch_search_all_providers
+
+        with patch(
+            "iptv_client.fetch_all_providers",
+            return_value=[{"stream_id": 1, "name": "X"}],
+        ) as mock_fap:
+            result = await fetch_search_all_providers("get_vod_streams", category_id=5)
+        assert result == [{"stream_id": 1, "name": "X"}]
+        mock_fap.assert_called_once_with("get_vod_streams", category_id=5)
