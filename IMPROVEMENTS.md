@@ -39,6 +39,11 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 - **Frontend companion bug**: `syncProfileProgress` sent only `Content-Type`, never `X-Profile-Token` — it would have 401'd under the new enforcement. Now uses `authHeaders()`.
 - **Tests**: +29 backend (security contract: every write 401 untokenized, 403 wrong-token — the middleware skips profiles so each handler must self-enforce; + progress GET/PUT, history add/clear, favorites id-fallback, settings PUT-merge/clear, `/auth` endpoint success/bad-pin/missing-pin, `/me` deleted-profile) → profiles.py coverage **72→96%**, backend 1431→**1460**. +2 frontend (syncProfileProgress sends token; 401→false) → frontend 1630→**1632**. Verified live: untokenized PUT progress + DELETE history both return **401** on :8720. Commit `c56584c`.
 
+### ✅ Session 12.6 (2026-08-02) — profile detail GET leak + PIN brute-force lockout
+- **Unauthenticated profile-detail GET closed (H1)**: `GET /profiles/{id}` had **no auth at all** and `get_profile()` returns the full stored dict minus pin_hash — watch **progress, history, favorites, settings** readable by anyone who knew a profile_id (enumerable from the open picker list). The frontend never reads this endpoint, so it was pure exposure. Now requires matching X-Profile-Token or X-Admin-Key. Verified live: unauth → **401**, admin-key read → 200, picker list stays open.
+- **PIN brute-force lockout (H2)**: `verify_profile_pin` had no failed-attempt backstop. The middleware-exempt `/verify` and `/session` endpoints (rate limiter keys by device-token/IP, which an attacker rotates) let a 4-6 digit PIN be enumerated in seconds. Added per-profile in-memory lockout in `auth.py`: `PIN_MAX_FAILED` (default 5) misses within `PIN_LOCK_SECONDS` (default 30) reject further attempts — even the correct PIN — until the window lapses or a success resets the counter. Unlocked profiles (no PIN) never lock.
+- **Tests**: +4 backend (unauth GET 401, cross-profile token 403, lockout-after-5-failures incl. session 403, success-resets-counter). Backend 1460→**1464**. Commit `ba379dd`.
+
 ## Recently Completed
 
 ### ✅ Session 12.2 (2026-08-02) — ops/CI/security audit batch
