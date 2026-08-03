@@ -80,9 +80,10 @@ describe("CatchupTimeline", () => {
   it("renders nothing when there are no programmes", async () => {
     mockCatchup.mockResolvedValue({ programmes: [] });
     const { container } = render(<CatchupTimeline {...baseProps} />);
+    // Wait for the loaded/empty re-render (component returns null) rather
+    // than just the fetch call — robust under parallel-worker contention.
     await waitFor(() => expect(mockCatchup).toHaveBeenCalled());
-    // After load with zero programmes the component returns null.
-    expect(container.firstChild).toBeNull();
+    await waitFor(() => expect(container.firstChild).toBeNull());
   });
 
   it("clicking the timeline reports the offset from now", async () => {
