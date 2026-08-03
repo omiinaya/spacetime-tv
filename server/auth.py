@@ -185,16 +185,59 @@ def verify_profile_pin(profile_id: str, pin: str) -> bool:
     A profile with NO PIN set (empty pin_hash) is unlocked: selecting it
     succeeds with an empty pin. Only profiles with an actual PIN require
     the matching pin to unlock.
+
+    Brute-force protection: failed attempts are tracked per profile_id and
+    a short lockout is imposed after PIN_MAX_ATTEMPTS misses within
+    PIN_LOCKOUT_SECONDS, so the 4-6 digit PIN space can't be walked by
+    rotating client IPs (the global rate limiter only buckets by
+    device-token/IP). Lockout is in-memory and resets on success or after
+    the window lapses.
     """
     profiles = _load_profiles()
     profile = profiles.get(profile_id)
     if not profile:
         return False
+    if _pin_locked(profile_id):
+        return False
     stored = profile.get("pin_hash") or profile.get("pin", "")
     if not stored:
         # No PIN set — unlocked profile; an empty pin is valid.
-        return pin == ""
-    return _verify_pin(stored, pin)
+        valid = pin == ""
+    else:
+        valid = _verify_pin(stored, pin)
+    if valid:
+        _pin_failures.pop(profile_id, None)  # reset on success
+    else:
+        _record_pin_failure(profile_id)
+    return valid
+
+
+# ── PIN brute-force lockout ───────────────────────────────────────────
+# Per-profile in-memory failed-attempt tracking with a cooldown window. A
+# 4-6 digit PIN would otherwise be enumerable in seconds via the open /verify
+# and /session endpoints (the middleware rate limiter keys by device-token/IP,
+# which an attacker can rotate). This is the per-profile backstop.
+
+_PIN_MAX_FAILED = int(os.getenv("PIN_MAX_FAILED", "5"))
+_PIN_LOCK_SECONDS = float(os.getenv("PIN_LOCK_SECONDS", "30"))
+_pin_failures: dict[str, list[float]] = {}
+
+
+def _record_pin_failure(profile_id: str) -> None:
+    """Append a failed-attempt timestamp for a profile."""
+    now = time.time()
+    recent = [t for t in _pin_failures.get(profile_id, []) if now - t < _PIN_LOCK_SECONDS]
+    recent.append(now)
+    _pin_failures[profile_id] = recent
+
+
+def _pin_locked(profile_id: str) -> bool:
+    """True when the profile has exceeded the allowed failed attempts in the window."""
+    now = time.time()
+    recent = [t for t in _pin_failures.get(profile_id, []) if now - t < _PIN_LOCK_SECONDS]
+    if len(recent) != len(_pin_failures.get(profile_id, [])):
+        _pin_failures[profile_id] = recent  # drop lapsed timestamps
+    return len(recent) >= _PIN_MAX_FAILED
 
 
 def get_profile(profile_id: str) -> dict | None:

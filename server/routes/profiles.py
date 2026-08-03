@@ -115,8 +115,14 @@ async def api_get_current_profile(request: Request):
 
 
 @router.get("/profiles/{profile_id}")
-async def api_get_profile(profile_id: str):
-    """Get a profile by ID (without PIN)."""
+async def api_get_profile(profile_id: str, request: Request):
+    """Get a profile by ID (without PIN).
+
+    Requires a matching X-Profile-Token or X-Admin-Key. The full profile
+    record carries watch progress, history, favorites and settings, so it
+    must not be readable by anyone who merely knows the (public) profile_id.
+    """
+    _require_profile_access(profile_id, request)
     profile = get_profile(profile_id)
     if not profile:
         raise HTTPException(404, "Profile not found")

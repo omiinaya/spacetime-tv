@@ -189,18 +189,43 @@ class TestProfileAPI:
         assert response.json()["valid"] is False
 
     def test_get_profile(self, client):
-        """Test GET /profiles/{id}."""
+        """Test GET /profiles/{id} — requires matching token or admin key."""
         create_resp = client.post(
             "/api/v1/profiles",
             json={"name": "Get Test", "pin": "1111"},
         )
         pid = create_resp.json()["profile"]["profile_id"]
 
-        response = client.get(f"/api/v1/profiles/{pid}")
+        # Unauthenticated GET now 401 — the full profile (progress, history,
+        # favorites, settings) must not leak to anyone who knows the id.
+        assert client.get(f"/api/v1/profiles/{pid}").status_code == 401
+
+        tok = client.post(
+            "/api/v1/profiles/session",
+            json={"profile_id": pid, "pin": "1111"},
+        ).json()["token"]
+        response = client.get(
+            f"/api/v1/profiles/{pid}",
+            headers={"X-Profile-Token": tok},
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["profile"]["name"] == "Get Test"
         assert "pin" not in data["profile"]
+
+    def test_get_profile_wrong_token_403(self, client):
+        """Another profile's token cannot read this profile's full record."""
+        p1 = client.post("/api/v1/profiles", json={"name": "GetA", "pin": "1111"}).json()["profile"]
+        p2 = client.post("/api/v1/profiles", json={"name": "GetB", "pin": "2222"}).json()["profile"]
+        t2 = client.post(
+            "/api/v1/profiles/session",
+            json={"profile_id": p2["profile_id"], "pin": "2222"},
+        ).json()["token"]
+        resp = client.get(
+            f"/api/v1/profiles/{p1['profile_id']}",
+            headers={"X-Profile-Token": t2},
+        )
+        assert resp.status_code == 403
 
     def test_profile_session(self, client):
         """Test profile session token flow."""
@@ -391,8 +416,14 @@ class TestProfileAccessGuard:
             headers={"X-Profile-Token": t1},
         )
         assert resp.status_code == 200
-        # Gone
-        assert client.get(f"/api/v1/profiles/{p1['profile_id']}").status_code == 404
+        # Gone (need admin key to read it back — unauthenticated GET is 401)
+        assert (
+            client.get(
+                f"/api/v1/profiles/{p1['profile_id']}",
+                headers={"X-Admin-Key": "test-admin-key-insecure"},
+            ).status_code
+            == 404
+        )
 
     def test_delete_profile_with_admin_key(self, client):
         p1, _ = self._mk_with_token(client, name="DelAdm", pin="1234")
@@ -410,7 +441,11 @@ class TestProfileAccessGuard:
         assert resp.status_code == 404
 
     def test_get_missing_profile_404(self, client):
-        assert client.get("/api/v1/profiles/nope").status_code == 404
+        resp = client.get(
+            "/api/v1/profiles/nope",
+            headers={"X-Admin-Key": "test-admin-key-insecure"},
+        )
+        assert resp.status_code == 404
 
     def test_progress_wrong_token_forbidden(self, client):
         p1, _ = self._mk_with_token(client, name="PG1", pin="1111")
@@ -786,6 +821,77 @@ class TestProfileProgressAndSettingsBranches:
         )
         resp = client.get("/api/v1/profiles/me", headers={"X-Profile-Token": t})
         assert resp.status_code == 404
+
+
+class TestPinBruteForceLockout:
+    """verify_profile_pin must enforce a per-profile failed-attempt lockout,
+    or the open /verify and /session endpoints let a 4-digit PIN be walked by
+    rotating client IPs (the global rate limiter keys by device-token/IP)."""
+
+    def _mk(self, client, name="PinBrute", pin="1234"):
+        return client.post("/api/v1/profiles", json={"name": name, "pin": pin}).json()["profile"]
+
+    def _verify_returns(self, client, pid, pin):
+        r = client.post(f"/api/v1/profiles/{pid}/verify", json={"pin": pin})
+        return r.json()["valid"]
+
+    def test_lockout_after_repeated_failures(self, client):
+        import auth as auth_mod
+
+        auth_mod._pin_failures.clear()
+        try:
+            p = self._mk(client, pin="1234")
+            # 5 failed attempts cross the threshold...
+            for _ in range(5):
+                assert self._verify_returns(client, p["profile_id"], "0000") is False
+            # ...so even the correct PIN is rejected during the lock window.
+            assert self._verify_returns(client, p["profile_id"], "1234") is False
+            # Session unlock is also locked out.
+            r = client.post(
+                "/api/v1/profiles/session",
+                json={"profile_id": p["profile_id"], "pin": "1234"},
+            )
+            assert r.status_code == 403
+        finally:
+            auth_mod._pin_failures.clear()
+
+    def test_success_resets_failure_count(self, client):
+        import auth as auth_mod
+
+        auth_mod._pin_failures.clear()
+        try:
+            p = self._mk(client, name="PinRes", pin="1234")
+            for _ in range(3):
+                self._verify_returns(client, p["profile_id"], "0000")
+            # Correct PIN succeeds and clears the counter.
+            assert self._verify_returns(client, p["profile_id"], "1234") is True
+            # Counter reset → 3 more failures do NOT lock yet.
+            for _ in range(3):
+                assert self._verify_returns(client, p["profile_id"], "0000") is False
+            assert self._verify_returns(client, p["profile_id"], "1234") is True
+        finally:
+            auth_mod._pin_failures.clear()
+
+    def test_lockout_does_not_affect_unlocked_profile(self, client):
+        """Profiles with no PIN never lock (nothing to brute-force)."""
+        import auth as auth_mod
+
+        auth_mod._pin_failures.clear()
+        try:
+            # create_profile always requires a PIN in this API; simulate an
+            # unlocked profile directly by wiping its pin_hash.
+            p = self._mk(client, name="NoPin", pin="1234")
+            from auth import _load_profiles, _save_profiles
+
+            profs = _load_profiles()
+            profs[p["profile_id"]]["pin_hash"] = ""
+            _save_profiles(profs)
+
+            # Many empty-pin attempts on an unlocked profile stay valid.
+            for _ in range(10):
+                assert self._verify_returns(client, p["profile_id"], "") is True
+        finally:
+            auth_mod._pin_failures.clear()
 
 
 if __name__ == "__main__":
