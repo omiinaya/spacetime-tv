@@ -68,6 +68,13 @@ _state_dir = _test_data_dir
 _hits_file = _state_dir / "stream_hits.json"
 if _hits_file.exists():
     _hits_file.unlink()
+# providers.json takes PRECEDENCE over env vars on config reload (config.py
+# loads it after building PROVIDERS from env). A test that saves providers
+# (admin PUT/DELETE/toggle) leaves a file that poisons every later config
+# reload for the rest of the session AND the next session. Wipe it.
+_providers_file = _state_dir / "providers.json"
+if _providers_file.exists():
+    _providers_file.unlink()
 
 # Ensure static assets directory exists before importing main
 _static_dir = Path(__file__).resolve().parent.parent.parent / "web" / "dist" / "assets"

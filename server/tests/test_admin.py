@@ -8,6 +8,8 @@ import asyncio
 import time
 from unittest.mock import MagicMock, patch
 
+import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 TEST_ADMIN_KEY = "test-admin-key-insecure"
@@ -601,3 +603,350 @@ class TestHermesIdVerifyNormalization:
         with patch.object(httpx, "AsyncClient", self._fake_client_factory(captured)):
             asyncio.run(_hermes_id_request("GET", "/agents"))
         assert captured["verify"] == "/etc/ssl/certs/ca.pem"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# hermes-id proxy — error paths + endpoints
+# ══════════════════════════════════════════════════════════════════════════
+
+
+class TestHermesIdRequestErrors:
+    """_hermes_id_request error branches: missing config, upstream failure, bad status."""
+
+    def _make_fake_client(self, captured, status=200, body=None, json_raises=False, http_error=None):
+
+        class FakeAsyncClient:
+            def __init__(self, **kwargs):
+                captured["kwargs"] = kwargs
+                self._resp = MagicMock()
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
+            async def request(self, *a, **kw):
+                captured["request"] = (a, kw)
+                if http_error:
+                    raise http_error
+                self._resp.status_code = status
+                self._resp.text = '{"detail": "boom"}' if status >= 400 else "raw text"
+                if json_raises:
+                    self._resp.json.side_effect = ValueError("not json")
+                else:
+                    self._resp.json.return_value = body if body is not None else {"detail": "boom"}
+                return self._resp
+
+        return FakeAsyncClient
+
+    def test_missing_config_raises_503(self, monkeypatch):
+
+        from routes.admin import _hermes_id_request
+
+        monkeypatch.delenv("HERMES_AUTH_SERVER_URL", raising=False)
+        monkeypatch.delenv("HERMES_AUTH_PROJECT", raising=False)
+        monkeypatch.delenv("HERMES_ID_ADMIN_KEY", raising=False)
+        monkeypatch.delenv("HERMES_AUTH_VERIFY", raising=False)
+
+        with pytest.raises(HTTPException) as exc:
+            asyncio.run(_hermes_id_request("GET", "/agents"))
+        assert exc.value.status_code == 503
+        assert "not configured" in exc.value.detail
+
+    def test_upstream_http_error_returns_502(self, monkeypatch):
+        import httpx
+
+        from routes.admin import _hermes_id_request
+
+        captured: dict = {}
+        monkeypatch.setenv("HERMES_AUTH_SERVER_URL", "https://auth.test")
+        monkeypatch.setenv("HERMES_AUTH_PROJECT", "test-proj")
+        monkeypatch.setenv("HERMES_ID_ADMIN_KEY", "test-admin-key")
+        monkeypatch.setenv("HERMES_AUTH_VERIFY", "false")
+
+        with patch.object(
+            httpx, "AsyncClient", self._make_fake_client(captured, http_error=httpx.ConnectError("down"))
+        ):
+            resp = asyncio.run(_hermes_id_request("GET", "/agents"))
+        assert resp.status_code == 502
+        assert "Auth server unreachable" in bytes(resp.body).decode()
+
+    def test_upstream_error_status_extracts_detail(self, monkeypatch):
+        import httpx
+
+        from routes.admin import _hermes_id_request
+
+        captured: dict = {}
+        monkeypatch.setenv("HERMES_AUTH_SERVER_URL", "https://auth.test")
+        monkeypatch.setenv("HERMES_AUTH_PROJECT", "test-proj")
+        monkeypatch.setenv("HERMES_ID_ADMIN_KEY", "test-admin-key")
+        monkeypatch.setenv("HERMES_AUTH_VERIFY", "false")
+
+        with patch.object(
+            httpx, "AsyncClient", self._make_fake_client(captured, status=403, body={"detail": "forbidden"})
+        ):
+            resp = asyncio.run(_hermes_id_request("GET", "/agents"))
+        assert resp.status_code == 403
+        assert b"forbidden" in bytes(resp.body)
+
+    def test_upstream_error_status_unparseable_body_keeps_text(self, monkeypatch):
+        """A 400+ response whose body is NOT JSON keeps the raw text as detail."""
+        import httpx
+
+        from routes.admin import _hermes_id_request
+
+        captured: dict = {}
+        monkeypatch.setenv("HERMES_AUTH_SERVER_URL", "https://auth.test")
+        monkeypatch.setenv("HERMES_AUTH_PROJECT", "test-proj")
+        monkeypatch.setenv("HERMES_ID_ADMIN_KEY", "test-admin-key")
+        monkeypatch.setenv("HERMES_AUTH_VERIFY", "false")
+
+        # 500 with unparseable body -> raw '{"detail": "boom"}' text survives
+        with patch.object(
+            httpx,
+            "AsyncClient",
+            self._make_fake_client(captured, status=500, body=None, json_raises=True),
+        ):
+            resp = asyncio.run(_hermes_id_request("GET", "/agents"))
+        assert resp.status_code == 500
+        # The raw (unparseable-as-JSON) detail is passed through and JSON-encoded
+        assert b"boom" in bytes(resp.body)
+
+    def test_upstream_json_unparseable_uses_raw_text(self, monkeypatch):
+        import httpx
+
+        from routes.admin import _hermes_id_request
+
+        captured: dict = {}
+        monkeypatch.setenv("HERMES_AUTH_SERVER_URL", "https://auth.test")
+        monkeypatch.setenv("HERMES_AUTH_PROJECT", "test-proj")
+        monkeypatch.setenv("HERMES_ID_ADMIN_KEY", "test-admin-key")
+        monkeypatch.setenv("HERMES_AUTH_VERIFY", "false")
+
+        with patch.object(httpx, "AsyncClient", self._make_fake_client(captured, status=200, json_raises=True)):
+            resp = asyncio.run(_hermes_id_request("GET", "/agents"))
+        assert resp.status_code == 200
+        assert b"raw text" in bytes(resp.body)
+
+    def test_success_proxies_body(self, monkeypatch):
+        import httpx
+
+        from routes.admin import _hermes_id_request
+
+        captured: dict = {}
+        monkeypatch.setenv("HERMES_AUTH_SERVER_URL", "https://auth.test")
+        monkeypatch.setenv("HERMES_AUTH_PROJECT", "test-proj")
+        monkeypatch.setenv("HERMES_ID_ADMIN_KEY", "test-admin-key")
+        monkeypatch.setenv("HERMES_AUTH_VERIFY", "false")
+
+        with patch.object(httpx, "AsyncClient", self._make_fake_client(captured, status=200, body={"agents": []})):
+            resp = asyncio.run(_hermes_id_request("GET", "/agents", {"status": "pending"}))
+        assert resp.status_code == 200
+        assert b"agents" in bytes(resp.body)
+        assert captured["request"][0] == ("GET", "https://auth.test/agents")
+        assert captured["request"][1]["params"]["status"] == "pending"
+
+
+class TestHermesIdEndpoints:
+    """The three hermes-id proxy endpoints forward through _hermes_id_request."""
+
+    def test_agents_endpoint_unconfigured_returns_503(self):
+        """Without HERMES_ID_ADMIN_KEY the proxy returns 503 (not 500)."""
+        import os
+
+        if "HERMES_ID_ADMIN_KEY" in os.environ:
+            old = os.environ["HERMES_ID_ADMIN_KEY"]
+            del os.environ["HERMES_ID_ADMIN_KEY"]
+            try:
+                with _admin_client() as c:
+                    resp = c.get("/api/v1/admin/hermes-id/agents")
+            finally:
+                os.environ["HERMES_ID_ADMIN_KEY"] = old
+        else:
+            with _admin_client() as c:
+                resp = c.get("/api/v1/admin/hermes-id/agents")
+        assert resp.status_code == 503
+
+    def test_agents_approve_endpoint_forwarded(self, monkeypatch):
+        """Approve endpoint forwards POST with the agent id in the path."""
+        import httpx
+
+        captured: dict = {}
+        monkeypatch.setenv("HERMES_AUTH_SERVER_URL", "https://auth.test")
+        monkeypatch.setenv("HERMES_AUTH_PROJECT", "test-proj")
+        monkeypatch.setenv("HERMES_ID_ADMIN_KEY", "test-admin-key")
+        monkeypatch.setenv("HERMES_AUTH_VERIFY", "false")
+
+        class FakeAsyncClient:
+            def __init__(self, **kwargs):
+                self._resp = MagicMock()
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
+            async def request(self, method, url, **kw):
+                captured["method"] = method
+                captured["url"] = url
+                self._resp.status_code = 200
+                self._resp.json.return_value = {"ok": True}
+                self._resp.text = '{"ok": true}'
+                return self._resp
+
+        with patch.object(httpx, "AsyncClient", FakeAsyncClient):
+            with _admin_client() as c:
+                resp = c.post("/api/v1/admin/hermes-id/agents/abc123/approve")
+        assert resp.status_code == 200
+        assert captured["method"] == "POST"
+        assert captured["url"].endswith("/agents/abc123/approve")
+
+    def test_agents_deny_endpoint_forwarded(self, monkeypatch):
+        """Deny endpoint forwards POST with the agent id in the path."""
+        import httpx
+
+        captured: dict = {}
+        monkeypatch.setenv("HERMES_AUTH_SERVER_URL", "https://auth.test")
+        monkeypatch.setenv("HERMES_AUTH_PROJECT", "test-proj")
+        monkeypatch.setenv("HERMES_ID_ADMIN_KEY", "test-admin-key")
+        monkeypatch.setenv("HERMES_AUTH_VERIFY", "false")
+
+        class FakeAsyncClient:
+            def __init__(self, **kwargs):
+                self._resp = MagicMock()
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *a):
+                return False
+
+            async def request(self, method, url, **kw):
+                captured["method"] = method
+                captured["url"] = url
+                self._resp.status_code = 200
+                self._resp.json.return_value = {"ok": True}
+                self._resp.text = '{"ok": true}'
+                return self._resp
+
+        with patch.object(httpx, "AsyncClient", FakeAsyncClient):
+            with _admin_client() as c:
+                resp = c.post("/api/v1/admin/hermes-id/agents/abc123/deny")
+        assert resp.status_code == 200
+        assert captured["method"] == "POST"
+        assert captured["url"].endswith("/agents/abc123/deny")
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# admin edge branches
+# ══════════════════════════════════════════════════════════════════════════
+
+
+class TestAdminEdgeBranches:
+    def test_wrong_admin_key_returns_403(self):
+        """require_admin_key rejects an invalid key."""
+        from main import app
+
+        c = TestClient(app)
+        c.headers.setdefault("X-Admin-Key", "wrong-key")
+        with c:
+            resp = c.get("/api/v1/admin/stats")
+        assert resp.status_code == 403
+
+    def test_require_admin_key_rejects_wrong_key_direct(self):
+        """require_admin_key dependency raises 403 for a bad key."""
+        from unittest.mock import MagicMock
+
+        from fastapi import HTTPException, Request
+
+        from routes.admin import require_admin_key
+
+        req = MagicMock(spec=Request)
+        req.headers.get.return_value = "not-the-key"
+        with pytest.raises(HTTPException) as exc:
+            require_admin_key(req)
+        assert exc.value.status_code == 403
+        assert "admin key" in exc.value.detail
+
+    def test_require_admin_key_accepts_correct_key(self):
+        from unittest.mock import MagicMock
+
+        from fastapi import Request
+
+        from config import ADMIN_API_KEY
+        from routes.admin import require_admin_key
+
+        req = MagicMock(spec=Request)
+        req.headers.get.return_value = ADMIN_API_KEY
+        assert require_admin_key(req) is None  # passes (returns None)
+
+    def test_stream_health_import_error_fallback(self):
+        """stream-health degrades gracefully when the probe cache is unavailable."""
+        import sys
+
+        # Direct approach: simulate by making routes.stream missing
+        saved = sys.modules.get("routes.stream")
+        sys.modules["routes.stream"] = None  # type: ignore[assignment]
+        try:
+            with _admin_client() as c:
+                resp = c.get("/api/v1/admin/stream-health")
+            assert resp.status_code == 200
+            assert resp.json()["enabled"] is False
+            assert "probe cache not available" in resp.json()["error"]
+        finally:
+            if saved is not None:
+                sys.modules["routes.stream"] = saved
+            else:
+                sys.modules.pop("routes.stream", None)
+
+    def test_stream_health_1440p_resolution(self):
+        """Height 1440 buckets to 1440p."""
+        from routes.stream import _probe_cache
+
+        now = time.time()
+        _probe_cache["live_1440"] = (
+            now,
+            {"codec": "h264", "width": 2560, "height": 1440, "error": ""},
+        )
+        with _admin_client() as c:
+            resp = c.get("/api/v1/admin/stream-health")
+        data = resp.json()
+        assert data["by_resolution"]["1440p"] == 1
+
+    def test_warm_full_noop_when_already_warming(self):
+        """warm-full is a no-op when a warm is already running."""
+        from routes import cache_warmer
+
+        with patch.object(cache_warmer, "is_warm_running", return_value=True):
+            with _admin_client() as c:
+                resp = c.post("/api/v1/admin/cache/warm-full")
+        assert resp.status_code == 200
+        assert "already in progress" in resp.json()["message"]
+
+    def test_update_provider_username_and_password(self):
+        """Updating a provider's username/password persists the changes."""
+        from config import PROVIDERS
+
+        # Snapshot first provider
+        p0 = PROVIDERS[0]
+        old_user = p0.username
+        old_pass = p0.password
+        try:
+            with patch("config._save_providers_to_file", return_value=None):
+                with _admin_client() as c:
+                    resp = c.put(
+                        "/api/v1/admin/providers/0",
+                        json={"username": "new_user_42", "password": "new_pass_42"},
+                    )
+            assert resp.status_code == 200
+            assert p0.username == "new_user_42"
+            # ENCRYPT_CREDENTIALS=false in tests -> plaintext stored
+            assert p0.password == "new_pass_42"
+        finally:
+            # Restore in-memory state; the save was patched to a no-op so
+            # no providers.json is written (that file takes precedence over
+            # env vars on config reload and would pollute other tests).
+            p0.username = old_user
+            p0.password = old_pass
