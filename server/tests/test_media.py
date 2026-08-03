@@ -323,3 +323,56 @@ class TestStreamAudio:
 
         resp = client.get("/api/v1/audio/stream/movie/999/0")
         assert resp.status_code == 500
+
+
+# ── Edge error branches ──────────────────────────────────────────────
+
+
+class TestMediaErrorBranches:
+    """Remaining uncovered error paths: subtitle/audio OSError, JSON decode."""
+
+    @patch("asyncio.create_subprocess_exec")
+    @patch("asyncio.wait_for")
+    def test_get_subtitles_oserror_returns_500(self, mock_wait_for, mock_create_subprocess, client):
+        """OSError during VTT extraction surfaces as a clean 500."""
+        mock_create_subprocess.side_effect = OSError("ffmpeg missing")
+
+        resp = client.get("/api/v1/subtitles/movie/50/0")
+        assert resp.status_code == 500
+        assert "ffmpeg missing" in resp.text
+
+    @patch("asyncio.create_subprocess_exec")
+    @patch("asyncio.wait_for")
+    def test_probe_audio_oserror_returns_empty(self, mock_wait_for, mock_create_subprocess, client):
+        """OSError during audio probe returns empty tracks + error message."""
+        mock_create_subprocess.side_effect = OSError("no ffprobe")
+
+        resp = client.get("/api/v1/audio/probe/movie/60")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["tracks"] == []
+        assert "no ffprobe" in data["error"]
+
+    @patch("asyncio.create_subprocess_exec")
+    @patch("asyncio.wait_for")
+    def test_probe_audio_json_decode_error_returns_empty(self, mock_wait_for, mock_create_subprocess, client):
+        """Unparseable ffprobe stdout -> {} tracks with error message."""
+        proc = AsyncMock()
+        proc.returncode = 0
+        mock_create_subprocess.return_value = proc
+        mock_wait_for.return_value = (b"{not json", b"")
+
+        resp = client.get("/api/v1/audio/probe/movie/61")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["tracks"] == []
+        assert data["error"]  # JSONDecodeError message
+
+    @patch("asyncio.create_subprocess_exec")
+    def test_stream_audio_oserror_returns_500(self, mock_create_subprocess, client):
+        """OSError during audio stream spawn -> 500 with the error message."""
+        mock_create_subprocess.side_effect = OSError("ffmpeg unavailable")
+
+        resp = client.get("/api/v1/audio/stream/movie/70/0")
+        assert resp.status_code == 500
+        assert "ffmpeg unavailable" in resp.text
