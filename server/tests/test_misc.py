@@ -228,3 +228,127 @@ def test_iptv_raw_proxy_failure_returns_502(client):
     with patch("iptv_client.client.get", side_effect=httpx.HTTPError("Connection refused")):
         resp = client.get("/api/v1/iptv/some/path")
         assert resp.status_code == 502
+
+
+# ── Image proxy: cache-eviction + edge branches ─────────────────────
+
+
+def test_image_proxy_rejects_urlparse_error(client):
+    """urlparse raising (ValueError/TypeError) is caught -> clean 400."""
+    # urlparse is imported inside image_proxy (from urllib.parse import urlparse),
+    # so patch the underlying urllib.parse.urlparse to raise.
+
+    def _raise_parse(url, **kw):
+        raise ValueError("bad url")
+
+    with patch("urllib.parse.urlparse", side_effect=_raise_parse):
+        resp = client.get(
+            "/api/v1/image-proxy?url=http://evil.com/x.jpg",
+            headers={"Referer": "http://localhost:5180/movies"},
+        )
+    assert resp.status_code == 400
+    assert "Invalid URL" in resp.text
+
+
+def test_image_proxy_expired_memory_entry_is_evicted(client):
+    """A stale in-memory entry is dropped and refetched from disk/upstream."""
+    from routes.misc import _img_cache
+
+    _img_cache.clear()
+    # Fake a stale in-memory entry for the URL (older than TTL)
+    _img_cache["http://image.tmdb.org/t/p/original/stale.jpg"] = (
+        0.0,
+        b"old-body",
+        "image/jpeg",
+    )
+    with patch("routes.misc._img_read_disk", return_value=None):
+        with _mock_http_image(b"fresh-body", "image/jpeg") as mock_get:
+            resp = client.get(
+                "/api/v1/image-proxy?url=http://image.tmdb.org/t/p/original/stale.jpg",
+                headers={"Referer": "http://localhost:5180/"},
+            )
+    assert resp.status_code == 200
+    assert mock_get.call_count == 1  # stale entry evicted -> refetch
+    _img_cache.clear()
+
+
+def test_image_proxy_evicts_oldest_when_cache_full_disk_hit(client):
+    """When cache is full and a disk hit is found, the oldest entry is evicted."""
+    import time as _t
+
+    from routes.misc import _img_cache
+
+    _img_cache.clear()
+    # Force a tiny cache ceiling so one new insert triggers eviction.
+    with patch("routes.misc._MAX_IMG_CACHE_SIZE", 1):
+        _img_cache["older-url"] = (_t.time(), b"old", "image/jpeg")
+        with patch(
+            "routes.misc._img_read_disk",
+            return_value=(b"disk-body", "image/png", _t.time()),
+        ):
+            resp = client.get(
+                "/api/v1/image-proxy?url=http://image.tmdb.org/t/p/original/diskmiss.jpg",
+                headers={"Referer": "http://localhost:5180/"},
+            )
+        assert resp.status_code == 200
+        # older-url evicted; only the new URL remains
+        assert "older-url" not in _img_cache
+        assert "http://image.tmdb.org/t/p/original/diskmiss.jpg" in _img_cache
+    _img_cache.clear()
+
+
+def test_image_proxy_evicts_oldest_when_cache_full_after_fetch(client):
+    """When cache is full after an upstream fetch, the oldest entry is evicted."""
+    from routes.misc import _img_cache
+
+    _img_cache.clear()
+    with patch("routes.misc._MAX_IMG_CACHE_SIZE", 1):
+        _img_cache["older-url"] = (1.0, b"old", "image/jpeg")
+        with patch("routes.misc._img_read_disk", return_value=None):
+            with _mock_http_body(b"new-image", "image/jpeg"):
+                resp = client.get(
+                    "/api/v1/image-proxy?url=http://image.tmdb.org/t/p/original/cap-full.jpg",
+                    headers={"Referer": "http://localhost:5180/"},
+                )
+        assert resp.status_code == 200
+        assert "older-url" not in _img_cache
+        assert "http://image.tmdb.org/t/p/original/cap-full.jpg" in _img_cache
+    _img_cache.clear()
+
+
+def _mock_http_body(content: bytes = b"image-body", content_type: str = "image/jpeg"):
+    """Patch iptv_client.client.get with a bytes body response."""
+    mock_response = AsyncMock()
+    mock_response.content = content
+    mock_response.headers = {"content-type": content_type}
+    mock_response.raise_for_status = MagicMock()
+    return patch("iptv_client.client.get", return_value=mock_response)
+
+
+# ── SPA fallback edge branches ───────────────────────────────────────
+
+
+def test_spa_fallback_missing_index_returns_404(client):
+    """When index.html is absent, the catch-all returns JSON not-found."""
+    from pathlib import Path
+
+    with patch("routes.misc.STATIC_DIR", Path("/nonexistent/static/dir")):
+        resp = client.get("/some/route/without/index.html")
+    assert resp.status_code == 200  # FastAPI returns the dict as 200 json
+    assert resp.json() == {"detail": "Not Found"}
+
+
+def test_spa_fallback_head_returns_200_when_index_exists(client):
+    """HEAD to catch-all returns 200 + text/html when index.html exists."""
+    resp = client.head("/api/v1/some/catch/all/path")
+    assert resp.status_code == 200
+    assert resp.headers.get("content-type", "").startswith("text/html")
+
+
+def test_spa_fallback_head_returns_404_when_index_missing(client):
+    """HEAD to catch-all returns 404 when index.html is missing."""
+    from pathlib import Path
+
+    with patch("routes.misc.STATIC_DIR", Path("/nonexistent/static/dir")):
+        resp = client.head("/api/v1/some/catch/all/path")
+    assert resp.status_code == 404

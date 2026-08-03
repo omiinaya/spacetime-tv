@@ -191,3 +191,69 @@ def test_live_info_stream_icon_included(client_with_cache):
     assert resp.status_code == 200
     data = resp.json()
     assert data["streams"][0]["stream_icon"] == "http://example.com/icon.png"
+
+
+def test_live_info_http_exception_returns_empty(client):
+    """GET /api/live/info should return empty when live_all fetch raises."""
+    from unittest.mock import patch
+
+    from fastapi import HTTPException
+
+    with patch("routes.live.cached_fetch", side_effect=HTTPException(502, "API down")):
+        resp = client.get("/api/v1/live/info?ids=1,2")
+    assert resp.status_code == 200
+    assert resp.json() == {"streams": []}
+
+
+# ── /api/live/all-slim ────────────────────────────────────────────────
+
+
+def test_live_all_slim_empty_when_cache_empty(client):
+    """GET /api/live/all-slim should return empty when cache is cold."""
+    resp = client.get("/api/v1/live/all-slim")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "streams" in data
+    assert data["streams"] == []
+
+
+def test_live_all_slim_with_cache_returns_slim_fields(client_with_cache):
+    """GET /api/live/all-slim returns only the slim field subset."""
+    from state import _cache
+
+    _cache["live_all"] = (
+        time.time() + 3600,
+        [
+            {
+                "stream_id": 1,
+                "name": "BBC News",
+                "stream_icon": "http://example.com/bbc.png",
+                "category_id": "1",
+                "num": 3,
+                "tv_archive": 1,
+                "tv_archive_duration": 7,
+                "epg_channel_id": "BBC1.uk",  # must NOT appear in slim output
+                "stream_type": "live",  # must NOT appear
+            }
+        ],
+    )
+
+    resp = client_with_cache.get("/api/v1/live/all-slim")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["streams"]) == 1
+    slim = data["streams"][0]
+    assert set(slim.keys()) == {
+        "stream_id",
+        "name",
+        "stream_icon",
+        "category_id",
+        "num",
+        "tv_archive",
+        "tv_archive_duration",
+    }
+    assert slim["stream_id"] == 1
+    assert slim["name"] == "BBC News"
+    assert slim["num"] == 3
+    assert "epg_channel_id" not in slim
+    assert "stream_type" not in slim
