@@ -44,6 +44,10 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 - **PIN brute-force lockout (H2)**: `verify_profile_pin` had no failed-attempt backstop. The middleware-exempt `/verify` and `/session` endpoints (rate limiter keys by device-token/IP, which an attacker rotates) let a 4-6 digit PIN be enumerated in seconds. Added per-profile in-memory lockout in `auth.py`: `PIN_MAX_FAILED` (default 5) misses within `PIN_LOCK_SECONDS` (default 30) reject further attempts — even the correct PIN — until the window lapses or a success resets the counter. Unlocked profiles (no PIN) never lock.
 - **Tests**: +4 backend (unauth GET 401, cross-profile token 403, lockout-after-5-failures incl. session 403, success-resets-counter). Backend 1460→**1464**. Commit `ba379dd`.
 
+### ✅ Session 12.7 (2026-08-02) — cloud-backup tokenless registration brick
+- **Tokenless first-registration closed (H1)**: `_verify_device_access` allowed a first `POST /cloud/backup` with **no X-Device-Token** — the entry was stored with an empty `_token_hash`, permanently bricking that device_id (no future token, including the owner's own, matches an empty hash). Any client that learned a `device_id` could pre-register it and lock the owner out of their own backup forever. Now first registration requires `X-Admin-Key` or a real device token (≥8 chars); the legitimate client always sends one, so real-device flow is unchanged. Existing backups keep requiring the matching token or admin key.
+- **Tests**: updated `test_upload_requires_token` (tokenless + short-token registration rejected, nothing stored) and `test_short_token_rejected` (clears the fixture's default admin key so device-auth is actually exercised). Backend stays **1464**. Verified live: tokenless POST → `error`; with token → `ok`. Commit `023342a`.
+
 ## Recently Completed
 
 ### ✅ Session 12.2 (2026-08-02) — ops/CI/security audit batch
