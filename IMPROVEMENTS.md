@@ -19,6 +19,29 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ---
 
+### ✅ Session 12.8 (2026-08-02) — backend coverage drive 91→97%, 1588 tests
+
+Backend coverage 91%→**97%** (3582 stmts, 101 missed), suite 1464→**1588** passed / 17 skipped / 3 xfailed. 20 modules at **100%**: auth, crypto_utils, tmdb, misc, live, guide_epg, admin, state, stream_core, stream_dash, stream_probe, guide, guide_core, media, vod, record, watchlist, stream_live (partial), plus stream/stream_live at 97%+.
+
+- **`verify_device_token` dead code removed** (auth 83→100%): imported `state._backups` which has NEVER existed → any call raised ImportError. Dead + broken in the auth hot path; main.py uses `verify_device_token_generic` + cloud_sync's `_verify_device_access`. +18 tests for token-verify branches, require_auth dependency, profile persistence errors, PIN lockout pruning, favorite init/missing branches.
+- **iptv_client multi-provider + failover** (40→80% then →98%): fetch_all_providers dedup/health, fetch_epg_all_providers merge, fetch_iptv failover, _fetch_single_provider decrypt, single-provider cached_fetch (success/stale-fallback/re-raise), health-swallow.
+- **guide_routes 81→91%** (guide_search parse-error, guide_enrich subprocess with _RICH_ENABLED patched; SSE generator body intentionally untested — manual body_iterator driving leaked async state across the suite).
+- **tmdb 86→100%**: fixed a no-key test that deleted the env var but never cleared the module constant; enrich-cli subprocess branches (success/nonzero/timeout/JSONDecode/OSError); person search/details success.
+- **stream_core 88→99%**: _vod_url, _http_feed_stdin aiohttp pipe, _ffmpeg_pipe lifecycle, stream_proxy (200/502×2).
+- **stream_vod 84→90% effective**: remux/transcode generator branches (start_time seek, disconnect-before-yield).
+- **misc 89→100%**: image-proxy eviction edges (stale entry, cache-full on disk-hit + fetch), urlparse error, SPA HEAD/missing-index.
+- **live 87→100%**: /live/all-slim (zero tests before), live_info HTTPException fallback.
+- **guide_epg 90→100%**: multi-provider parallel load_epg (success + exception fallbacks).
+- **admin 90→100%**: hermes-id proxy errors (missing-config 503, HTTPError 502, 400+ detail extraction, unparseable body), 3 proxy endpoints, require_admin_key direct, stream-health ImportError/1440p, warm-full noop, provider update.
+- **crypto_utils 90→100%**: key-file OSError read/write, default data_dir, missing-import fallback (Fernet=None).
+- **config 90→93%**: providers-file load/save error paths.
+- **media 94→100%**: subtitle/audio OSError + JSON-decode branches.
+- **vod 94→100%**: non-list fallbacks + unified skip branches.
+- **cloud_sync 93→99%**: backup read/write error paths + auth branches.
+- **main 91→96%**: HTTPS redirect, api-redirect query, body-size 413s.
+- **conftest**: wipe DATA_DIR/providers.json at session start — it takes PRECEDENCE over env vars on config reload, so any test that saves providers poisoned every later config test (found via 13 config failures caused by an admin provider-update test).
+- **Coverage measurement caveat**: health.py + stream_vod.py preflight-fail returns show "uncovered" but are proven to execute via server logs — TestClient runs the app in a worker thread and coverage's trace drops after the first await in that chain (same artifact as starlette thread-based tracing).
+
 ### ✅ Session 12.4 (2026-08-02) — Permissions-Policy + rate-limit quota headers
 - **Permissions-Policy now on every response** — `SecurityHeadersMiddleware` was setting XCTO/XFO/Referrer/CSP/HSTS but *not* Permissions-Policy (only nginx had it), so direct/dev backend responses missed it. Now emits `camera=(), microphone=(), geolocation=(), interest-cohort=(), browsing-topics=(), usb=(), bluetooth=(), serial=()`. Mirrors `web/nginx.conf`, which gained the same denied capabilities (**was missing usb/bluetooth/serial**). SECURITY_AUDIT §13 corrected — its old "Permissions-Policy (inherits from CSP)" line was wrong (it doesn't inherit; the header just wasn't emitted backend-side).
 - **Rate-quota visibility** — `RateLimitMiddleware` now sets `X-RateLimit-Limit`/`X-RateLimit-Remaining` on every response so clients read their live budget (was: only `Retry-After` on 429, otherwise guess).
