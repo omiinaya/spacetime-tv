@@ -954,3 +954,144 @@ class TestGuideSearch:
             assert "start_ts" in result
             assert "stop_ts" in result
             assert "duration" in result
+
+    def test_search_matches_title_but_bad_timestamp_skipped(self, client):
+        """A titled match with an unparseable timestamp reaches _parse_ts and is skipped."""
+        bad_epg = {
+            "channels": [{"id": "CH1", "name": "Channel One"}],
+            "programmes": [
+                {
+                    "channel": "CH1",
+                    "start": "not_a_timestamp",
+                    "stop": "also_not",
+                    "title": "Specific Show",  # title matches query
+                    "subtitle": "",
+                    "desc": "",
+                },
+                {
+                    "channel": "CH1",
+                    "start": _epg_timestamp(datetime.now(UTC) + timedelta(hours=1)),
+                    "stop": _epg_timestamp(datetime.now(UTC) + timedelta(hours=2)),
+                    "title": "Good Show",
+                    "subtitle": "",
+                    "desc": "",
+                },
+            ],
+        }
+
+        async def mock_load():
+            return bad_epg
+
+        # Query 'show' matches BOTH titles; the bad-timestamp one must be skipped
+        # inside guide_search's _parse_ts (ValueError/IndexError) rather than
+        # filtered out pre-parse. Only 'Good Show' survives.
+        with patch("routes.guide_routes.load_epg_background", mock_load):
+            resp = client.get("/api/v1/guide/search?q=show")
+            data = resp.json()
+            titles = [r["title"] for r in data["results"]]
+            assert "Good Show" in titles
+            assert "not_a_timestamp bad" not in titles  # the malformed one is dropped
+            assert all(r["title"] != "not_a_timestamp" for r in data["results"])
+
+
+# ── guide_enrich subprocess success + nonzero-exit (RICH disabled gate) ──
+
+
+class TestGuideEnrichSubprocessBranches:
+    """Cover guide_enrich's subprocess branches that the RICH-disabled gate skipped.
+
+    guide_routes._RICH_ENABLED is False in tests (no TMDB_ENRICH_PATH), so the
+    existing "direct" tests returned at the `if not _RICH_ENABLED` early-exit and
+    never exercised the create_subprocess_exec paths. These patch _RICH_ENABLED
+    True to force the real subprocess branches.
+    """
+
+    @pytest.mark.asyncio
+    async def test_nonzero_exit_records_false(self):
+        from routes.guide_core import _EPG_ENRICH_CACHE
+        from routes.guide_routes import asyncio as gr_asyncio
+        from routes.guide_routes import guide_enrich
+        from state import epg_cache
+
+        _EPG_ENRICH_CACHE.clear()
+        epg_cache["data"] = SAMPLE_EPG
+        epg_cache["fetched"] = time.time()
+
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 1
+        mock_proc.communicate = AsyncMock(return_value=(b"", b"exit failure"))
+
+        with patch("routes.guide_routes._RICH_ENABLED", True):
+            with patch.object(gr_asyncio, "create_subprocess_exec", return_value=mock_proc):
+                result = await guide_enrich(q="nonzeroexitmovie")
+        assert result == {"enabled": False, "result": None}
+        # the cache is populated with None so it won't re-run
+        assert _EPG_ENRICH_CACHE.get("nonzeroexitmovie") is not None
+
+    @pytest.mark.asyncio
+    async def test_json_decode_error_cached_as_none(self):
+        from routes.guide_core import _EPG_ENRICH_CACHE
+        from routes.guide_routes import asyncio as gr_asyncio
+        from routes.guide_routes import guide_enrich
+        from state import epg_cache
+
+        _EPG_ENRICH_CACHE.clear()
+        epg_cache["data"] = SAMPLE_EPG
+        epg_cache["fetched"] = time.time()
+
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 0
+        mock_proc.communicate = AsyncMock(return_value=(b"{not valid json", b""))
+
+        with patch("routes.guide_routes._RICH_ENABLED", True):
+            with patch.object(gr_asyncio, "create_subprocess_exec", return_value=mock_proc):
+                result = await guide_enrich(q="badjsonshow")
+        assert result == {"enabled": False, "result": None}
+
+    @pytest.mark.asyncio
+    async def test_success_returns_result(self):
+        from routes.guide_core import _EPG_ENRICH_CACHE
+        from routes.guide_routes import asyncio as gr_asyncio
+        from routes.guide_routes import guide_enrich
+        from state import epg_cache
+
+        _EPG_ENRICH_CACHE.clear()
+        epg_cache["data"] = SAMPLE_EPG
+        epg_cache["fetched"] = time.time()
+
+        payload = {"poster": "http://x/p.jpg", "rating": 7.5}
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 0
+        mock_proc.communicate = AsyncMock(return_value=(json_dumps_compact(payload).encode(), b""))
+
+        with patch("routes.guide_routes._RICH_ENABLED", True):
+            with patch.object(gr_asyncio, "create_subprocess_exec", return_value=mock_proc):
+                result = await guide_enrich(q="goodenrichmovie")
+        assert result == {"enabled": True, "result": payload}
+        # successful result is cached too
+        assert _EPG_ENRICH_CACHE["goodenrichmovie"][1] == payload
+
+    @pytest.mark.asyncio
+    async def test_timeout_records_none(self):
+        from routes.guide_core import _EPG_ENRICH_CACHE
+        from routes.guide_routes import asyncio as gr_asyncio
+        from routes.guide_routes import guide_enrich
+        from state import epg_cache
+
+        _EPG_ENRICH_CACHE.clear()
+        epg_cache["data"] = SAMPLE_EPG
+        epg_cache["fetched"] = time.time()
+
+        mock_proc = AsyncMock()
+        mock_proc.communicate = AsyncMock(side_effect=TimeoutError("Took too long"))
+
+        with patch("routes.guide_routes._RICH_ENABLED", True):
+            with patch.object(gr_asyncio, "create_subprocess_exec", return_value=mock_proc):
+                result = await guide_enrich(q="timedoutshow2")
+        assert result == {"enabled": False, "result": None}
+
+
+def json_dumps_compact(d):
+    import json
+
+    return json.dumps(d, separators=(",", ":"))
