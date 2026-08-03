@@ -264,3 +264,63 @@ def test_download_series_redirects(client):
     assert "series" in resp.headers["location"]
     assert "456" in resp.headers["location"]
     assert ".mkv" in resp.headers["location"]
+
+
+# ── Edge branches: non-list data + unified skip paths ───────────────
+
+
+class TestVodEdgeBranches:
+    """Cover the non-list fallbacks and unified-movies skip branches."""
+
+    def test_movies_category_non_list_data(self, client):
+        """When cached_fetch returns a non-list, return it directly."""
+        from unittest.mock import patch
+
+        with patch("routes.vod.cached_fetch", return_value={"error": "no data"}):
+            resp = client.get("/api/v1/movies?category_id=1")
+        assert resp.status_code == 200
+        assert resp.json() == {"movies": {"error": "no data"}}
+
+    def test_series_list_non_list_data(self, client):
+        """GET /series with non-list data returns it directly."""
+        from unittest.mock import patch
+
+        with patch("routes.vod.cached_fetch", return_value={"error": "no data"}):
+            resp = client.get("/api/v1/series?category_id=1")
+            assert resp.status_code == 200
+            assert resp.json() == {"series": {"error": "no data"}}
+
+    def test_movies_unified_skips_non_vod_keys(self, client_with_cache):
+        """Cache keys that aren't vod_* are ignored by unified."""
+        from state import _cache
+
+        _cache["live_all"] = (time.time() + 3600, [{"stream_id": 1}])
+        _cache["vod_1"] = (
+            time.time() + 3600,
+            [{"stream_id": 101, "name": "EN - Matrix", "tmdb": "tmdb603"}],
+        )
+        resp = client_with_cache.get("/api/v1/movies/unified")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 1
+
+    def test_movies_unified_skips_non_list_data(self, client_with_cache):
+        """A vod_* cache entry that isn't a list is skipped."""
+        from state import _cache
+
+        _cache["vod_99"] = (time.time() + 3600, {"not": "a list"})
+        resp = client_with_cache.get("/api/v1/movies/unified")
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 0
+
+    def test_movies_unified_skips_entries_without_tmdb(self, client_with_cache):
+        """A VOD stream with no tmdb id is skipped."""
+        from state import _cache
+
+        _cache["vod_5"] = (
+            time.time() + 3600,
+            [{"stream_id": 5, "name": "EN - No Tmdb Here", "tmdb": None}],
+        )
+        resp = client_with_cache.get("/api/v1/movies/unified")
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 0
