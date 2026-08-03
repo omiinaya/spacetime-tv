@@ -709,3 +709,100 @@ class TestEpgBroadcastLoop:
 
         mock_err.assert_called_once()
         assert "EPG refresh error" in mock_err.call_args[0][0]
+
+
+# ── Multi-provider load_epg branch ────────────────────────────────────
+
+
+class TestLoadEpgMultiProvider:
+    """load_epg's else branch: parallel multi-provider fetch + merge."""
+
+    def _make_two_provider_configs(self):
+        from iptv_client import ProviderConfig
+
+        return [
+            ProviderConfig("MAIN", "http://main.test", "u", "p", enabled=True),
+            ProviderConfig("SEC", "http://sec.test", "u2", "p2", enabled=True),
+        ]
+
+    @patch("routes.guide_epg.client", new_callable=AsyncMock)
+    @patch("routes.guide_epg.EPG_CACHE_FILE")
+    async def test_multi_provider_success(self, mock_cache_file, mock_client):
+        """Two providers: fetch_epg_all_providers merge is persisted + cached."""
+        from routes.guide_epg import load_epg
+        from state import _guide_cache, epg_cache
+
+        epg_cache["data"] = None
+        epg_cache["fetched"] = 0
+        _guide_cache["channel_groups"] = {"stale": True}
+
+        mock_cache_file.exists.return_value = False
+
+        merged = {"channels": [{"id": "a"}], "programmes": [{"title": "p"}]}
+        with (
+            patch(
+                "iptv_client.get_enabled_providers",
+                return_value=self._make_two_provider_configs(),
+            ),
+            patch("iptv_client.fetch_epg_all_providers", return_value=merged),
+        ):
+            result = await load_epg()
+
+        assert result == merged
+        assert epg_cache["data"] == merged
+        assert epg_cache["fetched"] > 0
+        assert _guide_cache["channel_groups"] is None  # invalidated
+        mock_cache_file.write_text.assert_called_once()
+
+    @patch("routes.guide_epg.EPG_CACHE_FILE")
+    async def test_multi_provider_exception_falls_back_to_cached(self, mock_cache_file):
+        """fetch_epg_all_providers raising -> falls back to in-memory EPG."""
+        from routes.guide_epg import load_epg
+        from routes.guide_epg import log as epg_log
+        from state import epg_cache
+
+        stale_data = {"channels": [{"id": "old"}], "programmes": []}
+        epg_cache["data"] = stale_data
+        epg_cache["fetched"] = time.time() - 999999  # stale, forces a refresh
+        mock_cache_file.exists.return_value = False
+
+        with (
+            patch(
+                "iptv_client.get_enabled_providers",
+                return_value=self._make_two_provider_configs(),
+            ),
+            patch(
+                "iptv_client.fetch_epg_all_providers",
+                side_effect=RuntimeError("merge failed"),
+            ),
+            patch.object(epg_log, "error") as mock_err,
+        ):
+            result = await load_epg()
+
+        assert result == stale_data  # stale fallback returned
+        mock_err.assert_called_once()
+        assert "Multi-provider EPG fetch failed" in mock_err.call_args[0][0]
+
+    @patch("routes.guide_epg.EPG_CACHE_FILE")
+    async def test_multi_provider_exception_no_fallback(self, mock_cache_file):
+        """fetch_epg_all_providers raising with no cached EPG -> empty structure."""
+        from routes.guide_epg import load_epg
+        from state import epg_cache
+
+        epg_cache["data"] = None
+        epg_cache["fetched"] = 0
+        mock_cache_file.exists.return_value = False
+
+        with (
+            patch(
+                "iptv_client.get_enabled_providers",
+                return_value=self._make_two_provider_configs(),
+            ),
+            patch(
+                "iptv_client.fetch_epg_all_providers",
+                side_effect=RuntimeError("boom"),
+            ),
+        ):
+            result = await load_epg()
+
+        assert result == {"channels": [], "programmes": []}
