@@ -29,20 +29,23 @@ export function PinPrompt({
     inputRef.current?.focus();
   }, []);
 
-  const handleSubmit = useCallback(async () => {
-    if (pin.length < 4) return;
-    setChecking(true);
-    setError(false);
-    const ok = await unlockAdult(pin);
-    setChecking(false);
-    if (ok) {
-      onSuccess();
-    } else {
-      setError(true);
-      setPin("");
-      inputRef.current?.focus();
-    }
-  }, [pin, unlockAdult, onSuccess]);
+  const handleSubmit = useCallback(
+    async (submitPin: string = pin) => {
+      if (submitPin.length < 4) return;
+      setChecking(true);
+      setError(false);
+      const ok = await unlockAdult(submitPin);
+      setChecking(false);
+      if (ok) {
+        onSuccess();
+      } else {
+        setError(true);
+        setPin("");
+        inputRef.current?.focus();
+      }
+    },
+    [unlockAdult, onSuccess],
+  );
 
   const handleDigit = (digit: string) => {
     if (pin.length >= 4) return;
@@ -50,8 +53,10 @@ export function PinPrompt({
     setPin(newPin);
     setError(false);
     if (newPin.length === 4) {
-      // Auto-submit after a brief delay
-      setTimeout(() => handleSubmit(), 150);
+      // Auto-submit after a brief delay. Pass newPin explicitly — handleSubmit
+      // no longer closes over `pin` (which would be the stale pre-4th-digit
+      // value at this point), so the 4-digit pin is guaranteed to submit.
+      setTimeout(() => handleSubmit(newPin), 150);
     }
   };
 
