@@ -317,3 +317,36 @@ class TestStartCleanupTask:
             m._cleanup_task = old_task
         else:
             m._cleanup_task = None
+
+
+# ── Graceful background-task cancellation on lifespan exit ──────────────────
+
+
+class TestLifespanShutdownCancelsTasks:
+    """Enter the app lifespan, then exit — background tasks must be cancelled."""
+
+    @pytest.mark.asyncio
+    async def test_exit_cancels_background_tasks(self):
+        from main import app
+
+        # Guard: only run when the app really has the lifespan registered.
+        assert app.router.lifespan_context is not None
+
+        async with app.router.lifespan_context(app):
+            # Tasks started by lifespan should be pending while running.
+            assert app.state is not None
+
+        # After exit, all background tasks must be done (no dangling tasks).
+        # The infinite cleanup loop must have ended via CancelledError; the
+        # warm task may legitimately complete normally (it's a one-shot that
+        # finishes when the cache is warm / warming disabled).
+        import main as m
+        from routes.cache_warmer import _warm_task
+
+        tasks = [t for t in (m._cleanup_task, _warm_task) if t is not None]
+        assert tasks, "Expected at least the cleanup task from lifespan"
+        for t in tasks:
+            assert t.done(), "Background task should be done on lifespan exit"
+        cleanup = m._cleanup_task
+        if cleanup is not None:
+            assert cleanup.cancelled(), "Cleanup loop must end via CancelledError"

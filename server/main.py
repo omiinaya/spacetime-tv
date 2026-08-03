@@ -62,6 +62,22 @@ async def lifespan(app: FastAPI):
 
     task.add_done_callback(_on_epg_task_done)
     yield
+    # ── Graceful shutdown ─────────────────────────────────────────────
+    # Cancel all background tasks so a restart doesn't tear down the event
+    # loop mid-task (asyncio "Task was destroyed but it is pending" warnings,
+    # partial shutil.rmtree / fetches during shutdown). The loops each sleep
+    # and tolerate CancelledError, so this is lossless.
+    from routes.cache_warmer import _warm_task as warmer_task
+
+    for bg in (task, _cleanup_task, warmer_task):
+        if bg is not None and not bg.done():
+            bg.cancel()
+            try:
+                await bg
+            except asyncio.CancelledError:
+                pass
+            except Exception as e:  # noqa: BLE001 — never let shutdown raise
+                log.warning(f"[SHUTDOWN] Background task error on cancel: {e}")
 
 
 app = FastAPI(title="Spacetime-TV", lifespan=lifespan)
