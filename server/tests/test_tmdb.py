@@ -7,6 +7,7 @@ Tests cover:
 - Edge cases (empty results, missing data, pagination)
 """
 
+import json
 import os
 import time
 from unittest.mock import AsyncMock, patch
@@ -30,20 +31,13 @@ def _clear_tmdb_cache():
 @pytest.mark.asyncio
 async def test_tmdb_fetch_no_api_key_returns_none():
     """tmdb_fetch returns None when TMDB_API_KEY is not set."""
-    # Temporarily remove the key
-    with patch.dict(os.environ, {}, clear=True):
-        # Re-import would be ideal but we can mock os.getenv inline
-        import routes.tmdb as tmdb
+    import routes.tmdb as tmdb
 
-        original_key = os.environ.get("TMDB_API_KEY")
-        if "TMDB_API_KEY" in os.environ:
-            del os.environ["TMDB_API_KEY"]
-        try:
-            result = await tmdb.tmdb_fetch("movie/550")
-            assert result is None
-        finally:
-            if original_key is not None:
-                os.environ["TMDB_API_KEY"] = original_key
+    # TMDB_API_KEY is bound at module import from config — deleting the env
+    # var does NOT clear it. Patch the module constant to force the branch.
+    with patch("routes.tmdb.TMDB_API_KEY", None):
+        result = await tmdb.tmdb_fetch("movie/550")
+    assert result is None
 
 
 # ── Trending movies (no API key) ──────────────────────────────────
@@ -711,5 +705,136 @@ def test_tmdb_person_details_cli_returns_none(client):
         data = resp.json()
         assert data["enabled"] is False
         assert data["info"] is None
+
+    _TMDB_CACHE.clear()
+
+
+# ── tmdb_enrich_cli subprocess branches (CLI path patched) ──────────────
+
+
+class TestTmdbEnrichCliBranches:
+    """Cover tmdb_enrich_cli's subprocess paths that the unset-CLI gate skipped.
+
+    TMDB_ENRICH_PATH is None in tests (no env var), so tmdb_enrich_cli returns
+    at the `if not TMDB_ENRICH_PATH` early-exit (line 232) and the
+    create_subprocess_exec / wait_for / parse branches never execute. These
+    patch TMDB_ENRICH_PATH to a fake path to force the real subprocess flow.
+    """
+
+    @pytest.mark.asyncio
+    async def test_success_returns_parsed_json(self):
+        from routes import tmdb as _tmdb
+        from routes.tmdb import asyncio as tmdb_asyncio
+
+        payload = {"person": {"name": "Tom Hanks"}}
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 0
+        mock_proc.communicate = AsyncMock(return_value=(json.dumps(payload).encode(), b""))
+
+        with patch("routes.tmdb.TMDB_ENRICH_PATH", "/fake/tmdb-enrich"):
+            with patch.object(tmdb_asyncio, "create_subprocess_exec", return_value=mock_proc):
+                result = await _tmdb.tmdb_enrich_cli("person", "Tom Hanks")
+        assert result == payload
+
+    @pytest.mark.asyncio
+    async def test_nonzero_exit_returns_none(self):
+        from routes import tmdb as _tmdb
+        from routes.tmdb import asyncio as tmdb_asyncio
+
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 2
+        mock_proc.communicate = AsyncMock(return_value=(b"", b"boom"))
+
+        with patch("routes.tmdb.TMDB_ENRICH_PATH", "/fake/tmdb-enrich"):
+            with patch.object(tmdb_asyncio, "create_subprocess_exec", return_value=mock_proc):
+                result = await _tmdb.tmdb_enrich_cli("person", "x")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_timeout_returns_none(self):
+        from routes import tmdb as _tmdb
+        from routes.tmdb import asyncio as tmdb_asyncio
+
+        mock_proc = AsyncMock()
+        mock_proc.communicate = AsyncMock(side_effect=TimeoutError("slow"))
+
+        with patch("routes.tmdb.TMDB_ENRICH_PATH", "/fake/tmdb-enrich"):
+            with patch.object(tmdb_asyncio, "create_subprocess_exec", return_value=mock_proc):
+                result = await _tmdb.tmdb_enrich_cli("person", "x")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_json_decode_error_returns_none(self):
+        from routes import tmdb as _tmdb
+        from routes.tmdb import asyncio as tmdb_asyncio
+
+        mock_proc = AsyncMock()
+        mock_proc.returncode = 0
+        mock_proc.communicate = AsyncMock(return_value=(b"{not valid json", b""))
+
+        with patch("routes.tmdb.TMDB_ENRICH_PATH", "/fake/tmdb-enrich"):
+            with patch.object(tmdb_asyncio, "create_subprocess_exec", return_value=mock_proc):
+                result = await _tmdb.tmdb_enrich_cli("person", "x")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_oserror_returns_none(self):
+        from routes import tmdb as _tmdb
+        from routes.tmdb import asyncio as tmdb_asyncio
+
+        with patch("routes.tmdb.TMDB_ENRICH_PATH", "/fake/tmdb-enrich"):
+            with patch.object(tmdb_asyncio, "create_subprocess_exec", side_effect=OSError("no binary")):
+                result = await _tmdb.tmdb_enrich_cli("person", "x")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_unset_cli_logs_and_returns_none(self, caplog):
+        """TMDB_ENRICH_PATH unset -> warning + None (the pre-existing gate)."""
+        from routes import tmdb as _tmdb
+
+        with patch("routes.tmdb.TMDB_ENRICH_PATH", None):
+            with caplog.at_level("WARNING"):
+                result = await _tmdb.tmdb_enrich_cli("person", "x")
+        assert result is None
+        assert "tmdb-enrich CLI not configured" in caplog.text
+
+
+# ── person search/details SUCCESS branches (CLI returns data) ──────────
+
+
+def test_tmdb_person_search_cli_returns_data(client):
+    """Person search returns enabled=True + info when CLI succeeds."""
+    from routes.tmdb import _TMDB_CACHE
+
+    _TMDB_CACHE.clear()
+
+    async def mock_cli(*args):
+        return {"name": "Tom Hanks", "id": 31}
+
+    with patch("routes.tmdb.tmdb_enrich_cli", mock_cli):
+        resp = client.get("/api/v1/tmdb/person/search?q=tom+hanks")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["enabled"] is True
+        assert data["info"] == {"name": "Tom Hanks", "id": 31}
+
+    _TMDB_CACHE.clear()
+
+
+def test_tmdb_person_details_cli_returns_data(client):
+    """Person details returns enabled=True + info when CLI succeeds."""
+    from routes.tmdb import _TMDB_CACHE
+
+    _TMDB_CACHE.clear()
+
+    async def mock_cli(*args):
+        return {"name": "Tom Hanks", "birthday": "1956-07-09"}
+
+    with patch("routes.tmdb.tmdb_enrich_cli", mock_cli):
+        resp = client.get("/api/v1/tmdb/person/31")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["enabled"] is True
+        assert data["info"]["name"] == "Tom Hanks"
 
     _TMDB_CACHE.clear()
