@@ -343,3 +343,83 @@ class TestHandleVodRequest:
 
             result = await handle_vod_request(req, 1, "movie", content_type="video/mp4")
             assert result.media_type == "video/mp4"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 9. stream_vod_mpegts / stream_vod_transcode generator branches
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestVodGenerators:
+    """Direct coverage of the remux/transcode async-generator branches."""
+
+    @pytest.mark.asyncio
+    async def test_mpegts_yields_chunks_no_disconnect(self):
+        """Remux generator echoes ffmpeg chunks and does not hit the disconnect branch."""
+        from routes.stream_vod import stream_vod_mpegts
+
+        async def fake_ffmpeg(cmd, feed_coro):
+            yield b"chunk1"
+            yield b"chunk2"
+
+        # No start_time, no request -> plain echo path
+        with patch("routes.stream_vod._ffmpeg_pipe", new=fake_ffmpeg):
+            chunks = [c async for c in stream_vod_mpegts("http://test/movie.mkv")]
+        assert chunks == [b"chunk1", b"chunk2"]
+
+    @pytest.mark.asyncio
+    async def test_mpegts_with_start_time_sets_seek(self):
+        """start_time>0 adds -ss + a Range header and yields chunks."""
+        from routes.stream_vod import stream_vod_mpegts
+
+        captured_cmd = {}
+        captured_feed = {}
+
+        async def fake_ffmpeg(cmd, feed_coro):
+            captured_cmd["cmd"] = cmd
+            captured_feed["feed"] = feed_coro
+            yield b"seeked"
+
+        with patch("routes.stream_vod._ffmpeg_pipe", new=fake_ffmpeg):
+            chunks = [c async for c in stream_vod_mpegts("http://test/movie.mkv", start_time=30.0)]
+        assert chunks == [b"seeked"]
+        assert "-ss" in captured_cmd["cmd"]
+        assert "30.0" in captured_cmd["cmd"]
+        assert "-copyts" in captured_cmd["cmd"]
+        # feed is a partial bound to _http_feed_stdin with a computed Range header
+        assert "bytes=150000000-" in captured_feed["feed"].keywords["range_header"]
+
+    @pytest.mark.asyncio
+    async def test_mpegts_breaks_on_disconnect(self):
+        """Client disconnect stops the remux generator early (no further yield)."""
+        from routes.stream_vod import stream_vod_mpegts
+
+        async def fake_ffmpeg(cmd, feed_coro):
+            yield b"chunk1"
+            yield b"chunk2"
+
+        class _DiscReq:
+            async def is_disconnected(self):
+                return True
+
+        with patch("routes.stream_vod._ffmpeg_pipe", new=fake_ffmpeg):
+            chunks = [c async for c in stream_vod_mpegts("http://test/movie.mkv", request=_DiscReq())]  # type: ignore[arg-type]
+        # disconnect is checked BEFORE each chunk: first iteration breaks
+        assert chunks == []
+
+    @pytest.mark.asyncio
+    async def test_transcode_breaks_on_disconnect(self):
+        """Transcode generator stops upstream on client disconnect."""
+        from routes.stream_vod import stream_vod_transcode
+
+        async def fake_ffmpeg(cmd, feed_coro):
+            yield b"chunk"
+            yield b"chunk2"
+
+        class AsyncDiscReq:
+            async def is_disconnected(self):
+                return True
+
+        with patch("routes.stream_vod._ffmpeg_pipe", new=fake_ffmpeg):
+            chunks = [c async for c in stream_vod_transcode("http://test/movie.mkv", AsyncDiscReq())]  # type: ignore[arg-type]
+        assert chunks == []
