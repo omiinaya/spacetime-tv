@@ -1088,3 +1088,68 @@ class TestFileOverrideProvider:
         )
         assert len(cfg.PROVIDERS) == 1
         assert cfg.PROVIDERS[0].name == "EnvOnly"
+
+
+class TestProviderFileEdgeBranches:
+    """Direct unit tests for _load/_save providers-file error paths."""
+
+    def test_load_when_providers_file_unset(self, monkeypatch):
+        """PROVIDERS_FILE None -> _load returns None."""
+        import config
+        from config import _load_providers_from_file
+
+        monkeypatch.setattr(config, "PROVIDERS_FILE", None)
+        assert _load_providers_from_file() is None
+
+    def test_load_missing_file_returns_none(self, monkeypatch, tmp_path):
+        import config
+        from config import _load_providers_from_file
+
+        monkeypatch.setattr(config, "PROVIDERS_FILE", tmp_path / "nope.json")
+        assert _load_providers_from_file() is None
+
+    def test_load_corrupted_file_logs_warning(self, monkeypatch, tmp_path, caplog):
+        """Corrupt providers.json content -> warning + None."""
+        import config
+        from config import _load_providers_from_file
+
+        bad = tmp_path / "providers.json"
+        bad.write_text("{not valid json !!!")
+        monkeypatch.setattr(config, "PROVIDERS_FILE", bad)
+        with caplog.at_level("WARNING"):
+            result = _load_providers_from_file()
+        assert result is None
+        assert "Failed to load PROVIDERS_FILE" in caplog.text
+
+    def test_save_providers_file_unset_is_noop(self, monkeypatch):
+        """PROVIDERS_FILE None -> _save returns without writing."""
+        import config
+        from config import PROVIDERS, _save_providers_to_file
+
+        monkeypatch.setattr(config, "PROVIDERS_FILE", None)
+        _save_providers_to_file(PROVIDERS)  # must not raise
+
+    def test_save_oserror_logs_warning(self, monkeypatch, tmp_path, caplog):
+        """OSError on save -> logged warning, no crash."""
+        import config
+        from config import PROVIDERS, _save_providers_to_file
+
+        # Point at a path whose parent can't be created (file under a file)
+        not_a_dir = tmp_path / "somefile"
+        not_a_dir.write_text("x")
+        monkeypatch.setattr(config, "PROVIDERS_FILE", not_a_dir / "providers.json")
+        with caplog.at_level("WARNING"):
+            _save_providers_to_file(PROVIDERS)
+        assert "Failed to save PROVIDERS_FILE" in caplog.text
+
+    def test_save_round_trips_through_file(self, monkeypatch, tmp_path):
+        """Saving then loading yields equivalent provider configs."""
+        import config
+        from config import PROVIDERS, _load_providers_from_file, _save_providers_to_file
+
+        dest = tmp_path / "providers.json"
+        monkeypatch.setattr(config, "PROVIDERS_FILE", dest)
+        _save_providers_to_file(PROVIDERS)
+        loaded = _load_providers_from_file()
+        assert loaded is not None
+        assert [p.name for p in loaded] == [p.name for p in PROVIDERS]
