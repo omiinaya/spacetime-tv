@@ -17,7 +17,7 @@
 | **Request Body Limits** | 90/100 | 🟢 Info | 1MB limit enforced at middleware level. Works correctly. |
 | **Error Response Leakage** | 90/100 | 🟢 Info | No stack traces leaked. Generic "Internal Server Error". Debug=False. Image-proxy upstream failures now surface as clean JSON 502 (was 500 text/plain). |
 | **Stream ACAO** | 60/100 | 🟡 Medium | No ACAO headers on stream endpoints — fine for direct use, but wildcards not an issue. |
-| **Auth Coverage** | 85/100 | 🟢 Low | All `/api/*` routes require X-Admin-Key or X-Device-Token via middleware. LAN bypass gated by `ALLOW_LAN_BYPASS` (default true; set false = hardened). Exempt: health/error, cloud-backup registration, profiles. |
+| **Auth Coverage** | 90/100 | 🟢 Low | All `/api/*` routes require X-Admin-Key or X-Device-Token via middleware. LAN bypass gated by `ALLOW_LAN_BYPASS` (default true; set false = hardened). Exempt: health/error, cloud-backup registration, profiles (by design — pre-auth profile picker). Profile GET **and** write handlers self-enforce `_require_profile_access` (X-Profile-Token or admin key) since middleware skips `/api/v1/profiles/*`. |
 | **Secrets in Code** | 70/100 | 🟡 Medium | GITHUB_TOKEN/ACC_GITHUB_TOKEN read at startup. IPTV creds in URL params. |
 | **HTTPS/TLS** | 75/100 | 🟢 Low | TLS termination at nginx on 443 (http2, TLSv1.2/1.3) with HTTP→HTTPS 301 redirect (nginx + `ENFORCE_HTTPS` middleware, default true). HSTS preload. Let's Encrypt via ACME_DOMAIN; self-signed fallback certs otherwise. |
 | **SSRF Protections** | 75/100 | 🟡 Medium | Image-proxy has host allowlist. But stream probe passes user-controlled URLs to ffprobe. |
