@@ -191,15 +191,31 @@ describe("PersonPage", () => {
         expect(screen.getByText(/No results found for/)).toBeInTheDocument();
       });
     });
-
     it("shows API error message on fetch failure", async () => {
       setupApiError();
       renderPersonPage();
+
       await waitFor(() => {
         expect(
           screen.getByText("Could not search for person"),
         ).toBeInTheDocument();
       });
+    });
+
+    it("replaces the URL when the resolved name differs from the route name", async () => {
+      const replaceSpy = vi.spyOn(window.history, "replaceState");
+      setupSuccessResponse({ ...tmdbPersonInfo, name: "Resolved Name" });
+      renderPersonPage();
+
+      await waitFor(() => {
+        expect(screen.getByText("Resolved Name")).toBeInTheDocument();
+      });
+      expect(replaceSpy).toHaveBeenCalledWith(
+        null,
+        "",
+        "/person/Resolved%20Name",
+      );
+      replaceSpy.mockRestore();
     });
 
     it("shows a person icon in the error view", async () => {
