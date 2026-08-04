@@ -19,6 +19,20 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ---
 
+### ✅ Session 13 (2026-08-03) — public-release hardening: zero hardcoded endpoints/creds
+
+**Audit result: gitleaks over all ~900 commits = 0 real secrets** (1 false positive — test cache key). Everything user-specific (LAN IP, real provider endpoint) externalized or scrubbed. Backend 1591 passed (+3 config/CORS tests), frontend 1924 passed.
+
+- **Hardcoded LAN IP removed** — `server/config.py` CORS defaults, `main.py` LAN-bypass list, `web/docker-entrypoint.sh` cert SANs no longer bake in the operator's IP:
+  - CORS serve host → **`STV_HOST`** env (auto-adds origins for standard ports)
+  - LAN bypass → RFC1918 subnet matching + **`LAN_BYPASS_HOSTS`** exact-match list
+  - Cert CN/SANs → `CERT_CN` / `CERT_SANS` env vars
+- **Provider endpoint scrubbed** — `iptv-provider.example.com` gone from both `.env.example` files, code comments, e2e specs, docs; placeholders now `your-iptv-provider.example.com`.
+- **Tracked Playwright auth state removed** — `web/e2e/.auth/` gitignored; `.auth/main-profile.json` deleted from history tracking.
+- **First-run UX** — LiveTV empty state explains `IPTV_BASE/USER/PASS` / `PROVIDERS_JSON` and links to Admin (3 new tests; `useNavigate` wired).
+- **Docs** — README rewritten for BYO-provider onboarding; SECURITY_AUDIT hardening note; ROADMAP session log; AGENTS.md env table expanded (STV_HOST, LAN_BYPASS_HOSTS, PROVIDERS_JSON, ADMIN_API_KEY, ENCRYPT_CREDENTIALS) and stripped of 179 embedded line-number artifacts.
+- **Remaining (unchanged):** P2 distributed rate limiting, P2 `ALLOW_LAN_BYPASS=false` in prod `.env`, P2 wire CACHE_TTL_HOURS/CLEANUP_INTERVAL.
+
 ### ✅ Session 12.8 (2026-08-02) — backend coverage drive 91→97%, 1588 tests
 
 Backend coverage 91%→**97%** (3582 stmts, 101 missed), suite 1464→**1588** passed / 17 skipped / 3 xfailed. 20 modules at **100%**: auth, crypto_utils, tmdb, misc, live, guide_epg, admin, state, stream_core, stream_dash, stream_probe, guide, guide_core, media, vod, record, watchlist, stream_live (partial), plus stream/stream_live at 97%+.
