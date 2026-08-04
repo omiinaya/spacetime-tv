@@ -11,7 +11,7 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
 
@@ -41,7 +41,7 @@ jobs:
         run: npm run lint
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-latest]
     needs: lint
     steps:
       - uses: actions/checkout@v4
@@ -79,3 +79,99 @@ jobs:
       - name: Build frontend
         working-directory: web
         run: npm run build
+
+  e2e:
+    runs-on: [self-hosted, ubuntu-latest]
+    needs: test
+    # Requires real IPTV credentials as GitHub secrets (IPTV_BASE/USER/PASS
+    # + ADMIN_API_KEY). Without them the E2E suite cannot run — skip
+    # gracefully instead of failing PRs from forks that lack secrets.
+    if: ${{ secrets.IPTV_BASE != '' && secrets.IPTV_USER != '' && secrets.IPTV_PASS != '' && secrets.ADMIN_API_KEY != '' }}
+    env:
+      E2E_BASE_URL: "http://127.0.0.1:8720"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install backend deps
+        working-directory: server
+        run: pip install -r requirements-dev.txt
+
+      - name: Install frontend deps
+        working-directory: web
+        run: npm ci
+
+      - name: Build frontend (backend serves SPA from web/dist)
+        working-directory: web
+        run: npm run build
+
+      - name: Write runtime env from secrets
+        working-directory: server
+        run: |
+          cat > .env <<EOF
+          IPTV_BASE=${{ secrets.IPTV_BASE }}
+          IPTV_USER=${{ secrets.IPTV_USER }}
+          IPTV_PASS=${{ secrets.IPTV_PASS }}
+          ADMIN_API_KEY=${{ secrets.ADMIN_API_KEY }}
+          ENFORCE_HTTPS=false
+          ALLOW_LAN_BYPASS=true
+          EOF
+
+      - name: Seed profile storageState
+        working-directory: web
+        run: |
+          mkdir -p e2e/.auth
+          cat > e2e/.auth/main-profile.json <<'EOF'
+          {
+            "cookies": [],
+            "origins": [
+              {
+                "origin": "http://127.0.0.1:8720",
+                "localStorage": [
+                  {
+                    "name": "stv_current_profile",
+                    "value": "{\"name\":\"Main Profile\",\"avatar\":\"default\",\"created\":1785478685}"
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
+
+      - name: Start backend
+        working-directory: server
+        run: |
+          nohup python -m uvicorn main:app --host 127.0.0.1 --port 8720 > /tmp/stv-backend.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8720/api/health > /dev/null 2>&1; then
+              echo "backend healthy after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "backend failed to start:"; tail -30 /tmp/stv-backend.log; exit 1
+
+      - name: Install Playwright browsers
+        working-directory: web
+        run: npx playwright install chromium webkit
+
+      - name: Run E2E suite
+        working-directory: web
+        run: npx playwright test --config e2e/playwright.config.ts
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: web/playwright-report/
+          retention-days: 14

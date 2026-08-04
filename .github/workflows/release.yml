@@ -17,7 +17,7 @@ env:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
 
@@ -49,7 +49,7 @@ jobs:
         run: npm run lint
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-latest]
     needs: lint
     permissions:
       contents: read

@@ -3,9 +3,10 @@
 > **Audit date:** 2026-08-02 (12th session — security findings closed, SW stream fix, a11y + perf, task guards)
 > **Stack:** FastAPI + React 19 + Vite 8 + Tailwind v4 | 13 pages | 133 components | 31 hooks | 25 back-end route modules
 > **Test counts:** 1,394 backend pass (17 skipped, 3 xfail) + 1,571 frontend pass (101 files) | 0 TypeScript errors | 0 production `any` types
-> **CI:** GitHub Actions (lint → test → tsc → build)
+> **CI:** GitHub Actions (lint → test → tsc → build) on a **self-hosted runner** (registered 2026-08-04 — the repo's jobs were failing the GitHub-hosted billing gate; `hermes-id` is now a git install in requirements.txt). **E2E also wired into CI** — runs against the live provider via GitHub secrets.
 > **Hook test coverage:** 31/31 (100%) — all custom hooks have unit tests
-> **E2E:** Playwright chromium 88 / Mobile Chrome 87 / Tablet 89 passed against live backend (2 shared search/settings teardown-timeout flakes; both pass isolated). Profile-gate seeded via storageState. Not in CI (needs IPTV creds as secrets)
+> **E2E:** 22 specs / 497 tests green across chromium, Mobile Chrome, Mobile Safari, Tablet (4 Playwright projects). Profile-gate seeded via storageState. **Now runs in CI** whenever the IPTV secrets are present (see `.github/workflows/ci.yml` `e2e` job); skipped gracefully otherwise.
+> **Auth posture:** single-user LAN app — `ALLOW_LAN_BYPASS=true` set EXPLICITLY in server/.env (it was a silent default). Justified: native media elements can't attach auth headers, box is RFC1918-only. Startup logs the posture. See server/scripts/backup.sh for state snapshots.
 
 ## Current File Sizes (source only, no tests)
 
@@ -27,6 +28,38 @@ deliberately flat data/type modules. useVideoPlayer.ts (816) is documented
 as diminishing returns for further splitting.
 
 ## Recent Improvements
+
+### Session 14 (2026-08-04) — production-readiness close-out: CI runner, auth posture, backups
+- **CI was RED on master and nobody had noticed** — every job failed in <5s with
+  `steps:[]` + `runner_id:0` = the GitHub-hosted runner allocation was blocked
+  by the Actions billing gate (repo had NO self-hosted runner). Registered
+  `runner-spacetime-tv` in the actions-runners farm (`--labels
+  ubuntu-latest,self-hosted,linux`), added it to `start-all-runners.sh` +
+  `setup-all-runners.sh`, switched both workflows to
+  `runs-on: [self-hosted, ubuntu-latest]`.
+- **`hermes-id` install fixed for CI/Docker** — it was declared
+  `hermes-id>=1.3.0` in requirements.txt but is NOT on PyPI, so every clean
+  install failed. Now pinned to the source repo:
+  `hermes-id @ git+https://github.com/omiinaya/hermes-auth-plugin.git@<sha>`
+  (verified by pip download).
+- **Backend boots without the hermes-id auth server** — `install_agent_auth`
+  is now wrapped in try/except: no `HERMES_AUTH_SERVER_URL` → the app starts
+  with agent auth disabled + a startup warning (CI, Docker, standalone LAN).
+  The `/admin/hermes-id/*` proxy already returns 503 "not configured".
+- **E2E wired into CI** — new `e2e` job in ci.yml: builds frontend, writes
+  `server/.env` from secrets, seeds the profile storageState, starts uvicorn
+  on :8720, runs all 4 Playwright projects. Gates on `secrets.IPTV_*` +
+  `ADMIN_API_KEY`; skips gracefully on forks without them.
+- **Auth posture made explicit** — `ALLOW_LAN_BYPASS=true` now set with a
+  rationale comment in server/.env (was a silent default). Startup logs the
+  posture (🔓/🔐) + ENFORCE_HTTPS. 2 new lifespan tests. Decision: single-user
+  LAN, native media elements can't attach auth headers, box is RFC1918-only —
+  flipping to false would break playback for no security gain.
+- **Backup/restore story** — `server/scripts/backup.sh` snapshots .env,
+  Fernet key (.encrypt_key), providers.json, profiles.json, stream hits,
+  watch progress, recordings, cache, and the EPG cache into `backups/`
+  (rotation 14, gitignored). `--restore <archive>` supported. Verified with a
+  temp-dir extraction + full 57MB EPG + 44-char key check.
 
 ### Session 13 (2026-08-03) — public-release hardening: zero hardcoded endpoints/creds
 - **No user-specific values left in the repo** — the LAN IP and the real IPTV

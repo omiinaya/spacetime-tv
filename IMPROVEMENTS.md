@@ -12,12 +12,40 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 ## Pending Items
 
 - **P2 — distributed rate limiting** (SECURITY_AUDIT #8) — Redis-backed for multi-instance
-- **P2 — `ALLOW_LAN_BYPASS=false` in production `.env`** (SECURITY_AUDIT #10)
+- ~~**P2 — `ALLOW_LAN_BYPASS=false` in production `.env`**~~ ✅ **RESOLVED 2026-08-04 by decision** — set EXPLICITLY `true` with rationale for this single-user LAN deployment (was a silent default). Startup logs the posture; `false` is documented as required only behind a public/VPN reverse proxy. Flipping it here would 401 native media playback (video/img can't attach auth headers).
 - ~~**P2 — wire CACHE_TTL_HOURS/CLEANUP_INTERVAL into runtime**~~ ✅ **RESOLVED `ab96e6d`** — env-driven via `_int_env` with graceful fallback (garbage values don't crash startup); conftest sentinel 0→1; 4 wiring tests
 - **P3 — `env_file: ./server/.env` is hard-required** — compose fails on a fresh clone before the app can auto-generate a key (**RESOLVED `def0ba6`** — no longer pending)
 - **P4 — player control row touch targets < 44px** (a11y audit low: Speed/Record/Download/Quality/Volume/SleepTimer/SubtitleSelector/MobileMoreMenu — currently 40px; deliberate density compromise, bump only if mobile overflow is re-evaluated)
 
 ---
+
+### ✅ Session 14 (2026-08-04) — production-readiness close-out: CI runner, E2E in CI, auth posture, backups
+
+- **CI red on master → fixed (billing gate).** All jobs failed in <5s with `steps:[]`
+  + `runner_id:0` = the GitHub-hosted runner allocation was blocked by the Actions
+  billing gate (the repo had NO self-hosted runner — every ~30 sibling repo does).
+  Registered `runner-spacetime-tv` in the actions-runners farm, added it to
+  `start-all-runners.sh` + `setup-all-runners.sh`, switched `ci.yml` + `release.yml`
+  to `runs-on: [self-hosted, ubuntu-latest]`. **CI now actually runs.**
+- **E2E wired into CI** — new `e2e` job in ci.yml: builds frontend, writes
+  `server/.env` from secrets (IPTV_BASE/USER/PASS + ADMIN_API_KEY now set as
+  GitHub secrets), seeds the profile storageState, starts uvicorn on :8720, runs
+  all 4 Playwright projects. Gates on the secrets' presence; skips gracefully on
+  forks. (FP: this closes the long-standing "E2E not in CI" P2.)
+- **`hermes-id` install fixed** — requirements.txt declared `hermes-id>=1.3.0`
+  but it's NOT on PyPI → every clean install (CI, Docker) failed. Now pinned to
+  the source git repo at a commit SHA (verified by `pip download`).
+- **Backend boots without hermes-id auth server** — `install_agent_auth` wrapped
+  in try/except; no `HERMES_AUTH_SERVER_URL` → app starts with agent auth
+  disabled + startup warning. `/admin/hermes-id/*` proxy already 503s clean.
+- **`ALLOW_LAN_BYPASS` resolved by decision** — set explicitly `true` with
+  rationale in server/.env (was silent default); startup logs posture; 2 tests.
+- **Backup/restore story added** — `server/scripts/backup.sh` snapshots .env,
+  Fernet key, providers.json, profiles.json, stream hits, watch progress,
+  recordings, cache, EPG cache into `backups/` (rotation 14, gitignored);
+  `--restore` verified. (FP: was "no backup/restore story".)
+- **Remaining (unchanged):** P2 distributed rate limiting (Redis, multi-instance
+  — not needed for single-user), P2 wire CACHE_TTL_HOURS/CLEANUP_INTERVAL.
 
 ### ✅ Session 13 (2026-08-03) — public-release hardening: zero hardcoded endpoints/creds
 

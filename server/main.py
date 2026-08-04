@@ -29,7 +29,19 @@ from state import _load_stream_hits  # re-exported for tests
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _load_stream_hits()
-    from config import _AUTO_GEN_KEY, ADMIN_API_KEY
+    from config import _AUTO_GEN_KEY, ADMIN_API_KEY, ALLOW_LAN_BYPASS, ENFORCE_HTTPS
+
+    # ── Log the auth posture so the decision is visible, not silent ──
+    if ALLOW_LAN_BYPASS:
+        log.warning(
+            "🔓 ALLOW_LAN_BYPASS=true — /api/* requires NO credential from "
+            "private/LAN clients (media elements can't attach auth headers). "
+            "Intended for trusted single-user LAN; set false behind a public "
+            "or VPN reverse proxy that does its own auth."
+        )
+    else:
+        log.info("🔐 ALLOW_LAN_BYPASS=false — all /api/* requests must authenticate.")
+    log.info(f"🔐 ENFORCE_HTTPS={ENFORCE_HTTPS}")
 
     if _AUTO_GEN_KEY:
         log.info(f"🔑 Admin API key auto-generated: {ADMIN_API_KEY}")
@@ -92,9 +104,16 @@ app.add_middleware(
 )
 
 # hermes-id agent authentication (env: HERMES_AUTH_SERVER_URL / HERMES_AUTH_PROJECT / HERMES_AUTH_VERIFY)
-from hermes_id.fastapi_plugin import install_agent_auth
+# Optional: the backend boots WITHOUT the auth server (CI, Docker, standalone
+# LAN installs). The /admin/hermes-id/* proxy routes then return a clear
+# "not configured" 503 instead of crashing startup.
+try:
+    from hermes_id.fastapi_plugin import install_agent_auth
 
-install_agent_auth(app)
+    install_agent_auth(app)
+    log.info("🔐 hermes-id agent auth mounted")
+except Exception as e:  # noqa: BLE001 - startup must survive missing auth server
+    log.warning(f"⚠️  hermes-id agent auth DISABLED: {e}")
 # GZip compression for API responses — JSON payloads compress 5-10x
 from fastapi.middleware.gzip import GZipMiddleware
 

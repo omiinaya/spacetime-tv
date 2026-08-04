@@ -86,7 +86,7 @@ cd web && npm test          # frontend unit tests (vitest)
 cd server && python -m pytest tests/ --ignore=tests/test_live.py   # backend unit tests
 ```
 
-### E2E tests (not wired into CI)
+### E2E tests (wired into CI)
 
 `web/e2e/` contains 22 Playwright specs (`npm run test:e2e`) covering every
 route — including the IPTV Provider settings form, Admin dashboard, Agent
@@ -96,12 +96,13 @@ They run against a live backend (`baseURL http://127.0.0.1:8720`) across 4
 projects (chromium, Mobile Chrome, Mobile Safari, Tablet): **497 passed /
 0 failed** on the current suite.
 
-They are **deliberately excluded from CI**: the specs exercise the real UI
-against a live backend and the live-tv / movies / series / search flows need
-real IPTV credentials, so a CI job would require `IPTV_USER`/`IPTV_PASS` (and
-the admin key file used by the Admin/Agent specs) as GitHub secrets, or a
-full mock backend, to be non-flaky. Run them locally against a running
-backend with valid credentials:
+CI runs them via the `e2e` job in `.github/workflows/ci.yml` whenever the
+real IPTV credentials are configured as GitHub secrets
+(`IPTV_BASE`/`IPTV_USER`/`IPTV_PASS` + `ADMIN_API_KEY`): the job builds the
+frontend, writes `server/.env` from the secrets, seeds the profile
+storageState, starts the backend on :8720, and runs all 4 projects. On forks
+or PRs without the secrets the job skips gracefully. Run locally against a
+running backend with valid credentials:
 
 ```bash
 cd web && npm run test:e2e            # all 4 projects
@@ -114,12 +115,29 @@ to `server/.env`, and skip their authenticated tests if no key is found.
 Install the WebKit browser before running the full matrix:
 `npx playwright install webkit` (needs the `libevent-2.1-7` host library).
 
+## Backups
+
+`server/scripts/backup.sh` snapshots everything that is not in git — `.env`,
+the Fernet key (`server/data/.encrypt_key`), `providers.json`, `profiles.json`,
+stream hit counters, watch progress, recordings, the image cache, and the EPG
+cache — into `backups/backup-<timestamp>.tar.gz` (keeps the newest 14, and
+`backups/` is gitignored):
+
+```bash
+server/scripts/backup.sh                    # create a snapshot
+server/scripts/backup.sh --restore backups/backup-20260804-165054.tar.gz   # restore
+```
+
+Restoring writes the files back under `server/`; restart
+`spacetime-tv.service` afterwards. The archive contains plaintext credentials
+and the encryption key — store it somewhere restricted (ideally off-machine).
+
 ## Security Notes
 
 - **No secrets in the repo** — the history is gitleaks-clean; `.env`, `server/data/`, and `web/e2e/.auth/` are gitignored.
 - **Admin endpoints** require `X-Admin-Key: <your ADMIN_API_KEY>`; the key is auto-generated (64-hex) on first startup if you don't set one.
 - **Passwords at rest** are Fernet-encrypted (key auto-generated in `server/data/.encrypt_key` or set via `STV_ENCRYPT_KEY`).
-- For a public deployment set `ALLOW_LAN_BYPASS=false` so every API request must authenticate, and terminate TLS (nginx handles this).
+- **LAN auth posture** — this is a single-user LAN app: `ALLOW_LAN_BYPASS=true` is set explicitly in `server/.env` (with a rationale comment) and logged at startup. Native media elements can't attach auth headers, so flipping it to `false` here would break live TV/VOD/thumbnails. For a public deployment, put the app behind a public/VPN reverse proxy that does its own auth AND accept that media URLs will then require credentials too.
 
 ## Documentation
 

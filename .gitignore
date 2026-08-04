@@ -29,3 +29,4 @@ server/.ruff_cache/
 # *.html  # removed for profiles.html
 .cursorrules
 .gitmessage
+backups/

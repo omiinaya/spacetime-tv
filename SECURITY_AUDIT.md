@@ -119,12 +119,18 @@ credential get 401; a wrong credential gets 403. Exceptions (deliberate):
 | `/api/health`, `/api/error` | ✅ Public | Liveness/error reporting by design |
 | `/api/v1/cloud/backup*` | ✅ Registration flow | First upload establishes device identity |
 | `/api/v1/profiles` | ✅ Public | Profile selection before auth |
-| LAN / localhost | ⚠️ Bypass **gated by `ALLOW_LAN_BYPASS`** | Default `true` (dev convenience). Set `ALLOW_LAN_BYPASS=false` in `.env` for hardened deployments where every request must authenticate |
+| LAN / localhost | ⚠️ Bypass **gated by `ALLOW_LAN_BYPASS`** | **2026-08-04: explicitly `true` by design** for this single-user LAN deployment (was a silent default). Set `ALLOW_LAN_BYPASS=false` in `.env` only behind a public/VPN reverse proxy that does its own auth |
 | `/*` (SPA) | ✅ Public | Static frontend |
 
-Remaining gap: the **default** `ALLOW_LAN_BYPASS=true` still lets any LAN client
-(192.168.x.x, localhost) through without a credential. Hardened deployments must
-set it to `false`.
+Remaining gap: **2026-08-04 — MITIGATED for this deployment.** `ALLOW_LAN_BYPASS=true`
+is now an explicit, commented setting in `server/.env` (it was an unexamined
+default), and startup logs the posture loudly. The trade-off is deliberate and
+documented: single-user LAN box (RFC1918, no port-forward/NAT), and native
+`<video>`/`<img>` media elements fetch `/api/stream` + image URLs directly —
+they cannot attach `X-Admin-Key`/`X-Device-Token` headers, so forcing auth would
+break live TV/VOD/thumbnails. A hardened deployment must put this app behind a
+public/VPN reverse proxy that does its own auth AND accept that media URLs will
+then also require credentials.
 
 ### 9. ⚠️ Secrets in Code — Score: 70/100
 - **Found:** GITHUB_TOKEN and ACC_GITHUB_TOKEN read at startup for auto-starring repo

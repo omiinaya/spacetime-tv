@@ -8,6 +8,9 @@ verify the gate: disabled → LAN requests are NOT bypassed (401); enabled →
 LAN requests pass through; non-LAN hosts are never bypassed.
 """
 
+import logging
+
+import pytest
 from fastapi.responses import Response
 from starlette.requests import Request
 
@@ -103,3 +106,44 @@ class TestLanBypassGate:
         from config import ALLOW_LAN_BYPASS
 
         assert ALLOW_LAN_BYPASS is True
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Startup posture logging (Finding 1 hardening)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestStartupPostureLog:
+    async def _enter_lifespan(self, monkeypatch, caplog, lan_bypass: bool):
+        import config as cfg
+        import main as m
+
+        monkeypatch.setattr(cfg, "ALLOW_LAN_BYPASS", lan_bypass)
+        # _warm_task is created inside lifespan; _cleanup_task too. Patch the
+        # warm module-level var to a cancelled task so lifespan doesn't spawn
+        # real network work during the test.
+        from routes.cache_warmer import _warm_task
+
+        if _warm_task is not None:
+            monkeypatch.setattr(_warm_task, "cancel", lambda *a, **k: None, raising=False)
+
+        with caplog.at_level(logging.INFO, logger="spacetime-tv"):
+            async with m.app.router.lifespan_context(m.app):
+                pass
+        return "\n".join(rec.getMessage() for rec in caplog.records)
+
+    @pytest.mark.asyncio
+    async def test_lifespan_logs_lan_bypass_posture(self, monkeypatch, caplog):
+        """Lifespan must emit an explicit security-posture log indicating
+        whether ALLOW_LAN_BYPASS is on/off (not a silent default)."""
+        joined = await self._enter_lifespan(monkeypatch, caplog, lan_bypass=True)
+        assert "ALLOW_LAN_BYPASS=true" in joined, "missing true-posture log"
+        assert "ENFORCE_HTTPS" in joined, "missing ENFORCE_HTTPS posture log"
+
+    @pytest.mark.asyncio
+    async def test_lifespan_logs_hardened_posture(self, monkeypatch, caplog):
+        import config as cfg
+
+        monkeypatch.setattr(cfg, "ALLOW_LAN_BYPASS", False)
+        joined = await self._enter_lifespan(monkeypatch, caplog, lan_bypass=False)
+        assert "ALLOW_LAN_BYPASS=false" in joined, "missing hardened-posture log"
