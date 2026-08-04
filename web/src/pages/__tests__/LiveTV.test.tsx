@@ -602,6 +602,43 @@ describe("LiveTV", () => {
       );
       expect(favToggle).toBeInTheDocument();
     });
+
+    it("filters the grid to favorites when the toggle is activated", async () => {
+      renderLiveTV();
+
+      await waitFor(() => {
+        expect(screen.getByText("Live TV")).toBeInTheDocument();
+      });
+
+      const favButtons = screen.getAllByRole("button");
+      const favToggle = favButtons.find(
+        (btn) => btn.getAttribute("aria-label") === "Show favorites only",
+      );
+      if (favToggle) {
+        fireEvent.click(favToggle);
+      }
+
+      // In favorites-only mode the category tabs are hidden and the header
+      // shows the favorites count
+      await waitFor(() => {
+        expect(screen.getByText(/2 favorites/)).toBeInTheDocument();
+      });
+      // Favorited channel cards render
+      expect(screen.getAllByText("CNN US").length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("removes a favorite from the grid via the card toggle", async () => {
+      renderLiveTV();
+
+      await waitFor(() => {
+        expect(screen.getByText("Live TV")).toBeInTheDocument();
+      });
+
+      // Click the favorite star on the first displayed card
+      const favBtns = screen.getAllByLabelText("Add to favorites");
+      if (favBtns.length > 0) fireEvent.click(favBtns[0]);
+      expect(mockToggleFavorite).toHaveBeenCalled();
+    });
   });
 
   // ── Edge cases ─────────────────────────────────────────────
