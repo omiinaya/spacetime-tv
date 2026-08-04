@@ -27,7 +27,7 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
   - CORS serve host → **`STV_HOST`** env (auto-adds origins for standard ports)
   - LAN bypass → RFC1918 subnet matching + **`LAN_BYPASS_HOSTS`** exact-match list
   - Cert CN/SANs → `CERT_CN` / `CERT_SANS` env vars
-- **Provider endpoint scrubbed** — `iptv-provider.example.com` gone from both `.env.example` files, code comments, e2e specs, docs; placeholders now `your-iptv-provider.example.com`.
+- **Provider endpoint scrubbed** — the real provider host is gone from both `.env.example` files, code comments, e2e specs, docs; placeholders now `your-iptv-provider.example.com`.
 - **Tracked Playwright auth state removed** — `web/e2e/.auth/` gitignored; `.auth/main-profile.json` deleted from history tracking.
 - **First-run UX** — LiveTV empty state explains `IPTV_BASE/USER/PASS` / `PROVIDERS_JSON` and links to Admin (3 new tests; `useNavigate` wired).
 - **Docs** — README rewritten for BYO-provider onboarding; SECURITY_AUDIT hardening note; ROADMAP session log; AGENTS.md env table expanded (STV_HOST, LAN_BYPASS_HOSTS, PROVIDERS_JSON, ADMIN_API_KEY, ENCRYPT_CREDENTIALS) and stripped of 179 embedded line-number artifacts.

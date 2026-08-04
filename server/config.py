@@ -151,7 +151,7 @@ DEFAULT_CORS_ORIGINS = (
     "https://localhost:8720,https://127.0.0.1:8720,"
     "https://localhost:8722,https://127.0.0.1:8722"
 )
-# Host (IP or domain) the app is served on — e.g. STV_HOST=192.168.1.50.
+# Host (IP or domain) the app is served on — e.g. STV_HOST=192.0.2.10.
 # When set, http:// and https:// origins for the standard ports are appended
 # to the CORS allowlist automatically. Leave empty if only localhost is used.
 STV_HOST = os.getenv("STV_HOST", "")
@@ -175,7 +175,7 @@ ALLOW_LAN_BYPASS = os.getenv("ALLOW_LAN_BYPASS", "true").lower() == "true"
 
 # Exact-match host strings exempt from auth while ALLOW_LAN_BYPASS is on.
 # Defaults to localhost aliases only; private RFC1918 subnets are exempted
-# separately by prefix in main.py. Set LAN_BYPASS_HOSTS=192.168.1.50,...
+# separately by prefix in main.py. Set LAN_BYPASS_HOSTS=192.0.2.10,...
 # to add a specific LAN host without relying on the subnet wildcard.
 LAN_BYPASS_HOSTS = tuple(
     h.strip() for h in os.getenv("LAN_BYPASS_HOSTS", "127.0.0.1,::1,localhost").split(",") if h.strip()
