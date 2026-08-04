@@ -464,17 +464,26 @@ describe("LiveTV", () => {
     it("switches to category-specific streams when a category tab is clicked", async () => {
       renderLiveTV();
 
+      // Wait for the tabs to render (fresh lookup each poll so a stale node
+      // from an interrupted render is never clicked)
       await waitFor(() => {
-        expect(screen.getByText("US| ENTERTAINMENT")).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: "US| ENTERTAINMENT" }),
+        ).toBeInTheDocument();
       });
 
       // Click the US category tab
-      const tab = screen.getByText("US| ENTERTAINMENT").closest("button")!;
-      fireEvent.click(tab);
+      fireEvent.click(
+        screen.getByRole("button", { name: "US| ENTERTAINMENT" }),
+      );
 
       // The tab becomes selected (aria-pressed) synchronously with the click
       await waitFor(() => {
-        expect(tab.getAttribute("aria-pressed")).toBe("true");
+        expect(
+          screen
+            .getByRole("button", { name: "US| ENTERTAINMENT" })
+            .getAttribute("aria-pressed"),
+        ).toBe("true");
       });
 
       // And the category-specific fetch fires. Longer timeout: under
