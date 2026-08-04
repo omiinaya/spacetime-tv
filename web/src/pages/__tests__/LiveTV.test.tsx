@@ -471,10 +471,15 @@ describe("LiveTV", () => {
       // Click the US category tab
       fireEvent.click(screen.getByText("US| ENTERTAINMENT"));
 
-      // Should have called api.live.streams with cat id "1"
-      await waitFor(() => {
-        expect(mockStreams).toHaveBeenCalledWith("1");
-      });
+      // Should have called api.live.streams with cat id "1".
+      // Longer timeout: under full-suite parallel load (16 forks) the
+      // click → state update → refetch cycle can exceed the 1s default.
+      await waitFor(
+        () => {
+          expect(mockStreams).toHaveBeenCalledWith("1");
+        },
+        { timeout: 5000 },
+      );
     });
   });
 

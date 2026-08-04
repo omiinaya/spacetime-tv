@@ -20,6 +20,18 @@ vi.mock("@/lib/recentChannels", () => ({
   clearRecentChannels: (...args: unknown[]) => mockClearRecentChannels(...args),
 }));
 
+// ── Mock continueWatching module ────────────────────────────
+const mockGetContinueWatching = vi.fn();
+const mockGetMovieContinueWatching = vi.fn();
+const mockClearAllProgress = vi.fn();
+
+vi.mock("@/lib/continueWatching", () => ({
+  getContinueWatching: (...args: unknown[]) => mockGetContinueWatching(...args),
+  getMovieContinueWatching: (...args: unknown[]) =>
+    mockGetMovieContinueWatching(...args),
+  clearAllProgress: (...args: unknown[]) => mockClearAllProgress(...args),
+}));
+
 // ── Mock navigate ──────────────────────────────────────────
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
@@ -62,10 +74,37 @@ function renderHistoryPage() {
   );
 }
 
+const sampleSeriesCW = [
+  {
+    seriesId: 10,
+    episodeId: 101,
+    seriesName: "Breaking Bad",
+    cover: "http://cdn/bb.jpg",
+    seasonNumber: 2,
+    episodeNum: 5,
+    progressSeconds: 1200,
+    durationSeconds: 3600,
+    updatedAt: Date.now(),
+  },
+];
+
+const sampleMovieCW = [
+  {
+    movieId: 20,
+    movieName: "Inception",
+    poster: "http://cdn/inception.jpg",
+    progressSeconds: 600,
+    durationSeconds: 900,
+    updatedAt: Date.now(),
+  },
+];
+
 // ── Tests ──────────────────────────────────────────────────
 describe("HistoryPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetContinueWatching.mockReturnValue([]);
+    mockGetMovieContinueWatching.mockReturnValue([]);
   });
 
   // ── Empty state ─────────────────────────────────────────
@@ -239,6 +278,118 @@ describe("HistoryPage", () => {
       renderHistoryPage();
       const link = document.querySelector("[data-watch-link]");
       expect(link).toBeInTheDocument();
+    });
+  });
+
+  // ── Continue Watching — Series ─────────────────────────
+  describe("continue watching series", () => {
+    it("renders the Series section with title and episode info", () => {
+      mockGetContinueWatching.mockReturnValue(sampleSeriesCW);
+      renderHistoryPage();
+      expect(screen.getByText("Breaking Bad")).toBeInTheDocument();
+      expect(screen.getByText("S2 · E5")).toBeInTheDocument();
+      expect(
+        screen.getByRole("img", { name: "Breaking Bad poster" }),
+      ).toBeInTheDocument();
+    });
+
+    it("shows a placeholder when the series cover is missing", () => {
+      mockGetContinueWatching.mockReturnValue([
+        { ...sampleSeriesCW[0], cover: "" },
+      ]);
+      renderHistoryPage();
+      expect(
+        screen.queryByRole("img", { name: "Breaking Bad poster" }),
+      ).toBeNull();
+      expect(screen.getByText("Breaking Bad")).toBeInTheDocument();
+    });
+
+    it("navigates to the series episode on click", () => {
+      mockGetContinueWatching.mockReturnValue(sampleSeriesCW);
+      renderHistoryPage();
+      fireEvent.click(screen.getByText("Breaking Bad"));
+      expect(mockNavigate).toHaveBeenCalledWith("/watch/series/10/101");
+    });
+
+    it("renders the progress bar width from progress/duration", () => {
+      mockGetContinueWatching.mockReturnValue(sampleSeriesCW);
+      renderHistoryPage();
+      const bar = document.querySelector(".bg-primary");
+      expect(bar).toBeInTheDocument();
+      // 1200/3600 = 33.33% (float rounding differs across engines)
+      expect(parseFloat((bar as HTMLElement).style.width)).toBeCloseTo(
+        33.33,
+        1,
+      );
+    });
+
+    it("hides the progress bar when duration is zero", () => {
+      mockGetContinueWatching.mockReturnValue([
+        { ...sampleSeriesCW[0], durationSeconds: 0 },
+      ]);
+      renderHistoryPage();
+      expect(document.querySelector(".bg-primary")).toBeNull();
+    });
+  });
+
+  // ── Continue Watching — Movies ─────────────────────────
+  describe("continue watching movies", () => {
+    it("renders the Movies section with title and poster", () => {
+      mockGetMovieContinueWatching.mockReturnValue(sampleMovieCW);
+      renderHistoryPage();
+      expect(screen.getByText("Inception")).toBeInTheDocument();
+      expect(
+        screen.getByRole("img", { name: "Inception poster" }),
+      ).toBeInTheDocument();
+    });
+
+    it("shows a placeholder when the movie poster is missing", () => {
+      mockGetMovieContinueWatching.mockReturnValue([
+        { ...sampleMovieCW[0], poster: "" },
+      ]);
+      renderHistoryPage();
+      expect(
+        screen.queryByRole("img", { name: "Inception poster" }),
+      ).toBeNull();
+    });
+
+    it("navigates to the movie on click", () => {
+      mockGetMovieContinueWatching.mockReturnValue(sampleMovieCW);
+      renderHistoryPage();
+      fireEvent.click(screen.getByText("Inception"));
+      expect(mockNavigate).toHaveBeenCalledWith("/watch/movie/20");
+    });
+
+    it("renders the movie progress bar", () => {
+      mockGetMovieContinueWatching.mockReturnValue(sampleMovieCW);
+      renderHistoryPage();
+      const bar = document.querySelector(".bg-primary");
+      expect(bar).toBeInTheDocument();
+      // 600/900 = 66.67% (float rounding differs across engines)
+      expect(parseFloat((bar as HTMLElement).style.width)).toBeCloseTo(
+        66.67,
+        1,
+      );
+    });
+  });
+
+  // ── Clear all with mixed content ────────────────────────
+  describe("clear all with mixed history", () => {
+    it("clears channels, series, and movie progress together", () => {
+      mockGetRecentChannels.mockReturnValue(sampleChannels);
+      mockGetContinueWatching.mockReturnValue(sampleSeriesCW);
+      mockGetMovieContinueWatching.mockReturnValue(sampleMovieCW);
+      renderHistoryPage();
+      fireEvent.click(screen.getByText("Clear all"));
+      expect(mockClearRecentChannels).toHaveBeenCalled();
+      expect(mockClearAllProgress).toHaveBeenCalled();
+      expect(screen.getByText("No watch history yet")).toBeInTheDocument();
+    });
+
+    it("shows Clear all when only series progress exists", () => {
+      mockGetContinueWatching.mockReturnValue(sampleSeriesCW);
+      renderHistoryPage();
+      expect(screen.getByText("Clear all")).toBeInTheDocument();
     });
   });
 });
