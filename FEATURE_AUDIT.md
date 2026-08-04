@@ -1,6 +1,6 @@
 # Feature Parity Audit: SpacetimeTV vs TiviMate & IPTV Smarters Pro
 
-|> **Audit date:** 2026-07-06 (Reconciliation audit — line counts verified)
+|> **Audit date:** 2026-07-06 (Reconciliation audit — line counts verified). Updated 2026-08-04: Multi-Provider feature grading corrected (now implemented — backend + Admin UI + Settings form).
 > **Codebase:** 4,579 Python + 16,510 TypeScript/TSX source + 17,479 test lines
 > **Tests:** 558 backend + 1209 frontend unit + 74 E2E
 
@@ -59,11 +59,13 @@
 
 | TiviMate | IPTV Smarters | SpacetimeTV | Verdict |
 |----------|---------------|-------------|---------|
-| ❌ Single provider per instance | ✅ Multiple Xtream accounts | ❌ **Not implemented** | **Behind Smarters** |
+| ❌ Single provider per instance | ✅ Multiple Xtream accounts | ✅ **Multi-provider backend + two UIs** | **Ahead of TiviMate, on par with Smarters** |
 
-**Details:** SpacetimeTV originally targeted a single IPTV provider via `.env` credentials (`IPTV_BASE`, `IPTV_USER`, `IPTV_PASS`), with no UI for adding/removing/switching providers. The architecture (single `iptv_client.py`) needed to become provider-agnostic.
+**Details:** Full multi-provider support is implemented. Backend (`iptv_client.py`) is provider-agnostic: `PROVIDERS_JSON` env or `server/data/providers.json` (persisted, Fernet-encrypted passwords), per-provider HTTP pools, automatic health-based failover, per-provider cache scoping. Two configuration surfaces:
+- **Admin dashboard → Provider Management** — add/remove/edit/toggle/reorder providers, view per-provider health (add, toggle, delete, reorder endpoints in `admin.py`).
+- **Settings → IPTV Provider** — single-provider form (name, base URL, username, password, enabled) with a **Test connection** button and provider health badges; user-facing (LAN/middleware auth, no admin key required). Endpoints: `GET/PUT /api/v1/provider`, `POST /api/v1/provider/test` (routes/provider_config.py).
 
-**Gap:** Smarters supports multiple Xtream Codes/M3U URLs with account switching. This is architectural — the entire API service layer assumes a single provider.
+**Gap vs Smarters:** Smarters' multi-account switching is app-level; SpacetimeTV's failover is automatic (server-side) rather than user-chosen. Multi-provider failover is backend-focused; the Settings UI intentionally manages a single provider (single-user IPTV design).
 
 ---
 
@@ -206,7 +208,7 @@
 | 1 | Catch-up / Timeshift TV | ✅ | ✅ | ✅ | **A** — Full implementation with TMDB enrichment |
 | 2 | DVR / Recording | ✅ | ✅ | ✅ | **A-** — Full pipeline, no scheduler |
 | 3 | Parental Controls PIN | ✅ | ✅ | ✅ | **A** — Local Web Crypto hashing (more secure) |
-| 4 | Multi-Provider | ❌ | ✅ | ❌ | **F** — Hardcoded single provider |
+| 4 | Multi-Provider | ❌ | ✅ | ✅ | **A** — Multi-provider backend + Admin UI + Settings form, automatic failover |
 | 5 | Cloud Favorites/Backup | ❌ | ✅ | ✅ | **B+** — Cloud backup, not cross-device sync |
 | 6 | Picture-in-Picture | ✅ | ❌ | ✅ | **A-** — Document PiP with fallback |
 | 7 | Auto Frame-Rate | ✅ | ❌ | 🟡 | **C** — Detection only, no switching (browser limit) |
@@ -226,7 +228,7 @@
 |------------|-------|-------|
 | **TiviMate** | 14/16 (87.5%) | Missing: multi-provider, multi-user profiles |
 | **IPTV Smarters** | 12/16 (75%) | Missing: PiP, AFR, playback speed, sleep timer, keyboard shortcuts |
-| **SpacetimeTV** | **14/16 (87.5%)** | Missing: multi-provider, multi-user profiles, AFR switching |
+| **SpacetimeTV** | **15/16 (93.75%)** | Missing: multi-user profiles, AFR switching |
 
 ## What SpacetimeTV Does Better (Unique Advantages)
 
@@ -243,7 +245,6 @@
 ### Critical (should fix)
 | Gap | Effort | Impact |
 |-----|--------|--------|
-| **Multi-Provider support** | High (architectural) | Medium — limits user base |
 | **Multi-User Profiles** | High (needs auth system) | Medium — Smarters users expect this |
 
 ### Nice-to-have

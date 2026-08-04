@@ -45,14 +45,20 @@ All configuration is environment-based — **nothing is hardcoded**. Copy `serve
 | `ALLOW_LAN_BYPASS` | Skip admin/device auth for localhost + RFC1918 LAN (default `true` for dev; set `false` to harden) |
 | `STV_HOST` | The IP/domain you open the dashboard on — its CORS origins are allowlisted automatically |
 
-### Adding providers in the UI
+### Adding / configuring providers in the UI
 
-1. Open the **Admin** dashboard (the sidebar "Admin" item).
-2. **IPTV Providers → Add Provider**.
-3. Enter a name (optional), base URL and username/password from your provider's Xtream panel.
-4. Toggle providers on/off, reorder for priority, edit or delete anytime.
+There are two places to configure providers:
 
-Providers added in the UI are persisted to `server/data/providers.json` (gitignored, passwords encrypted when `ENCRYPT_CREDENTIALS=true`).
+1. **Settings → IPTV Provider** — the quick path for a single-user setup.
+   Enter provider name, base URL, username and password, then **Test
+   connection** before saving. The password is stored encrypted and never
+   shown again (leave the field blank to keep the existing one).
+2. **Admin dashboard → IPTV Providers → Add Provider** — full multi-provider
+   management: add several Xtream accounts, toggle on/off, reorder for
+   priority, edit or delete anytime (health-based automatic failover).
+
+Providers configured in the UI are persisted to `server/data/providers.json`
+(gitignored, passwords encrypted when `ENCRYPT_CREDENTIALS=true`).
 
 ## Production Deployment
 
