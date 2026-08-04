@@ -88,17 +88,30 @@ cd server && python -m pytest tests/ --ignore=tests/test_live.py   # backend uni
 
 ### E2E tests (not wired into CI)
 
-`web/e2e/` contains 13 Playwright specs (`npm run test:e2e`), but they are
-**deliberately excluded from CI**: the specs exercise the real UI against a
-live backend (`baseURL http://127.0.0.1:8720`) and the live-tv / movies /
-series / search flows need real IPTV credentials, so a CI job would require
-`IPTV_USER`/`IPTV_PASS` as GitHub secrets (or a full mock backend) to be
-non-flaky. Run them locally against a running backend with valid
-credentials:
+`web/e2e/` contains 20 Playwright specs (`npm run test:e2e`) covering every
+route — including the IPTV Provider settings form, Admin dashboard, Agent
+Access, Person page, watch movie/series/recording players, and the 404 page.
+They run against a live backend (`baseURL http://127.0.0.1:8720`) across 4
+projects (chromium, Mobile Chrome, Mobile Safari, Tablet): **449 passed /
+0 failed** on the current suite.
+
+They are **deliberately excluded from CI**: the specs exercise the real UI
+against a live backend and the live-tv / movies / series / search flows need
+real IPTV credentials, so a CI job would require `IPTV_USER`/`IPTV_PASS` (and
+the admin key file used by the Admin/Agent specs) as GitHub secrets, or a
+full mock backend, to be non-flaky. Run them locally against a running
+backend with valid credentials:
 
 ```bash
-cd web && npm run test:e2e
+cd web && npm run test:e2e            # all 4 projects
+npx playwright test --config e2e/playwright.config.ts --project=chromium   # single project
 ```
+
+The Admin/Agent specs read the admin key at runtime from the systemd
+`EnvironmentFile` (`~/.hermes/auth/projects/spacetime-tv.env`) falling back
+to `server/.env`, and skip their authenticated tests if no key is found.
+Install the WebKit browser before running the full matrix:
+`npx playwright install webkit` (needs the `libevent-2.1-7` host library).
 
 ## Security Notes
 
