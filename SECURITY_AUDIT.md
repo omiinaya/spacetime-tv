@@ -4,6 +4,24 @@
 **Auditor:** Hermes Agent (automated)
 **Target:** FastAPI backend on `localhost:8720` (behind nginx TLS on :8722)
 
+> **2026-08-03 public-release hardening (supersedes audit findings that are now fixed):**
+> - **Hardcoded LAN IP removed** — `server/config.py` default CORS origins no longer bake in any
+>   private IP. The serve host is now configurable via `STV_HOST` (origins auto-added for the
+>   standard ports). `server/main.py`'s LAN bypass list now matches RFC1918 subnets + a configurable
+>   `LAN_BYPASS_HOSTS` exact-match list (default `127.0.0.1,::1,localhost`). `web/docker-entrypoint.sh`
+>   cert SANs/CN are likewise env-driven.
+> - **Provider endpoint scrubbed** — the real provider host is gone from all repo files; both
+>   `.env.example` files use `your-iptv-provider.example.com` placeholders. Gitleaks over all ~900
+>   commits: **0 real secrets** (1 false positive).
+> - **`web/e2e/.auth/` now gitignored** — Playwright auth state (containing local origins) is no
+>   longer tracked; `.auth/main-profile.json` removed from git.
+> - **Credentials surface is fully user-configurable**: single-provider via `IPTV_BASE/USER/PASS`,
+>   multi-provider via `PROVIDERS_JSON` or the Admin UI (CRUD persisted to gitignored
+>   `server/data/providers.json`, passwords Fernet-encrypted at rest, never echoed by the API).
+> - **Admin endpoints** remain gated by `X-Admin-Key` (router-level dependency). Recommended public
+>   deployment: set `ADMIN_API_KEY`, `ALLOW_LAN_BYPASS=false`, `ENFORCE_HTTPS=true`, `STV_HOST` to
+>   the public host. See finding 8 and remediation item 10.
+
 ---
 
 ## OVERALL SCORE: 80/100 (🟡 MODERATE RISK — CORS + error-consistency + request-ID closed)

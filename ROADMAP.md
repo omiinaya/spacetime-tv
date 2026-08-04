@@ -28,6 +28,34 @@ as diminishing returns for further splitting.
 
 ## Recent Improvements
 
+### Session 13 (2026-08-03) — public-release hardening: zero hardcoded endpoints/creds
+- **No user-specific values left in the repo** — the LAN IP and the real IPTV
+  provider endpoint were baked into `server/config.py` CORS defaults, `main.py`'s
+  LAN bypass list, `web/docker-entrypoint.sh` cert SANs, both `.env.example`
+  files, code comments, e2e specs and docs. All externalized or scrubbed:
+  - CORS serve host now configurable via **`STV_HOST`** (auto-adds origins for
+    the standard ports); no private IP in defaults.
+  - LAN bypass uses RFC1918 subnet matching + configurable **`LAN_BYPASS_HOSTS`**
+    exact-match list (default `127.0.0.1,::1,localhost`).
+  - Cert SANs/CN in `docker-entrypoint.sh` read `CERT_CN`/`CERT_SANS` env vars.
+  - `.env.example` ×2 use `your-iptv-provider.example.com` placeholders.
+- **Gitleaks over full ~900-commit history: 0 real secrets** (1 false positive —
+  test cache key). `.env`, `server/data/`, and `web/e2e/.auth/` all gitignored;
+  tracked Playwright auth state file removed.
+- **Credential safety verified** — admin endpoints gated by `X-Admin-Key`
+  (router-level); provider passwords Fernet-encrypted at rest
+  (`ENCRYPT_CREDENTIALS=true` default), never returned by the API, PUT with
+  empty password never clobbers the stored one.
+- **First-run UX** — LiveTV empty state now explains `IPTV_BASE/USER/PASS` or
+  `PROVIDERS_JSON` and links to the Admin dashboard (3 new tests; navigate wired
+  via `useNavigate`).
+- **Docs** — README rewritten for BYO-provider onboarding (config table,
+  Admin-UI provider flow, production deployment, security notes); SECURITY_AUDIT
+  and `.env.example` docs updated. New config tests for `STV_HOST`/`LAN_BYPASS_HOSTS`.
+- **Test counts:** 1,591 backend pass (+3 config/CORS tests) + 1,922 frontend pass.
+  Remaining audit items: distributed rate limiting (Redis), `ALLOW_LAN_BYPASS=false`
+  in production `.env`.
+
 ### Session 12 (2026-08-02) — security findings closed, SW stream fix, a11y + perf
 - **CRITICAL SW fix** — every `/api/*` GET was routed to `networkFirst()` which
   does `clone.blob()`; infinite live streams never resolved (playback hung),

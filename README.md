@@ -1,29 +1,69 @@
 # SpacetimeTV
 
-**IPTV cable TV dashboard** — Live TV, EPG guide, Movies & Series from your IPTV provider. FastAPI backend + React/Vite frontend + nginx reverse proxy.
+**IPTV cable TV dashboard** — Live TV, EPG guide, Movies & Series from **your** IPTV provider. FastAPI backend + React/Vite frontend + nginx reverse proxy.
 
-## Stack
+Bring your own Xtream Codes provider: enter your base URL, username and password once (env file or Admin UI) and SpacetimeTV handles the rest — live streaming, EPG schedule, VOD catalog with search and watchlists.
 
-- **FastAPI** (Python 3.12) — backend API, IPTV proxy, EPG parser, VOD streaming
-- **React 19 + Vite 8 + Tailwind CSS** — modern SPA frontend
-- **nginx** — serves frontend build, proxies `/api` to backend
-- **ffmpeg** — VOD remux for browser-playable MP4
-- **TMDB API** — optional metadata enrichment
+## Features
+
+- 📺 **Live TV** — categories, channel grid, favorites, now-playing badges
+- 📋 **EPG guide** — schedule with enrichment
+- 🎬 **Movies & Series** — catalog, search, watchlist, VOD streaming with ffmpeg remux
+- 🔀 **Multi-provider** — add several Xtream accounts, enable/disable, priority order, automatic health-based failover
+- 🔒 **Credential safety** — provider passwords encrypted at rest (Fernet), never returned by the API, admin endpoints gated by an API key
 
 ## Quick Start (Development)
 
 ```bash
-# Backend
+# 1. Backend — configure YOUR provider
 cd server
 pip install -r requirements.txt
-cp .env.example .env   # then edit with IPTV credentials
+cp .env.example .env
+#   edit .env → set IPTV_BASE, IPTV_USER, IPTV_PASS
+#   (or PROVIDERS_JSON for multiple providers)
 python main.py         # starts on :8720
 
-# Frontend (separate terminal)
+# 2. Frontend (separate terminal)
 cd web
 npm install
 npm run dev            # starts on :5183, proxies /api to :8720
 ```
+
+Open http://localhost:5183 — you're in. No channels? The app shows a first-run prompt linking to the Admin dashboard where you can add your provider in the UI.
+
+## Configuration
+
+All configuration is environment-based — **nothing is hardcoded**. Copy `server/.env.example` to `server/.env` and fill in your own values:
+
+| Variable | Purpose |
+|---|---|
+| `IPTV_BASE` / `IPTV_USER` / `IPTV_PASS` | Your Xtream Codes provider credentials (single provider) |
+| `PROVIDERS_JSON` | JSON array of providers — overrides single-provider vars for multi-account setups |
+| `TMDB_API_KEY` | Optional TMDB metadata enrichment |
+| `ADMIN_API_KEY` | Admin API key — auto-generated (and logged) on first start if unset |
+| `ENCRYPT_CREDENTIALS` | Fernet-encrypt provider passwords at rest (default `true`) |
+| `ALLOW_LAN_BYPASS` | Skip admin/device auth for localhost + RFC1918 LAN (default `true` for dev; set `false` to harden) |
+| `STV_HOST` | The IP/domain you open the dashboard on — its CORS origins are allowlisted automatically |
+
+### Adding providers in the UI
+
+1. Open the **Admin** dashboard (the sidebar "Admin" item).
+2. **IPTV Providers → Add Provider**.
+3. Enter a name (optional), base URL and username/password from your provider's Xtream panel.
+4. Toggle providers on/off, reorder for priority, edit or delete anytime.
+
+Providers added in the UI are persisted to `server/data/providers.json` (gitignored, passwords encrypted when `ENCRYPT_CREDENTIALS=true`).
+
+## Production Deployment
+
+```bash
+docker compose up -d --build
+```
+
+- nginx serves the frontend build on :8722 and proxies `/api` to the backend
+- Set `ACME_DOMAIN` / `ACME_EMAIL` in `.env` for real Let's Encrypt certs (self-signed fallback otherwise)
+- Set `ADMIN_API_KEY` explicitly, `ALLOW_LAN_BYPASS=false`, and `STV_HOST` to your public host
+- All credentials live in your `.env` / `server/data/` — both gitignored
 
 ## Ports
 
@@ -32,6 +72,7 @@ npm run dev            # starts on :5183, proxies /api to :8720
 | 8720 | FastAPI backend | API, IPTV proxy, VOD streaming |
 | 8722 | nginx (production) | Serves built frontend, proxied to backend |
 | 5183 | Vite dev server | Frontend hot-reload |
+
 ## Testing
 
 ```bash
@@ -48,9 +89,17 @@ series / search flows need real IPTV credentials, so a CI job would require
 `IPTV_USER`/`IPTV_PASS` as GitHub secrets (or a full mock backend) to be
 non-flaky. Run them locally against a running backend with valid
 credentials:
+
 ```bash
 cd web && npm run test:e2e
 ```
+
+## Security Notes
+
+- **No secrets in the repo** — the history is gitleaks-clean; `.env`, `server/data/`, and `web/e2e/.auth/` are gitignored.
+- **Admin endpoints** require `X-Admin-Key: <your ADMIN_API_KEY>`; the key is auto-generated (64-hex) on first startup if you don't set one.
+- **Passwords at rest** are Fernet-encrypted (key auto-generated in `server/data/.encrypt_key` or set via `STV_ENCRYPT_KEY`).
+- For a public deployment set `ALLOW_LAN_BYPASS=false` so every API request must authenticate, and terminate TLS (nginx handles this).
 
 ## Documentation
 

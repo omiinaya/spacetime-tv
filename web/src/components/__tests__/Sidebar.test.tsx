@@ -22,7 +22,10 @@ function renderSidebar(props: Record<string, unknown> = {}) {
 describe("Sidebar", () => {
   it("renders brand name", () => {
     renderSidebar();
-    expect(screen.getByText("Spacetime-TV")).toBeTruthy();
+    // Brand appears in the header badge and the footer — assert presence, not uniqueness
+    expect(screen.getAllByText("Spacetime-TV").length).toBeGreaterThanOrEqual(
+      1,
+    );
   });
 
   it("renders navigation items", () => {
