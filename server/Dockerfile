@@ -2,8 +2,9 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system deps for ffmpeg (VOD remux)
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && \
+# Install system deps for ffmpeg (VOD remux) + git (hermes-id is installed
+# from a git+https URL in requirements.txt; python:3.12-slim has no git).
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg git && \
     rm -rf /var/lib/apt/lists/*
 
 # Python deps

@@ -1,13 +1,13 @@
-# NOTE: this file was renamed from e2e.yml → release.yml (2026-07-31).
-# It was misnamed — it is the container release-build workflow and never
-# ran Playwright. The Playwright E2E specs in web/e2e/ are NOT wired into
-# CI because they require a live backend with IPTV credentials (see README
-# "E2E tests" section for the rationale).
+# Release Build — lint gate on every master push; container images only on
+# explicit release tags (this box deploys natively via systemd, NOT Docker —
+# the docker/setup-buildx-action cannot provision buildx inside this LXC, and
+# there is no production GHCR consumer for these images).
 name: Release Build
 
 on:
   push:
     branches: [master, 'release/*']
+    tags: ['v*']
   pull_request:
     branches: [master]
 
@@ -53,6 +53,10 @@ jobs:
   build:
     runs-on: [self-hosted, ubuntu-latest]
     needs: lint
+    # Only build+push container images on version tags (explicit releases).
+    # Every-master-push image publishing previously made master permanently
+    # red here: setup-buildx-action cannot provision buildx in this LXC.
+    if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: read
       packages: write
