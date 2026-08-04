@@ -27,6 +27,9 @@ import type {
   TmdbTvSimilarResponse,
   TmdbPersonSearchResponse,
   TmdbPersonDetailsResponse,
+  ProviderGetResponse,
+  ProviderUpdateResponse,
+  ProviderTestResponse,
 } from "./types";
 
 // Route images from blocked CDNs through our proxy
@@ -170,6 +173,31 @@ async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   return res.json();
 }
 
+async function send<T>(
+  method: "POST" | "PUT",
+  path: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
+  const res = await fetchWithRetry(`${API}${path}`, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok) {
+    let detail = `API error ${res.status}`;
+    try {
+      const data = await res.json();
+      if (data?.detail) detail = String(data.detail);
+    } catch {
+      /* keep default */
+    }
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
 export const api = {
   live: {
     categories: (signal?: AbortSignal) =>
@@ -290,6 +318,24 @@ export const api = {
         "/watchlist/progress",
         signal,
       ),
+  },
+  provider: {
+    get: (signal?: AbortSignal) =>
+      get<ProviderGetResponse>("/provider", signal),
+    update: (
+      config: {
+        name?: string;
+        base_url: string;
+        username: string;
+        password?: string;
+        enabled?: boolean;
+      },
+      signal?: AbortSignal,
+    ) => send<ProviderUpdateResponse>("PUT", "/provider", config, signal),
+    test: (
+      config: { base_url: string; username: string; password?: string },
+      signal?: AbortSignal,
+    ) => send<ProviderTestResponse>("POST", "/provider/test", config, signal),
   },
   tmdb: {
     trending: (

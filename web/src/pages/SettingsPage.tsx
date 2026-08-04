@@ -17,6 +17,7 @@ import ServiceFilter from "@/components/settings/ServiceFilter";
 import ParentalControls from "@/components/settings/ParentalControls";
 import CloudBackupSection from "@/components/settings/CloudBackupSection";
 import HiddenCategoriesSection from "@/components/settings/HiddenCategoriesSection";
+import ProviderSettings from "@/components/settings/ProviderSettings";
 
 export default function SettingsPage() {
   const {
@@ -200,6 +201,9 @@ export default function SettingsPage() {
           Reset
         </button>
       </div>
+
+      {/* ── IPTV Provider ─────────────────────────────────── */}
+      <ProviderSettings />
 
       {/* ── Theme ──────────────────────────────────────── */}
       <ThemeSelector theme={settings.theme} onUpdate={update} />

@@ -110,6 +110,7 @@ from routes.live import router as live_router
 from routes.media import router as media_router
 from routes.misc import router as misc_router
 from routes.profiles import router as profiles_router
+from routes.provider_config import router as provider_config_router
 from routes.record import router as record_router
 from routes.search import router as search_router
 from routes.stream import router as stream_router
@@ -133,6 +134,7 @@ app.include_router(cloud_sync_router, prefix="/api/v1")
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="assets")
 app.include_router(profiles_router, prefix="/api/v1")
+app.include_router(provider_config_router, prefix="/api/v1")
 app.include_router(misc_router)
 
 

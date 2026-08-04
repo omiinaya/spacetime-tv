@@ -23,6 +23,7 @@ import type { Category } from "@/lib/types";
 const mockLiveCats = vi.fn();
 const mockMovieCats = vi.fn();
 const mockSeriesCats = vi.fn();
+const mockProviderGet = vi.fn();
 
 vi.mock("@/lib/api", () => ({
   api: {
@@ -49,6 +50,12 @@ vi.mock("@/lib/api", () => ({
             ...a: unknown[]
           ) => Promise<{ categories: Category[] }>
         )(...args),
+    },
+    provider: {
+      get: (...args: unknown[]) =>
+        (mockProviderGet as unknown as (...a: unknown[]) => Promise<unknown>)(
+          ...args,
+        ),
     },
   },
   imageUrl: (url: string) => url,
@@ -130,6 +137,10 @@ beforeEach(() => {
   mockLiveCats.mockResolvedValue({ categories: sampleLiveCats });
   mockMovieCats.mockResolvedValue({ categories: sampleMovieCats });
   mockSeriesCats.mockResolvedValue({ categories: sampleSeriesCats });
+  mockProviderGet.mockResolvedValue({
+    configured: false,
+    provider: null,
+  });
 });
 
 // ═══════════════════════════════════════════════════════════

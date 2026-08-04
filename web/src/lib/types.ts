@@ -443,3 +443,37 @@ export interface SearchTotals {
 
 export type FilterTab = "all" | "live" | "movies" | "series" | "epg";
 export type SortBy = "relevance" | "name" | "rating";
+
+// ── IPTV provider configuration ─────────────────────────────────
+
+export interface ProviderHealth {
+  last_ok: number | null;
+  last_error: string | null;
+  error_count: number;
+  ok_count: number;
+}
+
+export interface ProviderConfig {
+  name: string;
+  base_url: string;
+  username: string;
+  enabled: boolean;
+  has_password: boolean;
+  health: ProviderHealth;
+}
+
+export interface ProviderGetResponse {
+  configured: boolean;
+  provider: ProviderConfig | null;
+}
+
+export interface ProviderUpdateResponse {
+  message: string;
+  provider: ProviderConfig;
+}
+
+export interface ProviderTestResponse {
+  ok: boolean;
+  categories?: number;
+  error?: string;
+}
