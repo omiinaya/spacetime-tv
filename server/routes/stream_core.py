@@ -184,7 +184,7 @@ async def _http_iter_chunks(
     properly. aiohttp uses c-ares DNS + native asyncio sockets.
 
     What to do if streaming breaks again:
-    - First verify: does ``curl -vL --max-time 15 'http://iptv-provider.example.com/live/{USER}/{PASS}/{STREAM_ID}.ts'``
+    - First verify: does ``curl -vL --max-time 15 '<provider_base_url>/live/{USER}/{PASS}/{STREAM_ID}.ts'``
       return 302 → 200 with streaming data? If yes, the provider is fine.
     - Test every candidate HTTP library (httpx, aiohttp, requests, tls_client)
       against the FULL redirect chain (not just the first hop) with a WORKING

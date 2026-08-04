@@ -61,7 +61,7 @@
 |----------|---------------|-------------|---------|
 | ❌ Single provider per instance | ✅ Multiple Xtream accounts | ❌ **Not implemented** | **Behind Smarters** |
 
-**Details:** SpacetimeTV is hardcoded to a single IPTV provider (iptv-provider.example.com) via `.env` credentials (`IPTV_BASE`, `IPTV_USER`, `IPTV_PASS`). No UI for adding/removing/switching providers. The architecture (single `iptv_client.py`) would need to become provider-agnostic.
+**Details:** SpacetimeTV originally targeted a single IPTV provider via `.env` credentials (`IPTV_BASE`, `IPTV_USER`, `IPTV_PASS`), with no UI for adding/removing/switching providers. The architecture (single `iptv_client.py`) needed to become provider-agnostic.
 
 **Gap:** Smarters supports multiple Xtream Codes/M3U URLs with account switching. This is architectural — the entire API service layer assumes a single provider.
 

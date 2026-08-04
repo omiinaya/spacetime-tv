@@ -52,12 +52,13 @@ class TestLanBypassGate:
         resp = await auth_middleware(_make_request("192.168.1.50"), _passthrough_call_next)
         assert resp.status_code == 401  # auth required, not bypassed
 
-    async def test_disabled_blocks_explicit_lan_ip(self, monkeypatch):
-        """The hardcoded dev IP 192.0.2.10 is also gated."""
+    async def test_disabled_blocks_custom_lan_bypass_host(self, monkeypatch):
+        """A host added via LAN_BYPASS_HOSTS is still gated when the flag is off."""
         import config as cfg
         from main import auth_middleware
 
         monkeypatch.setattr(cfg, "ALLOW_LAN_BYPASS", False)
+        monkeypatch.setattr(cfg, "LAN_BYPASS_HOSTS", ("127.0.0.1", "::1", "localhost", "192.0.2.10"))
         resp = await auth_middleware(_make_request("192.0.2.10"), _passthrough_call_next)
         assert resp.status_code == 401
 
@@ -94,7 +95,7 @@ class TestLanBypassGate:
         from main import auth_middleware
 
         monkeypatch.setattr(cfg, "ALLOW_LAN_BYPASS", True)
-        resp = await auth_middleware(_make_request("203.0.113.50"), _passthrough_call_next)
+        resp = await auth_middleware(_make_request("8.8.8.8"), _passthrough_call_next)
         assert resp.status_code == 401  # auth still required
 
     async def test_default_flag_is_true(self):

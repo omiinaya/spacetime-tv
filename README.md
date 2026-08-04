@@ -1,6 +1,6 @@
 # SpacetimeTV
 
-**IPTV cable TV dashboard** — Live TV, EPG guide, Movies & Series from iptv-provider. FastAPI backend + React/Vite frontend + nginx reverse proxy.
+**IPTV cable TV dashboard** — Live TV, EPG guide, Movies & Series from your IPTV provider. FastAPI backend + React/Vite frontend + nginx reverse proxy.
 
 ## Stack
 

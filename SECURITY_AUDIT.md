@@ -13,7 +13,7 @@
 | **Admin Auth** | 85/100 | 🟡 Low | X-Admin-Key enforced. Dev-mode bypass (empty key) is a gap. |
 | **Rate Limiting** | 65/100 | 🟡 Medium | Works but IP-based only. Search=100/min, Default=1000/min. Per-IP, no distributed. |
 | **CSP Headers** | 85/100 | 🟢 Info | CSP active — explicit script/style/img/media sources configured. Includes TMDB domains for images. |
-| **CORS Configuration** | 85/100 | 🟢 Low | Configured origin list works — now includes frontend dev port 5183 + LAN origin 192.0.2.10. Allowed origins preflight 200 + ACAO; unknown origins blocked. |
+| **CORS Configuration** | 85/100 | 🟢 Low | Configured origin list works — now includes frontend dev port 5183 + LAN origin (configurable via STV_HOST). Allowed origins preflight 200 + ACAO; unknown origins blocked. |
 | **Request Body Limits** | 90/100 | 🟢 Info | 1MB limit enforced at middleware level. Works correctly. |
 | **Error Response Leakage** | 90/100 | 🟢 Info | No stack traces leaked. Generic "Internal Server Error". Debug=False. Image-proxy upstream failures now surface as clean JSON 502 (was 500 text/plain). |
 | **Stream ACAO** | 60/100 | 🟡 Medium | No ACAO headers on stream endpoints — fine for direct use, but wildcards not an issue. |
@@ -65,10 +65,10 @@
 - **Risk:** Low — CSP provides defense-in-depth against XSS
 
 ### 4. ✅ CORS Configuration — Score: 85/100
-- Origin list is **explicit** (16 specific origins incl. frontend dev 5183 + LAN 192.0.2.10) ✅
+- Origin list is **explicit** (16 specific origins incl. frontend dev 5183 + LAN host (configurable via STV_HOST)) ✅
 - ACAO returned correctly for allowed origins; preflight returns **200** + ACAO ✅
 - Unknown origins get no ACAO → browser blocks ✅
-- **Fixed 2026-08-02:** origin list previously omitted the frontend dev port (5183) and the LAN host (192.0.2.10) — the origins the app actually runs on — so their preflights 400'd without ACAO.
+- **Fixed 2026-08-02:** origin list previously omitted the frontend dev port (5183) and the LAN host (configurable via STV_HOST) — the origins the app actually runs on — so their preflights 400'd without ACAO.
 - **Risk:** Low
 
 ### 5. ✅ Request Body Limits — Score: 90/100
@@ -192,7 +192,7 @@ covers `X-Request-ID` + `X-RateLimit-Limit/Remaining` for cross-origin clients.
 6. ~~**Warn on empty ADMIN_API_KEY**~~ ✅ **MITIGATED — config auto-generates a random key when empty (`_AUTO_GEN_KEY`), so an empty env never leaves admin open; startup logs the generated key**
 7. ~~**Move IPTV credentials from URL path to headers** — avoid credential exposure in logs~~ ✅ **DONE — Credentials encrypted at rest (crypto_utils) + HTTPS for transit; Xtream API requires URL-based auth, mitigated via TLS**
 8. **Add distributed rate limiting** — Redis-backed for multi-instance deployments
-9. ~~**Add CORS exception handler** — return 204 instead of 400 for OPTIONS preflight~~ ✅ **DONE — origin list now includes the real origins (frontend dev 5183, LAN 192.0.2.10); allowed preflights return 200 + ACAO, unknown origins stay blocked. 3 CORS tests.**
+9. ~~**Add CORS exception handler** — return 204 instead of 400 for OPTIONS preflight~~ ✅ **DONE — origin list now includes the real origins (frontend dev 5183, LAN host (configurable via STV_HOST)); allowed preflights return 200 + ACAO, unknown origins stay blocked. 3 CORS tests.**
 10. **Set `ALLOW_LAN_BYPASS=false` in production `.env`** — the default `true` skips auth for all LAN/localhost clients (see finding 8)
 
 ### 🟢 Low

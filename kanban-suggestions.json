@@ -17,7 +17,7 @@
   {
     "title": "Verify stream preflight latency and CDN behavior at runtime",
     "priority": 0,
-    "description": "VERIFIED AT RUNTIME (2026-08-01): preflight_stream() in server/routes/stream_core.py tested against the REAL provider (iptv-provider.example.com). Working channel 483976: preflight=True in 751ms cold, 0ms cached (30s success TTL). Dead channels 1 and 250: preflight=False fast (325ms/185ms), 0ms cached (5s failure TTL). The 1-byte body read does not desync mpegts.js (stream succeeds and returns). Rapid re-zaps skip the redundant CDN connection via the short-TTL cache. All three kanban risk areas verified: (a) latency acceptable, (b) no desync, (c) dead channels return 502 quickly. RESOLVED."
+    "description": "VERIFIED AT RUNTIME (2026-08-01): preflight_stream() in server/routes/stream_core.py tested against the real provider. Working channel 483976: preflight=True in 751ms cold, 0ms cached (30s success TTL). Dead channels 1 and 250: preflight=False fast (325ms/185ms), 0ms cached (5s failure TTL). The 1-byte body read does not desync mpegts.js (stream succeeds and returns). Rapid re-zaps skip the redundant CDN connection via the short-TTL cache. All three kanban risk areas verified: (a) latency acceptable, (b) no desync, (c) dead channels return 502 quickly. RESOLVED."
   },
   {
     "title": "TMDB trending needs API key \u2014 wiring exists, credential missing",

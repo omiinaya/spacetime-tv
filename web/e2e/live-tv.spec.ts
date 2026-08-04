@@ -3,7 +3,7 @@
  *
  * Prerequisites:
  *   - Backend API running (default http://127.0.0.1:8720)
- *   - Frontend served on BASE_URL (default http://192.0.2.10:5183)
+ *   - Frontend served on BASE_URL (default http://<your-host>:5183)
  *
  * IMPORTANT: Do NOT use waitForLoadState("networkidle") on /watch/live/ pages
  * — the streaming endpoint keeps an open HTTP connection forever, so

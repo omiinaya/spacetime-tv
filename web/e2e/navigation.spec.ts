@@ -8,7 +8,7 @@
  *
  * Prerequisites:
  *   - Backend API running on :8720
- *   - Frontend served on BASE_URL (default http://192.0.2.10:5183)
+ *   - Frontend served on BASE_URL (default http://<your-host>:5183)
  *
  * Run: npm run test:e2e
  */

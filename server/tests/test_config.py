@@ -895,6 +895,37 @@ class TestExtraDefaults:
         )
         assert cfg.CORS_ORIGINS == ["http://single-origin.com"]
 
+    def test_cors_origins_default_has_no_lan_ip(self, monkeypatch):
+        """Default CORS list must NOT contain hardcoded LAN IPs (public-safe)."""
+        cfg = _reload_config(
+            monkeypatch,
+            delenv=["CORS_ORIGINS", "STV_HOST"],
+        )
+        for origin in cfg.CORS_ORIGINS:
+            assert "192.168." not in origin
+            assert "10." not in origin or "http://10." not in origin
+
+    def test_stv_host_appends_origins(self, monkeypatch):
+        """STV_HOST auto-appends http/https origins for the standard ports."""
+        cfg = _reload_config(
+            monkeypatch,
+            delenv=["CORS_ORIGINS"],
+            setenv={"STV_HOST": "192.168.1.50"},
+        )
+        joined = ",".join(cfg.CORS_ORIGINS)
+        assert "http://192.168.1.50:5183" in joined
+        assert "https://192.168.1.50:8722" in joined
+        assert "http://192.168.1.50:8720" in joined
+
+    def test_stv_host_empty_no_extra_origins(self, monkeypatch):
+        """Without STV_HOST the default list contains no LAN-host origins."""
+        cfg = _reload_config(
+            monkeypatch,
+            delenv=["CORS_ORIGINS", "STV_HOST"],
+        )
+        joined = ",".join(cfg.CORS_ORIGINS)
+        assert "192.168." not in joined
+
     # -- RATE_* --------------------------------------------------------------
 
     def test_rate_window_env_override(self, monkeypatch):

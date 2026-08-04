@@ -145,7 +145,7 @@ export default function Sidebar({
             Settings
           </button>
           <p className="text-[10px] text-muted-foreground/50 text-center px-4 py-2">
-            Spacetime-TV · iptv-provider
+            Spacetime-TV
           </p>
           <button
             onClick={() => navigate("/admin")}

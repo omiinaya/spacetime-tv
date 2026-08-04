@@ -10,14 +10,15 @@ STAGING="${ACME_STAGING:-false}"
 mkdir -p "$CERT_DIR" /var/www/acme
 
 # Step 1: Generate production-grade wildcard certificate with SANs
-# Creates a local CA and signs a server cert with IP SAN for 192.0.2.10
-# and wildcard DNS entries for internal use
+# Creates a local CA and signs a server cert with IP SAN for the configured
+# STV_HOST (defaults to localhost) and wildcard DNS entries for internal use
 CA_KEY="$CERT_DIR/ca.key"
 CA_CERT="$CERT_DIR/ca.crt"
 SERVER_KEY="$CERT_DIR/server.key"
 SERVER_CERT="$CERT_DIR/server.crt"
 SERVER_CSR="$CERT_DIR/server.csr"
-SANS="IP:192.0.2.10,IP:127.0.0.1,DNS:localhost,DNS:*.local,DNS:*.lan,DNS:*.home"
+CERT_HOST="${STV_HOST:-127.0.0.1}"
+SANS="IP:$CERT_HOST,IP:127.0.0.1,DNS:localhost,DNS:*.local,DNS:*.lan,DNS:*.home"
 
 if [ ! -f "$CA_KEY" ]; then
     echo "Generating local Certificate Authority..."
@@ -27,10 +28,10 @@ if [ ! -f "$CA_KEY" ]; then
         -subj "/CN=SpacetimeTV Local CA/O=SpacetimeTV/C=US"
 fi
 
-echo "Generating server key with SANs for 192.0.2.10 + wildcards..."
+echo "Generating server key with SANs for $CERT_HOST + wildcards..."
 openssl genrsa -out "$SERVER_KEY" 2048
 openssl req -new -key "$SERVER_KEY" -out "$SERVER_CSR" \
-    -subj "/CN=192.0.2.10" \
+    -subj "/CN=$CERT_HOST" \
     -addext "subjectAltName=$SANS"
 openssl x509 -req -in "$SERVER_CSR" -CA "$CA_CERT" -CAkey "$CA_KEY" \
     -CAcreateserial -out "$SERVER_CERT" -days 365 -sha256 \

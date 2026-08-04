@@ -104,7 +104,7 @@ Frontend coverage 81%→**85%** statements (85.9% lines; ~4915 stmts). Suite gre
 - **admin warm-full concurrency guard** (audit L1): `/admin/cache/warm-full` now no-ops when a warm is already running (was identical to clear-cache but could double-spawn warm tasks).
 
 ### ✅ Session 12 (2026-08-02) — security findings, SW stream fix, a11y + perf batch, task guards
-- **CORS real origins** (SECURITY_AUDIT #9): origin list was missing the frontend dev port 5183 + LAN host 192.0.2.10 — their preflights 400'd with no ACAO. Added both (16 origins). CORS 70→85, overall 78→80.
+- **CORS real origins** (SECURITY_AUDIT #9): origin list was missing the frontend dev port 5183 + the LAN host — their preflights 400'd with no ACAO. Added both (16 origins). CORS 70→85, overall 78→80.
 - **image-proxy JSON 502** (SECURITY_AUDIT #11): uncaught `httpx.HTTPStatusError`/transport error → 500 text/plain. Now clean JSON 502, no upstream detail leak. Error-Leakage 80→90.
 - **Request-ID middleware** (SECURITY_AUDIT #13): `X-Request-ID` echoed/generated + logged per request for end-to-end correlation.
 - **SW stream-path bypass (CRITICAL)**: every `/api/*` GET went to `networkFirst()` which does `clone.blob()` — infinite live streams never resolved (playback hung), multi-GB VOD remux buffered fully. Added `STREAM_PATH_PREFIXES`; SW never intercepts `/api/stream|media|iptv|movie/hls|series/hls`. Cache keys now hash X-Profile-Token (per-profile isolation — was cross-profile mixing). v3→v4.

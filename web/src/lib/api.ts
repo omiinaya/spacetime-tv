@@ -83,7 +83,7 @@ export function tmdbSrcset(path: string): string {
 
 /**
  * Build the proxied URL for a provider channel logo.
- * iptv-provider serves channel icons on the same origin that requires auth, so
+ * The IPTV provider serves channel icons on the same origin that requires auth, so
  * they're fetched through the backend's raw IPTV proxy (strip scheme).
  */
 export function channelIconUrl(rawIcon: string): string {

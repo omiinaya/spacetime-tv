@@ -172,12 +172,23 @@ async def auth_middleware(request: Request, call_next):
     # Dev/bypass: allow all localhost and internal network requests.
     # Gated by ALLOW_LAN_BYPASS — set to "false" in .env for hardened
     # deployments where every request (including LAN) must authenticate.
-    from config import ALLOW_LAN_BYPASS
+    # The exact-match host list is configurable via LAN_BYPASS_HOSTS
+    # (comma-separated); private RFC1918 subnets (10.x, 172.16-31.x,
+    # 192.168.x) are always exempt while ALLOW_LAN_BYPASS is on.
+    from config import ALLOW_LAN_BYPASS, LAN_BYPASS_HOSTS
 
     client_host = request.client.host if request.client else ""
-    if ALLOW_LAN_BYPASS and (
-        client_host in ("127.0.0.1", "::1", "localhost", "192.0.2.10") or client_host.startswith("192.168.")
-    ):
+    # RFC1918 private ranges: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+    # plus link-local 169.254.0.0/16 (Docker/network bridges report these).
+    _is_private = False
+    try:
+        import ipaddress
+
+        _ip = ipaddress.ip_address(client_host)
+        _is_private = _ip.is_private or _ip.is_link_local
+    except ValueError:
+        _is_private = False
+    if ALLOW_LAN_BYPASS and (client_host in LAN_BYPASS_HOSTS or _is_private):
         return await call_next(request)
 
     # Allow health, error reporting, and non-API paths

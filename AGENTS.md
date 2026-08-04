@@ -1,6 +1,6 @@
 ---
 name: SpacetimeTV
-description: "IPTV cable TV dashboard — Live TV, EPG guide, Movies & Series from iptv-provider"
+description: "IPTV cable TV dashboard — Live TV, EPG guide, Movies & Series from any Xtream Codes IPTV provider"
 stack: [python, fastapi, react, typescript, tailwindcss]
 ports:
   backend: 8720
@@ -19,7 +19,7 @@ This file is read by AI coding agents (Claude Code, Cursor, Hermes, Copilot, etc
 ## Architecture
 
 ```
-Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :8720 ──┬── iptv-provider.example.com (IPTV)
+Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :8720 ──┬── IPTV provider (Xtream)
                   │                                              ├── TMDB API (metadata)
                   │                                              ├── ffmpeg (VOD remux)
                   │                                              └── epg_cache.json (disk)
@@ -29,7 +29,7 @@ Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :
 **Layers:**
 - **Frontend** (React 19 + Vite 8 + Tailwind) — 13 pages, custom HLS/mpegts player. Proxies `/api/*` to backend.
 - **Backend** (FastAPI Python) — 25 route modules. Handles live TV streaming, VOD remux (ffmpeg), EPG parsing, search, watchlists.
-- **External:** IPTV provider (iptv-provider.example.com via aiohttp), TMDB API for metadata.
+- **External:** IPTV provider (any Xtream Codes host via aiohttp), TMDB API for metadata.
 
 ---
 
@@ -173,7 +173,7 @@ Users ── HTTPS ──┬── Vite Dev :5183 ──proxy──→ FastAPI :
 138|
 139|| Env Var | Purpose | Default |
 140||---|---|---|
-|| `IPTV_BASE` | IPTV provider base URL | http://iptv-provider.example.com |
+|| `IPTV_BASE` | IPTV provider base URL | (set by user) |
 || `IPTV_USER` | IPTV username | — |
 || `IPTV_PASS` | IPTV password | — |
 || `TMDB_API_KEY` | TMDB metadata enrichment | (optional) |

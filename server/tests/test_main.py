@@ -820,16 +820,16 @@ class TestCors:
         assert r.status_code == 200
         assert r.headers.get("access-control-allow-origin") == "http://localhost:5183"
 
-    def test_preflight_allows_lan_origin(self, client):
+    def test_preflight_blocks_unconfigured_lan_origin(self, client):
+        """A LAN origin is blocked unless STV_HOST/CORS_ORIGINS configures it."""
         r = client.options(
             "/api/v1/live/categories",
             headers={
-                "Origin": "http://192.0.2.10:5183",
+                "Origin": "http://192.168.5.50:5183",
                 "Access-Control-Request-Method": "GET",
             },
         )
-        assert r.status_code == 200
-        assert r.headers.get("access-control-allow-origin") == "http://192.0.2.10:5183"
+        assert r.headers.get("access-control-allow-origin") is None
 
     def test_preflight_blocks_unknown_origin(self, client):
         r = client.options(

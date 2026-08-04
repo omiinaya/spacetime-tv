@@ -19,6 +19,8 @@ server/[0-9]*/
 .hermes-tmp*
 # Runtime data directory
 server/data/
+# Playwright auth state (regenerated at runtime — may contain local origins)
+web/e2e/.auth/
 server/venv/
 server/.venv/
 server/.ruff_cache/

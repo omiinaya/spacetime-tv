@@ -137,19 +137,29 @@ MAX_FILE_UPLOAD = int(os.getenv("MAX_FILE_UPLOAD", "52428800"))  # 50 MB for fil
 TMDB_ENRICH_PATH = os.getenv("TMDB_ENRICH_PATH")
 
 # CORS — restrict to known origins instead of wide-open *
-# Comma-separated list — overridable via env var
+# Comma-separated list — overridable via env var.
+# Defaults cover localhost only. If the app is served on a LAN IP or a
+# public domain, set CORS_ORIGINS (or STV_HOST, which auto-appends
+# http(s)://<host>:<port> for the standard ports) to the real origins.
 DEFAULT_CORS_ORIGINS = (
     "http://localhost:5180,http://127.0.0.1:5180,"
     "http://localhost:5183,http://127.0.0.1:5183,"
     "http://localhost:8720,http://127.0.0.1:8720,"
     "http://localhost:8722,http://127.0.0.1:8722,"
-    "http://192.0.2.10:5180,http://192.0.2.10:5183,"
-    "http://192.0.2.10:8720,http://192.0.2.10:8722,"
     "https://localhost:5180,https://127.0.0.1:5180,"
     "https://localhost:5183,https://127.0.0.1:5183,"
     "https://localhost:8720,https://127.0.0.1:8720,"
     "https://localhost:8722,https://127.0.0.1:8722"
 )
+# Host (IP or domain) the app is served on — e.g. STV_HOST=192.168.1.50.
+# When set, http:// and https:// origins for the standard ports are appended
+# to the CORS allowlist automatically. Leave empty if only localhost is used.
+STV_HOST = os.getenv("STV_HOST", "")
+if STV_HOST:
+    _host_origins = ",".join(
+        f"{scheme}://{STV_HOST}:{port}" for scheme in ("http", "https") for port in (5180, 5183, 8720, 8722)
+    )
+    DEFAULT_CORS_ORIGINS = f"{DEFAULT_CORS_ORIGINS},{_host_origins}"
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", DEFAULT_CORS_ORIGINS).split(",")
 
 # HTTPS enforcement
@@ -162,6 +172,14 @@ ENFORCE_HTTPS = os.getenv("ENFORCE_HTTPS", "true").lower() == "true"
 # /api/ endpoints. Set to "false" for hardened deployments so every request
 # (including LAN) must authenticate.
 ALLOW_LAN_BYPASS = os.getenv("ALLOW_LAN_BYPASS", "true").lower() == "true"
+
+# Exact-match host strings exempt from auth while ALLOW_LAN_BYPASS is on.
+# Defaults to localhost aliases only; private RFC1918 subnets are exempted
+# separately by prefix in main.py. Set LAN_BYPASS_HOSTS=192.168.1.50,...
+# to add a specific LAN host without relying on the subnet wildcard.
+LAN_BYPASS_HOSTS = tuple(
+    h.strip() for h in os.getenv("LAN_BYPASS_HOSTS", "127.0.0.1,::1,localhost").split(",") if h.strip()
+)
 
 # Rate limiting (env-configurable)
 RATE_WINDOW = int(os.getenv("RATE_WINDOW", "60"))  # seconds
