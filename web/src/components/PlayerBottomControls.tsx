@@ -235,6 +235,7 @@ export default function PlayerBottomControls({
           )}
 
           <button
+            ref={fullscreenBtnRef}
             onClick={handleFullscreenClick}
             className="text-white/80 hover:text-white transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
