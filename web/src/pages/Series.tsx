@@ -108,6 +108,10 @@ export default function SeriesPage() {
     if (openId) {
       const id = Number(openId);
       if (isNaN(id)) return;
+      // Only clear the param once rows have loaded and we can definitively
+      // say the id wasn't found — clearing while rows are still empty (or
+      // mid-fetch) would race the async row load and silently drop the open.
+      if (rows.size === 0) return;
       for (const [, row] of rows) {
         const found = row.series.find((s) => s.series_id === id);
         if (found) {

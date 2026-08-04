@@ -98,16 +98,23 @@ vi.mock("@/components/ContentRow", () => ({
     title,
     children,
     action,
+    onScrollEnd,
   }: {
     title: string;
     children: React.ReactNode;
     action?: { label: string; onClick: () => void };
+    onScrollEnd?: () => void;
   }) => (
     <div data-testid="content-row">
       <h3>{title}</h3>
       {action && (
         <button onClick={action.onClick} data-testid="show-all-btn">
           {action.label}
+        </button>
+      )}
+      {onScrollEnd && (
+        <button onClick={onScrollEnd} data-testid="scroll-end-btn">
+          Load more
         </button>
       )}
       {children}
@@ -788,6 +795,174 @@ describe("SeriesPage (MSW)", () => {
       await waitFor(() => {
         expect(screen.queryByTestId("series-overlay")).not.toBeInTheDocument();
       });
+    });
+
+    it("opens the overlay from location.state.openSeries", async () => {
+      render(
+        <MemoryRouter
+          initialEntries={[
+            { pathname: "/series", state: { openSeries: sampleSeries[0] } },
+          ]}
+        >
+          <SeriesPage />
+        </MemoryRouter>,
+      );
+      await waitFor(() => {
+        expect(screen.getByTestId("series-overlay")).toBeInTheDocument();
+      });
+    });
+
+    it("opens the overlay from the ?open= URL param", async () => {
+      // sampleSeries[0] belongs to a category row that will be loaded
+      render(
+        <MemoryRouter initialEntries={["/series?open=101"]}>
+          <SeriesPage />
+        </MemoryRouter>,
+      );
+      await waitFor(() => {
+        expect(screen.getByTestId("series-overlay")).toBeInTheDocument();
+      });
+    });
+  });
+
+  // ── Fetch error paths ───────────────────────────────────
+  describe("fetch error handling", () => {
+    it("shows the error banner when categories fail to load", async () => {
+      server.use(
+        http.get("/api/series/categories", () =>
+          HttpResponse.json({ detail: "boom" }, { status: 500 }),
+        ),
+      );
+      renderSeries();
+      await waitFor(() => {
+        expect(screen.getByText(/API error 500/)).toBeInTheDocument();
+      });
+    });
+
+    it("renders a skeleton row when a category fetch fails", async () => {
+      // One category fails, the other succeeds
+      server.use(
+        http.get("/api/series", ({ request }) => {
+          const url = new URL(request.url);
+          const catId = url.searchParams.get("category_id") || "";
+          if (catId === "1") {
+            return HttpResponse.json({ detail: "err" }, { status: 500 });
+          }
+          const filtered = sampleSeries.filter((s) => s.category_id === catId);
+          return HttpResponse.json({
+            series: filtered,
+            total: filtered.length,
+            offset: 0,
+            limit: 20,
+          });
+        }),
+      );
+      renderSeries();
+      // The failing category shows a skeleton (PosterCardSkeleton via SeriesRowSkeleton)
+      await waitFor(() => {
+        const skeletons = document.querySelectorAll(".bg-muted");
+        expect(skeletons.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  // ── Show All pagination ─────────────────────────────────
+  describe("Show All pagination", () => {
+    async function renderShowAll() {
+      const manySeries = Array.from({ length: 75 }, (_, i) => ({
+        ...sampleSeries[0],
+        series_id: 300 + i,
+        name: `Paged ${i + 1}`,
+        category_id: "1",
+      }));
+      server.use(
+        http.get("/api/series", ({ request }) => {
+          const url = new URL(request.url);
+          const catId = url.searchParams.get("category_id") || "";
+          const limit = Number(url.searchParams.get("limit")) || 20;
+          const offset = Number(url.searchParams.get("offset")) || 0;
+          const all = manySeries.filter((s) => s.category_id === catId);
+          return HttpResponse.json({
+            series: all.slice(offset, offset + limit),
+            total: all.length,
+            offset,
+            limit,
+          });
+        }),
+      );
+      renderSeries();
+      await waitFor(() => {
+        expect(screen.getByText("Action")).toBeInTheDocument();
+      });
+      const showAllBtns = screen.queryAllByTestId("show-all-btn");
+      if (showAllBtns.length > 0) {
+        fireEvent.click(showAllBtns[0]);
+      }
+      await waitFor(() => {
+        expect(screen.getByText("Back to categories")).toBeInTheDocument();
+      });
+    }
+
+    it("navigates to the next Show All page via pagination", async () => {
+      await renderShowAll();
+      const nextBtn = screen.queryByLabelText("Next page");
+      expect(nextBtn).not.toBeNull();
+      if (nextBtn) {
+        fireEvent.click(nextBtn);
+        await waitFor(() => {
+          expect(screen.getByText("2 / 2")).toBeInTheDocument();
+        });
+      }
+    });
+
+    it("returns to the category rows via Back to categories", async () => {
+      await renderShowAll();
+      fireEvent.click(screen.getByText("Back to categories"));
+      await waitFor(() => {
+        expect(screen.queryByText("Back to categories")).toBeNull();
+        expect(screen.getByText("Action")).toBeInTheDocument();
+      });
+    });
+  });
+
+  // ── Load more rows via scroll-end ───────────────────────
+  describe("load more", () => {
+    it("fetches the next page of a row on scroll end", async () => {
+      const manySeries = Array.from({ length: 45 }, (_, i) => ({
+        ...sampleSeries[0],
+        series_id: 400 + i,
+        name: `Scroll ${i + 1}`,
+        category_id: "1",
+      }));
+      server.use(
+        http.get("/api/series", ({ request }) => {
+          const url = new URL(request.url);
+          const catId = url.searchParams.get("category_id") || "";
+          const limit = Number(url.searchParams.get("limit")) || 20;
+          const offset = Number(url.searchParams.get("offset")) || 0;
+          const all = manySeries.filter((s) => s.category_id === catId);
+          return HttpResponse.json({
+            series: all.slice(offset, offset + limit),
+            total: all.length,
+            offset,
+            limit,
+          });
+        }),
+      );
+      renderSeries();
+      await waitFor(() => {
+        expect(screen.getByText("Scroll 1")).toBeInTheDocument();
+      });
+      // The first page (20) is loaded; clicking Load more on the row's
+      // onScrollEnd button appends the next page (offset 20).
+      const loadMoreBtn = screen.queryAllByTestId("scroll-end-btn")[0];
+      expect(loadMoreBtn).toBeTruthy();
+      if (loadMoreBtn) {
+        fireEvent.click(loadMoreBtn);
+        await waitFor(() => {
+          expect(screen.getByText("Scroll 21")).toBeInTheDocument();
+        });
+      }
     });
   });
 
