@@ -100,6 +100,52 @@ function renderChannelRow(
   );
 }
 
+// ── Sort pipeline coverage ───────────────────────────────────
+describe("programme sort pipeline", () => {
+  it("sorts multiple upcoming programmes by start time ascending", () => {
+    const group: ChannelGroup = {
+      ...sampleGroup,
+      programmes: [
+        { ...upcomingProgramme, title: "Later", start: "20260627150000 +0000" },
+        {
+          ...upcomingProgramme,
+          title: "Earlier",
+          start: "20260627120000 +0000",
+        },
+      ],
+    };
+    renderChannelRow({ group });
+    // Both titles render as programme cards; Earlier (12:00) must precede
+    // Later (15:00) in DOM order after the sort pipeline.
+    const earlier = screen.getByText("Earlier");
+    const later = screen.getByText("Later");
+    expect(
+      earlier.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("places a live programme before all upcoming programmes", () => {
+    const group: ChannelGroup = {
+      ...sampleGroup,
+      programmes: [
+        { ...upcomingProgramme, title: "Upcoming A" },
+        { ...baseProgramme, title: "Live Now" },
+      ],
+    };
+    renderChannelRow({ group });
+    const live = screen.getByText("Live Now");
+    const upcoming = screen.getByText("Upcoming A");
+    expect(
+      live.compareDocumentPosition(upcoming) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("shows the no-upcoming placeholder for a channel with no programmes", () => {
+    renderChannelRow({ group: groupNoProgrammes });
+    expect(screen.getByText("No upcoming programmes")).toBeTruthy();
+  });
+});
+
 // ── Tests ──────────────────────────────────────────────────────
 
 describe("ChannelRow", () => {
