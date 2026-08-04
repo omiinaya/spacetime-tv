@@ -11,7 +11,7 @@
  * resume position, and cleanup/destroy lifecycle.
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useHlsPlayer, type HlsPlayerCallbacks } from "@/hooks/useHlsPlayer";
 
@@ -62,6 +62,18 @@ vi.mock("hls.js", () => {
   };
 });
 
+// ── Mock usePlayerUtils ─────────────────────────────────────
+const mockSaveProgress = vi.fn();
+const mockRegisterProgressSync = vi.fn();
+const mockTryAutoplay = vi.fn();
+vi.mock("@/hooks/usePlayerUtils", () => ({
+  tryAutoplay: (video: HTMLVideoElement, _onMuted?: () => void) =>
+    mockTryAutoplay(video),
+  saveProgress: (...args: unknown[]) => mockSaveProgress(...args),
+  registerProgressSync: (...args: unknown[]) =>
+    mockRegisterProgressSync(...args),
+}));
+
 // ── Hls event helpers ───────────────────────────────────────
 const hlsListeners: Record<
   string,
@@ -85,6 +97,14 @@ function resetTestState() {
   HlsSupported = true;
   Object.keys(hlsListeners).forEach((k) => delete hlsListeners[k]);
   lastHls = null;
+  mockSaveProgress.mockClear();
+  mockRegisterProgressSync.mockClear();
+  mockTryAutoplay.mockClear();
+  // Faithful to the real tryAutoplay: calls video.play() and resolves true
+  mockTryAutoplay.mockImplementation((video: HTMLVideoElement) => {
+    video.play();
+    return Promise.resolve(true);
+  });
 }
 
 // ── Helpers ─────────────────────────────────────────────────
@@ -504,6 +524,177 @@ describe("useHlsPlayer — cleanup and destroy", () => {
     expect(videoRef.current.removeEventListener).toHaveBeenCalledWith(
       "waiting",
       expect.any(Function),
+    );
+    unmount();
+  });
+});
+
+// ═════════════════════════════════════════════════════════════
+// Progress saving
+// ═════════════════════════════════════════════════════════════
+describe("useHlsPlayer — progress saving", () => {
+  let videoRef: { current: HTMLVideoElement };
+  let cb: HlsPlayerCallbacks;
+
+  beforeEach(() => {
+    resetTestState();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    videoRef = { current: mockVideo({ currentTime: 60, paused: false }) };
+    cb = makeCallbacks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("saves progress every 5s when watchKey is set", () => {
+    const { result, unmount } = renderHook(() => useHlsPlayer(videoRef, cb));
+    act(() => {
+      result.current.playHLS(
+        "http://cdn/vod.m3u8",
+        null,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "movie:1",
+      );
+    });
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(mockSaveProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        video: videoRef.current,
+        watchKey: "movie:1",
+        type: "movie",
+      }),
+    );
+    unmount();
+  });
+
+  it("registers progress sync on the 6th save (30s)", () => {
+    const { result, unmount } = renderHook(() => useHlsPlayer(videoRef, cb));
+    act(() => {
+      result.current.playHLS(
+        "http://cdn/vod.m3u8",
+        null,
+        "movie",
+        "s1",
+        "e1",
+        "42",
+        "movie:1",
+      );
+    });
+    act(() => {
+      vi.advanceTimersByTime(30000);
+    });
+    expect(mockSaveProgress).toHaveBeenCalled();
+    expect(mockRegisterProgressSync).toHaveBeenCalled();
+    unmount();
+  });
+
+  it("does not set up the progress interval without a watchKey", () => {
+    const { result, unmount } = renderHook(() => useHlsPlayer(videoRef, cb));
+    act(() => {
+      result.current.playHLS("http://cdn/vod.m3u8");
+    });
+    act(() => {
+      vi.advanceTimersByTime(20000);
+    });
+    expect(mockSaveProgress).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it("clears the progress interval on unmount", () => {
+    const { result, unmount } = renderHook(() => useHlsPlayer(videoRef, cb));
+    act(() => {
+      result.current.playHLS(
+        "http://cdn/vod.m3u8",
+        null,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "movie:1",
+      );
+    });
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    const callsBefore = mockSaveProgress.mock.calls.length;
+    unmount();
+    act(() => {
+      vi.advanceTimersByTime(15000);
+    });
+    expect(mockSaveProgress.mock.calls.length).toBe(callsBefore);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════
+// Empty-stream detection (readyState transitions)
+// ═════════════════════════════════════════════════════════════
+describe("useHlsPlayer — empty stream detection", () => {
+  let videoRef: { current: HTMLVideoElement };
+  let cb: HlsPlayerCallbacks;
+
+  beforeEach(() => {
+    resetTestState();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    cb = makeCallbacks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("fires empty_stream when readyState stays 0 after 2s", () => {
+    videoRef = { current: mockVideo({ readyState: 0 }) };
+    const { result, unmount } = renderHook(() => useHlsPlayer(videoRef, cb));
+    act(() => {
+      result.current.playHLS(
+        "http://cdn/vod.m3u8",
+        null,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "movie:1",
+      );
+    });
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(cb.onError).toHaveBeenCalledWith(
+      "empty_stream",
+      expect.stringContaining("Stream returned empty data"),
+    );
+    unmount();
+  });
+
+  it("does not fire empty_stream once readyState becomes positive", () => {
+    // Start ready; then transition to readyState 1 — the checker clears
+    videoRef = { current: mockVideo({ readyState: 1 }) };
+    const { result, unmount } = renderHook(() => useHlsPlayer(videoRef, cb));
+    act(() => {
+      result.current.playHLS(
+        "http://cdn/vod.m3u8",
+        null,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        "movie:1",
+      );
+    });
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
+    expect(cb.onError).not.toHaveBeenCalledWith(
+      "empty_stream",
+      expect.any(String),
     );
     unmount();
   });
