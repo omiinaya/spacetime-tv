@@ -13,7 +13,7 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 - **P2 — distributed rate limiting** (SECURITY_AUDIT #8) — Redis-backed for multi-instance
 - **P2 — `ALLOW_LAN_BYPASS=false` in production `.env`** (SECURITY_AUDIT #10)
-- **P2 — wire CACHE_TTL_HOURS/CLEANUP_INTERVAL into runtime** (currently hardcoded; conftest uses sentinels that would break cleanup tests if wired naively)
+- ~~**P2 — wire CACHE_TTL_HOURS/CLEANUP_INTERVAL into runtime**~~ ✅ **RESOLVED `ab96e6d`** — env-driven via `_int_env` with graceful fallback (garbage values don't crash startup); conftest sentinel 0→1; 4 wiring tests
 - **P3 — `env_file: ./server/.env` is hard-required** — compose fails on a fresh clone before the app can auto-generate a key (**RESOLVED `def0ba6`** — no longer pending)
 - **P4 — player control row touch targets < 44px** (a11y audit low: Speed/Record/Download/Quality/Volume/SleepTimer/SubtitleSelector/MobileMoreMenu — currently 40px; deliberate density compromise, bump only if mobile overflow is re-evaluated)
 
