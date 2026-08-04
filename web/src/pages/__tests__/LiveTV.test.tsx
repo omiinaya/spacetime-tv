@@ -469,11 +469,17 @@ describe("LiveTV", () => {
       });
 
       // Click the US category tab
-      fireEvent.click(screen.getByText("US| ENTERTAINMENT"));
+      const tab = screen.getByText("US| ENTERTAINMENT").closest("button")!;
+      fireEvent.click(tab);
 
-      // Should have called api.live.streams with cat id "1".
-      // Longer timeout: under full-suite parallel load (16 forks) the
-      // click → state update → refetch cycle can exceed the 1s default.
+      // The tab becomes selected (aria-pressed) synchronously with the click
+      await waitFor(() => {
+        expect(tab.getAttribute("aria-pressed")).toBe("true");
+      });
+
+      // And the category-specific fetch fires. Longer timeout: under
+      // full-suite parallel load (16 forks) the click → state update →
+      // refetch cycle can exceed the 1s default.
       await waitFor(
         () => {
           expect(mockStreams).toHaveBeenCalledWith("1");

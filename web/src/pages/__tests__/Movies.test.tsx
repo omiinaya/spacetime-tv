@@ -366,6 +366,30 @@ describe("Movies", () => {
         expect(screen.getByPlaceholderText("Search movies...")).toHaveValue("");
       });
     });
+
+    it("persists the query in the URL after a debounced search commit", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      renderMovies();
+
+      await waitFor(() => {
+        expect(screen.getByText("No movies available")).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText("Search movies...");
+      fireEvent.change(searchInput, { target: { value: "Inception" } });
+      // Advance past the 300ms debounce so handleSearch fires with a value
+      vi.advanceTimersByTime(400);
+
+      // The page refetches with the query — mock returns movies now
+      await waitFor(() => {
+        expect(mockMoviesUnified).toHaveBeenCalledWith(
+          expect.any(Number),
+          expect.any(Number),
+          "Inception",
+        );
+      });
+      vi.useRealTimers();
+    });
   });
 
   // ── Normal rendering ────────────────────────────────────
