@@ -15,7 +15,7 @@ const API_BASE = process.env.API_BASE || "http://127.0.0.1:8720";
 
 test.describe("Recordings (DVR)", () => {
   test("recordings page loads", async ({ page }) => {
-    await page.goto("/history");
+    await page.goto("/recordings");
     await page.waitForLoadState("load");
     await page.waitForTimeout(3000);
 
@@ -23,6 +23,12 @@ test.describe("Recordings (DVR)", () => {
     await expect(body).toBeVisible({ timeout: 5_000 });
     const text = await body.innerText();
     expect(text.length).toBeGreaterThan(20);
+    // Should be on the recordings route
+    expect(page.url()).toContain("/recordings");
+    // Heading renders
+    await expect(page.getByRole("heading", { name: "Recordings" })).toBeVisible({
+      timeout: 5_000,
+    });
     console.log(`Recordings page loaded (${text.length} chars)`);
   });
 
@@ -47,7 +53,7 @@ test.describe("Recordings (DVR)", () => {
   });
 
   test("recordings page shows empty state when no recordings exist", async ({ page }) => {
-    await page.goto("/history");
+    await page.goto("/recordings");
     await page.waitForLoadState("load");
     await page.waitForTimeout(3000);
 
@@ -55,6 +61,7 @@ test.describe("Recordings (DVR)", () => {
 
     // Should not crash — either shows recordings or empty state
     const text = await body.innerText();
+    expect(page.url()).toContain("/recordings");
 
     // If no recordings, should show an empty state message (not a blank page)
     expect(text.length).toBeGreaterThan(10);
@@ -66,7 +73,7 @@ test.describe("Recordings (DVR)", () => {
   });
 
   test("recordings page has sidebar nav icon", async ({ page }) => {
-    await page.goto("/history");
+    await page.goto("/recordings");
     await page.waitForLoadState("load");
     await page.waitForTimeout(2000);
 
