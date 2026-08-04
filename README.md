@@ -88,11 +88,12 @@ cd server && python -m pytest tests/ --ignore=tests/test_live.py   # backend uni
 
 ### E2E tests (not wired into CI)
 
-`web/e2e/` contains 20 Playwright specs (`npm run test:e2e`) covering every
+`web/e2e/` contains 22 Playwright specs (`npm run test:e2e`) covering every
 route — including the IPTV Provider settings form, Admin dashboard, Agent
-Access, Person page, watch movie/series/recording players, and the 404 page.
+Access, Person page, watch movie/series/recording players, the keyboard
+shortcuts overlay, the parental-controls PIN lifecycle, and the 404 page.
 They run against a live backend (`baseURL http://127.0.0.1:8720`) across 4
-projects (chromium, Mobile Chrome, Mobile Safari, Tablet): **449 passed /
+projects (chromium, Mobile Chrome, Mobile Safari, Tablet): **497 passed /
 0 failed** on the current suite.
 
 They are **deliberately excluded from CI**: the specs exercise the real UI
