@@ -293,6 +293,36 @@ describe("LiveTV", () => {
       });
     });
 
+    it("renders first-run setup prompt with provider guidance when no streams", async () => {
+      mockAllSlim.mockResolvedValue({ streams: [] });
+
+      renderLiveTV();
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/No IPTV provider is configured yet/),
+        ).toBeInTheDocument();
+      });
+      expect(
+        screen.getByText(
+          /IPTV_BASE \/ IPTV_USER \/ IPTV_PASS or PROVIDERS_JSON/,
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("navigates to /admin from the first-run setup prompt", async () => {
+      mockAllSlim.mockResolvedValue({ streams: [] });
+
+      renderLiveTV();
+
+      const button = await screen.findByRole("button", {
+        name: "Open Admin settings",
+      });
+      fireEvent.click(button);
+
+      expect(mockNavigate).toHaveBeenCalledWith("/admin");
+    });
+
     it('shows "No categories match your filters" when filteredCategories empty', async () => {
       // Categories with adult name that gets filtered by default
       mockCategories.mockResolvedValue({

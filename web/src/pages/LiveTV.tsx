@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import {
   Tv,
   Loader2,
@@ -28,6 +28,7 @@ const ALL_CAT = "__all__";
 // ── Main Page ─────────────────────────────────────────────────
 
 export default function LiveTV() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const {
     categories,
@@ -346,6 +347,17 @@ export default function LiveTV() {
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Tv className="h-10 w-10 text-muted-foreground/20 mb-3" />
           <p className="text-sm text-muted-foreground">No channels available</p>
+          <p className="text-xs text-muted-foreground/50 mt-1 max-w-sm">
+            No IPTV provider is configured yet. Add your provider credentials in
+            the Admin dashboard or via the server&apos;s .env file (IPTV_BASE /
+            IPTV_USER / IPTV_PASS or PROVIDERS_JSON), then refresh.
+          </p>
+          <button
+            onClick={() => navigate("/admin")}
+            className="mt-3 text-xs text-primary hover:underline"
+          >
+            Open Admin settings
+          </button>
         </div>
       )}
 
