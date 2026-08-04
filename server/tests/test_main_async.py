@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import main
 from iptv_client import cached_fetch, fetch_iptv
 from main import (
     CACHE_DIR,
@@ -19,6 +20,31 @@ from main import (
     start_cleanup_task,
 )
 from state import _cache
+
+# ── env-driven cleanup config wiring ─────────────────────────────────────────
+
+
+class TestCleanupConfigWiring:
+    """CLEANUP_TTL_HOURS / CLEANUP_INTERVAL must come from env, not hardcode."""
+
+    def test_int_env_reads_valid_value(self, monkeypatch):
+        monkeypatch.setenv("STV_TEST_VAR", "42")
+        assert main._int_env("STV_TEST_VAR", 7) == 42
+
+    def test_int_env_returns_default_when_unset(self, monkeypatch):
+        monkeypatch.delenv("STV_TEST_VAR", raising=False)
+        assert main._int_env("STV_TEST_VAR", 7) == 7
+
+    def test_int_env_returns_default_on_garbage(self, monkeypatch):
+        monkeypatch.setenv("STV_TEST_VAR", "not-a-number")
+        assert main._int_env("STV_TEST_VAR", 7) == 7
+
+    def test_runtime_constants_are_env_driven(self):
+        # conftest pins CACHE_TTL_HOURS=1 / CLEANUP_INTERVAL=3600 — assert the
+        # module resolved those env values (not the old hardcoded 2/600).
+        assert main.CLEANUP_TTL_HOURS == 1
+        assert main.CLEANUP_INTERVAL == 3600
+
 
 # ── cached_fetch edge cases ──────────────────────────────────────────────────
 

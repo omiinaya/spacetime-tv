@@ -461,12 +461,21 @@ from routes.cache_warmer import (  # noqa: F401 — re-exported for tests
 
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+
 # ── Cache TTL / Auto-cleanup ────────────────────────────────────────────────
-# NOTE: hardcoded — the CACHE_TTL_HOURS / CLEANUP_INTERVAL env vars are only
-# honored in tests (conftest sets sentinels). Wiring them here would change
-# runtime behavior; kept constant deliberately until a config review.
-CLEANUP_TTL_HOURS = 2
-CLEANUP_INTERVAL = 600
+# Configurable via env: CACHE_TTL_HOURS (stale-entry cutoff) and
+# CLEANUP_INTERVAL (seconds between sweeps). Defaults match the original
+# hardcoded values (2h TTL, 10min interval). Garbage env values fall back
+# to defaults instead of crashing startup.
+def _int_env(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, ""))
+    except (TypeError, ValueError):
+        return default
+
+
+CLEANUP_TTL_HOURS = _int_env("CACHE_TTL_HOURS", 2)
+CLEANUP_INTERVAL = _int_env("CLEANUP_INTERVAL", 600)
 _cleanup_task: asyncio.Task | None = None
 
 

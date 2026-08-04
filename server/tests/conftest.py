@@ -20,7 +20,7 @@ os.environ.setdefault("IPTV_PASS", "test_pass")
 os.environ.setdefault("CACHE_WARM_ENABLED", "false")
 os.environ.setdefault("CACHE_WARM_CATEGORIES", "")
 os.environ.setdefault("CLEANUP_INTERVAL", "3600")
-os.environ.setdefault("CACHE_TTL_HOURS", "0")
+os.environ.setdefault("CACHE_TTL_HOURS", "1")
 os.environ.setdefault("ENFORCE_HTTPS", "false")
 # Force the admin key + LAN bypass (NOT setdefault): the parent shell env
 # carries a real ADMIN_API_KEY (spacetime-tv is started from the Hermes
