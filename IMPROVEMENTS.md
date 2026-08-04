@@ -71,19 +71,19 @@ Backend coverage 91%→**97%** (3582 stmts, 101 missed), suite 1464→**1588** p
 - **Tokenless first-registration closed (H1)**: `_verify_device_access` allowed a first `POST /cloud/backup` with **no X-Device-Token** — the entry was stored with an empty `_token_hash`, permanently bricking that device_id (no future token, including the owner's own, matches an empty hash). Any client that learned a `device_id` could pre-register it and lock the owner out of their own backup forever. Now first registration requires `X-Admin-Key` or a real device token (≥8 chars); the legitimate client always sends one, so real-device flow is unchanged. Existing backups keep requiring the matching token or admin key.
 - **Tests**: updated `test_upload_requires_token` (tokenless + short-token registration rejected, nothing stored) and `test_short_token_rejected` (clears the fixture's default admin key so device-auth is actually exercised). Backend stays **1464**. Verified live: tokenless POST → `error`; with token → `ok`. Commit `023342a`.
 
-### ✅ Session 12.9 (2026-08-03) — frontend coverage drive 81→85%, 1902 tests + 2 real bug fixes
+### ✅ Session 12.9 (2026-08-03) — frontend coverage drive 81→85%, 1922 tests + 2 real bug fixes
 
-Frontend coverage 81%→**85%** statements (83.5% overall / 85.9% lines; 4915/5813 stmts, 4045 branches). Suite grew 1632→**1902** tests (134 files), tsc clean, full suite green (3x consecutive reruns after flake fix). Installed `@vitest/coverage-v8` for real per-file measurement.
+Frontend coverage 81%→**85%** statements (85.9% lines; ~4915 stmts). Suite grew 1632→**1922** tests (135 files), tsc clean, full suite green (8x consecutive reruns). Installed `@vitest/coverage-v8` for real per-file measurement. Backend stays green throughout (1588 passed / 17 skipped / 3 xfailed).
 
 **Real bugs found & fixed by the tests:**
 - **Dead fullscreen button (PlayerBottomControls)**: the "Enter fullscreen" button called `handleFullscreenClick` → `fullscreenBtnRef.current.click()`, but the ref was never attached to any element → clicking did nothing. Attached the ref so the click reaches Player's `toggleFullscreen` listener.
 - **`?open=` deep-link race (Series.tsx)**: the effect cleared the URL param while rows were still empty (async fetch), silently dropping the deep-link. Now only clears once rows are loaded and the id is definitively not found.
 
-**Biggest coverage jumps** (stmts): Guide 48→95%, Player 47→86%, Series 64→82%, Sidebar 67→92%, HistoryPage 70→85%, useProfile 75→95%, useFocusTrap 60→100%, useHlsPlayer 82→90%, ChannelRow ~70, LiveTV 76→81. New suites: AppRoutes (21 — route table incl. watch/person/notfound), AgentAccess (10 — hermes-id approve/deny/403-key-prompt), search-results trio (30), LiveChannelCard (10), SeriesCard (11), ContentRow carousel (14 — jsdom scroll metrics via defineProperty), PlayerInteractions (19 — fullscreen/record/timeshift/touch), useProfile API surface (+14), useHlsPlayer progress+empty-stream (+6).
+**Biggest coverage jumps** (stmts): Guide 48→95%, Player 47→86%, Series 64→82%, Sidebar 67→92%, HistoryPage 70→85%, useProfile 75→95%, useFocusTrap 60→100%, useHlsPlayer 82→90%, ChannelRow ~74, LiveTV 76→81, Movies ~80, PersonPage 77→79. New suites: AppRoutes (21 — route table), AgentAccess (10 — approve/deny/403-key-prompt), search-results trio (30), LiveChannelCard (10), SeriesCard (11), ContentRow carousel (14 — jsdom scroll metrics), PlayerInteractions (19 — fullscreen/record/timeshift/touch), useProfile API surface (+14), useHlsPlayer progress+empty-stream (+6), api image helpers (18), useFocusTrap Tab-wrap (+5).
 
-**Flake fixed**: LiveTV category-switch test's `waitFor` default 1s timeout was exceeded under full-suite parallel load (16 forks) → intermittent full-suite-only failure; bumped to 5s, 3x green reruns.
+**Flake fixed (LiveTV category-switch)**: was intermittent under full-suite parallel CPU contention — the tab element could be re-rendered between `getByText` and `click`, clicking a stale detached node. Fixed with a role-based query that re-resolves on every poll/click; 8x green full-suite reruns.
 
-**Key test patterns learned**: native `.focus()` doesn't fire React's onFocus in jsdom (use `fireEvent.focus`); patch fullscreen APIs on the *rendered* video node (React owns the element, ref assignment is overwritten); stub `offsetParent` to reveal focusables for the focus-trap; `compareDocumentPosition` for DOM-order assertions.
+**Key test patterns learned**: native `.focus()` doesn't fire React's onFocus in jsdom (use `fireEvent.focus`); patch fullscreen APIs on the *rendered* video node (React owns the element, ref assignment is overwritten); stub `offsetParent` to reveal focusables for the focus-trap; `compareDocumentPosition` for DOM-order assertions; `vi.useFakeTimers({ shouldAdvanceTime: true })` so `waitFor` still polls.
 
 ## Recently Completed
 
