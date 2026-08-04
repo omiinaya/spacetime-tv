@@ -10,7 +10,7 @@
  * rendering state with channel rows + favorites interaction.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import Guide from "@/pages/Guide";
 import type { ChannelGroup, Programme } from "@/lib/types";
@@ -524,6 +524,174 @@ describe("Guide", () => {
     it("does not show spinner when not loading more", () => {
       renderGuide();
       expect(document.querySelector(".animate-spin")).toBeNull();
+    });
+  });
+
+  // ── Search filtering ───────────────────────────────────────
+  describe("search filtering", () => {
+    it("filters programmes by title and keeps matching channels", () => {
+      renderGuide();
+      fireEvent.change(screen.getByPlaceholderText("Search programmes..."), {
+        target: { value: "Weather" },
+      });
+      // Only Weather Today matches across the three channels
+      expect(screen.getByText("Weather Today")).toBeInTheDocument();
+      expect(screen.queryByText("Morning News")).not.toBeInTheDocument();
+    });
+
+    it("matches on subtitle and description too", () => {
+      renderGuide();
+      fireEvent.change(screen.getByPlaceholderText("Search programmes..."), {
+        target: { value: "Regional" },
+      });
+      expect(screen.getByText("Weather Today")).toBeInTheDocument();
+    });
+
+    it("shows the programme match count badge", () => {
+      renderGuide();
+      fireEvent.change(screen.getByPlaceholderText("Search programmes..."), {
+        target: { value: "News" },
+      });
+      // Morning News (bbc1), CNN This Morning (cnn), Newsroom (cnn) = 3
+      expect(screen.getByText("3 programmes")).toBeInTheDocument();
+    });
+
+    it("shows the no-results empty state with clear action", () => {
+      renderGuide();
+      fireEvent.change(screen.getByPlaceholderText("Search programmes..."), {
+        target: { value: "zzzz" },
+      });
+      expect(screen.getByText(/No programmes matching/)).toBeInTheDocument();
+      fireEvent.click(screen.getByText("Clear search"));
+      expect(screen.getByText("BBC One")).toBeInTheDocument();
+    });
+  });
+
+  // ── Keyboard navigation ────────────────────────────────────
+  describe("keyboard navigation", () => {
+    // Focusing a channel button triggers onFocusCol(-1) → focusedRow=0,
+    // which arms the grid-level keydown navigation handler. Use fireEvent
+    // (native .focus() doesn't fire React's onFocus in jsdom).
+    function focusFirstChannel() {
+      const grid = screen.getByRole("grid");
+      const firstBtn = grid.querySelector(
+        '[data-guide-row="0"][data-guide-target="channel"]',
+      ) as HTMLElement;
+      fireEvent.focus(firstBtn);
+      return grid;
+    }
+
+    it("navigates down and focuses the channel button of the next row", async () => {
+      renderGuide();
+      const grid = focusFirstChannel();
+      fireEvent.keyDown(grid, { key: "ArrowDown" });
+      const sel = grid.querySelector(
+        '[data-guide-row="1"][data-guide-target="channel"]',
+      );
+      // Focus effect runs async after the state update
+      await waitFor(() => {
+        expect(document.activeElement).toBe(sel);
+      });
+    });
+
+    it("clamps ArrowDown at the last row", async () => {
+      renderGuide();
+      const grid = focusFirstChannel();
+      // 3 channels → bottom row is index 2
+      fireEvent.keyDown(grid, { key: "ArrowDown" });
+      fireEvent.keyDown(grid, { key: "ArrowDown" });
+      const sel = grid.querySelector(
+        '[data-guide-row="2"][data-guide-target="channel"]',
+      );
+      await waitFor(() => {
+        expect(document.activeElement).toBe(sel);
+      });
+    });
+
+    it("moves right into the first programme card", async () => {
+      renderGuide();
+      const grid = focusFirstChannel();
+      fireEvent.keyDown(grid, { key: "ArrowRight" });
+      const sel = grid.querySelector(
+        '[data-guide-row="0"][data-guide-col="0"]',
+      );
+      await waitFor(() => {
+        expect(document.activeElement).toBe(sel);
+      });
+    });
+
+    it("clamps ArrowRight at the last programme column", async () => {
+      renderGuide();
+      const grid = focusFirstChannel();
+      fireEvent.keyDown(grid, { key: "ArrowRight" }); // col 0
+      fireEvent.keyDown(grid, { key: "ArrowRight" }); // col 1
+      const sel = grid.querySelector(
+        '[data-guide-row="0"][data-guide-col="1"]',
+      );
+      await waitFor(() => {
+        expect(document.activeElement).toBe(sel);
+      });
+    });
+
+    it("moves left from a programme back to the channel column", async () => {
+      renderGuide();
+      const grid = focusFirstChannel();
+      fireEvent.keyDown(grid, { key: "ArrowRight" });
+      fireEvent.keyDown(grid, { key: "ArrowLeft" });
+      const sel = grid.querySelector(
+        '[data-guide-row="0"][data-guide-target="channel"]',
+      );
+      await waitFor(() => {
+        expect(document.activeElement).toBe(sel);
+      });
+    });
+
+    it("moves up and clamps at the first row", () => {
+      renderGuide();
+      const grid = focusFirstChannel();
+      fireEvent.keyDown(grid, { key: "ArrowUp" });
+      const sel = grid.querySelector(
+        '[data-guide-row="0"][data-guide-target="channel"]',
+      );
+      expect(document.activeElement).toBe(sel);
+    });
+
+    it("navigates to the live channel on Enter at the channel column", () => {
+      renderGuide();
+      const grid = focusFirstChannel();
+      fireEvent.keyDown(grid, { key: "Enter" });
+      expect(mockNavigate).toHaveBeenCalledWith("/watch/live/1001");
+    });
+
+    it("navigates on Enter from a programme card", () => {
+      renderGuide();
+      const grid = focusFirstChannel();
+      fireEvent.keyDown(grid, { key: "ArrowRight" });
+      fireEvent.keyDown(grid, { key: "Enter" });
+      expect(mockNavigate).toHaveBeenCalledWith("/watch/live/1001");
+    });
+
+    it("presses Escape to drop focus", () => {
+      renderGuide();
+      const grid = focusFirstChannel();
+      fireEvent.keyDown(grid, { key: "Escape" });
+      // After Escape, further arrows do nothing (focusedRow reset to -1)
+      const before = document.activeElement;
+      fireEvent.keyDown(grid, { key: "ArrowDown" });
+      expect(document.activeElement).toBe(before);
+    });
+
+    it("ignores arrow keys while typing in the search input", () => {
+      renderGuide();
+      const input = screen.getByPlaceholderText("Search programmes...");
+      fireEvent.focus(input);
+      // The grid-level handler must NOT navigate/focus-move when the
+      // keydown target is the search input (jsdom doesn't track input
+      // focus via activeElement, so assert on behavior).
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+      fireEvent.keyDown(input, { key: "ArrowRight" });
+      fireEvent.keyDown(input, { key: "Enter" });
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
   });
 });

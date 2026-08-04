@@ -62,6 +62,7 @@ export function ChannelRow({
           onClick={onPlay}
           disabled={!hasStream}
           data-guide-target="channel"
+          data-guide-row={rowIndex}
           tabIndex={focusedCol === -2 ? -1 : 0}
           onFocus={() => onFocusCol(-1)}
           className={`flex items-center gap-2.5 text-left flex-1 min-w-0 rounded-lg px-1 py-1 transition-all duration-150 ${
