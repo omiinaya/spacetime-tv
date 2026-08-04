@@ -14,6 +14,10 @@ import {
   fetchProfileHistory,
   syncProfileProgress,
   switchProfile,
+  fetchProfileProgress,
+  addProfileHistory,
+  clearProfileHistory,
+  refreshProfileToken,
 } from "@/hooks/useProfile";
 
 // Mock fetch globally
@@ -301,5 +305,151 @@ describe("syncProfileProgress", () => {
     mockFetch({ detail: "Authentication required" }, false);
     const result = await syncProfileProgress("p1", "movie:1", 30);
     expect(result).toBe(false);
+  });
+});
+
+describe("fetchProfileProgress", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("returns progress data on success", async () => {
+    mockFetch({ progress: { "movie:1": { position: 30 } } }, true);
+    const result = await fetchProfileProgress("p1");
+    expect(result).toEqual({ "movie:1": { position: 30 } });
+  });
+
+  it("returns empty object on HTTP error", async () => {
+    mockFetch({}, false);
+    const result = await fetchProfileProgress("p1");
+    expect(result).toEqual({});
+  });
+});
+
+describe("addProfileHistory", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("posts history with payload and returns true", async () => {
+    const fetchSpy = mockFetch({ ok: true }, true);
+    const result = await addProfileHistory(
+      "p1",
+      "movie:1",
+      "Inception",
+      "movie",
+      30,
+      120,
+      { quality: "hd" },
+    );
+    expect(result).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/profiles/p1/history",
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining('"watchKey":"movie:1"'),
+      }),
+    );
+  });
+
+  it("applies default position/duration/metadata when omitted", async () => {
+    const fetchSpy = mockFetch({ ok: true }, true);
+    await addProfileHistory("p1", "live:5", "CNN", "live");
+    const body = JSON.parse(
+      (fetchSpy.mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.position).toBe(0);
+    expect(body.duration).toBe(0);
+    expect(body.metadata).toEqual({});
+  });
+
+  it("returns false on HTTP error", async () => {
+    mockFetch({}, false);
+    const result = await addProfileHistory("p1", "live:5", "CNN", "live");
+    expect(result).toBe(false);
+  });
+});
+
+describe("clearProfileHistory", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("sends DELETE and returns true", async () => {
+    const fetchSpy = mockFetch({}, true);
+    const result = await clearProfileHistory("p1");
+    expect(result).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/profiles/p1/history",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
+  it("returns false on HTTP error", async () => {
+    mockFetch({}, false);
+    const result = await clearProfileHistory("p1");
+    expect(result).toBe(false);
+  });
+});
+
+describe("deleteProfileApi", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("sends DELETE with auth headers and returns true", async () => {
+    localStorage.setItem("stv_profile_token", "prof-tok-delete");
+    const fetchSpy = mockFetch({}, true);
+    const result = await deleteProfileApi("p1");
+    expect(result).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/profiles/p1",
+      expect.objectContaining({
+        method: "DELETE",
+        headers: expect.objectContaining({
+          "X-Profile-Token": "prof-tok-delete",
+        }),
+      }),
+    );
+  });
+
+  it("returns false on HTTP error", async () => {
+    mockFetch({}, false);
+    const result = await deleteProfileApi("p1");
+    expect(result).toBe(false);
+  });
+});
+
+describe("refreshProfileToken", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("returns false when no token is stored", async () => {
+    localStorage.clear();
+    const result = await refreshProfileToken();
+    expect(result).toBe(false);
+  });
+
+  it("refreshes and stores the new token on success", async () => {
+    localStorage.setItem("stv_profile_token", "old-token");
+    mockFetch({ token: "new-token", profile: { profile_id: "p1" } }, true);
+    const result = await refreshProfileToken();
+    expect(result).toBe(true);
+    expect(localStorage.getItem("stv_profile_token")).toBe("new-token");
+  });
+
+  it("clears the stored token when refresh fails", async () => {
+    localStorage.setItem("stv_profile_token", "expired-token");
+    mockFetch({}, false);
+    const result = await refreshProfileToken();
+    expect(result).toBe(false);
+    expect(localStorage.getItem("stv_profile_token")).toBeNull();
+  });
+});
+
+describe("createProfile error path", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("throws the server detail message on failure", async () => {
+    mockFetch({ detail: "PIN too short" }, false);
+    await expect(createProfile("Alex", "12")).rejects.toThrow("PIN too short");
+  });
+
+  it("falls back to a generic message when the error body has no detail", async () => {
+    mockFetch({}, false);
+    await expect(createProfile("Alex", "1234")).rejects.toThrow(
+      "Failed to create profile",
+    );
   });
 });
