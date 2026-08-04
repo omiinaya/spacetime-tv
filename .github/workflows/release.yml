@@ -21,10 +21,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+      - name: Set up Python (system, job-local venv)
+        run: |
+          PY=$(command -v python3.11 || command -v python3)
+          "$PY" -m venv "$RUNNER_TEMP/ci-venv"
+          echo "$RUNNER_TEMP/ci-venv/bin" >> "$GITHUB_PATH"
+          python --version
 
       - name: Install ruff
         run: pip install ruff
@@ -37,8 +39,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
+          # NOTE: no `cache: npm` — the Actions cache upload hangs on the
+          # self-hosted LXC network (see self-hosted-github-runners skill #15).
 
       - name: Install npm dependencies
         working-directory: ./web
