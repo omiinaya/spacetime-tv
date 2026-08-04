@@ -100,7 +100,7 @@ Frontend coverage 81%→**85%** statements (85.9% lines; ~4915 stmts). Suite gre
 
 ### ✅ Session 12.3 (2026-08-02) — rate-limit eviction + channelIconUrl + admin guard
 - **Rate-limit unbounded-memory leak** (discovered during review): `_rate_limits` keyed by device-token/IP was never evicted — every unique token ever seen left an entry forever. Added opportunistic stale-bucket sweep (at most once per RATE_WINDOW, lossless). +1 test. Backend 1398.
-- **`channelIconUrl()` extracted** (perf audit #12): the iptv-provider proxy-icon URL construction was copy-pasted in LiveChannelCard, LiveSearchResults, HistoryPage. Centralized in lib/api.ts; updated the two test mocks that render those components.
+- **`channelIconUrl()` extracted** (perf audit #12): the provider proxy-icon URL construction was copy-pasted in LiveChannelCard, LiveSearchResults, HistoryPage. Centralized in lib/api.ts; updated the two test mocks that render those components.
 - **admin warm-full concurrency guard** (audit L1): `/admin/cache/warm-full` now no-ops when a warm is already running (was identical to clear-cache but could double-spawn warm tasks).
 
 ### ✅ Session 12 (2026-08-02) — security findings, SW stream fix, a11y + perf batch, task guards
@@ -135,7 +135,7 @@ index.html was served with no Cache-Control → browsers heuristically cached th
 Fresh Playwright browsers hit the profile gate, so specs expecting app content failed. Added storageState seed (e2e/.auth/main-profile.json), scoped quick-link locators to `<main>`, pinned a mobile touch viewport in mobile.spec.ts via test.use(). Chromium run: 85 passed / 1 failed / 3 flaky against the live backend (was gate-blocked). Search 429 surfaced as raw "API error 429" → now a friendly "Too many requests" message.
 
 ### ✅ P2 — Preflight verified at runtime (Verification)
-Tested preflight_stream() against the real iptv-provider.example.com provider: working channel 483976 → True in 751ms cold / 0ms cached; dead channels (1, 250) → False fast (325/185ms), 0ms cached. No mpegts desync from the 1-byte body read. All three kanban risk areas verified.
+Tested preflight_stream() against the real provider: working channel 483976 → True in 751ms cold / 0ms cached; dead channels (1, 250) → False fast (325/185ms), 0ms cached. No mpegts desync from the 1-byte body read. All three kanban risk areas verified.
 
 ### ✅ P1 — Fix pre-commit hook: silent no-op gate (exit codes never propagated) (Bug/DX)
 `.githooks/pre-commit` ran `make fmt-check` / `make lint` but never propagated their

@@ -167,10 +167,10 @@ async def _http_iter_chunks(
     TRANSPORT CHOICE — DO NOT CHANGE WITHOUT READING THIS
     ═══════════════════════════════════════════════════════════════════
 
-    The provider (iptv-provider.example.com) uses Cloudflare → CDN (Apache2 HTTP/1.1):
+    The provider (any Xtream host fronted by Cloudflare) uses Cloudflare → CDN (Apache2 HTTP/1.1):
 
-      1. Cloudflare at iptv-provider.example.com returns HTTP 302 with short-lived token
-      2. CDN edge (e.g. 185.245.x.x:80) returns the actual MPEG-TS stream
+      1. Cloudflare at the provider base URL returns HTTP 302 with short-lived token
+      2. CDN edge (e.g. a 185.245.x.x:80-style address) returns the actual MPEG-TS stream
 
     httpx (via httpcore/anyio) **cannot** read from the CDN after the redirect.
     It hangs/times out even with follow_redirects=True and a fresh redirect URL.

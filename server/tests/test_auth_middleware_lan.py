@@ -58,8 +58,8 @@ class TestLanBypassGate:
         from main import auth_middleware
 
         monkeypatch.setattr(cfg, "ALLOW_LAN_BYPASS", False)
-        monkeypatch.setattr(cfg, "LAN_BYPASS_HOSTS", ("127.0.0.1", "::1", "localhost", "192.0.2.10"))
-        resp = await auth_middleware(_make_request("192.0.2.10"), _passthrough_call_next)
+        monkeypatch.setattr(cfg, "LAN_BYPASS_HOSTS", ("127.0.0.1", "::1", "localhost", "192.168.7.7"))
+        resp = await auth_middleware(_make_request("192.168.7.7"), _passthrough_call_next)
         assert resp.status_code == 401
 
     async def test_disabled_blocks_localhost(self, monkeypatch):
