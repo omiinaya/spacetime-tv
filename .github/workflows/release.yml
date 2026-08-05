@@ -17,16 +17,14 @@ env:
 
 jobs:
   lint:
-    runs-on: [self-hosted, ubuntu-latest]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python (system, job-local venv)
-        run: |
-          PY=$(command -v python3.11 || command -v python3)
-          "$PY" -m venv "$RUNNER_TEMP/ci-venv"
-          echo "$RUNNER_TEMP/ci-venv/bin" >> "$GITHUB_PATH"
-          python --version
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Install ruff
         run: pip install ruff
@@ -51,7 +49,7 @@ jobs:
         run: npm run lint
 
   build:
-    runs-on: [self-hosted, ubuntu-latest]
+    runs-on: ubuntu-latest
     needs: lint
     # Only build+push container images on version tags (explicit releases).
     # Every-master-push image publishing previously made master permanently
