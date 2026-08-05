@@ -316,32 +316,37 @@ def test_admin_stream_health_returns_structure(client: TestClient):
 
 def test_admin_stream_health_stale_marker(client: TestClient):
     """Entries exactly at the stale boundary (3600s) should not be stale."""
-    import time
-
     from routes.stream import _probe_cache
 
-    now = time.time()
-    _probe_cache["live_500"] = (
-        now - 3600,
-        {
-            "codec": "h264",
-            "width": 640,
-            "height": 480,
-            "error": "",
-        },
-    )
-    _probe_cache["live_501"] = (
-        now - 3601,
-        {
-            "codec": "h264",
-            "width": 640,
-            "height": 480,
-            "error": "",
-        },
-    )
+    # Freeze the clock so the handler computes ages against the SAME
+    # reference time used to seed the cache. Seeding with time.time() and
+    # letting the handler read a later time.time() is load-dependent: under
+    # full-suite CPU contention the gap can exceed 0.5s, so
+    # round(3600.x) rolls up to 3601 and the "exactly 3600s" entry flips to
+    # stale (stale_count 1 → 2 flake).
+    fixed_now = 1_800_000_000.0
+    with patch("routes.admin.time.time", return_value=fixed_now):
+        _probe_cache["live_500"] = (
+            fixed_now - 3600,
+            {
+                "codec": "h264",
+                "width": 640,
+                "height": 480,
+                "error": "",
+            },
+        )
+        _probe_cache["live_501"] = (
+            fixed_now - 3601,
+            {
+                "codec": "h264",
+                "width": 640,
+                "height": 480,
+                "error": "",
+            },
+        )
 
-    with _admin_client() as c:
-        resp = c.get("/api/v1/admin/stream-health")
+        with _admin_client() as c:
+            resp = c.get("/api/v1/admin/stream-health")
     data = resp.json()
     # age > 3600 (strictly greater), so 3600 is NOT stale, 3601 IS stale
     assert data["stale_count"] == 1

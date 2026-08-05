@@ -13,8 +13,8 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 - ~~**P2 — distributed rate limiting** (SECURITY_AUDIT #8) — Redis-backed for multi-instance~~ ✅ **RESOLVED 2026-08-05** — `REDIS_URL` env opt-in: set → `RedisRateLimitStore` (fixed-window, SET NX EX + INCR, TTL-based Retry-After, fail-open on outage, shared counter across replicas); unset → in-process `MemoryRateLimitStore` (zero new deps). Store interface extracted in `main.py`; 8 fake-redis unit tests (shared-counter property, TTL retry-after, fail-open).
 - ~~**P2 — `ALLOW_LAN_BYPASS=false` in production `.env`**~~ ✅ **RESOLVED 2026-08-04 by decision** — set EXPLICITLY `true` with rationale for this single-user LAN deployment (was a silent default). Startup logs the posture; `false` is documented as required only behind a public/VPN reverse proxy. Flipping it here would 401 native media playback (video/img can't attach auth headers).
-- ~~**P2 — wire CACHE_TTL_HOURS/CLEANUP_INTERVAL into runtime**~~ ✅ **RESOLVED `ab96e6d`** — env-driven via `_int_env` with graceful fallback (garbage values don't crash startup); conftest sentinel 0→1; 4 wiring tests
-- ~~**P3 — `env_file: ./server/.env` is hard-required**~~ ✅ **RESOLVED `def0ba6`** — compose fails on a fresh clone before the app can auto-generate a key (no longer pending)
+- ~~**P2 — wire CACHE_TTL_HOURS/CLEANUP_INTERVAL into runtime**~~ ✅ **RESOLVED `e65149b`** — env-driven via `_int_env` with graceful fallback (garbage values don't crash startup); conftest sentinel 0→1; 4 wiring tests
+- ~~**P3 — `env_file: ./server/.env` is hard-required**~~ ✅ **RESOLVED `6fe6b49`** — compose fails on a fresh clone before the app can auto-generate a key (no longer pending)
 - ~~**P4 — player control row touch targets < 44px** (a11y audit low: Speed/Record/Download/Quality/Volume/SleepTimer/SubtitleSelector/MobileMoreMenu — currently 40px; deliberate density compromise, bump only if mobile overflow is re-evaluated)~~ ✅ **RESOLVED 2026-08-05** — all 6 control components bumped `min-w/min-h` 40px → **44px** (WCAG 2.5.8 minimum); density compromise re-evaluated and accepted — the row already scrolls/wraps on narrow screens and 44px keeps the 4px slack without reflow. Frontend 1942 tests + tsc + build green.
 
 ---
@@ -128,6 +128,18 @@ Frontend coverage 81%→**85%** statements (85.9% lines; ~4915 stmts). Suite gre
 **Key test patterns learned**: native `.focus()` doesn't fire React's onFocus in jsdom (use `fireEvent.focus`); patch fullscreen APIs on the *rendered* video node (React owns the element, ref assignment is overwritten); stub `offsetParent` to reveal focusables for the focus-trap; `compareDocumentPosition` for DOM-order assertions; `vi.useFakeTimers({ shouldAdvanceTime: true })` so `waitFor` still polls.
 
 ## Recently Completed
+
+### ✅ Session 16 (2026-08-05) — stream-health flake fix + backlog reconciliation
+- **Fixed a load-dependent flake in `test_admin_stream_health_stale_marker`** — the test seeded
+  `_probe_cache` entries at `time.time() - 3600`/`-3601` then let the handler read its own (later)
+  `time.time()`. Under full-suite CPU contention the gap exceeded ~0.5s, so `round(3600.x)` rolled
+  up to 3601 and the "exactly 3600s" entry flipped to stale (`stale_count 1 → 2`). Now the test
+  freezes the clock (`patch("routes.admin.time.time")`) so ages are computed against the same
+  reference time used to seed the cache — deterministic under any load.
+- **Backlog reconciliation** — the Pending Items section is now fully resolved (nothing open).
+  Corrected two stale commit references (`ab96e6d` → `e65149b`, `def0ba6` → `6fe6b49`) in
+  IMPROVEMENTS.md; updated ROADMAP's stale Remaining-Work section (E2E-in-CI is done since
+  Session 14) and stale header test counts (now 1,635/1,618 backend, 1,942 frontend).
 
 ### ✅ Session 15 (2026-08-05) — P2 distributed rate limiting (Redis) + P4 touch targets
 - **P2: Redis-backed distributed rate limiting** (SECURITY_AUDIT #8) — new

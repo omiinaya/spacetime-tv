@@ -1,8 +1,8 @@
 # SpacetimeTV Roadmap v9 — Current State
 
-> **Audit date:** 2026-08-02 (12th session — security findings closed, SW stream fix, a11y + perf, task guards)
+> **Audit date:** 2026-08-05 (15th session — distributed rate limiting, touch targets; backlog current)
 > **Stack:** FastAPI + React 19 + Vite 8 + Tailwind v4 | 13 pages | 133 components | 31 hooks | 25 back-end route modules
-> **Test counts:** 1,394 backend pass (17 skipped, 3 xfail) + 1,571 frontend pass (101 files) | 0 TypeScript errors | 0 production `any` types
+> **Test counts:** 1,635 backend pass (17 skip, 3 xfail; 1,618 offline-safe) + 1,942 frontend pass (136 files) | 0 TypeScript errors | 0 production `any` types
 > **CI:** GitHub Actions (lint → test → tsc → build) on a **self-hosted runner** (registered 2026-08-04 — the repo's jobs were failing the GitHub-hosted billing gate; `hermes-id` is now a git install in requirements.txt). **E2E also wired into CI** — runs against the live provider via GitHub secrets.
 > **Hook test coverage:** 31/31 (100%) — all custom hooks have unit tests
 > **E2E:** 22 specs / 497 tests green across chromium, Mobile Chrome, Mobile Safari, Tablet (4 Playwright projects). Profile-gate seeded via storageState. **Now runs in CI** whenever the IPTV secrets are present (see `.github/workflows/ci.yml` `e2e` job); skipped gracefully otherwise.
@@ -238,7 +238,7 @@ as diminishing returns for further splitting.
 
 ### Frontend
 - `useVideoPlayer.ts` (816 lines) — main effect is dense orchestration; further sub-hook extraction possible but diminishing returns
-- E2E: 3 flaky specs remain (timing-sensitive negative assertions vs live backend; one search spec hit a real 429 rate limit — now friendly-messaged). CI wiring still needs IPTV_USER/IPTV_PASS as GitHub secrets or a mock backend
+- **E2E: 3 flaky specs remain** (timing-sensitive negative assertions vs live backend; one search spec hit a real 429 rate limit — now friendly-messaged). E2E is wired into CI (Session 14): the `e2e` job builds the frontend, seeds the profile storageState, starts uvicorn on :8720, and runs all 4 Playwright projects — gated on `secrets.IPTV_*` + `ADMIN_API_KEY`, skipped gracefully on forks.
 - Full-suite parallel-load flakiness was fixed in session 9 (asyncUtilTimeout 4000ms + SeriesOverlay play gating + usePlayerUtils sessionStorage guard); if flakes reappear, revisit the rotating waitFor/userEvent timeouts
 
 ### Backend
@@ -248,11 +248,11 @@ as diminishing returns for further splitting.
 - Consider extracting service layer from route modules if routes grow
 
 ### Infrastructure
-- ✅ CI with GitHub Actions (lint + test + tsc + build)
+- ✅ CI with GitHub Actions (lint + test + tsc + build) on a self-hosted runner
 - ✅ Docker Compose for deployment
 - ✅ Nginx + TLS (443, http2, HSTS; Let's Encrypt via ACME_DOMAIN, self-signed fallback)
 - ✅ Pre-commit hooks auto-installed via `npm install` (`prepare`/`postinstall` set `core.hooksPath .githooks`); hook gates staged files on ruff/prettier/eslint and fails the commit on violations
-- ⏳ E2E in CI — blocked on IPTV credentials as GitHub secrets (or mock backend); suite runs locally against live backend
+- ✅ E2E in CI — wired Session 14 into ci.yml's `e2e` job (builds frontend, seeds profile storageState, starts uvicorn on :8720, runs all 4 Playwright projects); gated on `secrets.IPTV_*` + `ADMIN_API_KEY`, skipped gracefully on forks
 
 ## What's Solid
 - **0 TypeScript errors** in production code
