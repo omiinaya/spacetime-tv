@@ -1,0 +1,9 @@
+# gitleaks ignore list — known false positives (NOT real secrets)
+#
+# Each line is a finding fingerprint: <commit-sha>:<path>:<rule>:<line>
+# These are test fixtures that merely LOOK like keys to the generic-api-key rule
+# (a fake image-disk-cache key in test_misc_disk_cache.py and a fake
+# PROFILE_TOKEN_SECRET test value in test_auth.py). Both were renamed in the
+# tree to obviously-fake values; the fingerprints below reference the OLD
+# commits in history where the original fixture values still appear.
+8a7c65a6c930b8f3ca54bf4610207a0b58e4a44e:server/tests/test_misc_disk_cache.py:generic-api-key:10

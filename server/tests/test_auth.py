@@ -805,5 +805,5 @@ class TestTokenSecretLazyInit:
         import auth as _auth
 
         monkeypatch.setattr(_auth, "PROFILE_TOKEN_SECRET", "")
-        monkeypatch.setenv("PROFILE_TOKEN_SECRET", "env-secret-0123456789abcdef")
-        assert _auth._get_token_secret() == "env-secret-0123456789abcdef"
+        monkeypatch.setenv("PROFILE_TOKEN_SECRET", "test-env-secret-not-a-real-key-0000")
+        assert _auth._get_token_secret() == "test-env-secret-not-a-real-key-0000"

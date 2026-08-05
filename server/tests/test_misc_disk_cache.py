@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from routes import misc
 
-_CACHE_KEY = "abc123def456"
+_CACHE_KEY = "test-image-cache-key-000000000000"
 
 
 def _img_dir(tmp_path: Path):
