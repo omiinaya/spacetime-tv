@@ -38,7 +38,7 @@ export default function MobileMoreMenu({
     <div className="relative sm:hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="text-white/60 hover:text-white/80 transition-colors p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center rounded"
+        className="text-white/60 hover:text-white/80 transition-colors p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded"
         aria-label="More options"
       >
         <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">

@@ -21,6 +21,7 @@ from config import (
     RATE_DEFAULT_LIMIT,
     RATE_SEARCH_LIMIT,
     RATE_WINDOW,
+    REDIS_URL,
     STATIC_DIR,
 )
 from state import _load_stream_hits  # re-exported for tests
@@ -309,9 +310,11 @@ async def api_redirect_middleware(request: Request, call_next):
     return await call_next(request)
 
 
-# ── Rate Limiting (in-memory fixed window) ──────────────────────────────────
+# ── Rate Limiting (fixed window; memory or Redis backend) ──────────────
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
+
+from rate_limit import RateLimitResult, RedisRateLimitStore
 
 _rate_limits: dict[str, tuple[float, int]] = {}
 _rate_limits_last_cleanup: float = 0.0
@@ -347,6 +350,72 @@ class RequestBodySizeMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+class MemoryRateLimitStore:
+    """In-process fixed-window store — the historical single-node behavior.
+
+    Operates on the module globals ``_rate_limits`` and
+    ``_rate_limits_last_cleanup`` so existing tests that manipulate those
+    (clear between cases, back-date to force the sweep) keep working.
+    """
+
+    async def check_and_increment(
+        self,
+        key: str,
+        limit: int,
+        window: int,
+        now: float | None = None,
+    ) -> RateLimitResult:
+        global _rate_limits, _rate_limits_last_cleanup
+        now = now if now is not None else time.time()
+        window_start, count = _rate_limits.get(key, (0, 0))
+        if now - window_start > window:
+            window_start = now
+            count = 0
+        if count >= limit:
+            return RateLimitResult(
+                allowed=False,
+                remaining=0,
+                retry_after=int(window - (now - window_start)),
+            )
+        _rate_limits[key] = (window_start, count + 1)
+        # Opportunistic eviction: every unique device-token / IP ever seen
+        # would otherwise live in _rate_limits forever (unbounded memory on a
+        # long-running server). Sweep at most once per window, dropping any
+        # bucket whose window has already lapsed — a re-request simply
+        # re-creates it from (now, 0), so eviction is lossless.
+        if now - _rate_limits_last_cleanup > window:
+            _rate_limits_last_cleanup = now
+            stale = [k for k, (ws, _) in _rate_limits.items() if now - ws > window]
+            for k in stale:
+                del _rate_limits[k]
+        return RateLimitResult(
+            allowed=True,
+            remaining=max(0, limit - (count + 1)),
+            retry_after=0,
+        )
+
+
+_rate_limit_store: MemoryRateLimitStore | RedisRateLimitStore | None = None
+
+
+def get_rate_limit_store():
+    """Return the shared rate-limit store, creating it once.
+
+    REDIS_URL set → Redis-backed (shared across multi-instance replicas);
+    otherwise the in-process MemoryRateLimitStore (zero deps, single-user).
+    """
+    global _rate_limit_store
+    if _rate_limit_store is not None:
+        return _rate_limit_store
+    if REDIS_URL:
+        log.info(f"🔴 Rate limiting: Redis-backed (REDIS_URL={REDIS_URL!r}) — shared across instances")
+        _rate_limit_store = RedisRateLimitStore(REDIS_URL)
+    else:
+        log.info("🟢 Rate limiting: in-process memory store (REDIS_URL unset — single instance)")
+        _rate_limit_store = MemoryRateLimitStore()
+    return _rate_limit_store
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: StarletteRequest, call_next):
         now = time.time()
@@ -360,34 +429,20 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         else:
             key = request.client.host if request.client else "unknown"
         limit = RATE_SEARCH_LIMIT if "/api/v1/search" in path or "/api/v1/image-proxy" in path else RATE_DEFAULT_LIMIT
-        window_start, count = _rate_limits.get(key, (0, 0))
-        if now - window_start > RATE_WINDOW:
-            window_start = now
-            count = 0
-        if count >= limit:
+        store = get_rate_limit_store()
+        result = await store.check_and_increment(key, limit, RATE_WINDOW, now=now)
+        if not result.allowed:
             return Response(
                 content='{"detail":"Too many requests"}',
                 status_code=429,
                 media_type="application/json",
-                headers={"Retry-After": str(int(RATE_WINDOW - (now - window_start)))},
+                headers={"Retry-After": str(result.retry_after)},
             )
-        _rate_limits[key] = (window_start, count + 1)
-        # Opportunistic eviction: every unique device-token / IP ever seen
-        # would otherwise live in _rate_limits forever (unbounded memory on a
-        # long-running server). Sweep at most once per window, dropping any
-        # bucket whose window has already lapsed — a re-request simply
-        # re-creates it from (now, 0), so eviction is lossless.
-        global _rate_limits_last_cleanup
-        if now - _rate_limits_last_cleanup > RATE_WINDOW:
-            _rate_limits_last_cleanup = now
-            stale = [k for k, (ws, _) in _rate_limits.items() if now - ws > RATE_WINDOW]
-            for k in stale:
-                del _rate_limits[k]
         response = await call_next(request)
         # Quota visibility: clients (incl. cross-origin via CORS expose_headers)
         # can read how many requests remain in this window instead of guessing.
         response.headers["X-RateLimit-Limit"] = str(limit)
-        response.headers["X-RateLimit-Remaining"] = str(max(0, limit - (count + 1)))
+        response.headers["X-RateLimit-Remaining"] = str(result.remaining)
         return response
 
 

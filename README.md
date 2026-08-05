@@ -47,6 +47,7 @@ All configuration is environment-based — **nothing is hardcoded**. Copy `serve
 | `ENCRYPT_CREDENTIALS` | Fernet-encrypt provider passwords at rest (default `true`) |
 | `ALLOW_LAN_BYPASS` | Skip admin/device auth for localhost + RFC1918 LAN (default `true` for dev; set `false` to harden) |
 | `STV_HOST` | The IP/domain you open the dashboard on — its CORS origins are allowlisted automatically |
+| `REDIS_URL` | Optional — set to share the rate-limit counter across multiple instances (e.g. `redis://redis:6379/0`). Unset keeps the in-process per-IP counter |
 
 ### Adding / configuring providers in the UI
 

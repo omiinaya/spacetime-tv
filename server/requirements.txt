@@ -6,6 +6,10 @@ python-dotenv>=1.0.0
 cryptography>=44.0.0
 curl-cffi>=0.8
 aiohttp>=3.10.0
+# Optional distributed rate limiting (P2 / SECURITY_AUDIT #8): only imported
+# when REDIS_URL is configured (multi-instance deployments share one counter
+# across replicas). Single-user LAN never imports it — redis-py is inert.
+redis>=5.0
 # hermes-id agent auth — main.py imports hermes_id.fastapi_plugin at
 # startup; missing this dep breaks the whole backend on a clean install
 # (and CI: `pip install -r requirements.txt` + pytest → ImportError).

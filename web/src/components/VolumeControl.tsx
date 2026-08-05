@@ -20,7 +20,7 @@ export default function VolumeControl({
     <div className="relative">
       <button
         onClick={() => setShowVolumeSlider(!showVolumeSlider)}
-        className="text-white/60 hover:text-white/80 transition-colors p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center"
+        className="text-white/60 hover:text-white/80 transition-colors p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center"
         aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
       >
         {muted || volume === 0 ? (

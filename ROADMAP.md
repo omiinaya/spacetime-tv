@@ -29,6 +29,25 @@ as diminishing returns for further splitting.
 
 ## Recent Improvements
 
+### Session 15 (2026-08-05) — P2 distributed rate limiting (Redis) + P4 touch targets
+- **P2 closed (SECURITY_AUDIT #8): Redis-backed distributed rate limiting.**
+  New `server/rate_limit.py` `RedisRateLimitStore` — fixed-window (SET NX EX +
+  INCR pipeline), TTL-based Retry-After, per-app key prefix, **fail-open** on
+  Redis outage (once-per-error-class warning). Opt-in via `REDIS_URL` env
+  (unset keeps the in-process per-IP store — single-user LAN unchanged, zero
+  new deps). Store interface extracted in `main.py`
+  (`MemoryRateLimitStore` + `get_rate_limit_store()` factory); the existing
+  rate-limit tests keep passing untouched. `requirements.txt` +`redis>=5.0`.
+  New test file `server/tests/test_rate_limit_redis.py` (fake in-process redis
+  client): shared counter across instances, TTL retry-after, window reset,
+  per-key isolation, fail-open. Both remaining audit items now closed except
+  `ALLOW_LAN_BYPASS=false` (resolved by decision for the LAN deployment).
+- **P4 closed: player control touch targets 40px → 44px** (WCAG 2.5.8) —
+  AudioSelector, MobileMoreMenu, PlayerBottomControls (Speed/Record/Download/
+  Quality), SleepTimer, SubtitleSelector, VolumeControl.
+- **Tests:** backend 1588→**1635** pass (full suite incl. test_live: +31 redis/fixtures +16 live; offline-safe run = 1618) / 17 skip /
+  3 xfail; frontend 1922→**1942** pass (136 files); tsc + vite build clean.
+
 ### Session 14 (2026-08-04) — production-readiness close-out: CI runner, auth posture, backups
 - **CI was RED on master and nobody had noticed** — every job failed in <5s with
   `steps:[]` + `runner_id:0` = the GitHub-hosted runner allocation was blocked

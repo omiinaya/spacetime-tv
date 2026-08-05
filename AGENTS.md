@@ -184,6 +184,7 @@ Configuration comes from `config.py` (reads `.env` file). Key env vars:
 | `ALLOW_LAN_BYPASS` | Skip auth for localhost/private-network requests (false = hardened) | true |
 | `LAN_BYPASS_HOSTS` | Exact-match hosts exempt from auth while bypass is on | 127.0.0.1,::1,localhost |
 | `STV_HOST` | Serve host — its CORS origins are allowlisted automatically | (empty) |
+| `REDIS_URL` | Distributed rate limiting — set to share the fixed-window counter across all instances (multi-instance deployments). Unset keeps the in-process per-IP counter | (empty) |
 | `STREAM_PREFLIGHT_TIMEOUT` | Per-call CDN preflight timeout (seconds) | 10 |
 | `STREAM_PREFLIGHT_SUCCESS_TTL` | Preflight success cache TTL (seconds) | 30 |
 | `STREAM_PREFLIGHT_FAILURE_TTL` | Preflight failure cache TTL (seconds) | 5 |

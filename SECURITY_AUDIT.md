@@ -215,7 +215,7 @@ covers `X-Request-ID` + `X-RateLimit-Limit/Remaining` for cross-origin clients.
 5. ~~**Add CSP header** — even a basic `default-src 'self'` for defense-in-depth~~ ✅ **DONE — CSP configured with explicit sources for scripts, styles, images (TMDB), media (HLS)**
 6. ~~**Warn on empty ADMIN_API_KEY**~~ ✅ **MITIGATED — config auto-generates a random key when empty (`_AUTO_GEN_KEY`), so an empty env never leaves admin open; startup logs the generated key**
 7. ~~**Move IPTV credentials from URL path to headers** — avoid credential exposure in logs~~ ✅ **DONE — Credentials encrypted at rest (crypto_utils) + HTTPS for transit; Xtream API requires URL-based auth, mitigated via TLS**
-8. **Add distributed rate limiting** — Redis-backed for multi-instance deployments
+8. ~~**Add distributed rate limiting** — Redis-backed for multi-instance deployments~~ ✅ **DONE (2026-08-05) — `REDIS_URL` env opt-in → `RedisRateLimitStore` (fixed-window shared counter across replicas, fail-open on outage); unset keeps the in-process per-IP store. 8 unit tests.**
 9. ~~**Add CORS exception handler** — return 204 instead of 400 for OPTIONS preflight~~ ✅ **DONE — origin list now includes the real origins (frontend dev 5183, LAN host (configurable via STV_HOST)); allowed preflights return 200 + ACAO, unknown origins stay blocked. 3 CORS tests.**
 10. **Set `ALLOW_LAN_BYPASS=false` in production `.env`** — the default `true` skips auth for all LAN/localhost clients (see finding 8)
 

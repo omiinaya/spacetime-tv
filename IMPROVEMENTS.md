@@ -11,11 +11,11 @@ Item labels: **P1** = ship blocker, **P2** = UX polish, **P3** = nice to have,
 
 ## Pending Items
 
-- **P2 — distributed rate limiting** (SECURITY_AUDIT #8) — Redis-backed for multi-instance
+- ~~**P2 — distributed rate limiting** (SECURITY_AUDIT #8) — Redis-backed for multi-instance~~ ✅ **RESOLVED 2026-08-05** — `REDIS_URL` env opt-in: set → `RedisRateLimitStore` (fixed-window, SET NX EX + INCR, TTL-based Retry-After, fail-open on outage, shared counter across replicas); unset → in-process `MemoryRateLimitStore` (zero new deps). Store interface extracted in `main.py`; 8 fake-redis unit tests (shared-counter property, TTL retry-after, fail-open).
 - ~~**P2 — `ALLOW_LAN_BYPASS=false` in production `.env`**~~ ✅ **RESOLVED 2026-08-04 by decision** — set EXPLICITLY `true` with rationale for this single-user LAN deployment (was a silent default). Startup logs the posture; `false` is documented as required only behind a public/VPN reverse proxy. Flipping it here would 401 native media playback (video/img can't attach auth headers).
 - ~~**P2 — wire CACHE_TTL_HOURS/CLEANUP_INTERVAL into runtime**~~ ✅ **RESOLVED `ab96e6d`** — env-driven via `_int_env` with graceful fallback (garbage values don't crash startup); conftest sentinel 0→1; 4 wiring tests
-- **P3 — `env_file: ./server/.env` is hard-required** — compose fails on a fresh clone before the app can auto-generate a key (**RESOLVED `def0ba6`** — no longer pending)
-- **P4 — player control row touch targets < 44px** (a11y audit low: Speed/Record/Download/Quality/Volume/SleepTimer/SubtitleSelector/MobileMoreMenu — currently 40px; deliberate density compromise, bump only if mobile overflow is re-evaluated)
+- ~~**P3 — `env_file: ./server/.env` is hard-required**~~ ✅ **RESOLVED `def0ba6`** — compose fails on a fresh clone before the app can auto-generate a key (no longer pending)
+- ~~**P4 — player control row touch targets < 44px** (a11y audit low: Speed/Record/Download/Quality/Volume/SleepTimer/SubtitleSelector/MobileMoreMenu — currently 40px; deliberate density compromise, bump only if mobile overflow is re-evaluated)~~ ✅ **RESOLVED 2026-08-05** — all 6 control components bumped `min-w/min-h` 40px → **44px** (WCAG 2.5.8 minimum); density compromise re-evaluated and accepted — the row already scrolls/wraps on narrow screens and 44px keeps the 4px slack without reflow. Frontend 1942 tests + tsc + build green.
 
 ---
 
@@ -128,6 +128,30 @@ Frontend coverage 81%→**85%** statements (85.9% lines; ~4915 stmts). Suite gre
 **Key test patterns learned**: native `.focus()` doesn't fire React's onFocus in jsdom (use `fireEvent.focus`); patch fullscreen APIs on the *rendered* video node (React owns the element, ref assignment is overwritten); stub `offsetParent` to reveal focusables for the focus-trap; `compareDocumentPosition` for DOM-order assertions; `vi.useFakeTimers({ shouldAdvanceTime: true })` so `waitFor` still polls.
 
 ## Recently Completed
+
+### ✅ Session 15 (2026-08-05) — P2 distributed rate limiting (Redis) + P4 touch targets
+- **P2: Redis-backed distributed rate limiting** (SECURITY_AUDIT #8) — new
+  `server/rate_limit.py` `RedisRateLimitStore` (fixed-window: SET NX EX + INCR
+  pipeline, TTL-based Retry-After, per-app key prefix, **fail-open** on Redis
+  outage with once-per-error-class warning). `REDIS_URL` env opt-in in
+  `config.py`; unset keeps the historical in-process store with zero new deps.
+  `main.py`: rate-limit logic extracted into `MemoryRateLimitStore` +
+  `get_rate_limit_store()` factory; middleware now talks to a store interface —
+  existing tests that manipulate `main._rate_limits` globals still pass
+  untouched. `requirements.txt` adds `redis>=5.0` (only imported when
+  `REDIS_URL` is set). 8 new tests with an in-process fake redis client:
+  limit→block, TTL retry-after == 60, remaining quota, **shared counter across
+  two store instances** (the multi-instance property the memory store can't
+  provide), window-expiry reset, per-key isolation, fail-open + single warning.
+- **P4: player control touch targets 40px → 44px** (WCAG 2.5.8) — bumped
+  `min-w/min-h` in AudioSelector, MobileMoreMenu, PlayerBottomControls
+  (Speed/Record/Download/Quality), SleepTimer, SubtitleSelector, VolumeControl.
+  Mobile-overflow re-evaluation: the row scrolls/wraps on narrow screens, no
+  reflow introduced.
+- **Test counts:** backend 1588→**1635** passed / 17 skipped / 3 xfailed
+  (full suite incl. test_live; 1618 = offline-safe run excluding it);
+  frontend 1922→**1942** passed (136 files), tsc + vite build clean. Live
+  fail-open verified against a closed port (real `redis.asyncio` import path).
 
 ### ✅ Session 12.2 (2026-08-02) — ops/CI/security audit batch
 - **release.yml build broken** (H1): used `context: .` with no root Dockerfile — every master push failed 'Dockerfile not found'. Now a 2-image matrix (server + web Dockerfiles) with correct contexts/tags. Commits `6a5921f`.

@@ -262,7 +262,7 @@ export default function PlayerBottomControls({
           <div className="relative">
             <button
               onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-              className="text-white/60 hover:text-white/80 transition-colors px-2 py-1 text-xs tabular-nums min-w-[40px] min-h-[40px] flex items-center justify-center rounded"
+              className="text-white/60 hover:text-white/80 transition-colors px-2 py-1 text-xs tabular-nums min-w-[44px] min-h-[44px] flex items-center justify-center rounded"
               aria-label={`Playback speed ${playbackRate}x`}
             >
               {playbackRate}x
@@ -328,7 +328,7 @@ export default function PlayerBottomControls({
             {type === "live" && (
               <button
                 onClick={handleRecordToggle}
-                className={`p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center transition-colors ${
+                className={`p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors ${
                   isRecording
                     ? "text-red-500"
                     : "text-white/60 hover:text-white/80"
@@ -345,7 +345,7 @@ export default function PlayerBottomControls({
               <a
                 href={`/api/download/${type === "series" ? "series" : "movie"}/${epId || id}`}
                 download
-                className="text-white/60 hover:text-white/80 transition-colors p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                className="text-white/60 hover:text-white/80 transition-colors p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center"
                 aria-label="Download for offline"
               >
                 <Download className="w-4 h-4" aria-hidden="true" />
@@ -365,7 +365,7 @@ export default function PlayerBottomControls({
               <div className="relative">
                 <button
                   onClick={() => setShowQualityMenu(!showQualityMenu)}
-                  className="text-white/60 hover:text-white/80 transition-colors p-1.5 min-w-[40px] min-h-[40px] flex items-center justify-center"
+                  className="text-white/60 hover:text-white/80 transition-colors p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center"
                   aria-label="Stream quality"
                 >
                   <Settings className="w-4 h-4" aria-hidden="true" />

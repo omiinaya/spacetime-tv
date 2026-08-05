@@ -192,6 +192,11 @@ RATE_WINDOW = int(os.getenv("RATE_WINDOW", "60"))  # seconds
 # search usable while still capping abuse.
 RATE_SEARCH_LIMIT = int(os.getenv("RATE_SEARCH_LIMIT", "300"))  # requests per window for search/proxy
 RATE_DEFAULT_LIMIT = int(os.getenv("RATE_DEFAULT_LIMIT", "1000"))  # requests per window for everything else
+# Distributed rate limiting (P2 / SECURITY_AUDIT #8): when REDIS_URL is set
+# (e.g. redis://redis:6379/0 for a multi-instance compose stack), the rate
+# limiter shares one fixed-window counter across ALL replicas. Empty (the
+# single-user default) keeps the in-process counter — zero new deps.
+REDIS_URL = os.getenv("REDIS_URL", "").strip()
 
 # Stream preflight (env-configurable)
 # preflight_stream() opens a short CDN connection before committing a 200 so

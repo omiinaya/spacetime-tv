@@ -110,7 +110,7 @@ export function SubtitleSelector({
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className={`text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[40px] min-h-[40px] flex items-center justify-center ${
+        className={`text-white/60 hover:text-white transition-colors p-2 sm:p-1 min-w-[44px] min-h-[44px] flex items-center justify-center ${
           activeTrack !== null ? "text-yellow-400" : ""
         }`}
         aria-label="Subtitles"
