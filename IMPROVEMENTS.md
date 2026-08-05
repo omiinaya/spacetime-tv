@@ -161,7 +161,7 @@ Frontend coverage 81%→**85%** statements (85.9% lines; ~4915 stmts). Suite gre
   Mobile-overflow re-evaluation: the row scrolls/wraps on narrow screens, no
   reflow introduced.
 - **Test counts:** backend 1588→**1635** passed / 17 skipped / 3 xfailed
-  (full suite incl. test_live; 1618 = offline-safe run excluding it);
+  (full suite incl. test_live; 1619 = offline-safe run excluding it);
   frontend 1922→**1942** passed (136 files), tsc + vite build clean. Live
   fail-open verified against a closed port (real `redis.asyncio` import path).
 

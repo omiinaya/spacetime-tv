@@ -2,7 +2,7 @@
 
 > **Audit date:** 2026-08-05 (15th session — distributed rate limiting, touch targets; backlog current)
 > **Stack:** FastAPI + React 19 + Vite 8 + Tailwind v4 | 13 pages | 133 components | 31 hooks | 25 back-end route modules
-> **Test counts:** 1,635 backend pass (17 skip, 3 xfail; 1,618 offline-safe) + 1,942 frontend pass (136 files) | 0 TypeScript errors | 0 production `any` types
+> **Test counts:** 1,635 backend pass (17 skip, 3 xfail; 1,619 offline-safe) + 1,942 frontend pass (136 files) | 0 TypeScript errors | 0 production `any` types
 > **CI:** GitHub Actions (lint → test → tsc → build) on a **self-hosted runner** (registered 2026-08-04 — the repo's jobs were failing the GitHub-hosted billing gate; `hermes-id` is now a git install in requirements.txt). **E2E also wired into CI** — runs against the live provider via GitHub secrets.
 > **Hook test coverage:** 31/31 (100%) — all custom hooks have unit tests
 > **E2E:** 22 specs / 497 tests green across chromium, Mobile Chrome, Mobile Safari, Tablet (4 Playwright projects). Profile-gate seeded via storageState. **Now runs in CI** whenever the IPTV secrets are present (see `.github/workflows/ci.yml` `e2e` job); skipped gracefully otherwise.
@@ -45,7 +45,7 @@ as diminishing returns for further splitting.
 - **P4 closed: player control touch targets 40px → 44px** (WCAG 2.5.8) —
   AudioSelector, MobileMoreMenu, PlayerBottomControls (Speed/Record/Download/
   Quality), SleepTimer, SubtitleSelector, VolumeControl.
-- **Tests:** backend 1588→**1635** pass (full suite incl. test_live: +31 redis/fixtures +16 live; offline-safe run = 1618) / 17 skip /
+- **Tests:** backend 1588→**1635** pass (full suite incl. test_live: +31 redis/fixtures +16 live; offline-safe run = 1619) / 17 skip /
   3 xfail; frontend 1922→**1942** pass (136 files); tsc + vite build clean.
 
 ### Session 14 (2026-08-04) — production-readiness close-out: CI runner, auth posture, backups
