@@ -531,3 +531,33 @@ def test_toggle_provider_missing_404(client: TestClient):
     with _client() as c:
         resp = c.post("/api/v1/providers/99/toggle")
     assert resp.status_code == 404
+
+
+# ── Cache invalidation re-warm ────────────────────────────────────────────
+
+
+def test_provider_mutation_triggers_cache_rewarm(client: TestClient):
+    """A provider edit clears the cache AND starts a re-warm.
+
+    Regression (2026-08-05): _invalidate_cache used to clear the in-memory
+    cache WITHOUT re-warming, so movies/unified (which reads ONLY the cache)
+    went empty for minutes after any provider edit. Clearing must kick off
+    the warmer (which is a no-op if already running).
+    """
+    import config as cfg
+
+    with patch.object(cfg, "_persist_providers"):
+        from routes import cache_warmer
+
+        with patch.object(cache_warmer, "start_cache_warmer") as mock_warm:
+            with _client() as c:
+                resp = c.put(
+                    "/api/v1/provider",
+                    json={
+                        "base_url": "http://updated.live",
+                        "username": "u",
+                        "password": "p",
+                    },
+                )
+    assert resp.status_code == 200
+    mock_warm.assert_called_once()

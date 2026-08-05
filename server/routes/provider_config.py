@@ -58,10 +58,25 @@ def _find_index() -> int:
 
 
 def _invalidate_cache() -> None:
-    """Clear the provider-scoped cache so new creds apply immediately."""
+    """Clear the provider-scoped cache AND trigger a re-warm.
+
+    The VOD/Series/EPG endpoints (esp. movies/unified, series/unified) read
+    ONLY from the in-memory cache — they have no cold-cache fallback. If a
+    provider edit (update/add/delete/toggle) cleared the cache WITHOUT
+    re-warming, the Movies page would go empty for minutes (until the next
+    restart's warmer). So clearing must kick off a fresh warm, exactly like
+    admin/cache/clear does. start_cache_warmer() is a no-op if one is already
+    running.
+    """
     from state import _cache
 
     _cache.clear()
+    try:
+        from routes.cache_warmer import start_cache_warmer
+
+        start_cache_warmer()
+    except Exception:  # noqa: BLE001 — never fail the mutation on warm failure
+        pass
 
 
 @router.get("/provider")

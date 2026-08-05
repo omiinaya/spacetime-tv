@@ -151,6 +151,30 @@ export default function Movies() {
     fetchPage(0, true, searchQuery);
   }, [searchQuery, fetchPage]);
 
+  // ── Cache-warm retry ──
+  // movies/unified reads ONLY the in-memory cache. After a service restart
+  // or a provider edit (which clears + re-warms the cache), the first fetch
+  // can legitimately return 0 movies while the warmer repopulates (~20-25s).
+  // Instead of showing a permanent "No movies available", retry a few times
+  // with a delay so the page fills in once the warm completes.
+  const warmRetriesRef = useRef(0);
+  const warmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (loading || searchQuery) return;
+    if (movies.length > 0) {
+      warmRetriesRef.current = 0;
+      return;
+    }
+    if (warmRetriesRef.current >= 8) return; // ~40s of retries, then give up
+    warmRetriesRef.current += 1;
+    warmTimerRef.current = setTimeout(() => {
+      fetchPage(0, true, "");
+    }, 5000);
+    return () => {
+      if (warmTimerRef.current) clearTimeout(warmTimerRef.current);
+    };
+  }, [movies.length, total, loading, searchQuery, fetchPage]);
+
   // ── Infinite scroll ──
   useEffect(() => {
     const sentinel = sentinelRef.current;
