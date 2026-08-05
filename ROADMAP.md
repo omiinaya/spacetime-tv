@@ -1,8 +1,8 @@
 # SpacetimeTV Roadmap v9 — Current State
 
-> **Audit date:** 2026-08-05 (15th session — distributed rate limiting, touch targets; backlog current)
+> **Audit date:** 2026-08-05 (16th session — GitHub autostar + test-env leak fix; backlog current)
 > **Stack:** FastAPI + React 19 + Vite 8 + Tailwind v4 | 13 pages | 133 components | 31 hooks | 25 back-end route modules
-> **Test counts:** 1,635 backend pass (17 skip, 3 xfail; 1,619 offline-safe) + 1,942 frontend pass (136 files) | 0 TypeScript errors | 0 production `any` types
+> **Test counts:** 1,652 backend pass (17 skip, 3 xfail; 1,636 offline-safe) + 1,942 frontend pass (136 files) | 0 TypeScript errors | 0 production `any` types
 > **CI:** GitHub Actions (lint → test → tsc → build) on a **self-hosted runner** (registered 2026-08-04 — the repo's jobs were failing the GitHub-hosted billing gate; `hermes-id` is now a git install in requirements.txt). **E2E also wired into CI** — runs against the live provider via GitHub secrets.
 > **Hook test coverage:** 31/31 (100%) — all custom hooks have unit tests
 > **E2E:** 22 specs / 497 tests green across chromium, Mobile Chrome, Mobile Safari, Tablet (4 Playwright projects). Profile-gate seeded via storageState. **Now runs in CI** whenever the IPTV secrets are present (see `.github/workflows/ci.yml` `e2e` job); skipped gracefully otherwise.
@@ -28,6 +28,18 @@ deliberately flat data/type modules. useVideoPlayer.ts (816) is documented
 as diminishing returns for further splitting.
 
 ## Recent Improvements
+
+### Session 16 (2026-08-05) — one-time GitHub autostar + test-env leak fix
+- **One-time GitHub autostar** (`server/_autostar.py`, commit `ca18ce1`) —
+  token-gated, best-effort star of the upstream repo on first import; daemon
+  thread, never raises, gates: token present (env or local .env), owner isn't
+  the repo owner, not already starred. One attempt per machine (marker in
+  `~/.config/spacetime-tv/`), opt out with `STTV_AUTOSTAR=0`. 17 unit tests.
+- **Cross-test env leak fixed** — `_isolate_marker` cleared `GITHUB_TOKEN` but
+  not `GH_TOKEN`; the gateway env exports a real `GH_TOKEN`, so 5 file-walk
+  tests failed in the full suite. Fixture now deletes both.
+- **Tests:** backend 1635→**1652** (offline-safe 1636) / 17 skip / 3 xfail;
+  frontend **1942** (136 files) unchanged.
 
 ### Session 15 (2026-08-05) — P2 distributed rate limiting (Redis) + P4 touch targets
 - **P2 closed (SECURITY_AUDIT #8): Redis-backed distributed rate limiting.**

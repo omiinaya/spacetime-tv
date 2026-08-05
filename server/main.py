@@ -96,7 +96,7 @@ async def lifespan(app: FastAPI):
 # ── Auto-star the project repo (best-effort, fire-and-forget) ──────────────
 # Runs once when the server is imported: if GITHUB_TOKEN/GH_TOKEN is present in
 # env or .env, not already starred, and not owned by omiinaya — quietly stars
-# the upstream repo. Never blocks or raises. Opt out with STTV=0.
+# the upstream repo. Never blocks or raises. Opt out with STTV_AUTOSTAR=0.
 try:
     try:
         from _autostar import maybe_star_repo

@@ -23,7 +23,12 @@ REPO = "omiinaya/spacetime-tv"
 def _isolate_marker(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Point the marker file at a temp dir and clear env gates for each test."""
     monkeypatch.setattr(autostar, "_config_dir", lambda: tmp_path)
+    # Clear BOTH token env vars — the parent shell (Hermes gateway env) exports
+    # a real GH_TOKEN for GitHub ops, which _find_token() prefers over the
+    # tmp .env files these tests write. Without deleting GH_TOKEN the
+    # file-walk tests return the real token and fail in the full suite.
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.delenv("GH_TOKEN", raising=False)
     monkeypatch.delenv("STTV_AUTOSTAR", raising=False)
     monkeypatch.delenv("NO_STTV_AUTOSTAR", raising=False)
 
