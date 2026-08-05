@@ -1,5 +1,8 @@
 # SpacetimeTV
 
+[![CI](https://github.com/omiinaya/spacetime-tv/actions/workflows/ci.yml/badge.svg)](https://github.com/omiinaya/spacetime-tv/actions/workflows/ci.yml)
+[![Release Build](https://github.com/omiinaya/spacetime-tv/actions/workflows/release.yml/badge.svg)](https://github.com/omiinaya/spacetime-tv/actions/workflows/release.yml)
+
 **IPTV cable TV dashboard** — Live TV, EPG guide, Movies & Series from **your** IPTV provider. FastAPI backend + React/Vite frontend + nginx reverse proxy.
 
 Bring your own Xtream Codes provider: enter your base URL, username and password once (env file or Admin UI) and SpacetimeTV handles the rest — live streaming, EPG schedule, VOD catalog with search and watchlists.
