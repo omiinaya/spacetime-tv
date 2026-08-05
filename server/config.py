@@ -11,6 +11,10 @@ from dotenv import load_dotenv
 _env_path = Path(__file__).parent / ".env"
 load_dotenv(_env_path)
 
+# Env file that provider saves are written back to (durable store that
+# survives data-dir wipes). Override via STV_ENV_FILE.
+PROVIDERS_ENV_FILE = Path(os.getenv("STV_ENV_FILE", str(_env_path)))
+
 # IPTV provider — legacy single-provider env vars (kept for backward compat)
 IPTV_BASE = os.getenv("IPTV_BASE", "")
 IPTV_USER = os.getenv("IPTV_USER", "")
@@ -277,6 +281,75 @@ def _save_providers_to_file(providers: list) -> None:
         import logging
 
         logging.getLogger("spacetime-tv").warning(f"Failed to save PROVIDERS_FILE: {e}")
+
+
+def _save_providers_to_env(providers: list) -> None:
+    """Write providers back to the .env file as PROVIDERS_JSON.
+
+    This is the durable store: creds survive data-dir wipes / container
+    recreates because they live in the env file the service reads at startup.
+    Passwords are written as plaintext (matching the legacy IPTV_* env vars)
+    so a wiped .encrypt_key file can't orphan them.
+    """
+    import logging
+
+    try:
+        env_path = PROVIDERS_ENV_FILE
+    except NameError:
+        return
+    if not env_path:
+        return
+    try:
+        data = []
+        for i, p in enumerate(providers):
+            pwd = p.password
+            if pwd.startswith("enc:"):
+                try:
+                    from crypto_utils import decrypt as _dec
+
+                    decrypted = _dec(pwd)
+                    # decrypt() returns "" (not an exception) when the token
+                    # is bogus / the key changed — never blank the creds,
+                    # keep the enc: form so nothing is silently lost.
+                    if decrypted:
+                        pwd = decrypted
+                except Exception:  # noqa: BLE001 — keep enc: form if decrypt fails
+                    pass
+            data.append(
+                {
+                    "name": p.name,
+                    "base_url": p.base_url,
+                    "username": p.username,
+                    "password": pwd,
+                    "enabled": p.enabled,
+                    "order": p.order if hasattr(p, "order") else i,
+                }
+            )
+        providers_json = json.dumps(data, separators=(",", ":"))
+
+        # Read existing .env, replace/insert the PROVIDERS_JSON line.
+        lines = []
+        if env_path.exists():
+            lines = env_path.read_text().splitlines()
+        filtered = [ln for ln in lines if not ln.startswith("PROVIDERS_JSON=")]
+        # Preserve trailing newline behavior: rejoin with \n and ensure a
+        # final newline so dotenv / shell parsing stays predictable.
+        filtered.append(f"PROVIDERS_JSON={providers_json}")
+        env_path.parent.mkdir(parents=True, exist_ok=True)
+        env_path.write_text("\n".join(filtered) + "\n")
+        logging.getLogger("spacetime-tv").debug(f"Wrote PROVIDERS_JSON ({len(data)} providers) to {env_path}")
+    except (OSError, TypeError) as e:
+        logging.getLogger("spacetime-tv").warning(f"Failed to save PROVIDERS_ENV_FILE: {e}")
+
+
+def _persist_providers(providers: list) -> None:
+    """Persist providers to BOTH the JSON file and the .env file.
+
+    Routes should call this instead of _save_providers_to_file so UI/admin
+    saves are also written back to env (creds not lost on data-dir wipe).
+    """
+    _save_providers_to_file(providers)
+    _save_providers_to_env(providers)
 
 
 # Override PROVIDERS with file-based config if available

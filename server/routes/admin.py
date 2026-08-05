@@ -257,18 +257,19 @@ async def admin_get_providers():
 @router.post("/admin/providers/{idx}/toggle")
 async def admin_toggle_provider(idx: int):
     """Enable/disable a provider."""
-    from config import PROVIDERS
+    from config import PROVIDERS, _persist_providers
 
     if idx < 0 or idx >= len(PROVIDERS):
         raise HTTPException(404, f"Provider index {idx} not found")
     PROVIDERS[idx].enabled = not PROVIDERS[idx].enabled
+    _persist_providers(PROVIDERS)
     return {"index": idx, "name": PROVIDERS[idx].name, "enabled": PROVIDERS[idx].enabled}
 
 
 @router.post("/admin/providers/{idx}/reorder")
 async def admin_reorder_provider(idx: int, new_order: int):
     """Change provider priority order."""
-    from config import PROVIDERS
+    from config import PROVIDERS, _persist_providers
 
     if idx < 0 or idx >= len(PROVIDERS):
         raise HTTPException(404, f"Provider index {idx} not found")
@@ -280,6 +281,7 @@ async def admin_reorder_provider(idx: int, new_order: int):
     PROVIDERS.insert(new_order, p)
     for i, pp in enumerate(PROVIDERS):
         pp.order = i
+    _persist_providers(PROVIDERS)
     return {"message": f"Provider '{p.name}' reordered to position {new_order}"}
 
 
@@ -306,7 +308,7 @@ async def admin_get_active_provider():
 @router.post("/admin/providers")
 async def admin_add_provider(body: dict):
     """Add a new provider."""
-    from config import PROVIDERS, _save_providers_to_file
+    from config import PROVIDERS, _persist_providers
 
     base_url = body.get("base_url", "").rstrip("/")
     if not base_url:
@@ -335,14 +337,14 @@ async def admin_add_provider(body: dict):
     for i, p in enumerate(PROVIDERS):
         p.order = i
 
-    _save_providers_to_file(PROVIDERS)
+    _persist_providers(PROVIDERS)
     return {"message": f"Provider '{name}' added", "index": len(PROVIDERS) - 1}
 
 
 @router.delete("/admin/providers/{idx}")
 async def admin_delete_provider(idx: int):
     """Delete a provider by index."""
-    from config import PROVIDERS, _save_providers_to_file
+    from config import PROVIDERS, _persist_providers
 
     if idx < 0 or idx >= len(PROVIDERS):
         raise HTTPException(404, f"Provider index {idx} not found")
@@ -353,14 +355,14 @@ async def admin_delete_provider(idx: int):
     for i, p in enumerate(PROVIDERS):
         p.order = i
 
-    _save_providers_to_file(PROVIDERS)
+    _persist_providers(PROVIDERS)
     return {"message": f"Provider '{name}' deleted"}
 
 
 @router.put("/admin/providers/{idx}")
 async def admin_update_provider(idx: int, body: dict):
     """Update a provider's configuration."""
-    from config import PROVIDERS, _maybe_encrypt, _save_providers_to_file
+    from config import PROVIDERS, _maybe_encrypt, _persist_providers
 
     if idx < 0 or idx >= len(PROVIDERS):
         raise HTTPException(404, f"Provider index {idx} not found")
@@ -386,7 +388,7 @@ async def admin_update_provider(idx: int, body: dict):
         for i, pp in enumerate(PROVIDERS):
             pp.order = i
 
-    _save_providers_to_file(PROVIDERS)
+    _persist_providers(PROVIDERS)
     return {"message": f"Provider '{p.name}' updated"}
 
 

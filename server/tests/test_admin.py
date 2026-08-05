@@ -934,7 +934,11 @@ class TestAdminEdgeBranches:
         old_user = p0.username
         old_pass = p0.password
         try:
-            with patch("config._save_providers_to_file", return_value=None):
+            # The route persists via _persist_providers (file + env). Patch it
+            # to a no-op so neither providers.json NOR the real .env is written
+            # during the test (previously only _save_providers_to_file was
+            # patched, leaving _save_providers_to_env=real → .env pollution).
+            with patch("config._persist_providers", return_value=None):
                 with _admin_client() as c:
                     resp = c.put(
                         "/api/v1/admin/providers/0",

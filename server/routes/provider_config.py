@@ -1,17 +1,25 @@
 """Provider configuration routes — user-facing settings surface.
 
-Single-user IPTV semantics: the dashboard manages exactly ONE provider
-(the one that feeds live TV / VOD / EPG). These endpoints let the
-Settings page read and update it without an admin key:
+Single-user IPTV semantics: the dashboard manages one or more Xtream
+providers (the ones that feed live TV / VOD / EPG). These endpoints let the
+Settings page read and update them without an admin key:
 
-  GET  /api/v1/provider       — current provider (password NEVER returned)
-  PUT  /api/v1/provider       — create/update the single provider, persist
-  POST /api/v1/provider/test  — validate creds against upstream (no save)
+  GET   /api/v1/provider        — active (first) provider (password NEVER returned)
+  PUT   /api/v1/provider        — create/update the primary provider, persist
+  POST  /api/v1/provider/test   — validate creds against upstream (no save)
+  GET   /api/v1/providers       — list all providers
+  POST  /api/v1/providers       — add a new provider
+  PUT   /api/v1/providers/{idx} — update provider at index
+  DELETE /api/v1/providers/{idx} — delete provider at index
+  POST  /api/v1/providers/{idx}/toggle — enable/disable provider
 
 Unlike /admin/providers*, this router is NOT admin-key gated: it sits
 behind the global auth middleware (LAN/localhost bypass, plus admin key
 or device token for external clients) so the Settings page can manage
-the provider directly — matching how live/VOD/search routes behave.
+providers directly — matching how live/VOD/search routes behave.
+
+Every mutation persists to BOTH server/data/providers.json AND the .env
+file (PROVIDERS_JSON) so creds/endpoints are not lost on data-dir wipes.
 """
 
 import logging
@@ -49,9 +57,16 @@ def _find_index() -> int:
     return 0 if PROVIDERS else -1
 
 
+def _invalidate_cache() -> None:
+    """Clear the provider-scoped cache so new creds apply immediately."""
+    from state import _cache
+
+    _cache.clear()
+
+
 @router.get("/provider")
 async def get_provider():
-    """Return the current provider config (password masked)."""
+    """Return the active (first) provider config (password masked)."""
     from config import PROVIDERS
 
     if not PROVIDERS:
@@ -59,9 +74,17 @@ async def get_provider():
     return {"configured": True, "provider": _public_provider(PROVIDERS[0], 0)}
 
 
+@router.get("/providers")
+async def list_providers():
+    """List all configured providers (password masked, with health)."""
+    from config import PROVIDERS
+
+    return {"providers": [{**_public_provider(p, i), "index": i, "order": p.order} for i, p in enumerate(PROVIDERS)]}
+
+
 @router.put("/provider")
 async def update_provider(body: dict):
-    """Create or update the single provider and persist it.
+    """Create or update the primary (first) provider and persist it.
 
     password is optional: when omitted/empty the existing password is
     kept (so the UI can change base_url/username without re-entering
@@ -71,7 +94,7 @@ async def update_provider(body: dict):
         PROVIDERS,
         ProviderConfig,
         _maybe_encrypt,
-        _save_providers_to_file,
+        _persist_providers,
     )
 
     base_url = body.get("base_url", "").rstrip("/")
@@ -105,17 +128,128 @@ async def update_provider(body: dict):
             )
         )
 
-    _save_providers_to_file(PROVIDERS)
+    _persist_providers(PROVIDERS)
 
     # Invalidate the whole cache so new creds take effect immediately
-    # (provider-scoped cache keys would otherwise serve stale data).
-    from state import _cache
-
-    _cache.clear()
+    _invalidate_cache()
 
     return {
         "message": f"Provider '{name}' saved",
         "provider": _public_provider(PROVIDERS[0], 0),
+    }
+
+
+@router.post("/providers")
+async def add_provider(body: dict):
+    """Add a new provider (any Xtream service)."""
+    from config import (
+        PROVIDERS,
+        ProviderConfig,
+        _maybe_encrypt,
+        _persist_providers,
+    )
+
+    base_url = body.get("base_url", "").rstrip("/")
+    if not base_url:
+        raise HTTPException(400, "base_url is required")
+    username = body.get("username", "")
+    if not username:
+        raise HTTPException(400, "username is required")
+
+    password = body.get("password", "")
+    name = (body.get("name") or f"Provider {len(PROVIDERS) + 1}").strip()
+    enabled = bool(body.get("enabled", True))
+
+    PROVIDERS.append(
+        ProviderConfig(
+            name=name,
+            base_url=base_url,
+            username=username,
+            password=_maybe_encrypt(password) if password else "",
+            enabled=enabled,
+            order=len(PROVIDERS),
+        )
+    )
+    # Re-index
+    for i, p in enumerate(PROVIDERS):
+        p.order = i
+
+    _persist_providers(PROVIDERS)
+    _invalidate_cache()
+
+    idx = len(PROVIDERS) - 1
+    return {
+        "message": f"Provider '{name}' added",
+        "index": idx,
+        "provider": _public_provider(PROVIDERS[idx], idx),
+    }
+
+
+@router.put("/providers/{idx}")
+async def update_provider_at(idx: int, body: dict):
+    """Update a provider at a given index (blank password keeps existing)."""
+    from config import PROVIDERS, _maybe_encrypt, _persist_providers
+
+    if idx < 0 or idx >= len(PROVIDERS):
+        raise HTTPException(404, f"Provider index {idx} not found")
+
+    p = PROVIDERS[idx]
+    if "name" in body and body["name"]:
+        p.name = body["name"].strip()
+    if "base_url" in body and body["base_url"]:
+        p.base_url = body["base_url"].rstrip("/")
+    if "username" in body and body["username"]:
+        p.username = body["username"]
+    if "password" in body and body["password"]:
+        p.password = _maybe_encrypt(body["password"])
+    if "enabled" in body:
+        p.enabled = bool(body["enabled"])
+
+    _persist_providers(PROVIDERS)
+    _invalidate_cache()
+
+    return {
+        "message": f"Provider '{p.name}' updated",
+        "index": idx,
+        "provider": _public_provider(p, idx),
+    }
+
+
+@router.delete("/providers/{idx}")
+async def delete_provider(idx: int):
+    """Delete a provider by index."""
+    from config import PROVIDERS, _persist_providers
+
+    if idx < 0 or idx >= len(PROVIDERS):
+        raise HTTPException(404, f"Provider index {idx} not found")
+
+    name = PROVIDERS[idx].name
+    del PROVIDERS[idx]
+    for i, p in enumerate(PROVIDERS):
+        p.order = i
+
+    _persist_providers(PROVIDERS)
+    _invalidate_cache()
+
+    return {"message": f"Provider '{name}' deleted"}
+
+
+@router.post("/providers/{idx}/toggle")
+async def toggle_provider(idx: int):
+    """Enable/disable a provider."""
+    from config import PROVIDERS, _persist_providers
+
+    if idx < 0 or idx >= len(PROVIDERS):
+        raise HTTPException(404, f"Provider index {idx} not found")
+
+    PROVIDERS[idx].enabled = not PROVIDERS[idx].enabled
+    _persist_providers(PROVIDERS)
+    _invalidate_cache()
+
+    return {
+        "message": f"Provider '{PROVIDERS[idx].name}' {'enabled' if PROVIDERS[idx].enabled else 'disabled'}",
+        "index": idx,
+        "enabled": PROVIDERS[idx].enabled,
     }
 
 

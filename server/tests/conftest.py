@@ -63,6 +63,20 @@ _test_data_dir = Path(os.environ.get("STV_TEST_DATA_DIR", "/tmp/stv-test-data"))
 _test_data_dir.mkdir(parents=True, exist_ok=True)
 os.environ["STV_DATA_DIR"] = str(_test_data_dir)
 
+# Isolate the provider .env write-back too. _save_providers_to_env() writes
+# PROVIDERS_JSON to PROVIDERS_ENV_FILE (default: the real server/.env) — a
+# test hitting a provider route would otherwise rewrite the PRODUCTION .env
+# with test creds. Point it at the test dir so NO test can touch the real env.
+_test_env_file = _test_data_dir / "test.env"
+os.environ["STV_ENV_FILE"] = str(_test_env_file)
+
+# The PRODUCTION server/.env may now carry a real PROVIDERS_JSON (the durable
+# store for provider creds). load_dotenv() won't override an already-set env
+# var, so explicitly neutralize it here — otherwise the real provider leaks
+# into tests via config's PROVIDERS_JSON branch instead of the mocked
+# IPTV_BASE/USER/PASS below. Set to "" (not setdefault) to force the override.
+os.environ["PROVIDERS_JSON"] = ""
+
 # Wipe persistent state files to prevent cross-session contamination
 _state_dir = _test_data_dir
 _hits_file = _state_dir / "stream_hits.json"

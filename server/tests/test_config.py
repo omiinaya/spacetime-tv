@@ -743,6 +743,150 @@ class TestSaveProvidersToFile:
         assert saved[0]["order"] == 99
 
 
+class TestSaveProvidersToEnv:
+    """_save_providers_to_env() writes PROVIDERS_JSON back to the .env file.
+
+    This is the durable store: UI saves go to both providers.json AND the
+    .env file so creds/endpoints survive data-dir wipes / container
+    recreates.
+    """
+
+    @pytest.fixture
+    def cfg(self):
+        import config as cfg
+
+        return cfg
+
+    def test_writes_providers_json_with_plaintext_creds(self, cfg, tmp_path, monkeypatch):
+        """_save_providers_to_env writes PROVIDERS_JSON with plaintext creds."""
+        from config import ProviderConfig
+
+        env_file = tmp_path / ".env"
+        monkeypatch.setattr(cfg, "PROVIDERS_ENV_FILE", env_file)
+        providers = [
+            ProviderConfig(
+                name="P1",
+                base_url="http://p1.live",
+                username="u1",
+                password="pw1",
+                enabled=True,
+                order=0,
+            ),
+            ProviderConfig(
+                name="P2",
+                base_url="http://p2.live",
+                username="u2",
+                password="pw2",
+                enabled=False,
+                order=1,
+            ),
+        ]
+        cfg._save_providers_to_env(providers)
+
+        text = env_file.read_text()
+        assert "PROVIDERS_JSON=" in text
+        line = [ln for ln in text.splitlines() if ln.startswith("PROVIDERS_JSON=")][0]
+        data = json.loads(line.split("=", 1)[1])
+        assert len(data) == 2
+        assert data[0]["name"] == "P1"
+        assert data[0]["base_url"] == "http://p1.live"
+        assert data[0]["username"] == "u1"
+        assert data[0]["password"] == "pw1"  # plaintext in env (durable store)
+        assert data[1]["enabled"] is False
+
+    def test_preserves_other_env_lines(self, cfg, tmp_path, monkeypatch):
+        """_save_providers_to_env keeps unrelated .env lines intact."""
+        from config import ProviderConfig
+
+        env_file = tmp_path / ".env"
+        env_file.write_text("TMDB_API_KEY=abc\nIPTV_BASE=http://old.live\n")
+        monkeypatch.setattr(cfg, "PROVIDERS_ENV_FILE", env_file)
+        providers = [
+            ProviderConfig(
+                name="P1",
+                base_url="http://p1.live",
+                username="u1",
+                password="pw1",
+                enabled=True,
+                order=0,
+            )
+        ]
+        cfg._save_providers_to_env(providers)
+
+        text = env_file.read_text()
+        assert "TMDB_API_KEY=abc" in text
+        assert "IPTV_BASE=http://old.live" in text
+        assert "PROVIDERS_JSON=" in text
+
+    def test_replaces_existing_line(self, cfg, tmp_path, monkeypatch):
+        """_save_providers_to_env replaces an existing PROVIDERS_JSON line."""
+        from config import ProviderConfig
+
+        env_file = tmp_path / ".env"
+        env_file.write_text('PROVIDERS_JSON=[{"name":"Old"}]\nOTHER=1\n')
+        monkeypatch.setattr(cfg, "PROVIDERS_ENV_FILE", env_file)
+        providers = [
+            ProviderConfig(
+                name="New",
+                base_url="http://new.live",
+                username="u",
+                password="p",
+                enabled=True,
+                order=0,
+            )
+        ]
+        cfg._save_providers_to_env(providers)
+
+        text = env_file.read_text()
+        assert text.count("PROVIDERS_JSON=") == 1  # replaced, not duplicated
+        assert "OTHER=1" in text
+        assert "New" in text and "Old" not in text
+
+    def test_decrypts_enc_password_before_env_write(self, cfg, tmp_path, monkeypatch):
+        """enc: passwords are decrypted before writing to env."""
+        from config import ProviderConfig
+
+        env_file = tmp_path / ".env"
+        monkeypatch.setattr(cfg, "PROVIDERS_ENV_FILE", env_file)
+        providers = [
+            ProviderConfig(
+                name="P1",
+                base_url="http://p1.live",
+                username="u1",
+                password="enc:not-a-real-token",
+                enabled=True,
+                order=0,
+            )
+        ]
+        cfg._save_providers_to_env(providers)
+        text = env_file.read_text()
+        # decryption failed (bogus token) → keep enc: form, never crash
+        assert "enc:not-a-real-token" in text
+
+    def test_persist_writes_both_file_and_env(self, cfg, tmp_path, monkeypatch):
+        """_persist_providers writes to BOTH providers.json AND the .env file."""
+        from config import ProviderConfig
+
+        data_dir = tmp_path / "data"
+        env_file = tmp_path / ".env"
+        monkeypatch.setattr(cfg, "PROVIDERS_FILE", data_dir / "providers.json")
+        monkeypatch.setattr(cfg, "PROVIDERS_ENV_FILE", env_file)
+        providers = [
+            ProviderConfig(
+                name="P1",
+                base_url="http://p1.live",
+                username="u1",
+                password="pw1",
+                enabled=True,
+                order=0,
+            )
+        ]
+        cfg._persist_providers(providers)
+
+        assert (data_dir / "providers.json").exists()
+        assert "PROVIDERS_JSON=" in env_file.read_text()
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 7.  ADMIN_API_KEY — auto-generation vs. user-supplied
 # ═══════════════════════════════════════════════════════════════════════════════

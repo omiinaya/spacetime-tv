@@ -28,7 +28,11 @@ import type {
   TmdbPersonSearchResponse,
   TmdbPersonDetailsResponse,
   ProviderGetResponse,
+  ProviderListResponse,
   ProviderUpdateResponse,
+  ProviderAddResponse,
+  ProviderToggleResponse,
+  ProviderDeleteResponse,
   ProviderTestResponse,
 } from "./types";
 
@@ -174,15 +178,16 @@ async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
 }
 
 async function send<T>(
-  method: "POST" | "PUT",
+  method: "POST" | "PUT" | "DELETE",
   path: string,
   body: unknown,
   signal?: AbortSignal,
 ): Promise<T> {
   const res = await fetchWithRetry(`${API}${path}`, {
     method,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    headers:
+      body === undefined ? undefined : { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
     signal,
   });
   if (!res.ok) {
@@ -322,6 +327,8 @@ export const api = {
   provider: {
     get: (signal?: AbortSignal) =>
       get<ProviderGetResponse>("/provider", signal),
+    list: (signal?: AbortSignal) =>
+      get<ProviderListResponse>("/providers", signal),
     update: (
       config: {
         name?: string;
@@ -332,6 +339,42 @@ export const api = {
       },
       signal?: AbortSignal,
     ) => send<ProviderUpdateResponse>("PUT", "/provider", config, signal),
+    updateAt: (
+      idx: number,
+      config: {
+        name?: string;
+        base_url?: string;
+        username?: string;
+        password?: string;
+        enabled?: boolean;
+      },
+      signal?: AbortSignal,
+    ) =>
+      send<ProviderUpdateResponse>("PUT", `/providers/${idx}`, config, signal),
+    add: (
+      config: {
+        name?: string;
+        base_url: string;
+        username: string;
+        password?: string;
+        enabled?: boolean;
+      },
+      signal?: AbortSignal,
+    ) => send<ProviderAddResponse>("POST", "/providers", config, signal),
+    remove: (idx: number, signal?: AbortSignal) =>
+      send<ProviderDeleteResponse>(
+        "DELETE",
+        `/providers/${idx}`,
+        undefined,
+        signal,
+      ),
+    toggle: (idx: number, signal?: AbortSignal) =>
+      send<ProviderToggleResponse>(
+        "POST",
+        `/providers/${idx}/toggle`,
+        undefined,
+        signal,
+      ),
     test: (
       config: { base_url: string; username: string; password?: string },
       signal?: AbortSignal,

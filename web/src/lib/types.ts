@@ -462,14 +462,39 @@ export interface ProviderConfig {
   health: ProviderHealth;
 }
 
+export interface ProviderListItem extends ProviderConfig {
+  index: number;
+  order: number;
+}
+
 export interface ProviderGetResponse {
   configured: boolean;
   provider: ProviderConfig | null;
 }
 
+export interface ProviderListResponse {
+  providers: ProviderListItem[];
+}
+
 export interface ProviderUpdateResponse {
   message: string;
   provider: ProviderConfig;
+}
+
+export interface ProviderAddResponse {
+  message: string;
+  index: number;
+  provider: ProviderConfig;
+}
+
+export interface ProviderToggleResponse {
+  message: string;
+  index: number;
+  enabled: boolean;
+}
+
+export interface ProviderDeleteResponse {
+  message: string;
 }
 
 export interface ProviderTestResponse {

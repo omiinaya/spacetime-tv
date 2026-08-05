@@ -173,10 +173,11 @@ Configuration comes from `config.py` (reads `.env` file). Key env vars:
 
 | Env Var | Purpose | Default |
 |---|---|---|
-| `IPTV_BASE` | IPTV provider base URL | (set by user) |
-| `IPTV_USER` | IPTV username | — |
-| `IPTV_PASS` | IPTV password | — |
+| `IPTV_BASE` | IPTV provider base URL (legacy single-provider) | (set by user) |
+| `IPTV_USER` | IPTV username (legacy single-provider) | — |
+| `IPTV_PASS` | IPTV password (legacy single-provider) | — |
 | `PROVIDERS_JSON` | JSON array of providers (overrides single-provider vars) | — |
+| `STV_ENV_FILE` | .env file that provider saves are written back to as `PROVIDERS_JSON` (durable store — creds survive data-dir wipes) | `server/.env` |
 | `TMDB_API_KEY` | TMDB metadata enrichment | (optional) |
 | `ADMIN_API_KEY` | Admin API key — auto-generated 64-hex on first start if unset | auto |
 | `ENCRYPT_CREDENTIALS` | Fernet-encrypt provider passwords at rest | true |
@@ -186,6 +187,16 @@ Configuration comes from `config.py` (reads `.env` file). Key env vars:
 | `STREAM_PREFLIGHT_TIMEOUT` | Per-call CDN preflight timeout (seconds) | 10 |
 | `STREAM_PREFLIGHT_SUCCESS_TTL` | Preflight success cache TTL (seconds) | 30 |
 | `STREAM_PREFLIGHT_FAILURE_TTL` | Preflight failure cache TTL (seconds) | 5 |
+
+**Provider persistence:** the Settings menu → IPTV Providers manages ANY number of
+Xtream services (add/edit/delete/toggle/test). Every save persists to BOTH
+`server/data/providers.json` AND `PROVIDERS_JSON` in `STV_ENV_FILE` (default
+`server/.env`) — so creds/endpoints are never lost on data-dir wipes or
+container recreates. The user-facing routes live in
+`server/routes/provider_config.py` (`/api/v1/provider`, `/api/v1/providers`,
+`/api/v1/providers/{idx}`, `/api/v1/providers/{idx}/toggle`,
+`/api/v1/provider/test`); admin-key-gated multi-provider CRUD mirrors them at
+`/api/v1/admin/providers*`.
 
 ### Frontend (React)
 

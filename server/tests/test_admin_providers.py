@@ -64,7 +64,9 @@ def _apply_provider_fixture():
     # (which only fixes the contents of whatever list is current at teardown).
     _provider_health.clear()
     patchers = [
+        patch.object(cfg, "_persist_providers", lambda providers: None),
         patch.object(cfg, "_save_providers_to_file", lambda providers: None),
+        patch.object(cfg, "_save_providers_to_env", lambda providers: None),
     ]
     for p in patchers:
         p.start()

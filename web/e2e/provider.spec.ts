@@ -1,8 +1,8 @@
 /**
  * IPTV Provider configuration E2E tests — the Settings page provider section.
  *
- * Covers: section renders, form pre-fills from the API, test-connection
- * button, save flow (PUT /api/provider).
+ * Covers: section renders, provider list + edit form pre-fills from the API,
+ * test-connection button, save flow (PUT /api/providers/{idx}).
  *
  * NOTE: the save test PUTs the SAME values that are already configured
  * (idempotent — no destructive change to the live provider).
@@ -31,11 +31,32 @@ test.describe("IPTV Provider Configuration", () => {
     console.log("Provider section present on settings page");
   });
 
-  test("provider form pre-fills from API", async ({ page }) => {
+  test("provider list renders the configured provider", async ({ page }) => {
     await page.goto("/settings");
     await page.waitForLoadState("load");
     await page.waitForTimeout(3000);
 
+    // The configured provider appears in the list (from server/.env).
+    const editBtn = page.getByText("Edit");
+    await expect(editBtn).toBeVisible({ timeout: 5_000 });
+
+    // API-level: /providers returns at least one configured provider.
+    const resp = await page.request.get(`${API_BASE}/api/v1/providers`);
+    expect(resp.ok()).toBeTruthy();
+    const data = await resp.json();
+    expect(data.providers.length).toBeGreaterThan(0);
+    expect(data.providers[0].base_url.length).toBeGreaterThan(5);
+    console.log(
+      `Provider list: ${data.providers.length} configured, base=${data.providers[0].base_url.length} chars`,
+    );
+  });
+
+  test("edit form pre-fills from API", async ({ page }) => {
+    await page.goto("/settings");
+    await page.waitForLoadState("load");
+    await page.waitForTimeout(3000);
+
+    await page.getByText("Edit").first().click();
     const urlInput = page.getByLabel("Base URL");
     await expect(urlInput).toBeVisible({ timeout: 5_000 });
     const urlValue = await urlInput.inputValue();
@@ -56,6 +77,7 @@ test.describe("IPTV Provider Configuration", () => {
     await page.waitForLoadState("load");
     await page.waitForTimeout(3000);
 
+    await page.getByText("Edit").first().click();
     const testBtn = page.getByText("Test connection");
     await expect(testBtn).toBeVisible({ timeout: 5_000 });
     await testBtn.click();
@@ -74,6 +96,7 @@ test.describe("IPTV Provider Configuration", () => {
     await page.waitForLoadState("load");
     await page.waitForTimeout(3000);
 
+    await page.getByText("Edit").first().click();
     const urlInput = page.getByLabel("Base URL");
     await expect(urlInput).toBeVisible({ timeout: 5_000 });
     const baseUrl = await urlInput.inputValue();
@@ -87,22 +110,25 @@ test.describe("IPTV Provider Configuration", () => {
     });
 
     // API-level verification: the provider is still configured with the same values
-    const resp = await page.request.get(`${API_BASE}/api/provider`);
+    const resp = await page.request.get(`${API_BASE}/api/v1/providers`);
     expect(resp.ok()).toBeTruthy();
     const data = await resp.json();
-    expect(data.configured).toBeTruthy();
-    expect(data.provider.base_url).toBe(baseUrl);
-    expect(data.provider.username).toBe(username);
-    expect(data.provider.name).toBe(name);
+    expect(data.providers.length).toBeGreaterThan(0);
+    expect(data.providers[0].base_url).toBe(baseUrl);
+    expect(data.providers[0].username).toBe(username);
+    expect(data.providers[0].name).toBe(name);
     console.log(`Provider saved idempotently: ${name} @ ${baseUrl}`);
   });
 
   test("provider API never leaks the password", async ({ page }) => {
-    const resp = await page.request.get(`${API_BASE}/api/provider`);
+    const resp = await page.request.get(`${API_BASE}/api/v1/providers`);
     expect(resp.ok()).toBeTruthy();
     const data = await resp.json();
-    expect(data.provider).not.toHaveProperty("password");
-    expect(typeof data.provider.has_password).toBe("boolean");
-    console.log(`has_password=${data.provider.has_password}, password field absent`);
+    expect(data.providers.length).toBeGreaterThan(0);
+    expect(data.providers[0]).not.toHaveProperty("password");
+    expect(typeof data.providers[0].has_password).toBe("boolean");
+    console.log(
+      `has_password=${data.providers[0].has_password}, password field absent`,
+    );
   });
 });

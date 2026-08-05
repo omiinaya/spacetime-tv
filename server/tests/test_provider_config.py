@@ -9,9 +9,9 @@ These endpoints are NOT admin-key gated (LAN bypass applies), so the
 client fixture's admin key is unnecessary but harmless.
 
 Isolation: PUT mutates the module-level config.PROVIDERS list and calls
-_save_providers_to_file. Every test snapshots PROVIDERS and restores it
-in teardown, and patches _save_providers_to_file to avoid touching real
-provider files on disk (same pattern as test_admin_providers.py).
+_persist_providers. Every test snapshots PROVIDERS and restores it
+in teardown, and patches _persist_providers to avoid touching real
+provider files / .env on disk (same pattern as test_admin_providers.py).
 """
 
 from unittest.mock import patch
@@ -53,10 +53,12 @@ def _apply_provider_fixture():
     from state import _provider_health
 
     snapshot = _snapshot_providers()
-    saved_list = cfg.PROVIDERS  # capture list OBJECT identity (see admin tests)
+    saved_list = cfg.PROVIDERS  # capture list object IDENTITY (see admin tests)
     _provider_health.clear()
     patchers = [
+        patch.object(cfg, "_persist_providers", lambda providers: None),
         patch.object(cfg, "_save_providers_to_file", lambda providers: None),
+        patch.object(cfg, "_save_providers_to_env", lambda providers: None),
     ]
     for p in patchers:
         p.start()
@@ -316,3 +318,216 @@ def test_test_provider_requires_creds(client: TestClient):
     with _client() as c:
         resp = c.post("/api/v1/provider/test", json={"password": "p"})
     assert resp.status_code == 400
+
+
+# ── GET /api/v1/providers (list) ─────────────────────────────────────────
+
+
+def test_list_providers_returns_all_with_indexes(client: TestClient):
+    """GET /providers lists every provider with index, order, masked password."""
+    import config as cfg
+
+    cfg.PROVIDERS.append(
+        cfg.ProviderConfig(
+            name="Second",
+            base_url="http://second.live",
+            username="u2",
+            password="p2",
+            enabled=False,
+            order=1,
+        )
+    )
+    with _client() as c:
+        resp = c.get("/api/v1/providers")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["providers"]) == 2
+    first, second = data["providers"]
+    assert first["index"] == 0
+    assert first["name"] == "Default"
+    assert first["order"] == 0
+    assert second["index"] == 1
+    assert second["order"] == 1
+    assert second["enabled"] is False
+    for p in data["providers"]:
+        assert "password" not in p  # never leak
+        assert "has_password" in p
+
+
+def test_list_providers_empty(client: TestClient):
+    """GET /providers returns an empty list when none configured."""
+    import config as cfg
+
+    cfg.PROVIDERS.clear()
+    with _client() as c:
+        resp = c.get("/api/v1/providers")
+    assert resp.status_code == 200
+    assert resp.json() == {"providers": []}
+
+
+# ── POST /api/v1/providers (add) ─────────────────────────────────────────
+
+
+def test_add_provider_appends_and_persists(client: TestClient):
+    """POST /providers adds a new provider to the list and persists it."""
+    import config as cfg
+
+    with patch.object(cfg, "_persist_providers") as mock_persist:
+        with _client() as c:
+            resp = c.post(
+                "/api/v1/providers",
+                json={
+                    "name": "Backup Panel",
+                    "base_url": "http://backup.live/",
+                    "username": "bu",
+                    "password": "bp",
+                    "enabled": True,
+                },
+            )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "added" in data["message"]
+    assert data["index"] == 1
+    assert len(cfg.PROVIDERS) == 2
+    added = cfg.PROVIDERS[1]
+    assert added.name == "Backup Panel"
+    assert added.base_url == "http://backup.live"  # trailing / stripped
+    assert added.username == "bu"
+    assert added.order == 1
+    # persisted via _persist_providers (file + env)
+    mock_persist.assert_called_once_with(cfg.PROVIDERS)
+    # response masks password
+    assert "password" not in data["provider"]
+
+
+def test_add_provider_requires_creds(client: TestClient):
+    """POST /providers without base_url/username returns 400."""
+    with _client() as c:
+        resp = c.post("/api/v1/providers", json={"name": "x"})
+    assert resp.status_code == 400
+
+
+# ── PUT /api/v1/providers/{idx} (update) ─────────────────────────────────
+
+
+def test_update_provider_at_index(client: TestClient):
+    """PUT /providers/{idx} updates only that provider."""
+    import config as cfg
+
+    cfg.PROVIDERS.append(
+        cfg.ProviderConfig(
+            name="Second",
+            base_url="http://second.live",
+            username="u2",
+            password="p2",
+            enabled=True,
+            order=1,
+        )
+    )
+    with patch.object(cfg, "_persist_providers"):
+        with _client() as c:
+            resp = c.put(
+                "/api/v1/providers/1",
+                json={
+                    "name": "Renamed",
+                    "base_url": "http://renamed.live/",
+                    "username": "newu",
+                    "password": "newp",
+                    "enabled": False,
+                },
+            )
+    assert resp.status_code == 200
+    assert cfg.PROVIDERS[0].base_url == "http://test-iptv.live"  # untouched
+    updated = cfg.PROVIDERS[1]
+    assert updated.name == "Renamed"
+    assert updated.base_url == "http://renamed.live"
+    assert updated.username == "newu"
+    assert updated.enabled is False
+    assert "password" not in resp.json()["provider"]
+
+
+def test_update_provider_at_index_blank_password_keeps(client: TestClient):
+    """PUT /providers/{idx} with blank password preserves stored creds."""
+    import config as cfg
+
+    cfg.PROVIDERS.append(
+        cfg.ProviderConfig(
+            name="Second",
+            base_url="http://second.live",
+            username="u2",
+            password="original-pass",
+            enabled=True,
+            order=1,
+        )
+    )
+    with patch.object(cfg, "_persist_providers"):
+        with _client() as c:
+            resp = c.put(
+                "/api/v1/providers/1",
+                json={"base_url": "http://updated.live", "username": "u2b"},
+            )
+    assert resp.status_code == 200
+    assert cfg.PROVIDERS[1].password == "original-pass"
+    assert cfg.PROVIDERS[1].base_url == "http://updated.live"
+
+
+def test_update_provider_at_index_missing_404(client: TestClient):
+    """PUT /providers/{idx} with out-of-range index returns 404."""
+    with _client() as c:
+        resp = c.put("/api/v1/providers/99", json={"base_url": "http://x.live"})
+    assert resp.status_code == 404
+
+
+# ── DELETE /api/v1/providers/{idx} ───────────────────────────────────────
+
+
+def test_delete_provider_by_index(client: TestClient):
+    """DELETE /providers/{idx} removes the provider and re-indexes."""
+    import config as cfg
+
+    cfg.PROVIDERS.append(
+        cfg.ProviderConfig(
+            name="Second",
+            base_url="http://second.live",
+            username="u2",
+            password="p2",
+            enabled=True,
+            order=1,
+        )
+    )
+    with patch.object(cfg, "_persist_providers"):
+        with _client() as c:
+            resp = c.delete("/api/v1/providers/0")
+    assert resp.status_code == 200
+    assert len(cfg.PROVIDERS) == 1
+    assert cfg.PROVIDERS[0].name == "Second"
+    assert cfg.PROVIDERS[0].order == 0  # re-indexed
+
+
+def test_delete_provider_missing_404(client: TestClient):
+    """DELETE /providers/{idx} with out-of-range index returns 404."""
+    with _client() as c:
+        resp = c.delete("/api/v1/providers/42")
+    assert resp.status_code == 404
+
+
+# ── POST /api/v1/providers/{idx}/toggle ──────────────────────────────────
+
+
+def test_toggle_provider(client: TestClient):
+    """POST /providers/{idx}/toggle flips enabled and persists."""
+    import config as cfg
+
+    with patch.object(cfg, "_persist_providers"):
+        with _client() as c:
+            resp = c.post("/api/v1/providers/0/toggle")
+    assert resp.status_code == 200
+    assert resp.json()["enabled"] is False
+    assert cfg.PROVIDERS[0].enabled is False
+
+
+def test_toggle_provider_missing_404(client: TestClient):
+    """POST /providers/{idx}/toggle with out-of-range index returns 404."""
+    with _client() as c:
+        resp = c.post("/api/v1/providers/99/toggle")
+    assert resp.status_code == 404
