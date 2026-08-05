@@ -37,8 +37,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          # NOTE: no `cache: npm` — the Actions cache upload hangs on the
-          # self-hosted LXC network (see self-hosted-github-runners skill #15).
+          # NOTE: no `cache: npm` — keep CI minimal on hosted runners.
 
       - name: Install npm dependencies
         working-directory: ./web
