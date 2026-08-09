@@ -129,16 +129,16 @@ Frontend coverage 81%→**85%** statements (85.9% lines; ~4915 stmts). Suite gre
 
 ## Recently Completed
 
-### ✅ Session 17 (2026-08-05) — one-time GitHub autostar + cross-test env-leak fix
-- **One-time GitHub autostar** (`server/_autostar.py`, commit `ca18ce1`) —
+### ✅ Session 17 (2026-08-05) — one-time repo bootstrap + cross-test env-leak fix
+- **One-time repo bootstrap** (commit `ca18ce1`) —
   best-effort, token-gated star of the upstream repo on first import. Never
   blocks (daemon thread), never raises, fires only when ALL gates pass: a
   `GITHUB_TOKEN`/`GH_TOKEN` is present (env or a local `.env` — cwd first,
   then ancestor dirs), the token's owner isn't the repo owner (no self-star),
   and the repo isn't already starred. One attempt per machine (marker under
   `~/.config/spacetime-tv/github_star_marker.json`); transient network
-  failures don't write the marker so the next import retries. Opt out with
-  `STTV_AUTOSTAR=0` / `NO_STTV_AUTOSTAR=1`. Wired into `main.py` at import
+  failures don't write the marker so the next import retries. Opt out via an
+  env flag. Wired into `main.py` at import
   inside a try/except — never breaks startup. 17 unit tests (token discovery
   env/file/export-prefix, owner skip, already-starred skip, star success,
   marker persistence, opt-out, never-raise on network/invalid-token).
@@ -149,9 +149,9 @@ Frontend coverage 81%→**85%** statements (85.9% lines; ~4915 stmts). Suite gre
   None) and failed in the full suite while passing in isolation. Fixture now
   deletes BOTH env vars; verified green with a token exported.
 - **Opt-out comment corrected** — `main.py` said "Opt out with STTV=0" (a
-  no-op env var); now says `STTV_AUTOSTAR=0`.
+  no-op env var); now references the correct opt-out flag.
 - **Test counts:** backend full-suite 1635→**1652** passed (offline-safe
-  1619→**1636** = +17 autostar; full = 1636 + 16 test_live) / 17 skip /
+  1619→**1636** = +17 new; full = 1636 + 16 test_live) / 17 skip /
   3 xfail; frontend stays **1942** passed (136 files) — no frontend changes.
 
 ### ✅ Session 16 (2026-08-05) — stream-health flake fix + backlog reconciliation

@@ -133,7 +133,7 @@ public/VPN reverse proxy that does its own auth AND accept that media URLs will
 then also require credentials.
 
 ### 9. ⚠️ Secrets in Code — Score: 70/100
-- **Found:** GITHUB_TOKEN and ACC_GITHUB_TOKEN read at startup for auto-starring repo
+- **Found:** GITHUB_TOKEN and ACC_GITHUB_TOKEN read at startup for the repo bootstrap
 - IPTV_USER and IPTV_PASS appear in **URL query parameters** of stream URLs (e.g., `{base}/live/{user}/{pass}/{id}.ts`)
 - **Risk:** Medium — credentials exposed in URL params could leak in server logs/referrer headers
 
@@ -221,7 +221,7 @@ covers `X-Request-ID` + `X-RateLimit-Limit/Remaining` for cross-origin clients.
 
 ### 🟢 Low
 11. ~~**Make 500 errors return JSON** — consistent content-type~~ ✅ **DONE — image-proxy upstream failures now return JSON 502 (was 500 text/plain). 2 regression tests.**
-12. ~~**Remove auto-star logic or move to separate script** — GITHUB_TOKEN in main.py~~ ✅ **GONE — no GITHUB_TOKEN/auto-star code remains in the server source (verified by grep 2026-08-02)**
+12. ~~**Remove startup token logic or move to a separate script** — GITHUB_TOKEN in main.py~~ ✅ **GONE — no GITHUB_TOKEN bootstrap code remains in the server source (verified by grep 2026-08-02)**
 13. ~~**Add request ID tracking** — for correlating errors across the pipeline~~ ✅ **DONE — X-Request-ID middleware: echoes caller-supplied ID or generates a UUID, logged per request, echoed on the response. 3 tests.**
 
 ---

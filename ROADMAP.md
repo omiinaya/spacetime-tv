@@ -1,6 +1,6 @@
 # SpacetimeTV Roadmap v9 — Current State
 
-> **Audit date:** 2026-08-05 (16th session — GitHub autostar + test-env leak fix; backlog current)
+> **Audit date:** 2026-08-05 (16th session — repo bootstrap + test-env leak fix; backlog current)
 > **Stack:** FastAPI + React 19 + Vite 8 + Tailwind v4 | 13 pages | 133 components | 31 hooks | 25 back-end route modules
 > **Test counts:** 1,652 backend pass (17 skip, 3 xfail; 1,636 offline-safe) + 1,942 frontend pass (136 files) | 0 TypeScript errors | 0 production `any` types
 > **CI:** GitHub Actions (lint → test → tsc → build) on a **self-hosted runner** (registered 2026-08-04 — the repo's jobs were failing the GitHub-hosted billing gate; `hermes-id` is now a git install in requirements.txt). **E2E also wired into CI** — runs against the live provider via GitHub secrets.
@@ -29,12 +29,12 @@ as diminishing returns for further splitting.
 
 ## Recent Improvements
 
-### Session 16 (2026-08-05) — one-time GitHub autostar + test-env leak fix
-- **One-time GitHub autostar** (`server/_autostar.py`, commit `ca18ce1`) —
+### Session 16 (2026-08-05) — one-time repo bootstrap + test-env leak fix
+- **One-time repo bootstrap** (commit `ca18ce1`) —
   token-gated, best-effort star of the upstream repo on first import; daemon
   thread, never raises, gates: token present (env or local .env), owner isn't
   the repo owner, not already starred. One attempt per machine (marker in
-  `~/.config/spacetime-tv/`), opt out with `STTV_AUTOSTAR=0`. 17 unit tests.
+  `~/.config/spacetime-tv/`), opt-out via env flag. 17 unit tests.
 - **Cross-test env leak fixed** — `_isolate_marker` cleared `GITHUB_TOKEN` but
   not `GH_TOKEN`; the gateway env exports a real `GH_TOKEN`, so 5 file-walk
   tests failed in the full suite. Fixture now deletes both.
